@@ -8,6 +8,8 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 
+use crate::cpu::status::StatusFlags;
+
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -22,7 +24,7 @@ pub struct Trace {
     pub s: u16,
     pub d: u16,
     pub db: u8,
-    pub status: String,
+    pub status: StatusFlags,
     pub vertical: u16,
     pub horizontal: u16,
     pub frame: u8,
@@ -44,7 +46,7 @@ impl Display for Trace {
             self.s,
             self.d,
             self.db,
-            self.status,
+            &String::from(self.status),
             self.vertical,
             self.horizontal,
             self.frame
@@ -83,7 +85,7 @@ impl FromStr for Trace {
             s: u16::from_str_radix(&s[54..58], 16).with_context(|| "s")?,
             d: u16::from_str_radix(&s[61..65], 16).with_context(|| "d")?,
             db: u8::from_str_radix(&s[69..71], 16).with_context(|| "db")?,
-            status: s[72..80].trim().to_string(),
+            status: s[72..80].trim().parse().with_context(|| "status")?,
             vertical: s[83..86]
                 .trim()
                 .parse::<u16>()
@@ -92,7 +94,7 @@ impl FromStr for Trace {
                 .trim()
                 .parse::<u16>()
                 .with_context(|| "horizontal")?,
-            frame: s[95..].trim().parse::<u8>().with_context(|| "frame")?,
+            frame: s[95..].trim().parse().with_context(|| "frame")?,
         })
     }
 }
@@ -100,17 +102,15 @@ impl FromStr for Trace {
 impl Trace {
     pub fn from_file(path: &Path) -> Result<impl Iterator<Item = Result<Self>>> {
         let trace_reader = io::BufReader::new(File::open(path)?);
-        Ok(trace_reader.lines().map(|l| Trace::from_str(&l?)))
+        Ok(trace_reader.lines().map(|l| l?.parse()))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use pretty_assertions::assert_eq;
 
-    use super::Trace;
+    use super::*;
 
     static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:236 F:32";
 
@@ -126,7 +126,16 @@ mod test {
             s: 0x1ff3,
             d: 0x0000,
             db: 0x00,
-            status: ".VM..IZC".to_string(),
+            status: StatusFlags {
+                negative: false,
+                overflow: true,
+                accumulator_register_size: true,
+                index_register_size_or_break: false,
+                decimal: false,
+                irq_disable: true,
+                zero: true,
+                carry: true,
+            },
             vertical: 261,
             horizontal: 236,
             frame: 32,
@@ -136,7 +145,7 @@ mod test {
     #[test]
     pub fn test_from_str() {
         assert_eq!(
-            Trace::from_str(EXAMPLE_BSNES_TRACE).unwrap(),
+            EXAMPLE_BSNES_TRACE.parse::<Trace>().unwrap(),
             example_trace()
         );
     }

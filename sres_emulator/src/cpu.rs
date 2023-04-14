@@ -1,3 +1,5 @@
+pub mod status;
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
