@@ -25,8 +25,6 @@ mod tests {
 
     #[test]
     pub fn test_assembler() {
-        const CODE: &str = "lda $1234";
-        let assembled = assemble(CODE);
-        assert_eq!(assembled, [0xAD, 0x34, 0x12]);
+        assert_eq!(assemble("lda $1234"), [0xAD, 0x34, 0x12]);
     }
 }
