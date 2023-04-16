@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
-use sres_emulator::cartridge::SnesHeader;
+use sres_emulator::bus::Bus;
+use sres_emulator::bus::SresBus;
 use sres_emulator::trace::Trace;
 
 #[test]
@@ -12,10 +13,12 @@ fn run_krom_test(test_name: &str) {
     let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log"));
     let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));
 
-    let rom = std::fs::read(rom_path).unwrap();
-    let header = SnesHeader::find_header_in_rom(&rom).unwrap();
-    assert_eq!(header.rom_size, rom.len());
-    println!("{:?}", header);
+    let mut bus = SresBus::new();
+    bus.cartridge.load_sfc(&rom_path).unwrap();
+
+    // TODO: Load vector table for initial PC.
+    let first_instruction = bus.read(0x008000);
+    assert_eq!(first_instruction, 0x78);
 
     for (_i, line) in Trace::from_file(&trace_path).unwrap().enumerate() {
         let line = line.unwrap();

@@ -1,9 +1,43 @@
+use std::path::Path;
+
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
 use intbits::Bits;
 use packed_struct::prelude::*;
+
+pub struct Cartridge {
+    pub mapping_mode: MappingMode,
+    pub rom: Vec<u8>,
+}
+
+impl Cartridge {
+    pub fn new() -> Self {
+        Self {
+            mapping_mode: MappingMode::LoRom,
+            rom: Vec::new(),
+        }
+    }
+
+    pub fn load_sfc_data(&mut self, data: &[u8]) -> Result<()> {
+        let header = SnesHeader::find_header_in_rom(data)?;
+        self.mapping_mode = header.mapping_mode;
+        self.rom = data.to_vec();
+        Ok(())
+    }
+
+    pub fn load_sfc(&mut self, path: &Path) -> Result<()> {
+        let data = std::fs::read(path)?;
+        self.load_sfc_data(&data)
+    }
+}
+
+impl Default for Cartridge {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MappingMode {
