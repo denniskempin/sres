@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::bail;
 use packed_struct::prelude::*;
 
-#[derive(PackedStruct, Clone, Debug, Default, Copy, PartialEq, Eq)]
+#[derive(PackedStruct, Clone, Debug, Copy, PartialEq, Eq)]
 #[packed_struct(bit_numbering = "msb0")]
 pub struct StatusFlags {
     pub negative: bool,
@@ -14,6 +14,21 @@ pub struct StatusFlags {
     pub irq_disable: bool,
     pub zero: bool,
     pub carry: bool,
+}
+
+impl Default for StatusFlags {
+    fn default() -> Self {
+        Self {
+            negative: false,
+            overflow: false,
+            accumulator_register_size: true,
+            index_register_size_or_break: true,
+            decimal: false,
+            irq_disable: true,
+            zero: false,
+            carry: false,
+        }
+    }
 }
 
 // Shorthand to convert StatusFlags into and from u8 reqister value
@@ -62,14 +77,14 @@ impl FromStr for StatusFlags {
         }
         let mut chars = s.chars();
         Ok(StatusFlags {
-            negative: chars.next().unwrap() == 'N',
-            overflow: chars.next().unwrap() == 'V',
-            accumulator_register_size: chars.next().unwrap() == 'M',
-            index_register_size_or_break: chars.next().unwrap() == 'X',
-            decimal: chars.next().unwrap() == 'D',
-            irq_disable: chars.next().unwrap() == 'I',
-            zero: chars.next().unwrap() == 'Z',
-            carry: chars.next().unwrap() == 'C',
+            negative: chars.next().unwrap() != '.',
+            overflow: chars.next().unwrap() != '.',
+            accumulator_register_size: chars.next().unwrap() != '.',
+            index_register_size_or_break: chars.next().unwrap() != '.',
+            decimal: chars.next().unwrap() != '.',
+            irq_disable: chars.next().unwrap() != '.',
+            zero: chars.next().unwrap() != '.',
+            carry: chars.next().unwrap() != '.',
         })
     }
 }

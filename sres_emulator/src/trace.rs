@@ -25,9 +25,6 @@ pub struct Trace {
     pub d: u16,
     pub db: u8,
     pub status: StatusFlags,
-    pub vertical: u16,
-    pub horizontal: u16,
-    pub frame: u8,
 }
 
 impl Display for Trace {
@@ -35,11 +32,15 @@ impl Display for Trace {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} {} V:{:>3} H:{:>3} F:{:>2}",
+            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} {}",
             self.pc,
             self.opcode,
             self.operand,
-            if let Some(addr) = self.operand_addr { format!("[{addr:06x}]") } else { "".to_string() },
+            if let Some(addr) = self.operand_addr {
+                format!("[{addr:06x}]")
+            } else {
+                "".to_string()
+            },
             self.a,
             self.x,
             self.y,
@@ -47,9 +48,6 @@ impl Display for Trace {
             self.d,
             self.db,
             &String::from(self.status),
-            self.vertical,
-            self.horizontal,
-            self.frame
         )
     }
 }
@@ -86,15 +84,6 @@ impl FromStr for Trace {
             d: u16::from_str_radix(&s[61..65], 16).with_context(|| "d")?,
             db: u8::from_str_radix(&s[69..71], 16).with_context(|| "db")?,
             status: s[72..80].trim().parse().with_context(|| "status")?,
-            vertical: s[83..86]
-                .trim()
-                .parse::<u16>()
-                .with_context(|| "vertical")?,
-            horizontal: s[89..92]
-                .trim()
-                .parse::<u16>()
-                .with_context(|| "horizontal")?,
-            frame: s[95..].trim().parse().with_context(|| "frame")?,
         })
     }
 }
@@ -136,9 +125,6 @@ mod test {
                 zero: true,
                 carry: true,
             },
-            vertical: 261,
-            horizontal: 236,
-            frame: 32,
         }
     }
 
@@ -152,6 +138,6 @@ mod test {
 
     #[test]
     pub fn test_to_str() {
-        assert_eq!(format!("{}", example_trace()), EXAMPLE_BSNES_TRACE);
+        assert_eq!(format!("{}", example_trace()), EXAMPLE_BSNES_TRACE[0..80]);
     }
 }
