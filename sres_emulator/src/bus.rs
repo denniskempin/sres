@@ -1,11 +1,8 @@
-use intbits::Bits;
-
 use crate::cartridge::Cartridge;
+use crate::memory::Memory;
+use crate::memory::ToAddress;
 
-pub trait Bus {
-    fn read(&mut self, addr: u32) -> u8;
-    fn write(&mut self, addr: u32, val: u8);
-}
+pub trait Bus: Memory {}
 
 pub struct SresBus {
     pub cartridge: Cartridge,
@@ -25,45 +22,49 @@ impl Default for SresBus {
     }
 }
 
-impl Bus for SresBus {
-    fn read(&mut self, addr: u32) -> u8 {
-        let bank = addr.bits(16..24);
-        let offset = addr.bits(0..16);
-        match offset {
+impl Memory for SresBus {
+    fn peek<Addr: ToAddress>(&mut self, addr: Addr) -> Option<u8> {
+        let addr = addr.to_address();
+        match addr.offset {
             0x8000..=0xFFFF => {
-                let rom_addr = ((offset - 0x8000) + bank * 0x8000) as usize;
+                let rom_addr = (addr.offset as usize - 0x8000) + addr.bank as usize * 0x8000;
                 if rom_addr < self.cartridge.rom.len() {
-                    self.cartridge.rom[rom_addr]
+                    Some(self.cartridge.rom[rom_addr])
                 } else {
-                    println!("Invalid read from ${addr:06X} (rom addr ${rom_addr:06X})");
-                    0
+                    println!("Invalid read from ${addr} (rom addr ${rom_addr:06X})");
+                    None
                 }
             }
             _ => {
-                println!("Invalid read from ${addr:06X}");
-                0
+                println!("Invalid read from ${addr}");
+                None
             }
         }
     }
 
-    fn write(&mut self, addr: u32, val: u8) {
-        let bank = addr.bits(16..24);
-        let offset = addr.bits(0..16);
-        match offset {
+    fn read<Addr: ToAddress>(&mut self, addr: Addr) -> u8 {
+        self.peek(addr).unwrap_or(0)
+    }
+
+    fn write<Addr: ToAddress>(&mut self, addr: Addr, val: u8) {
+        let addr = addr.to_address();
+        match addr.offset {
             0x8000..=0xFFFF => {
-                let rom_addr = ((offset - 0x8000) + bank * 0x8000) as usize;
+                let rom_addr = (addr.offset as usize - 0x8000) + addr.bank as usize * 0x8000;
                 if rom_addr < self.cartridge.rom.len() {
                     self.cartridge.rom[rom_addr] = val;
                 } else {
-                    println!("Invalid write to ${addr:06X} (rom addr ${rom_addr:06X})");
+                    println!("Invalid write to ${addr} (rom addr ${rom_addr:06X})");
                 }
             }
             _ => {
-                println!("Invalid write to ${addr:06X}");
+                println!("Invalid write to ${addr}");
             }
         }
     }
 }
+
+impl Bus for SresBus {}
 
 #[cfg(test)]
 mod tests {
