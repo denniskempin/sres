@@ -21,7 +21,7 @@ fn run_krom_test(test_name: &str) {
 
     for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
         // Exit test after unimplemented part
-        if i == 2 {
+        if i == 3 {
             break;
         }
 

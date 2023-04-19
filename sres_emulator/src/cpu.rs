@@ -1,8 +1,8 @@
 pub mod instructions;
 pub mod status;
 
-use self::instructions::build_instruction_table;
-use self::instructions::InstructionTableEntry;
+use self::instructions::build_opcode_table;
+use self::instructions::OpCodeTableEntry;
 use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::trace::Trace;
@@ -31,7 +31,8 @@ pub struct Cpu<BusT: Bus> {
     pub d: u16,
     pub db: u8,
     pub status: StatusFlags,
-    instruction_table: [InstructionTableEntry<BusT>; 256],
+    pub emulation_mode: bool,
+    instruction_table: [OpCodeTableEntry<BusT>; 256],
 }
 
 impl<BusT: Bus> Cpu<BusT> {
@@ -46,7 +47,8 @@ impl<BusT: Bus> Cpu<BusT> {
             db: 0,
             status: StatusFlags::default(),
             pc: 0,
-            instruction_table: build_instruction_table(),
+            emulation_mode: true,
+            instruction_table: build_opcode_table(),
         }
     }
 
