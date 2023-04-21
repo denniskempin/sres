@@ -9,15 +9,17 @@ use anyhow::Context;
 use anyhow::Result;
 
 use crate::cpu::status::StatusFlags;
+use crate::memory::Address;
+use crate::memory::ToAddress;
 
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Trace {
-    pub pc: u32,
-    pub opcode: String,
+    pub pc: Address,
+    pub instruction: String,
     pub operand: String,
-    pub operand_addr: Option<u16>,
+    pub operand_addr: Option<Address>,
     pub a: u16,
     pub x: u16,
     pub y: u16,
@@ -33,11 +35,11 @@ impl Display for Trace {
         write!(
             f,
             "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} {}",
-            self.pc,
-            self.opcode,
+            u32::from(self.pc),
+            self.instruction,
             self.operand,
-            if let Some(addr) = self.operand_addr {
-                format!("[{addr:06x}]")
+            if let Some(addr) = &self.operand_addr {
+                format!("[{:06x}]", u32::from(*addr))
             } else {
                 "".to_string()
             },
@@ -66,15 +68,21 @@ impl FromStr for Trace {
         // 0      7   11          23        33     40     47     54     61      69 72         83    89    95
 
         Ok(Trace {
-            pc: u32::from_str_radix(&s[0..6], 16).with_context(|| "pc")?,
-            opcode: s[7..10].trim().to_string(),
+            pc: u32::from_str_radix(&s[0..6], 16)
+                .with_context(|| "pc")?
+                .to_address(),
+            instruction: s[7..10].trim().to_string(),
             operand: s[11..21].trim().to_string(),
             operand_addr: {
                 let addr = s[23..29].trim();
                 if addr.is_empty() {
                     None
                 } else {
-                    Some(u16::from_str_radix(addr, 16).with_context(|| "operand_addr")?)
+                    Some(
+                        u32::from_str_radix(addr, 16)
+                            .with_context(|| "operand_addr")?
+                            .to_address(),
+                    )
                 }
             },
             a: u16::from_str_radix(&s[33..37], 16).with_context(|| "a")?,
@@ -105,10 +113,16 @@ mod test {
 
     fn example_trace() -> Trace {
         Trace {
-            pc: 0x00e811,
-            opcode: "bpl".to_string(),
+            pc: Address {
+                bank: 0,
+                offset: 0xe811,
+            },
+            instruction: "bpl".to_string(),
             operand: "$e80e".to_string(),
-            operand_addr: Some(0x00e80e),
+            operand_addr: Some(Address {
+                bank: 0,
+                offset: 0xe80e,
+            }),
             a: 0x9901,
             x: 0x0100,
             y: 0x0000,

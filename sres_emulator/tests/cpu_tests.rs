@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use pretty_assertions::assert_eq;
 use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::memory::Memory;
 use sres_emulator::trace::Trace;
 
 #[test]
@@ -21,10 +22,11 @@ fn run_krom_test(test_name: &str) {
 
     for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
         // Exit test after unimplemented part
-        if i == 3 {
+        if i == 6 {
             break;
         }
 
+        println!("Opcode: {:02X}", cpu.bus.read(cpu.pc));
         let expected_line = expected_line.unwrap();
         let actual_line = cpu.trace();
         assert_eq!(actual_line, expected_line);

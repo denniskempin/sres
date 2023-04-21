@@ -23,7 +23,7 @@ impl Default for SresBus {
 }
 
 impl Memory for SresBus {
-    fn peek<Addr: ToAddress>(&mut self, addr: Addr) -> Option<u8> {
+    fn peek<Addr: ToAddress>(&self, addr: Addr) -> Option<u8> {
         let addr = addr.to_address();
         match addr.offset {
             0x8000..=0xFFFF => {

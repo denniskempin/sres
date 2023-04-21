@@ -1,11 +1,29 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::ops::Add;
 
 use intbits::Bits;
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Copy)]
 pub struct Address {
     pub bank: u8,
     pub offset: u16,
+}
+
+impl Add<usize> for Address {
+    type Output = Self;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        let bank = self.bank;
+        let offset = self.offset + rhs as u16;
+        Address { bank, offset }
+    }
+}
+
+impl From<Address> for u32 {
+    fn from(addr: Address) -> Self {
+        (addr.bank as u32) << 16 | (addr.offset as u32)
+    }
 }
 
 pub trait ToAddress {
@@ -33,7 +51,7 @@ impl Display for Address {
 }
 
 pub trait Memory {
-    fn peek<Addr: ToAddress>(&mut self, addr: Addr) -> Option<u8>;
+    fn peek<Addr: ToAddress>(&self, addr: Addr) -> Option<u8>;
     fn read<Addr: ToAddress>(&mut self, addr: Addr) -> u8;
     fn write<Addr: ToAddress>(&mut self, addr: Addr, value: u8);
 }

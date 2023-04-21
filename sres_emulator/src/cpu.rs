@@ -1,10 +1,16 @@
 pub mod instructions;
 pub mod status;
+mod operands;
+
+use intbits::Bits;
 
 use self::instructions::build_opcode_table;
-use self::instructions::OpCodeTableEntry;
+use self::instructions::Instruction;
+use self::instructions::InstructionMeta;
 use self::status::StatusFlags;
 use crate::bus::Bus;
+use crate::memory::Address;
+use crate::memory::ToAddress;
 use crate::trace::Trace;
 
 pub enum NativeVectorTable {
@@ -23,7 +29,7 @@ pub enum EmuVectorTable {
 
 pub struct Cpu<BusT: Bus> {
     pub bus: BusT,
-    pub pc: u32,
+    pub pc: Address,
     pub a: u16,
     pub x: u16,
     pub y: u16,
@@ -32,10 +38,12 @@ pub struct Cpu<BusT: Bus> {
     pub db: u8,
     pub status: StatusFlags,
     pub emulation_mode: bool,
-    instruction_table: [OpCodeTableEntry<BusT>; 256],
+    instruction_table: [Instruction<BusT>; 256],
 }
 
 impl<BusT: Bus> Cpu<BusT> {
+    const STACK_BASE: u32 = 0x100;
+
     pub fn new(bus: BusT) -> Self {
         Self {
             bus,
@@ -46,37 +54,70 @@ impl<BusT: Bus> Cpu<BusT> {
             d: 0,
             db: 0,
             status: StatusFlags::default(),
-            pc: 0,
+            pc: Address::default(),
             emulation_mode: true,
             instruction_table: build_opcode_table(),
         }
     }
 
+    /// Execute the instruction at the given address and return the address of the next instruction.
+    fn execute_instruction(&mut self, addr: Address) -> Address {
+        let opcode = self.bus.read(addr);
+        (self.instruction_table[opcode as usize].execute)(self, addr);
+        addr + self.instruction_table[opcode as usize].size
+    }
+
+    /// Return the instruction meta data for the instruction at the given address
+    fn load_instruction_meta(&mut self, addr: Address) -> (InstructionMeta, Address) {
+        let opcode = self.bus.read(addr);
+        (
+            (self.instruction_table[opcode as usize].meta)(&self.bus, addr),
+            addr + self.instruction_table[opcode as usize].size,
+        )
+    }
+
     pub fn reset(&mut self) {
-        self.pc = u16::from_le_bytes([
-            self.bus.read(EmuVectorTable::Reset as u32),
-            self.bus.read(EmuVectorTable::Reset as u32 + 1),
-        ]) as u32;
+        self.pc = Address {
+            bank: 0,
+            offset: u16::from_le_bytes([
+                self.bus.read(EmuVectorTable::Reset as u32),
+                self.bus.read(EmuVectorTable::Reset as u32 + 1),
+            ]),
+        };
     }
 
     pub fn step(&mut self) {
-        let opcode = self.bus.read(self.pc);
-        self.pc += 1;
-        let instruction = &self.instruction_table[opcode as usize];
-        (instruction.execute)(self);
+        self.pc = self.execute_instruction(self.pc);
     }
 
-    pub fn current_opcode(&mut self) -> &'static str {
-        let opcode = self.bus.read(self.pc);
-        self.instruction_table[opcode as usize].name
+    fn stack_push(&mut self, value: u8) {
+        self.bus.write(Self::STACK_BASE + self.s as u32, value);
+        if self.s == 0 {
+            return;
+        }
+        self.s -= 1;
+    }
+
+    fn stack_pop(&mut self) -> u8 {
+        if self.s == 0xFF {
+            return 0;
+        }
+        self.s += 1;
+        self.bus.read(Self::STACK_BASE + self.s as u32)
+    }
+
+    fn update_negative_zero_flags(&mut self, value: u8) {
+        self.status.negative = value.bit(7);
+        self.status.zero = value == 0;
     }
 
     pub fn trace(&mut self) -> Trace {
+        let (instruction, _) = self.load_instruction_meta(self.pc.to_address());
         Trace {
             pc: self.pc,
-            opcode: self.current_opcode().to_string(),
-            operand: "".to_string(),
-            operand_addr: None,
+            instruction: instruction.name.to_string(),
+            operand: instruction.operand_str.unwrap_or_default(),
+            operand_addr: instruction.operand_addr,
             a: self.a,
             x: self.x,
             y: self.y,
