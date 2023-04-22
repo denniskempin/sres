@@ -22,14 +22,14 @@ fn run_krom_test(test_name: &str) {
 
     for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
         // Exit test after unimplemented part
-        if i == 6 {
+        if i == 12 {
             break;
         }
 
         println!("Opcode: {:02X}", cpu.bus.read(cpu.pc));
         let expected_line = expected_line.unwrap();
         let actual_line = cpu.trace();
-        assert_eq!(actual_line, expected_line);
+        assert_eq!(actual_line.to_string(), expected_line.to_string());
         cpu.step();
     }
 }

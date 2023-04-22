@@ -46,7 +46,7 @@ impl ToAddress for u32 {
 
 impl Display for Address {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "${:02X}:{:04X}", self.bank, self.offset)
+        write!(f, "${:02X}{:04X}", self.bank, self.offset)
     }
 }
 
