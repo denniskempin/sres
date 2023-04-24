@@ -1,9 +1,10 @@
-use super::operands::Operand;
+use super::operands::RegisterSize;
 use super::Cpu;
 use crate::bus::Bus;
-use crate::cpu::operands::ImmediateOperand;
-use crate::cpu::operands::ImmediateOperandA;
-use crate::cpu::operands::ImmediateOperandU16;
+use crate::cpu::operands::AddressMode;
+use crate::cpu::operands::Operand;
+use crate::cpu::operands::Register;
+
 use crate::memory::Address;
 
 pub struct InstructionMeta {
@@ -22,41 +23,40 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         // Operand-less instruction
         ($method: ident) => {
             Instruction::<BusT> {
-                execute: |cpu, operand_addr| {
+                execute: |cpu, instruction_addr| {
                     $method(cpu);
-                    operand_addr
+                    instruction_addr + 1
                 },
-                meta: |_, operand_addr| {
+                meta: |_, instruction_addr| {
                     (
                         InstructionMeta {
                             name: stringify!($method),
                             operand_str: None,
                             operand_addr: None,
                         },
-                        operand_addr,
+                        instruction_addr + 1,
                     )
                 },
             }
         };
         // Instruction with operand
-        ($method: ident, $operand: ident) => {
+        ($method: ident, $address_mode: expr, $register: expr) => {
             Instruction::<BusT> {
-                execute: |cpu, operand_addr| {
-                    let (next_addr, operand) = $operand::new(cpu, operand_addr);
-                    println!(
-                        "Loaded operand at {:}. Next addr: {:}",
-                        operand_addr, next_addr
-                    );
-                    $method(cpu, operand);
+                execute: |cpu, instruction_addr| {
+                    let (operand, next_addr) =
+                        Operand::new(cpu, instruction_addr, $address_mode, $register);
+                    $method(cpu, &operand);
                     next_addr
                 },
-                meta: |cpu, operand_addr| {
-                    let (next_addr, operand) = $operand::new(cpu, operand_addr);
+                meta: |cpu, instruction_addr| {
+                    let (operand, next_addr) =
+                        Operand::new(cpu, instruction_addr, $address_mode, $register);
+                    let (operand_str, operand_addr) = operand.get_meta();
                     (
                         InstructionMeta {
                             name: stringify!($method),
-                            operand_str: operand.format(cpu),
-                            operand_addr: operand.addr(),
+                            operand_str: Some(operand_str),
+                            operand_addr,
                         },
                         next_addr,
                     )
@@ -85,10 +85,11 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0xFB] = instruction!(xce);
     table[0x4B] = instruction!(phk);
     table[0xAB] = instruction!(plb);
-    table[0xE2] = instruction!(sep, ImmediateOperand);
-    table[0xC2] = instruction!(rep, ImmediateOperand);
-    table[0xA9] = instruction!(lda, ImmediateOperandA);
-    table[0xA2] = instruction!(ldx, ImmediateOperandU16);
+    table[0xE2] = instruction!(sep, AddressMode::Immediate, Register::Status);
+    table[0xC2] = instruction!(rep, AddressMode::Immediate, Register::Status);
+    table[0xA9] = instruction!(lda, AddressMode::Immediate, Register::A);
+    table[0xA2] = instruction!(ldx, AddressMode::Immediate, Register::X);
+    table[0x8D] = instruction!(sta, AddressMode::Absolute, Register::A);
     table[0x9A] = instruction!(txs);
     table[0x5B] = instruction!(tcd);
     table
@@ -112,35 +113,39 @@ fn phk(cpu: &mut Cpu<impl Bus>) {
 
 fn plb(cpu: &mut Cpu<impl Bus>) {
     cpu.db = cpu.stack_pop();
-    cpu.update_negative_zero_flags_u8(cpu.db);
+    cpu.update_negative_zero_flags(cpu.db as u16, RegisterSize::U8);
 }
 
-fn rep(cpu: &mut Cpu<impl Bus>, operand: impl Operand) {
-    let data = operand.load() as u8;
+fn rep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let data = operand.load(cpu) as u8;
     cpu.status = (u8::from(cpu.status) & !data).into();
 }
 
-fn sep(cpu: &mut Cpu<impl Bus>, operand: impl Operand) {
-    let data = operand.load() as u8;
+fn sep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let data = operand.load(cpu) as u8;
     cpu.status = (u8::from(cpu.status) | data).into();
 }
 
-fn ldx(cpu: &mut Cpu<impl Bus>, operand: impl Operand) {
-    cpu.x = operand.load();
-    cpu.update_negative_zero_flags_u16(cpu.x);
+fn ldx(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.x = operand.load(cpu);
+    cpu.update_negative_zero_flags(cpu.x, operand.register_size);
 }
 
-fn lda(cpu: &mut Cpu<impl Bus>, operand: impl Operand) {
-    cpu.a = operand.load();
-    cpu.update_negative_zero_flags_u16(cpu.a);
+fn lda(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.a = operand.load(cpu);
+    cpu.update_negative_zero_flags(cpu.a, operand.register_size);
+}
+
+fn sta(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    operand.store(cpu, cpu.a);
 }
 
 fn txs(cpu: &mut Cpu<impl Bus>) {
     cpu.s = cpu.x;
-    cpu.update_negative_zero_flags_u16(cpu.s);
+    cpu.update_negative_zero_flags(cpu.s, RegisterSize::U16);
 }
 
 fn tcd(cpu: &mut Cpu<impl Bus>) {
     cpu.d = cpu.a;
-    cpu.update_negative_zero_flags_u16(cpu.d);
+    cpu.update_negative_zero_flags(cpu.d, RegisterSize::U16);
 }

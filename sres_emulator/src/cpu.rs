@@ -7,6 +7,7 @@ use intbits::Bits;
 use self::instructions::build_opcode_table;
 use self::instructions::Instruction;
 use self::instructions::InstructionMeta;
+use self::operands::RegisterSize;
 use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::memory::Address;
@@ -63,13 +64,13 @@ impl<BusT: Bus> Cpu<BusT> {
     /// Execute the instruction at the given address and return the address of the next instruction.
     fn execute_instruction(&mut self, addr: Address) -> Address {
         let opcode = self.bus.read(addr);
-        (self.instruction_table[opcode as usize].execute)(self, addr + 1)
+        (self.instruction_table[opcode as usize].execute)(self, addr)
     }
 
     /// Return the instruction meta data for the instruction at the given address
     fn load_instruction_meta(&mut self, addr: Address) -> (InstructionMeta, Address) {
         let opcode = self.bus.read(addr);
-        (self.instruction_table[opcode as usize].meta)(self, addr + 1)
+        (self.instruction_table[opcode as usize].meta)(self, addr)
     }
 
     pub fn reset(&mut self) {
@@ -102,13 +103,11 @@ impl<BusT: Bus> Cpu<BusT> {
         self.bus.read(Self::STACK_BASE + self.s as u32)
     }
 
-    fn update_negative_zero_flags_u8(&mut self, value: u8) {
-        self.status.negative = value.bit(7);
-        self.status.zero = value == 0;
-    }
-
-    fn update_negative_zero_flags_u16(&mut self, value: u16) {
-        self.status.negative = value.bit(15);
+    fn update_negative_zero_flags(&mut self, value: u16, register_size: RegisterSize) {
+        self.status.negative = value.bit(match register_size {
+            RegisterSize::U8 => 7,
+            RegisterSize::U16 => 15,
+        });
         self.status.zero = value == 0;
     }
 
