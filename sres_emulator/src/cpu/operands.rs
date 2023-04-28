@@ -6,6 +6,7 @@ use crate::memory::{Address, ToAddress};
 pub enum AddressMode {
     Immediate,
     Absolute,
+    Relative,
 }
 
 #[derive(Clone, Copy)]
@@ -13,7 +14,7 @@ pub enum Register {
     A,
     X,
     Y,
-    Status,
+    FixedU8,
 }
 
 #[derive(Clone, Copy)]
@@ -43,7 +44,7 @@ fn get_register_size(cpu: &Cpu<impl Bus>, register: Register) -> RegisterSize {
     match register {
         Register::A => RegisterSize::from(cpu.status.accumulator_register_size),
         Register::X | Register::Y => RegisterSize::from(cpu.status.index_register_size_or_break),
-        Register::Status => RegisterSize::U8,
+        Register::FixedU8 => RegisterSize::U8,
     }
 }
 
@@ -58,6 +59,7 @@ impl Operand {
         let operand_size = match mode {
             AddressMode::Immediate => register_size,
             AddressMode::Absolute => RegisterSize::U16,
+            AddressMode::Relative => RegisterSize::U8,
         };
         let value = match operand_size {
             RegisterSize::U8 => cpu.bus.peek(instruction_addr + 1).unwrap_or_default() as u32,
@@ -83,8 +85,8 @@ impl Operand {
     pub fn load(&self, cpu: &mut Cpu<impl Bus>) -> u16 {
         match self.mode {
             AddressMode::Immediate => self.value as u16,
-            AddressMode::Absolute => {
-                let addr = self.addr().unwrap();
+            AddressMode::Absolute | AddressMode::Relative => {
+                let addr = self.addr(cpu).unwrap();
                 match self.register_size {
                     RegisterSize::U8 => cpu.bus.read(addr) as u16,
                     RegisterSize::U16 => {
@@ -95,18 +97,28 @@ impl Operand {
         }
     }
 
-    pub fn addr(&self) -> Option<Address> {
+    pub fn addr(&self, cpu: &Cpu<impl Bus>) -> Option<Address> {
         match self.mode {
             AddressMode::Immediate => None,
             AddressMode::Absolute => Some(self.value.to_address()),
+            // TODO: impl Add<Address> for Address
+            AddressMode::Relative => {
+                let relative_addr = self.value as i8;
+                let absolute_addr = if relative_addr > 0 {
+                    u32::from(cpu.pc + 2).wrapping_add(relative_addr.unsigned_abs() as u32)
+                } else {
+                    u32::from(cpu.pc + 2).wrapping_sub(relative_addr.unsigned_abs() as u32)
+                };
+                Some(absolute_addr.to_address())
+            }
         }
     }
 
     pub fn store(&self, cpu: &mut Cpu<impl Bus>, value: u16) {
         match self.mode {
             AddressMode::Immediate => (),
-            AddressMode::Absolute => {
-                let addr = self.addr().unwrap();
+            AddressMode::Absolute | AddressMode::Relative => {
+                let addr = self.addr(cpu).unwrap();
                 match self.register_size {
                     RegisterSize::U8 => cpu.bus.write(addr, value as u8),
                     RegisterSize::U16 => {
@@ -119,13 +131,15 @@ impl Operand {
         }
     }
 
-    pub fn get_meta(&self) -> (String, Option<Address>) {
+    pub fn get_meta(&self, cpu: &Cpu<impl Bus>) -> (String, Option<Address>) {
         match self.mode {
             AddressMode::Immediate => match self.register_size {
                 RegisterSize::U8 => (format!("#${:02x}", self.value), None),
                 RegisterSize::U16 => (format!("#${:04x}", self.value), None),
             },
-            AddressMode::Absolute => (format!("${:04x}", self.value), self.addr()),
+            AddressMode::Absolute | AddressMode::Relative => {
+                (self.addr(cpu).unwrap().to_string(), self.addr(cpu))
+            }
         }
     }
 }

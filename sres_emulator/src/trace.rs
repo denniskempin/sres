@@ -14,7 +14,7 @@ use crate::memory::ToAddress;
 
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Trace {
     pub pc: Address,
     pub instruction: String,

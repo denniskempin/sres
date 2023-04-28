@@ -51,7 +51,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                 meta: |cpu, instruction_addr| {
                     let (operand, next_addr) =
                         Operand::new(cpu, instruction_addr, $address_mode, $register);
-                    let (operand_str, operand_addr) = operand.get_meta();
+                    let (operand_str, operand_addr) = operand.get_meta(cpu);
                     (
                         InstructionMeta {
                             name: stringify!($method),
@@ -85,13 +85,16 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0xFB] = instruction!(xce);
     table[0x4B] = instruction!(phk);
     table[0xAB] = instruction!(plb);
-    table[0xE2] = instruction!(sep, AddressMode::Immediate, Register::Status);
-    table[0xC2] = instruction!(rep, AddressMode::Immediate, Register::Status);
+    table[0xE2] = instruction!(sep, AddressMode::Immediate, Register::FixedU8);
+    table[0xC2] = instruction!(rep, AddressMode::Immediate, Register::FixedU8);
     table[0xA9] = instruction!(lda, AddressMode::Immediate, Register::A);
     table[0xA2] = instruction!(ldx, AddressMode::Immediate, Register::X);
     table[0x8D] = instruction!(sta, AddressMode::Absolute, Register::A);
+    table[0x9C] = instruction!(stz, AddressMode::Absolute, Register::FixedU8);
     table[0x9A] = instruction!(txs);
     table[0x5B] = instruction!(tcd);
+    table[0xCA] = instruction!(dex);
+    table[0xD0] = instruction!(bne, AddressMode::Relative, Register::FixedU8);
     table
 }
 
@@ -140,9 +143,29 @@ fn sta(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, cpu.a);
 }
 
+fn stz(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    operand.store(cpu, 0);
+}
+
 fn txs(cpu: &mut Cpu<impl Bus>) {
     cpu.s = cpu.x;
     cpu.update_negative_zero_flags(cpu.s, RegisterSize::U16);
+}
+
+fn dex(cpu: &mut Cpu<impl Bus>) {
+    cpu.x = cpu.x.wrapping_sub(1);
+    cpu.update_negative_zero_flags(cpu.s, RegisterSize::U16);
+}
+
+fn dey(cpu: &mut Cpu<impl Bus>) {
+    cpu.x = cpu.x.wrapping_sub(1);
+    cpu.update_negative_zero_flags(cpu.s, RegisterSize::U16);
+}
+
+fn bne(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if !cpu.status.zero {
+        cpu.pc = operand.addr(cpu).unwrap();
+    }
 }
 
 fn tcd(cpu: &mut Cpu<impl Bus>) {
