@@ -5,32 +5,11 @@ use crate::memory::ToAddress;
 
 #[derive(Clone, Copy)]
 pub enum AddressMode {
-    Immediate,
+    ImmediateU8,
+    ImmediateA,  // Immediate value based on accumulator register size
+    ImmediateXY, // Immediate value based on index register size
     Absolute,
     Relative,
-}
-
-#[derive(Clone, Copy)]
-pub enum Register {
-    A,
-    X,
-    FixedU8,
-}
-
-#[derive(Clone, Copy)]
-pub enum RegisterSize {
-    U8,
-    U16,
-}
-
-impl From<bool> for RegisterSize {
-    fn from(b: bool) -> Self {
-        if b {
-            RegisterSize::U8
-        } else {
-            RegisterSize::U16
-        }
-    }
 }
 
 #[derive(Copy, Clone)]
@@ -41,36 +20,14 @@ pub enum Operand {
     Relative(i8, Address),
 }
 
-fn get_register_size(cpu: &Cpu<impl Bus>, register: Register) -> RegisterSize {
-    match register {
-        Register::A => RegisterSize::from(cpu.status.accumulator_register_size),
-        Register::X => RegisterSize::from(cpu.status.index_register_size_or_break),
-        Register::FixedU8 => RegisterSize::U8,
-    }
-}
-
 impl Operand {
     #[inline]
     pub fn decode(
         cpu: &Cpu<impl Bus>,
         instruction_addr: Address,
         mode: AddressMode,
-        register: Register,
     ) -> (Self, Address) {
         match mode {
-            AddressMode::Immediate => match get_register_size(cpu, register) {
-                RegisterSize::U8 => (
-                    Operand::ImmediateU8(cpu.bus.peek(instruction_addr + 1).unwrap_or_default()),
-                    instruction_addr + 2,
-                ),
-
-                RegisterSize::U16 => (
-                    Operand::ImmediateU16(
-                        cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default(),
-                    ),
-                    instruction_addr + 3,
-                ),
-            },
             AddressMode::Absolute => (
                 Operand::Absolute(
                     (cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default() as u32)
@@ -90,8 +47,62 @@ impl Operand {
                     instruction_addr + 2,
                 )
             }
+            AddressMode::ImmediateU8 => (
+                Operand::ImmediateU8(cpu.bus.peek(instruction_addr + 1).unwrap_or_default()),
+                instruction_addr + 2,
+            ),
+            AddressMode::ImmediateA => {
+                if cpu.status.accumulator_register_size {
+                    (
+                        Operand::ImmediateU8(
+                            cpu.bus.peek(instruction_addr + 1).unwrap_or_default(),
+                        ),
+                        instruction_addr + 2,
+                    )
+                } else {
+                    (
+                        Operand::ImmediateU16(
+                            cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default(),
+                        ),
+                        instruction_addr + 3,
+                    )
+                }
+            }
+            AddressMode::ImmediateXY => {
+                if cpu.status.index_register_size_or_break {
+                    (
+                        Operand::ImmediateU8(
+                            cpu.bus.peek(instruction_addr + 1).unwrap_or_default(),
+                        ),
+                        instruction_addr + 2,
+                    )
+                } else {
+                    (
+                        Operand::ImmediateU16(
+                            cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default(),
+                        ),
+                        instruction_addr + 3,
+                    )
+                }
+            }
         }
     }
+
+    /*
+               AddressMode::Immediate => match get_register_size(cpu, register) {
+                   RegisterSize::U8 => (
+                       Operand::ImmediateU8(cpu.bus.peek(instruction_addr + 1).unwrap_or_default()),
+                       instruction_addr + 2,
+                   ),
+
+                   RegisterSize::U16 => (
+                       Operand::ImmediateU16(
+                           cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default(),
+                       ),
+                       instruction_addr + 3,
+                   ),
+               },
+    */
 
     #[inline]
     pub fn addr(&self) -> Option<Address> {

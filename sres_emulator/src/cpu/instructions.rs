@@ -2,7 +2,6 @@ use super::Cpu;
 use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
-use crate::cpu::operands::Register;
 use crate::memory::Address;
 
 pub struct InstructionMeta {
@@ -38,17 +37,16 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
             }
         };
         // Instruction with operand
-        ($method: ident, $address_mode: expr, $register: expr) => {
+        ($method: ident, $address_mode: expr) => {
             Instruction::<BusT> {
                 execute: |cpu| {
-                    let (operand, next_addr) =
-                        Operand::decode(cpu, cpu.pc, $address_mode, $register);
+                    let (operand, next_addr) = Operand::decode(cpu, cpu.pc, $address_mode);
                     cpu.pc = next_addr;
                     $method(cpu, &operand);
                 },
                 meta: |cpu, instruction_addr| {
                     let (operand, next_addr) =
-                        Operand::decode(cpu, instruction_addr, $address_mode, $register);
+                        Operand::decode(cpu, instruction_addr, $address_mode);
                     (
                         InstructionMeta {
                             operation: stringify!($method),
@@ -82,20 +80,20 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0xFB] = instruction!(xce);
     table[0x4B] = instruction!(phk);
     table[0xAB] = instruction!(plb);
-    table[0xE2] = instruction!(sep, AddressMode::Immediate, Register::FixedU8);
-    table[0xC2] = instruction!(rep, AddressMode::Immediate, Register::FixedU8);
-    table[0xA9] = instruction!(lda, AddressMode::Immediate, Register::A);
-    table[0xA2] = instruction!(ldx, AddressMode::Immediate, Register::X);
-    table[0xA0] = instruction!(ldy, AddressMode::Immediate, Register::X);
-    table[0x8D] = instruction!(sta, AddressMode::Absolute, Register::A);
-    table[0x8E] = instruction!(stx, AddressMode::Absolute, Register::X);
-    table[0x8C] = instruction!(sty, AddressMode::Absolute, Register::X);
-    table[0x9C] = instruction!(stz, AddressMode::Absolute, Register::FixedU8);
+    table[0xE2] = instruction!(sep, AddressMode::ImmediateU8);
+    table[0xC2] = instruction!(rep, AddressMode::ImmediateU8);
+    table[0xA9] = instruction!(lda, AddressMode::ImmediateA);
+    table[0xA2] = instruction!(ldx, AddressMode::ImmediateXY);
+    table[0xA0] = instruction!(ldy, AddressMode::ImmediateXY);
+    table[0x8D] = instruction!(sta, AddressMode::Absolute);
+    table[0x8E] = instruction!(stx, AddressMode::Absolute);
+    table[0x8C] = instruction!(sty, AddressMode::Absolute);
+    table[0x9C] = instruction!(stz, AddressMode::Absolute);
     table[0x9A] = instruction!(txs);
     table[0x5B] = instruction!(tcd);
     table[0xCA] = instruction!(dex);
     table[0xEA] = instruction!(nop);
-    table[0xD0] = instruction!(bne, AddressMode::Relative, Register::FixedU8);
+    table[0xD0] = instruction!(bne, AddressMode::Relative);
     table
 }
 
