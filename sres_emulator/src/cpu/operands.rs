@@ -1,6 +1,7 @@
 use super::Cpu;
 use crate::bus::Bus;
-use crate::memory::{Address, ToAddress};
+use crate::memory::Address;
+use crate::memory::ToAddress;
 
 #[derive(Clone, Copy)]
 pub enum AddressMode {
@@ -13,7 +14,6 @@ pub enum AddressMode {
 pub enum Register {
     A,
     X,
-    Y,
     FixedU8,
 }
 
@@ -33,112 +33,109 @@ impl From<bool> for RegisterSize {
     }
 }
 
-#[derive(Clone)]
-pub struct Operand {
-    pub value: u32,
-    pub mode: AddressMode,
-    pub register_size: RegisterSize,
+#[derive(Copy, Clone)]
+pub enum Operand {
+    ImmediateU8(u8),
+    ImmediateU16(u16),
+    Absolute(Address),
+    Relative(i8, Address),
 }
 
 fn get_register_size(cpu: &Cpu<impl Bus>, register: Register) -> RegisterSize {
     match register {
         Register::A => RegisterSize::from(cpu.status.accumulator_register_size),
-        Register::X | Register::Y => RegisterSize::from(cpu.status.index_register_size_or_break),
+        Register::X => RegisterSize::from(cpu.status.index_register_size_or_break),
         Register::FixedU8 => RegisterSize::U8,
     }
 }
 
 impl Operand {
-    pub fn new(
+    #[inline]
+    pub fn decode(
         cpu: &Cpu<impl Bus>,
         instruction_addr: Address,
         mode: AddressMode,
         register: Register,
     ) -> (Self, Address) {
-        let register_size = get_register_size(cpu, register);
-        let operand_size = match mode {
-            AddressMode::Immediate => register_size,
-            AddressMode::Absolute => RegisterSize::U16,
-            AddressMode::Relative => RegisterSize::U8,
-        };
-        let value = match operand_size {
-            RegisterSize::U8 => cpu.bus.peek(instruction_addr + 1).unwrap_or_default() as u32,
-            RegisterSize::U16 => u16::from_le_bytes([
-                cpu.bus.peek(instruction_addr + 1).unwrap_or_default(),
-                cpu.bus.peek(instruction_addr + 2).unwrap_or_default(),
-            ]) as u32,
-        };
-        let instruction_size = match operand_size {
-            RegisterSize::U8 => 2,
-            RegisterSize::U16 => 3,
-        };
-        (
-            Self {
-                value,
-                mode,
-                register_size,
+        match mode {
+            AddressMode::Immediate => match get_register_size(cpu, register) {
+                RegisterSize::U8 => (
+                    Operand::ImmediateU8(cpu.bus.peek(instruction_addr + 1).unwrap_or_default()),
+                    instruction_addr + 2,
+                ),
+
+                RegisterSize::U16 => (
+                    Operand::ImmediateU16(
+                        cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default(),
+                    ),
+                    instruction_addr + 3,
+                ),
             },
-            instruction_addr + instruction_size,
-        )
-    }
-
-    pub fn load(&self, cpu: &mut Cpu<impl Bus>) -> u16 {
-        match self.mode {
-            AddressMode::Immediate => self.value as u16,
-            AddressMode::Absolute | AddressMode::Relative => {
-                let addr = self.addr(cpu).unwrap();
-                match self.register_size {
-                    RegisterSize::U8 => cpu.bus.read(addr) as u16,
-                    RegisterSize::U16 => {
-                        u16::from_le_bytes([cpu.bus.read(addr), cpu.bus.read(addr + 1)])
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn addr(&self, cpu: &Cpu<impl Bus>) -> Option<Address> {
-        match self.mode {
-            AddressMode::Immediate => None,
-            AddressMode::Absolute => Some(self.value.to_address()),
-            // TODO: impl Add<Address> for Address
+            AddressMode::Absolute => (
+                Operand::Absolute(
+                    (cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default() as u32)
+                        .to_address(),
+                ),
+                instruction_addr + 3,
+            ),
             AddressMode::Relative => {
-                let relative_addr = self.value as i8;
-                let absolute_addr = if relative_addr > 0 {
+                let relative_addr = cpu.bus.peek(instruction_addr + 1).unwrap_or_default() as i8;
+                let operand_addr = if relative_addr > 0 {
                     u32::from(cpu.pc + 2).wrapping_add(relative_addr.unsigned_abs() as u32)
                 } else {
                     u32::from(cpu.pc + 2).wrapping_sub(relative_addr.unsigned_abs() as u32)
                 };
-                Some(absolute_addr.to_address())
+                (
+                    Operand::Relative(relative_addr, operand_addr.to_address()),
+                    instruction_addr + 2,
+                )
             }
         }
     }
 
-    pub fn store(&self, cpu: &mut Cpu<impl Bus>, value: u16) {
-        match self.mode {
-            AddressMode::Immediate => (),
-            AddressMode::Absolute | AddressMode::Relative => {
-                let addr = self.addr(cpu).unwrap();
-                match self.register_size {
-                    RegisterSize::U8 => cpu.bus.write(addr, value as u8),
-                    RegisterSize::U16 => {
-                        let bytes = value.to_le_bytes();
-                        cpu.bus.write(addr, bytes[0]);
-                        cpu.bus.write(addr + 1, bytes[1]);
-                    }
-                }
-            }
+    #[inline]
+    pub fn addr(&self) -> Option<Address> {
+        match self {
+            Self::ImmediateU8(_) => None,
+            Self::ImmediateU16(_) => None,
+            Self::Absolute(addr) | Self::Relative(_, addr) => Some(*addr),
         }
     }
 
-    pub fn get_meta(&self, cpu: &Cpu<impl Bus>) -> (String, Option<Address>) {
-        match self.mode {
-            AddressMode::Immediate => match self.register_size {
-                RegisterSize::U8 => (format!("#${:02x}", self.value), None),
-                RegisterSize::U16 => (format!("#${:04x}", self.value), None),
-            },
-            AddressMode::Absolute | AddressMode::Relative => {
-                (self.addr(cpu).unwrap().to_string(), self.addr(cpu))
+    #[inline]
+    pub fn load(&self, cpu: &mut Cpu<impl Bus>) -> u8 {
+        match self {
+            Self::ImmediateU8(value) => *value,
+            Self::ImmediateU16(_) => panic!("loading u8 from u16 operand"),
+            Self::Absolute(addr) | Self::Relative(_, addr) => cpu.bus.read(*addr),
+        }
+    }
+
+    #[inline]
+    pub fn load_u16(&self, cpu: &mut Cpu<impl Bus>) -> u16 {
+        match self {
+            Self::ImmediateU8(_) => panic!("loading u16 from u8 operand"),
+            Self::ImmediateU16(value) => *value,
+            Self::Absolute(addr) | Self::Relative(_, addr) => cpu.bus.read_u16(*addr),
+        }
+    }
+
+    #[inline]
+    pub fn store(&self, cpu: &mut Cpu<impl Bus>, value: u8) {
+        match self {
+            Self::ImmediateU8(_) => panic!("writing to immediate operand"),
+            Self::ImmediateU16(_) => panic!("writing to immediate operand"),
+            Self::Absolute(addr) | Self::Relative(_, addr) => cpu.bus.write(*addr, value),
+        }
+    }
+
+    #[inline]
+    pub fn format(&self) -> String {
+        match self {
+            Self::ImmediateU8(value) => format!("#${:02x}", value),
+            Self::ImmediateU16(value) => format!("#${:04x}", value),
+            Self::Absolute(addr) | Self::Relative(_, addr) => {
+                format!("${:04x}", u32::from(*addr))
             }
         }
     }

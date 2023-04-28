@@ -31,11 +31,13 @@ impl Memory for SresBus {
                 if rom_addr < self.cartridge.rom.len() {
                     Some(self.cartridge.rom[rom_addr])
                 } else {
+                    #[cfg(feature = "debug_log")]
                     println!("Invalid read from ${addr} (rom addr ${rom_addr:06X})");
                     None
                 }
             }
             _ => {
+                #[cfg(feature = "debug_log")]
                 println!("Invalid read from ${addr}");
                 None
             }
@@ -48,16 +50,19 @@ impl Memory for SresBus {
 
     fn write<Addr: ToAddress>(&mut self, addr: Addr, val: u8) {
         let addr = addr.to_address();
+        #[allow(clippy::single_match)]
         match addr.offset {
             0x8000..=0xFFFF => {
                 let rom_addr = (addr.offset as usize - 0x8000) + addr.bank as usize * 0x8000;
                 if rom_addr < self.cartridge.rom.len() {
                     self.cartridge.rom[rom_addr] = val;
                 } else {
+                    #[cfg(feature = "debug_log")]
                     println!("Invalid write to ${addr} (rom addr ${rom_addr:06X})");
                 }
             }
             _ => {
+                #[cfg(feature = "debug_log")]
                 println!("Invalid write to ${addr}");
             }
         }

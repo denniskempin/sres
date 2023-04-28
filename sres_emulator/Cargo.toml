@@ -8,24 +8,25 @@ rust-version = "1.65"
 [lib]
 bench = false
 
+[features]
+debug_log = []
+
 [dependencies]
 anyhow = "1.0"
-argh = "0.1"
-bincode =  { version = "2.0.0-rc.2", features = ["derive"] }
-egui = "0.20"
-getrandom = { version = "0.2", features = ["js"] }
-image = { version = "0.24", features = ["png"] }
 intbits = "0.2"
 itertools = "0.10"
 lazy_static = "1"
 packed_struct = "0.10"
-regex = "1.6"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 thiserror = "1.0"
-tracing = "0.1"
 snafu = "*"
 
 [dev-dependencies]
 tempfile = "*"
 pretty_assertions = "*"
+criterion = "*"
+
+
+[[bench]]
+name = "cpu_benches"
+harness = false
+

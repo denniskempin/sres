@@ -1,14 +1,12 @@
-use super::operands::RegisterSize;
 use super::Cpu;
 use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
 use crate::cpu::operands::Register;
-
 use crate::memory::Address;
 
 pub struct InstructionMeta {
-    pub name: &'static str,
+    pub operation: &'static str,
     pub operand_str: Option<String>,
     pub operand_addr: Option<Address>,
 }
@@ -30,7 +28,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                 meta: |_, instruction_addr| {
                     (
                         InstructionMeta {
-                            name: stringify!($method),
+                            operation: stringify!($method),
                             operand_str: None,
                             operand_addr: None,
                         },
@@ -44,19 +42,18 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
             Instruction::<BusT> {
                 execute: |cpu, instruction_addr| {
                     let (operand, next_addr) =
-                        Operand::new(cpu, instruction_addr, $address_mode, $register);
+                        Operand::decode(cpu, instruction_addr, $address_mode, $register);
                     $method(cpu, &operand);
                     next_addr
                 },
                 meta: |cpu, instruction_addr| {
                     let (operand, next_addr) =
-                        Operand::new(cpu, instruction_addr, $address_mode, $register);
-                    let (operand_str, operand_addr) = operand.get_meta(cpu);
+                        Operand::decode(cpu, instruction_addr, $address_mode, $register);
                     (
                         InstructionMeta {
-                            name: stringify!($method),
-                            operand_str: Some(operand_str),
-                            operand_addr,
+                            operation: stringify!($method),
+                            operand_str: Some(operand.format()),
+                            operand_addr: operand.addr(),
                         },
                         next_addr,
                     )
@@ -72,7 +69,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         meta: |_, addr| {
             (
                 InstructionMeta {
-                    name: "ill",
+                    operation: "ill",
                     operand_str: None,
                     operand_addr: None,
                 },
@@ -116,31 +113,41 @@ fn phk(cpu: &mut Cpu<impl Bus>) {
 
 fn plb(cpu: &mut Cpu<impl Bus>) {
     cpu.db = cpu.stack_pop();
-    cpu.update_negative_zero_flags(cpu.db as u16, RegisterSize::U8);
+    cpu.update_negative_zero_flags(cpu.db);
 }
 
 fn rep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let data = operand.load(cpu) as u8;
+    let data = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) & !data).into();
 }
 
 fn sep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let data = operand.load(cpu) as u8;
+    let data = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) | data).into();
 }
 
 fn ldx(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.x = operand.load(cpu);
-    cpu.update_negative_zero_flags(cpu.x, operand.register_size);
+    if cpu.status.index_register_size_or_break {
+        cpu.x = operand.load(cpu) as u16;
+        cpu.update_negative_zero_flags(cpu.x as u8);
+    } else {
+        cpu.x = operand.load_u16(cpu);
+        cpu.update_negative_zero_flags_u16(cpu.x);
+    }
 }
 
 fn lda(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.a = operand.load(cpu);
-    cpu.update_negative_zero_flags(cpu.a, operand.register_size);
+    if cpu.status.accumulator_register_size {
+        cpu.a = operand.load(cpu) as u16;
+        cpu.update_negative_zero_flags(cpu.a as u8);
+    } else {
+        cpu.a = operand.load_u16(cpu);
+        cpu.update_negative_zero_flags_u16(cpu.a);
+    }
 }
 
 fn sta(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, cpu.a);
+    operand.store(cpu, cpu.a as u8);
 }
 
 fn stz(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -149,26 +156,21 @@ fn stz(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn txs(cpu: &mut Cpu<impl Bus>) {
     cpu.s = cpu.x;
-    cpu.update_negative_zero_flags(cpu.s, RegisterSize::U16);
+    cpu.update_negative_zero_flags_u16(cpu.s);
 }
 
 fn dex(cpu: &mut Cpu<impl Bus>) {
     cpu.x = cpu.x.wrapping_sub(1);
-    cpu.update_negative_zero_flags(cpu.s, RegisterSize::U16);
-}
-
-fn dey(cpu: &mut Cpu<impl Bus>) {
-    cpu.x = cpu.x.wrapping_sub(1);
-    cpu.update_negative_zero_flags(cpu.s, RegisterSize::U16);
+    cpu.update_negative_zero_flags_u16(cpu.x);
 }
 
 fn bne(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.zero {
-        cpu.pc = operand.addr(cpu).unwrap();
+        cpu.pc = operand.addr().unwrap();
     }
 }
 
 fn tcd(cpu: &mut Cpu<impl Bus>) {
     cpu.d = cpu.a;
-    cpu.update_negative_zero_flags(cpu.d, RegisterSize::U16);
+    cpu.update_negative_zero_flags_u16(cpu.d);
 }

@@ -7,7 +7,6 @@ use intbits::Bits;
 use self::instructions::build_opcode_table;
 use self::instructions::Instruction;
 use self::instructions::InstructionMeta;
-use self::operands::RegisterSize;
 use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::memory::Address;
@@ -103,11 +102,13 @@ impl<BusT: Bus> Cpu<BusT> {
         self.bus.read(Self::STACK_BASE + self.s as u32)
     }
 
-    fn update_negative_zero_flags(&mut self, value: u16, register_size: RegisterSize) {
-        self.status.negative = value.bit(match register_size {
-            RegisterSize::U8 => 7,
-            RegisterSize::U16 => 15,
-        });
+    fn update_negative_zero_flags(&mut self, value: u8) {
+        self.status.negative = value.bit(7);
+        self.status.zero = value == 0;
+    }
+
+    fn update_negative_zero_flags_u16(&mut self, value: u16) {
+        self.status.negative = value.bit(15);
         self.status.zero = value == 0;
     }
 
@@ -115,7 +116,7 @@ impl<BusT: Bus> Cpu<BusT> {
         let (instruction, _) = self.load_instruction_meta(self.pc.to_address());
         Trace {
             pc: self.pc,
-            instruction: instruction.name.to_string(),
+            instruction: instruction.operation.to_string(),
             operand: instruction.operand_str.unwrap_or_default(),
             operand_addr: instruction.operand_addr,
             a: self.a,
