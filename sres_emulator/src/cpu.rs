@@ -60,12 +60,6 @@ impl<BusT: Bus> Cpu<BusT> {
         }
     }
 
-    /// Execute the instruction at the given address and return the address of the next instruction.
-    fn execute_instruction(&mut self, addr: Address) -> Address {
-        let opcode = self.bus.read(addr);
-        (self.instruction_table[opcode as usize].execute)(self, addr)
-    }
-
     /// Return the instruction meta data for the instruction at the given address
     fn load_instruction_meta(&mut self, addr: Address) -> (InstructionMeta, Address) {
         let opcode = self.bus.read(addr);
@@ -83,7 +77,8 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
-        self.pc = self.execute_instruction(self.pc);
+        let opcode = self.bus.read(self.pc);
+        (self.instruction_table[opcode as usize].execute)(self)
     }
 
     fn stack_push(&mut self, value: u8) {

@@ -130,6 +130,15 @@ impl Operand {
     }
 
     #[inline]
+    pub fn store_u16(&self, cpu: &mut Cpu<impl Bus>, value: u16) {
+        match self {
+            Self::ImmediateU8(_) => panic!("writing to immediate operand"),
+            Self::ImmediateU16(_) => panic!("writing to immediate operand"),
+            Self::Absolute(addr) | Self::Relative(_, addr) => cpu.bus.write_u16(*addr, value),
+        }
+    }
+
+    #[inline]
     pub fn format(&self) -> String {
         match self {
             Self::ImmediateU8(value) => format!("#${:02x}", value),

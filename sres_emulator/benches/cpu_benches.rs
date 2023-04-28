@@ -17,11 +17,10 @@ fn criterion_benchmark(c: &mut Criterion) {
                 Cpu::new(bus)
             },
             |cpu: &mut Cpu<SresBus>| {
-                // Repeat 1000 times
-                for _ in 0..1000 {
+                for _ in 0..100 {
                     cpu.reset();
-                    // Execute first 90 instructions (That's all that's supported so far)
-                    for _ in 0..90 {
+                    // Execute first 985 instructions (That's all that's supported so far)
+                    for _ in 0..985 {
                         cpu.step();
                     }
                 }

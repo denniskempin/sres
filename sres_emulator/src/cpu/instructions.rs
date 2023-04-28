@@ -12,7 +12,7 @@ pub struct InstructionMeta {
 }
 
 pub struct Instruction<BusT: Bus> {
-    pub execute: fn(&mut Cpu<BusT>, Address) -> Address,
+    pub execute: fn(&mut Cpu<BusT>),
     pub meta: fn(&Cpu<BusT>, Address) -> (InstructionMeta, Address),
 }
 
@@ -21,9 +21,9 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         // Operand-less instruction
         ($method: ident) => {
             Instruction::<BusT> {
-                execute: |cpu, instruction_addr| {
+                execute: |cpu| {
                     $method(cpu);
-                    instruction_addr + 1
+                    cpu.pc = cpu.pc + 1;
                 },
                 meta: |_, instruction_addr| {
                     (
@@ -40,11 +40,11 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         // Instruction with operand
         ($method: ident, $address_mode: expr, $register: expr) => {
             Instruction::<BusT> {
-                execute: |cpu, instruction_addr| {
+                execute: |cpu| {
                     let (operand, next_addr) =
-                        Operand::decode(cpu, instruction_addr, $address_mode, $register);
+                        Operand::decode(cpu, cpu.pc, $address_mode, $register);
+                    cpu.pc = next_addr;
                     $method(cpu, &operand);
-                    next_addr
                 },
                 meta: |cpu, instruction_addr| {
                     let (operand, next_addr) =
@@ -63,7 +63,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     }
 
     let mut table = [(); 256].map(|_| Instruction::<BusT> {
-        execute: |_, _| {
+        execute: |_| {
             panic!("Unimplemented instruction");
         },
         meta: |_, addr| {
@@ -86,14 +86,20 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0xC2] = instruction!(rep, AddressMode::Immediate, Register::FixedU8);
     table[0xA9] = instruction!(lda, AddressMode::Immediate, Register::A);
     table[0xA2] = instruction!(ldx, AddressMode::Immediate, Register::X);
+    table[0xA0] = instruction!(ldy, AddressMode::Immediate, Register::X);
     table[0x8D] = instruction!(sta, AddressMode::Absolute, Register::A);
+    table[0x8E] = instruction!(stx, AddressMode::Absolute, Register::X);
+    table[0x8C] = instruction!(sty, AddressMode::Absolute, Register::X);
     table[0x9C] = instruction!(stz, AddressMode::Absolute, Register::FixedU8);
     table[0x9A] = instruction!(txs);
     table[0x5B] = instruction!(tcd);
     table[0xCA] = instruction!(dex);
+    table[0xEA] = instruction!(nop);
     table[0xD0] = instruction!(bne, AddressMode::Relative, Register::FixedU8);
     table
 }
+
+fn nop(_: &mut Cpu<impl Bus>) {}
 
 fn sei(cpu: &mut Cpu<impl Bus>) {
     cpu.status.irq_disable = true;
@@ -136,6 +142,16 @@ fn ldx(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     }
 }
 
+fn ldy(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if cpu.status.index_register_size_or_break {
+        cpu.y = operand.load(cpu) as u16;
+        cpu.update_negative_zero_flags(cpu.y as u8);
+    } else {
+        cpu.y = operand.load_u16(cpu);
+        cpu.update_negative_zero_flags_u16(cpu.y);
+    }
+}
+
 fn lda(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.accumulator_register_size {
         cpu.a = operand.load(cpu) as u16;
@@ -148,6 +164,22 @@ fn lda(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn sta(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, cpu.a as u8);
+}
+
+fn sty(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if cpu.status.index_register_size_or_break {
+        operand.store(cpu, cpu.y as u8);
+    } else {
+        operand.store_u16(cpu, cpu.y);
+    }
+}
+
+fn stx(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if cpu.status.index_register_size_or_break {
+        operand.store(cpu, cpu.x as u8);
+    } else {
+        operand.store_u16(cpu, cpu.x);
+    }
 }
 
 fn stz(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
