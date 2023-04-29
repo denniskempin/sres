@@ -84,6 +84,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0xE2] = instruction!(sep, AddressMode::ImmediateU8);
     table[0xC2] = instruction!(rep, AddressMode::ImmediateU8);
     table[0xA9] = instruction!(lda, AddressMode::ImmediateA);
+    table[0xBD] = instruction!(lda, AddressMode::AbsoluteXIndexed);
     table[0xA2] = instruction!(ldx, AddressMode::ImmediateXY);
     table[0xA0] = instruction!(ldy, AddressMode::ImmediateXY);
     table[0x8D] = instruction!(sta, AddressMode::Absolute);
@@ -94,6 +95,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x9A] = instruction!(txs);
     table[0x5B] = instruction!(tcd);
     table[0xCA] = instruction!(dex);
+    table[0xE8] = instruction!(inx);
     table[0xEA] = instruction!(nop);
     table[0x2C] = instruction!(bit, AddressMode::Absolute);
     table[0xD0] = instruction!(bne, AddressMode::Relative);
@@ -191,6 +193,11 @@ fn stz(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 fn txs(cpu: &mut Cpu<impl Bus>) {
     cpu.s = cpu.x;
     cpu.update_negative_zero_flags_u16(cpu.s);
+}
+
+fn inx(cpu: &mut Cpu<impl Bus>) {
+    cpu.x = cpu.x.wrapping_add(1);
+    cpu.update_negative_zero_flags_u16(cpu.x);
 }
 
 fn dex(cpu: &mut Cpu<impl Bus>) {

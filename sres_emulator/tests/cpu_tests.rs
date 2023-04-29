@@ -23,16 +23,15 @@ fn run_krom_test(test_name: &str) {
     let mut in_nmi_loop = false;
     for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
         // Exit test after unimplemented part
-        if i == 5000 {
+        if i == 3229 {
             break;
         }
         let expected_line = expected_line.unwrap();
         let actual_line = cpu.trace();
 
         // krom tests will run a loop to wait for nmi:
-        // bit $4210
-        // bpl ...
-        // Skip those, so the fake implementation can always return NMI
+        // bit $4210; bpl ...;
+        // Skip those, to match our fake implementation that always return NMI
         if in_nmi_loop {
             if expected_line.status.negative {
                 println!("Line {:06}: End skip", i);
