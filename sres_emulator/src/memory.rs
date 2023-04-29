@@ -64,6 +64,16 @@ pub trait Memory {
         Some(u16::from_le_bytes([self.peek(addr)?, self.peek(addr + 1)?]))
     }
 
+    fn peek_u24<Addr: ToAddress>(&self, addr: Addr) -> Option<u32> {
+        let addr = addr.to_address();
+        Some(u32::from_le_bytes([
+            self.peek(addr)?,
+            self.peek(addr + 1)?,
+            self.peek(addr + 2)?,
+            0,
+        ]))
+    }
+
     fn read_u16<Addr: ToAddress>(&mut self, addr: Addr) -> u16 {
         let addr = addr.to_address();
         u16::from_le_bytes([self.read(addr), self.read(addr + 1)])

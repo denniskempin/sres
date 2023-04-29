@@ -1,0 +1,65 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sres_emulator'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sres_emulator"
+                ],
+                "filter": {
+                    "name": "sres_emulator",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/sres_emulator"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'cpu_tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=cpu_tests",
+                    "--package=sres_emulator"
+                ],
+                "filter": {
+                    "name": "cpu_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/sres_emulator"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'cpu_benches'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=cpu_benches",
+                    "--package=sres_emulator"
+                ],
+                "filter": {
+                    "name": "cpu_benches",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/sres_emulator"
+        }
+    ]
+}

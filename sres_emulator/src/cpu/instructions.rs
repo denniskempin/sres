@@ -89,11 +89,14 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x8E] = instruction!(stx, AddressMode::Absolute);
     table[0x8C] = instruction!(sty, AddressMode::Absolute);
     table[0x9C] = instruction!(stz, AddressMode::Absolute);
+    table[0x5C] = instruction!(jml, AddressMode::AbsoluteLong);
     table[0x9A] = instruction!(txs);
     table[0x5B] = instruction!(tcd);
     table[0xCA] = instruction!(dex);
     table[0xEA] = instruction!(nop);
+    table[0x2C] = instruction!(bit, AddressMode::Absolute);
     table[0xD0] = instruction!(bne, AddressMode::Relative);
+    table[0x10] = instruction!(bpl, AddressMode::Relative);
     table
 }
 
@@ -200,7 +203,29 @@ fn bne(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     }
 }
 
+fn bpl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if !cpu.status.negative {
+        cpu.pc = operand.addr().unwrap();
+    }
+}
+
 fn tcd(cpu: &mut Cpu<impl Bus>) {
     cpu.d = cpu.a;
     cpu.update_negative_zero_flags_u16(cpu.d);
+}
+
+fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.pc = operand.addr().unwrap();
+}
+
+fn bit(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if cpu.status.accumulator_register_size {
+        let data = operand.load_u16(cpu);
+        let result = cpu.a & data;
+        cpu.update_negative_zero_flags_u16(result);
+    } else {
+        let data = operand.load(cpu);
+        let result = cpu.a as u8 & data;
+        cpu.update_negative_zero_flags(result);
+    }
 }
