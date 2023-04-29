@@ -1,3 +1,4 @@
+use super::status::StatusFlags;
 use super::Cpu;
 use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
@@ -219,13 +220,9 @@ fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn bit(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.accumulator_register_size {
-        let data = operand.load_u16(cpu);
-        let result = cpu.a & data;
-        cpu.update_negative_zero_flags_u16(result);
-    } else {
-        let data = operand.load(cpu);
-        let result = cpu.a as u8 & data;
-        cpu.update_negative_zero_flags(result);
-    }
+    let value = operand.load(cpu);
+    let flags = StatusFlags::from(value);
+    cpu.status.negative = flags.negative;
+    cpu.status.overflow = flags.overflow;
+    cpu.status.zero = (value & cpu.a as u8) == 0;
 }

@@ -36,6 +36,8 @@ impl Memory for SresBus {
                     None
                 }
             }
+            // Fake RDNMI register. NMI is always true.
+            0x4210 => Some(0xC2),
             _ => {
                 #[cfg(feature = "debug_log")]
                 println!("Invalid read from ${addr}");
