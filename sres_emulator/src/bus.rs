@@ -6,12 +6,14 @@ pub trait Bus: Memory {}
 
 pub struct SresBus {
     pub cartridge: Cartridge,
+    pub memory: Vec<u8>,
 }
 
 impl SresBus {
     pub fn new() -> Self {
         Self {
             cartridge: Cartridge::new(),
+            memory: vec![0; 0x1000000],
         }
     }
 }
@@ -36,13 +38,7 @@ impl Memory for SresBus {
                     None
                 }
             }
-            // Fake RDNMI register. NMI is always true.
-            0x4210 => Some(0xC2),
-            _ => {
-                #[cfg(feature = "debug_log")]
-                println!("Invalid read from ${addr}");
-                None
-            }
+            _ => Some(self.memory[u32::from(addr) as usize]),
         }
     }
 
@@ -64,8 +60,7 @@ impl Memory for SresBus {
                 }
             }
             _ => {
-                #[cfg(feature = "debug_log")]
-                println!("Invalid write to ${addr}");
+                self.memory[u32::from(addr) as usize] = val;
             }
         }
     }
@@ -86,6 +81,7 @@ mod tests {
                 rom: vec![0x00; 0x10000],
                 mapping_mode: MappingMode::LoRom,
             },
+            memory: vec![0x00; 0x1000000],
         };
         // Access first byte of page 0
         bus.cartridge.rom[0x000000] = 0x12;
@@ -104,6 +100,7 @@ mod tests {
                 rom: vec![0x00; 0x10000],
                 mapping_mode: MappingMode::LoRom,
             },
+            memory: vec![0x00; 0x1000000],
         };
 
         // Access first byte of page 0

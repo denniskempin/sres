@@ -17,13 +17,15 @@ fn run_krom_test(test_name: &str) {
 
     let mut bus = SresBus::new();
     bus.cartridge.load_sfc(&rom_path).unwrap();
+    // Fake RDNMI register. NMI is always true.
+    bus.write(0x004210, 0xC2);
     let mut cpu = Cpu::new(bus);
     cpu.reset();
 
     let mut in_nmi_loop = false;
     for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
         // Exit test after unimplemented part
-        if i == 3229 {
+        if i == 4453 {
             break;
         }
         let expected_line = expected_line.unwrap();
@@ -41,10 +43,6 @@ fn run_krom_test(test_name: &str) {
             }
         }
 
-        println!("Line {:06}: opcode {:02X}", i, cpu.bus.read(cpu.pc));
-        assert_eq!(actual_line.to_string(), expected_line.to_string());
-        cpu.step();
-
         if actual_line.instruction == "bit" {
             if let Some(addr) = actual_line.operand_addr {
                 if addr.offset == 0x4210 {
@@ -53,5 +51,9 @@ fn run_krom_test(test_name: &str) {
                 }
             }
         }
+
+        println!("Line {:06}: opcode {:02X}", i, cpu.bus.read(cpu.pc));
+        assert_eq!(actual_line.to_string(), expected_line.to_string());
+        cpu.step();
     }
 }

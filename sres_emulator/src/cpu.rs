@@ -89,12 +89,24 @@ impl<BusT: Bus> Cpu<BusT> {
         self.s -= 1;
     }
 
+    fn stack_push_u16(&mut self, value: u16) {
+        let [low, high] = value.to_le_bytes();
+        self.stack_push(high);
+        self.stack_push(low);
+    }
+
     fn stack_pop(&mut self) -> u8 {
         if self.s == 0xFF {
             return 0;
         }
         self.s += 1;
         self.bus.read(Self::STACK_BASE + self.s as u32)
+    }
+
+    fn stack_pop_u16(&mut self) -> u16 {
+        let low = self.stack_pop();
+        let high = self.stack_pop();
+        u16::from_le_bytes([low, high])
     }
 
     fn update_negative_zero_flags(&mut self, value: u8) {
