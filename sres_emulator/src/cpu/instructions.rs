@@ -1,5 +1,6 @@
 use super::status::StatusFlags;
 use super::Cpu;
+use super::UInt;
 use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
@@ -14,6 +15,12 @@ pub struct InstructionMeta {
 pub struct Instruction<BusT: Bus> {
     pub execute: fn(&mut Cpu<BusT>),
     pub meta: fn(&Cpu<BusT>, Address) -> (InstructionMeta, Address),
+}
+
+enum Register {
+    A,
+    X,
+    Y,
 }
 
 pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
@@ -59,6 +66,37 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                 },
             }
         };
+        // Instruction with operand and variable register size
+        ($method: ident, $address_mode: expr, $register: expr) => {
+            Instruction::<BusT> {
+                execute: |cpu| {
+                    let (operand, next_addr) = Operand::decode(cpu, cpu.pc, $address_mode);
+                    cpu.pc = next_addr;
+                    let is_u8 = match $register {
+                        Register::A => cpu.status.accumulator_register_size,
+                        Register::X => cpu.status.index_register_size_or_break,
+                        Register::Y => cpu.status.index_register_size_or_break,
+                    };
+                    if is_u8 {
+                        $method::<u8>(cpu, &operand);
+                    } else {
+                        $method::<u16>(cpu, &operand);
+                    }
+                },
+                meta: |cpu, instruction_addr| {
+                    let (operand, next_addr) =
+                        Operand::decode(cpu, instruction_addr, $address_mode);
+                    (
+                        InstructionMeta {
+                            operation: stringify!($method),
+                            operand_str: Some(operand.format()),
+                            operand_addr: operand.addr(),
+                        },
+                        next_addr,
+                    )
+                },
+            }
+        };
     }
 
     let mut table = [(); 256].map(|_| Instruction::<BusT> {
@@ -82,43 +120,43 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x4B] = instruction!(phk);
     table[0x08] = instruction!(php);
     table[0xAB] = instruction!(plb);
-    table[0x68] = instruction!(pla);
-    table[0x69] = instruction!(adc, AddressMode::ImmediateA);
+    table[0x68] = instruction!(pla, AddressMode::Implied, Register::A);
+    table[0x69] = instruction!(adc, AddressMode::ImmediateA, Register::A);
     table[0xE2] = instruction!(sep, AddressMode::ImmediateU8);
     table[0xC2] = instruction!(rep, AddressMode::ImmediateU8);
-    table[0xA9] = instruction!(lda, AddressMode::ImmediateA);
-    table[0xBD] = instruction!(lda, AddressMode::AbsoluteXIndexed);
-    table[0xA2] = instruction!(ldx, AddressMode::ImmediateXY);
-    table[0xA0] = instruction!(ldy, AddressMode::ImmediateXY);
+    table[0xA9] = instruction!(lda, AddressMode::ImmediateA, Register::A);
+    table[0xBD] = instruction!(lda, AddressMode::AbsoluteXIndexed, Register::A);
+    table[0xA2] = instruction!(ldx, AddressMode::ImmediateXY, Register::X);
+    table[0xA0] = instruction!(ldy, AddressMode::ImmediateXY, Register::Y);
     table[0x8D] = instruction!(sta, AddressMode::Absolute);
     table[0x85] = instruction!(sta, AddressMode::DirectPage);
-    table[0x8E] = instruction!(stx, AddressMode::Absolute);
-    table[0x8C] = instruction!(sty, AddressMode::Absolute);
+    table[0x8E] = instruction!(stx, AddressMode::Absolute, Register::X);
+    table[0x8C] = instruction!(sty, AddressMode::Absolute, Register::Y);
     table[0x9C] = instruction!(stz, AddressMode::Absolute);
     table[0x5C] = instruction!(jml, AddressMode::AbsoluteLong);
-    table[0x9A] = instruction!(txs);
+    table[0x9A] = instruction!(txs, AddressMode::Implied, Register::X);
     table[0x5B] = instruction!(tcd);
-    table[0xCA] = instruction!(dex);
-    table[0x88] = instruction!(dey);
-    table[0xE8] = instruction!(inx);
+    table[0xCA] = instruction!(dex, AddressMode::Implied, Register::X);
+    table[0x88] = instruction!(dey, AddressMode::Implied, Register::Y);
+    table[0xE8] = instruction!(inx, AddressMode::Implied, Register::X);
     table[0xEA] = instruction!(nop);
-    table[0xC9] = instruction!(cmp, AddressMode::ImmediateA);
+    table[0xC9] = instruction!(cmp, AddressMode::ImmediateA, Register::A);
     table[0x4A] = instruction!(lsr, AddressMode::Accumulator);
     table[0x2C] = instruction!(bit, AddressMode::Absolute);
     table[0xD0] = instruction!(bne, AddressMode::Relative);
     table[0x10] = instruction!(bpl, AddressMode::Relative);
     table[0x80] = instruction!(bra, AddressMode::Relative);
-    table[0xE0] = instruction!(cpx, AddressMode::ImmediateXY);
-    table[0x29] = instruction!(and, AddressMode::ImmediateA);
+    table[0xE0] = instruction!(cpx, AddressMode::ImmediateXY, Register::X);
+    table[0x29] = instruction!(and, AddressMode::ImmediateA, Register::A);
     table[0x20] = instruction!(jsr, AddressMode::Absolute);
     table[0x24] = instruction!(bit, AddressMode::DirectPage);
     table[0x60] = instruction!(rts);
-    table[0xA5] = instruction!(lda, AddressMode::DirectPage);
-    table[0xCD] = instruction!(cmp, AddressMode::Absolute);
+    table[0xA5] = instruction!(lda, AddressMode::DirectPage, Register::A);
+    table[0xCD] = instruction!(cmp, AddressMode::Absolute, Register::A);
     table[0xF0] = instruction!(beq, AddressMode::Relative);
     table[0x38] = instruction!(sec);
-    table[0xA6] = instruction!(ldx, AddressMode::DirectPage);
-    table[0xEC] = instruction!(cpx, AddressMode::Absolute);
+    table[0xA6] = instruction!(ldx, AddressMode::DirectPage, Register::X);
+    table[0xEC] = instruction!(cpx, AddressMode::Absolute, Register::X);
     table
 }
 
@@ -129,12 +167,12 @@ fn sec(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.stack_push_u16(cpu.pc.offset - 1);
+    cpu.stack_push(cpu.pc.offset - 1);
     cpu.pc = operand.addr().unwrap();
 }
 
 fn rts(cpu: &mut Cpu<impl Bus>) {
-    cpu.pc.offset = cpu.stack_pop_u16();
+    cpu.pc.offset = cpu.stack_pop();
 }
 
 fn beq(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -168,58 +206,42 @@ fn plb(cpu: &mut Cpu<impl Bus>) {
     cpu.update_negative_zero_flags(cpu.db);
 }
 
-fn pla(cpu: &mut Cpu<impl Bus>) {
-    if cpu.status.accumulator_register_size {
-        cpu.a = cpu.stack_pop() as u16;
-        cpu.update_negative_zero_flags(cpu.a as u8);
-    } else {
-        cpu.a = cpu.stack_pop_u16();
-        cpu.update_negative_zero_flags_u16(cpu.a);
-    }
+fn pla<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    let value: T = cpu.stack_pop();
+    cpu.a.set(value);
+    cpu.update_negative_zero_flags(value);
 }
 
 fn rep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let data = operand.load(cpu);
+    let data: u8 = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) & !data).into();
 }
 
 fn sep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let data = operand.load(cpu);
+    let data: u8 = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) | data).into();
 }
 
-fn ldx(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.index_register_size_or_break {
-        cpu.x = operand.load(cpu) as u16;
-        cpu.update_negative_zero_flags(cpu.x as u8);
-    } else {
-        cpu.x = operand.load_u16(cpu);
-        cpu.update_negative_zero_flags_u16(cpu.x);
-    }
+fn ldx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load(cpu);
+    cpu.x.set(value);
+    cpu.update_negative_zero_flags(value);
 }
 
-fn ldy(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.index_register_size_or_break {
-        cpu.y = operand.load(cpu) as u16;
-        cpu.update_negative_zero_flags(cpu.y as u8);
-    } else {
-        cpu.y = operand.load_u16(cpu);
-        cpu.update_negative_zero_flags_u16(cpu.y);
-    }
+fn ldy<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load(cpu);
+    cpu.y.set(value);
+    cpu.update_negative_zero_flags(value);
 }
 
-fn lda(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.accumulator_register_size {
-        cpu.a = operand.load(cpu) as u16;
-        cpu.update_negative_zero_flags(cpu.a as u8);
-    } else {
-        cpu.a = operand.load_u16(cpu);
-        cpu.update_negative_zero_flags_u16(cpu.a);
-    }
+fn lda<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load(cpu);
+    cpu.a.set(value);
+    cpu.update_negative_zero_flags(value);
 }
 
 fn lsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let data = operand.load(cpu);
+    let data: u8 = operand.load(cpu);
     let result = data >> 1;
     cpu.status.carry = data & 1 != 0;
     cpu.update_negative_zero_flags(result);
@@ -227,47 +249,43 @@ fn lsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn sta(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, cpu.a as u8);
+    operand.store(cpu, cpu.a.get::<u8>());
 }
 
-fn sty(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.index_register_size_or_break {
-        operand.store(cpu, cpu.y as u8);
-    } else {
-        operand.store_u16(cpu, cpu.y);
-    }
+fn sty<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    operand.store(cpu, cpu.y.get::<T>());
 }
 
-fn stx(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.index_register_size_or_break {
-        operand.store(cpu, cpu.x as u8);
-    } else {
-        operand.store_u16(cpu, cpu.x);
-    }
+fn stx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    operand.store(cpu, cpu.x.get::<T>());
 }
 
 fn stz(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, 0);
+    operand.store(cpu, 0_u8);
 }
 
-fn txs(cpu: &mut Cpu<impl Bus>) {
-    cpu.s = cpu.x;
-    cpu.update_negative_zero_flags_u16(cpu.s);
+fn txs<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    let value: T = cpu.x.get();
+    cpu.s = value.to_u16().unwrap();
+    cpu.update_negative_zero_flags(value);
 }
 
-fn inx(cpu: &mut Cpu<impl Bus>) {
-    cpu.x = cpu.x.wrapping_add(1);
-    cpu.update_negative_zero_flags_u16(cpu.x);
+fn inx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    let value: T = cpu.x.get::<T>().wrapping_add(&T::one());
+    cpu.x.set(value);
+    cpu.update_negative_zero_flags(value);
 }
 
-fn dex(cpu: &mut Cpu<impl Bus>) {
-    cpu.x = cpu.x.wrapping_sub(1);
-    cpu.update_negative_zero_flags_u16(cpu.x);
+fn dex<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    let value: T = cpu.x.get::<T>().wrapping_sub(&T::one());
+    cpu.x.set(value);
+    cpu.update_negative_zero_flags(value);
 }
 
-fn dey(cpu: &mut Cpu<impl Bus>) {
-    cpu.y = cpu.y.wrapping_sub(1);
-    cpu.update_negative_zero_flags_u16(cpu.y);
+fn dey<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    let value: T = cpu.y.get::<T>().wrapping_sub(&T::one());
+    cpu.y.set(value);
+    cpu.update_negative_zero_flags(value);
 }
 
 fn bne(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -287,80 +305,53 @@ fn bra(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn tcd(cpu: &mut Cpu<impl Bus>) {
-    cpu.d = cpu.a;
-    cpu.update_negative_zero_flags_u16(cpu.d);
+    cpu.d = cpu.a.get();
+    cpu.update_negative_zero_flags(cpu.d);
 }
 
 fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.pc = operand.addr().unwrap();
 }
 
-fn and(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.accumulator_register_size {
-        cpu.a &= operand.load(cpu) as u16;
-        cpu.update_negative_zero_flags(cpu.a as u8);
-    } else {
-        cpu.a &= operand.load_u16(cpu);
-        cpu.update_negative_zero_flags_u16(cpu.a);
-    }
+fn and<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let operand_value: T = operand.load(cpu);
+    let result = cpu.a.get::<T>() & operand_value;
+    cpu.a.set(result);
+    cpu.update_negative_zero_flags(result);
 }
 
 fn bit(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value = operand.load(cpu);
+    let value = operand.load::<u8>(cpu);
     let flags = StatusFlags::from(value);
     cpu.status.negative = flags.negative;
     cpu.status.overflow = flags.overflow;
-    cpu.status.zero = (value & cpu.a as u8) == 0;
+    cpu.status.zero = (value & cpu.a.get::<u8>()) == 0;
 }
 
-fn cpx(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.index_register_size_or_break {
-        let (value, overflow) = (cpu.x as u8).overflowing_sub(operand.load(cpu));
-        cpu.update_negative_zero_flags(value);
-        cpu.status.carry = !overflow;
-    } else {
-        let (value, overflow) = cpu.x.overflowing_sub(operand.load_u16(cpu));
-        cpu.update_negative_zero_flags_u16(value);
-        cpu.status.carry = !overflow;
-    }
+fn cpx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let operand_value: T = operand.load(cpu);
+    let (value, overflow) = cpu.x.get::<T>().overflowing_sub(&operand_value);
+    cpu.update_negative_zero_flags(value);
+    cpu.status.carry = !overflow;
 }
 
-fn cmp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.accumulator_register_size {
-        let (value, overflow) = (cpu.a as u8).overflowing_sub(operand.load(cpu));
-        cpu.update_negative_zero_flags(value);
-        cpu.status.carry = !overflow;
-    } else {
-        let (value, overflow) = cpu.a.overflowing_sub(operand.load_u16(cpu));
-        cpu.update_negative_zero_flags_u16(value);
-        cpu.status.carry = !overflow;
-    }
+fn cmp<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let operand_value: T = operand.load(cpu);
+    let (value, overflow) = cpu.a.get::<T>().overflowing_sub(&operand_value);
+    cpu.update_negative_zero_flags(value);
+    cpu.status.carry = !overflow;
 }
 
-fn adc(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if cpu.status.accumulator_register_size {
-        let value = operand.load(cpu);
-        let (mut result, mut overflow) = (cpu.a as u8).overflowing_add(value);
-        if cpu.status.carry {
-            let (result2, overflow2) = result.overflowing_add(1);
-            result = result2;
-            overflow |= overflow2;
-        }
-        cpu.update_negative_zero_flags(result);
-        cpu.status.carry = overflow;
-        cpu.status.overflow = ((cpu.a as u8) ^ result) & (value ^ result) & 0x80 != 0;
-        cpu.a = result as u16;
-    } else {
-        let value = operand.load_u16(cpu);
-        let (mut result, mut overflow) = cpu.a.overflowing_add(value);
-        if cpu.status.carry {
-            let (result2, overflow2) = result.overflowing_add(1);
-            result = result2;
-            overflow |= overflow2;
-        }
-        cpu.update_negative_zero_flags_u16(result);
-        cpu.status.carry = overflow;
-        cpu.status.overflow = (cpu.a ^ result) & (value ^ result) & 0x8000 != 0;
-        cpu.a = result;
+fn adc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load(cpu);
+    let (mut result, mut overflow) = cpu.a.get::<T>().overflowing_add(&value);
+    if cpu.status.carry {
+        let (result2, overflow2) = result.overflowing_add(&T::one());
+        result = result2;
+        overflow |= overflow2;
     }
+    cpu.update_negative_zero_flags(result);
+    cpu.status.carry = overflow;
+    cpu.status.overflow = ((cpu.a.get::<T>() ^ result) & (value ^ result)).bit(T::N_BITS - 1);
+    cpu.a.set(result);
 }

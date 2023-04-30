@@ -19,6 +19,7 @@ lazy_static = "1"
 packed_struct = "0.10"
 thiserror = "1.0"
 snafu = "*"
+num-traits = "*"
 
 [dev-dependencies]
 tempfile = "*"

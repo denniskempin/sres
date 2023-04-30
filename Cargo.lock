@@ -677,6 +677,7 @@ dependencies = [
  "intbits",
  "itertools",
  "lazy_static",
+ "num-traits",
  "packed_struct",
  "pretty_assertions",
  "snafu",

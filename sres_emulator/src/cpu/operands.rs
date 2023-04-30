@@ -1,10 +1,12 @@
 use super::Cpu;
+use super::UInt;
 use crate::bus::Bus;
 use crate::memory::Address;
 use crate::memory::ToAddress;
 
 #[derive(Clone, Copy)]
 pub enum AddressMode {
+    Implied,
     ImmediateU8,
     ImmediateA,  // Immediate value based on accumulator register size
     ImmediateXY, // Immediate value based on index register size
@@ -18,6 +20,7 @@ pub enum AddressMode {
 
 #[derive(Copy, Clone)]
 pub enum Operand {
+    Implied,
     Accumulator,
     ImmediateU8(u8),
     ImmediateU16(u16),
@@ -36,6 +39,7 @@ impl Operand {
         mode: AddressMode,
     ) -> (Self, Address) {
         match mode {
+            AddressMode::Implied => (Operand::Implied, instruction_addr + 1),
             AddressMode::Accumulator => (Operand::Accumulator, instruction_addr + 1),
             AddressMode::Absolute => (
                 Operand::Absolute(
@@ -49,7 +53,7 @@ impl Operand {
                 (
                     Operand::AbsoluteXIndexed(
                         base.to_address(),
-                        (base + cpu.x as u32).to_address(),
+                        (base + cpu.x.value as u32).to_address(),
                     ),
                     instruction_addr + 3,
                 )
@@ -123,9 +127,9 @@ impl Operand {
     #[inline]
     pub fn addr(&self) -> Option<Address> {
         match self {
-            Self::Accumulator => None,
-            Self::ImmediateU8(_) => None,
-            Self::ImmediateU16(_) => None,
+            Self::Accumulator | Self::ImmediateU8(_) | Self::ImmediateU16(_) | Self::Implied => {
+                None
+            }
             Self::Absolute(addr)
             | Self::Relative(_, addr)
             | Self::AbsoluteLong(addr)
@@ -135,47 +139,28 @@ impl Operand {
     }
 
     #[inline]
-    pub fn load(&self, cpu: &mut Cpu<impl Bus>) -> u8 {
+    pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl Bus>) -> T {
         match self {
-            Self::ImmediateU8(value) => *value,
-            Self::ImmediateU16(_) => panic!("loading u8 from u16 operand"),
-            Self::Accumulator => cpu.a as u8,
-            _ => cpu.bus.read(self.addr().unwrap()),
+            Self::ImmediateU8(value) => T::from_u8(*value),
+            Self::ImmediateU16(value) => T::from_u16(*value),
+            Self::Accumulator => cpu.a.get(),
+            _ => T::read_from_bus(&mut cpu.bus, self.addr().unwrap()),
         }
     }
 
     #[inline]
-    pub fn load_u16(&self, cpu: &mut Cpu<impl Bus>) -> u16 {
+    pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, value: T) {
         match self {
-            Self::ImmediateU8(_) => panic!("loading u16 from u8 operand"),
-            Self::ImmediateU16(value) => *value,
-            Self::Accumulator => cpu.a,
-            _ => cpu.bus.read_u16(self.addr().unwrap()),
-        }
-    }
-
-    #[inline]
-    pub fn store(&self, cpu: &mut Cpu<impl Bus>, value: u8) {
-        match self {
-            Self::Accumulator => cpu.a = value as u16,
+            Self::Accumulator => cpu.a.set(value),
             Self::ImmediateU8(_) | Self::ImmediateU16(_) => panic!("writing to immediate operand"),
-            _ => cpu.bus.write(self.addr().unwrap(), value),
-        }
-    }
-
-    #[inline]
-    pub fn store_u16(&self, cpu: &mut Cpu<impl Bus>, value: u16) {
-        match self {
-            Self::Accumulator => cpu.a = value,
-            Self::ImmediateU8(_) | Self::ImmediateU16(_) => panic!("writing to immediate operand"),
-            _ => cpu.bus.write_u16(self.addr().unwrap(), value),
+            _ => value.write_to_bus(&mut cpu.bus, self.addr().unwrap()),
         }
     }
 
     #[inline]
     pub fn format(&self) -> String {
         match self {
-            Self::Accumulator => "".to_string(),
+            Self::Implied | Self::Accumulator => "".to_string(),
             Self::ImmediateU8(value) => format!("#${:02x}", value),
             Self::ImmediateU16(value) => format!("#${:04x}", value),
             Self::Absolute(addr) | Self::Relative(_, addr) => {

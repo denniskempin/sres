@@ -2,8 +2,6 @@ pub mod instructions;
 mod operands;
 pub mod status;
 
-use intbits::Bits;
-
 use self::instructions::build_opcode_table;
 use self::instructions::Instruction;
 use self::instructions::InstructionMeta;
@@ -12,6 +10,22 @@ use crate::bus::Bus;
 use crate::memory::Address;
 use crate::memory::ToAddress;
 use crate::trace::Trace;
+use crate::uint::UInt;
+
+#[derive(Default)]
+pub struct VariableLengthRegister {
+    value: u16,
+}
+
+impl VariableLengthRegister {
+    fn set(&mut self, value: impl UInt) {
+        value.store_in_u16(&mut self.value);
+    }
+
+    fn get<T: UInt>(&self) -> T {
+        T::from_u16(self.value)
+    }
+}
 
 pub enum NativeVectorTable {
     Cop = 0xFFE4,
@@ -30,9 +44,9 @@ pub enum EmuVectorTable {
 pub struct Cpu<BusT: Bus> {
     pub bus: BusT,
     pub pc: Address,
-    pub a: u16,
-    pub x: u16,
-    pub y: u16,
+    pub a: VariableLengthRegister,
+    pub x: VariableLengthRegister,
+    pub y: VariableLengthRegister,
     pub s: u16,
     pub d: u16,
     pub db: u8,
@@ -47,9 +61,9 @@ impl<BusT: Bus> Cpu<BusT> {
     pub fn new(bus: BusT) -> Self {
         Self {
             bus,
-            a: 0,
-            x: 0,
-            y: 0,
+            a: Default::default(),
+            x: Default::default(),
+            y: Default::default(),
             s: 0x1FF,
             d: 0,
             db: 0,
@@ -81,42 +95,31 @@ impl<BusT: Bus> Cpu<BusT> {
         (self.instruction_table[opcode as usize].execute)(self)
     }
 
-    fn stack_push(&mut self, value: u8) {
-        self.bus.write(Self::STACK_BASE + self.s as u32, value);
+    fn stack_push<T: UInt>(&mut self, value: T) {
+        value.write_to_bus(
+            &mut self.bus,
+            (Self::STACK_BASE + self.s as u32).to_address(),
+        );
         if self.s == 0 {
             return;
         }
-        self.s -= 1;
+        self.s -= T::N_BYTES as u16;
     }
 
-    fn stack_push_u16(&mut self, value: u16) {
-        let [low, high] = value.to_le_bytes();
-        self.stack_push(high);
-        self.stack_push(low);
-    }
-
-    fn stack_pop(&mut self) -> u8 {
+    fn stack_pop<T: UInt>(&mut self) -> T {
         if self.s == 0xFF {
-            return 0;
+            return T::zero();
         }
-        self.s += 1;
-        self.bus.read(Self::STACK_BASE + self.s as u32)
+        self.s += T::N_BYTES as u16;
+        T::read_from_bus(
+            &mut self.bus,
+            (Self::STACK_BASE + self.s as u32).to_address(),
+        )
     }
 
-    fn stack_pop_u16(&mut self) -> u16 {
-        let low = self.stack_pop();
-        let high = self.stack_pop();
-        u16::from_le_bytes([low, high])
-    }
-
-    fn update_negative_zero_flags(&mut self, value: u8) {
-        self.status.negative = value.bit(7);
-        self.status.zero = value == 0;
-    }
-
-    fn update_negative_zero_flags_u16(&mut self, value: u16) {
-        self.status.negative = value.bit(15);
-        self.status.zero = value == 0;
+    fn update_negative_zero_flags<T: UInt>(&mut self, value: T) {
+        self.status.negative = value.bit(T::N_BITS - 1);
+        self.status.zero = value.is_zero();
     }
 
     pub fn trace(&mut self) -> Trace {
@@ -126,9 +129,9 @@ impl<BusT: Bus> Cpu<BusT> {
             instruction: instruction.operation.to_string(),
             operand: instruction.operand_str.unwrap_or_default(),
             operand_addr: instruction.operand_addr,
-            a: self.a,
-            x: self.x,
-            y: self.y,
+            a: self.a.value,
+            x: self.x.value,
+            y: self.y.value,
             s: self.s,
             d: self.d,
             db: self.db,
@@ -144,6 +147,8 @@ mod tests {
     use std::str::from_utf8;
 
     use tempfile::NamedTempFile;
+
+    use crate::cpu::VariableLengthRegister;
 
     fn assemble(code: &str) -> Vec<u8> {
         let mut code_file = NamedTempFile::new().unwrap();
@@ -165,5 +170,17 @@ mod tests {
     #[test]
     pub fn test_assembler() {
         assert_eq!(assemble("lda $1234"), [0xAD, 0x34, 0x12]);
+    }
+
+    #[test]
+    pub fn variable_length_register() {
+        let mut reg = VariableLengthRegister { value: 0 };
+        reg.set(0x1234_u16);
+        assert_eq!(reg.get::<u8>(), 0x34);
+        assert_eq!(reg.get::<u16>(), 0x1234);
+        // Writing the register in u8 mode, will only overwrite the low byte
+        reg.set(0xFF_u8);
+        assert_eq!(reg.get::<u8>(), 0xFF);
+        assert_eq!(reg.get::<u16>(), 0x12FF);
     }
 }
