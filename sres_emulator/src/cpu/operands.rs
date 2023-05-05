@@ -14,8 +14,11 @@ pub enum AddressMode {
     Absolute,
     AbsoluteLong,
     AbsoluteXIndexed,
+    AbsoluteXIndexedLong,
     Relative,
     DirectPage,
+    DirectPageIndirect,
+    DirectPageIndirectLong,
 }
 
 #[derive(Copy, Clone)]
@@ -26,8 +29,11 @@ pub enum Operand {
     ImmediateU16(u16),
     Absolute(Address),
     AbsoluteXIndexed(Address, Address),
+    AbsoluteXIndexedLong(Address, Address),
     DirectPage(Address, Address),
     AbsoluteLong(Address),
+    DirectPageIndirect(Address, Address),
+    DirectPageIndirectLong(Address, Address),
     Relative(i8, Address),
 }
 
@@ -57,6 +63,16 @@ impl Operand {
                         (base + cpu.x.value as u32).to_address(),
                     ),
                     instruction_addr + 3,
+                )
+            }
+            AddressMode::AbsoluteXIndexedLong => {
+                let base = cpu.bus.peek_u24(instruction_addr + 1).unwrap_or_default();
+                (
+                    Operand::AbsoluteXIndexedLong(
+                        base.to_address(),
+                        (base + cpu.x.value as u32).to_address(),
+                    ),
+                    instruction_addr + 4,
                 )
             }
             AddressMode::DirectPage => {
@@ -122,6 +138,22 @@ impl Operand {
                     )
                 }
             }
+            AddressMode::DirectPageIndirect => {
+                let indirect_addr = cpu.bus.peek(instruction_addr + 1).unwrap_or_default() as u32;
+                let addr = cpu.bus.peek_u16(indirect_addr).unwrap_or_default() as u32;
+                (
+                    Operand::DirectPageIndirect(indirect_addr.to_address(), addr.to_address()),
+                    instruction_addr + 2,
+                )
+            }
+            AddressMode::DirectPageIndirectLong => {
+                let indirect_addr = cpu.bus.peek(instruction_addr + 1).unwrap_or_default() as u32;
+                let addr = cpu.bus.peek_u24(indirect_addr).unwrap_or_default();
+                (
+                    Operand::DirectPageIndirectLong(indirect_addr.to_address(), addr.to_address()),
+                    instruction_addr + 2,
+                )
+            }
         }
     }
 
@@ -135,7 +167,10 @@ impl Operand {
             | Self::Relative(_, addr)
             | Self::AbsoluteLong(addr)
             | Self::DirectPage(_, addr)
-            | Self::AbsoluteXIndexed(_, addr) => Some(*addr),
+            | Self::DirectPageIndirect(_, addr)
+            | Self::DirectPageIndirectLong(_, addr)
+            | Self::AbsoluteXIndexed(_, addr)
+            | Self::AbsoluteXIndexedLong(_, addr) => Some(*addr),
         }
     }
 
@@ -175,6 +210,15 @@ impl Operand {
             }
             Self::AbsoluteXIndexed(base_addr, _) => {
                 format!("${:04x},x", u32::from(*base_addr))
+            }
+            Self::AbsoluteXIndexedLong(base_addr, _) => {
+                format!("${:06x},x", u32::from(*base_addr))
+            }
+            Self::DirectPageIndirect(indirect_addr, _) => {
+                format!("(${:02x})", u32::from(*indirect_addr))
+            }
+            Self::DirectPageIndirectLong(indirect_addr, _) => {
+                format!("[${:02x}]", u32::from(*indirect_addr))
             }
         }
     }

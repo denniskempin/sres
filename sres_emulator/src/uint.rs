@@ -1,4 +1,3 @@
-use std::ops::Add;
 use std::ops::BitXor;
 
 use intbits::Bits;
@@ -150,62 +149,62 @@ mod tests {
 
     #[test]
     fn u8_bcd_add() {
-        let (result, overflow, carry) = 0x01_u8.add_bcd(0x01, false);
+        let (result, _, carry) = 0x01_u8.add_bcd(0x01, false);
         assert_eq!(result, 0x02);
         assert_eq!(carry, false);
 
-        let (result, overflow, carry) = 0x01_u8.add_bcd(0x08, false);
+        let (result, _, carry) = 0x01_u8.add_bcd(0x08, false);
         assert_eq!(result, 0x09);
         assert_eq!(carry, false);
 
-        let (result, overflow, carry) = 0x01_u8.add_bcd(0x09, false);
+        let (result, _, carry) = 0x01_u8.add_bcd(0x09, false);
         assert_eq!(result, 0x10);
         assert_eq!(carry, false);
 
-        let (result, overflow, carry) = 0x10_u8.add_bcd(0x01, false);
+        let (result, _, carry) = 0x10_u8.add_bcd(0x01, false);
         assert_eq!(result, 0x11);
         assert_eq!(carry, false);
 
-        let (result, overflow, carry) = 0x19_u8.add_bcd(0x01, false);
+        let (result, _, carry) = 0x19_u8.add_bcd(0x01, false);
         assert_eq!(result, 0x20);
         assert_eq!(carry, false);
 
-        let (result, overflow, carry) = 0x99_u8.add_bcd(0x01, false);
+        let (result, _, carry) = 0x99_u8.add_bcd(0x01, false);
         assert_eq!(result, 0x00);
         assert_eq!(carry, true);
 
-        let (result, overflow, carry) = 0x90_u8.add_bcd(0x10, false);
+        let (result, _, carry) = 0x90_u8.add_bcd(0x10, false);
         assert_eq!(result, 0x00);
         assert_eq!(carry, true);
 
-        let (result, overflow, carry) = 0x90_u8.add_bcd(0x15, false);
+        let (result, _, carry) = 0x90_u8.add_bcd(0x15, false);
         assert_eq!(result, 0x05);
         assert_eq!(carry, true);
 
-        let (result, overflow, carry) = 0x99_u8.add_bcd(0x99, false);
+        let (result, _, carry) = 0x99_u8.add_bcd(0x99, false);
         assert_eq!(result, 0x98);
         assert_eq!(carry, true);
     }
 
     #[test]
     fn u16_bcd_add() {
-        let (result, overflow, carry) = 0x1234_u16.add_bcd(0x0001, false);
+        let (result, _, carry) = 0x1234_u16.add_bcd(0x0001, false);
         assert_eq!(result, 0x1235);
         assert_eq!(carry, false);
 
-        let (result, overflow, carry) = 0x0099_u16.add_bcd(0x0001, false);
+        let (result, _, carry) = 0x0099_u16.add_bcd(0x0001, false);
         assert_eq!(result, 0x0100);
         assert_eq!(carry, false);
 
-        let (result, overflow, carry) = 0x9999_u16.add_bcd(0x0001, false);
+        let (result, _, carry) = 0x9999_u16.add_bcd(0x0001, false);
         assert_eq!(result, 0x0000);
         assert_eq!(carry, true);
 
-        let (result, overflow, carry) = 0x9999_u16.add_bcd(0x1112, false);
+        let (result, _, carry) = 0x9999_u16.add_bcd(0x1112, false);
         assert_eq!(result, 0x1111);
         assert_eq!(carry, true);
 
-        let (result, overflow, carry) = 0x9999_u16.add_bcd(0x9999, false);
+        let (result, _, carry) = 0x9999_u16.add_bcd(0x9999, false);
         assert_eq!(result, 0x9998);
         assert_eq!(carry, true);
     }
