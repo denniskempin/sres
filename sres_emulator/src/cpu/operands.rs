@@ -39,6 +39,7 @@ impl Operand {
         mode: AddressMode,
     ) -> (Self, Address) {
         match mode {
+            // TODO: Lots of duplication here. Clean this up.
             AddressMode::Implied => (Operand::Implied, instruction_addr + 1),
             AddressMode::Accumulator => (Operand::Accumulator, instruction_addr + 1),
             AddressMode::Absolute => (

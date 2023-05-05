@@ -128,8 +128,8 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0xBD] = instruction!(lda, AddressMode::AbsoluteXIndexed, Register::A);
     table[0xA2] = instruction!(ldx, AddressMode::ImmediateXY, Register::X);
     table[0xA0] = instruction!(ldy, AddressMode::ImmediateXY, Register::Y);
-    table[0x8D] = instruction!(sta, AddressMode::Absolute);
-    table[0x85] = instruction!(sta, AddressMode::DirectPage);
+    table[0x8D] = instruction!(sta, AddressMode::Absolute, Register::A);
+    table[0x85] = instruction!(sta, AddressMode::DirectPage, Register::A);
     table[0x8E] = instruction!(stx, AddressMode::Absolute, Register::X);
     table[0x8C] = instruction!(sty, AddressMode::Absolute, Register::Y);
     table[0x9C] = instruction!(stz, AddressMode::Absolute);
@@ -248,8 +248,8 @@ fn lsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, result);
 }
 
-fn sta(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, cpu.a.get::<u8>());
+fn sta<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    operand.store(cpu, cpu.a.get::<T>());
 }
 
 fn sty<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -343,15 +343,24 @@ fn cmp<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn adc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load(cpu);
-    let (mut result, mut overflow) = cpu.a.get::<T>().overflowing_add(&value);
-    if cpu.status.carry {
-        let (result2, overflow2) = result.overflowing_add(&T::one());
-        result = result2;
-        overflow |= overflow2;
+    if cpu.status.decimal {
+        let value: T = operand.load(cpu);
+        let (result, overflow, carry) = cpu.a.get::<T>().add_bcd(value, cpu.status.carry);
+        cpu.update_negative_zero_flags(result);
+        cpu.status.carry = carry;
+        cpu.status.overflow = overflow;
+        cpu.a.set(result);
+    } else {
+        let value: T = operand.load(cpu);
+        let (mut result, mut overflow) = cpu.a.get::<T>().overflowing_add(&value);
+        if cpu.status.carry {
+            let (result2, overflow2) = result.overflowing_add(&T::one());
+            result = result2;
+            overflow |= overflow2;
+        }
+        cpu.update_negative_zero_flags(result);
+        cpu.status.carry = overflow;
+        cpu.status.overflow = ((cpu.a.get::<T>() ^ result) & (value ^ result)).bit(T::N_BITS - 1);
+        cpu.a.set(result);
     }
-    cpu.update_negative_zero_flags(result);
-    cpu.status.carry = overflow;
-    cpu.status.overflow = ((cpu.a.get::<T>() ^ result) & (value ^ result)).bit(T::N_BITS - 1);
-    cpu.a.set(result);
 }
