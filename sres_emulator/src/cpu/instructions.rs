@@ -122,6 +122,9 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0xAB] = instruction!(plb);
     table[0x68] = instruction!(pla, AddressMode::Implied, Register::A);
     table[0x69] = instruction!(adc, AddressMode::ImmediateA, Register::A);
+    table[0x6D] = instruction!(adc, AddressMode::Absolute, Register::A);
+    table[0x6F] = instruction!(adc, AddressMode::AbsoluteLong, Register::A);
+    table[0x65] = instruction!(adc, AddressMode::DirectPage, Register::A);
     table[0xE2] = instruction!(sep, AddressMode::ImmediateU8);
     table[0xC2] = instruction!(rep, AddressMode::ImmediateU8);
     table[0xA9] = instruction!(lda, AddressMode::ImmediateA, Register::A);
@@ -131,6 +134,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x8D] = instruction!(sta, AddressMode::Absolute, Register::A);
     table[0x85] = instruction!(sta, AddressMode::DirectPage, Register::A);
     table[0x8E] = instruction!(stx, AddressMode::Absolute, Register::X);
+    table[0x86] = instruction!(stx, AddressMode::DirectPage, Register::X);
     table[0x8C] = instruction!(sty, AddressMode::Absolute, Register::Y);
     table[0x9C] = instruction!(stz, AddressMode::Absolute);
     table[0x5C] = instruction!(jml, AddressMode::AbsoluteLong);

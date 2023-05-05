@@ -25,7 +25,7 @@ fn run_krom_test(test_name: &str) {
     let mut in_nmi_loop = false;
     for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
         // Exit test after unimplemented part
-        if i == 30000 {
+        if i == 96459 {
             break;
         }
         let expected_line = expected_line.unwrap();
