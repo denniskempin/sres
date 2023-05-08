@@ -17,6 +17,7 @@ pub trait UInt:
     const N_BYTES: usize;
 
     fn store_in_u16(self, target: &mut u16);
+    fn from_u32(target: u32) -> Self;
     fn from_u16(target: u16) -> Self;
     fn from_u8(target: u8) -> Self;
     fn peek_from_bus(bus: &mut impl Bus, addr: Address) -> Option<Self>;
@@ -30,6 +31,10 @@ pub trait UInt:
 impl UInt for u8 {
     fn store_in_u16(self, target: &mut u16) {
         target.set_bits(0..8, self as u16);
+    }
+
+    fn from_u32(target: u32) -> Self {
+        target as u8
     }
 
     fn from_u16(target: u16) -> Self {
@@ -82,6 +87,9 @@ impl UInt for u8 {
 impl UInt for u16 {
     fn store_in_u16(self, target: &mut u16) {
         *target = self
+    }
+    fn from_u32(target: u32) -> Self {
+        target as u16
     }
 
     fn from_u16(target: u16) -> Self {
