@@ -25,7 +25,7 @@ fn run_krom_test(test_name: &str) {
     let mut in_nmi_loop = false;
     for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
         // Exit test after unimplemented part
-        if i == 229526 {
+        if i == 349254 {
             break;
         }
         let expected_line = expected_line.unwrap();
@@ -52,7 +52,12 @@ fn run_krom_test(test_name: &str) {
             }
         }
 
-        println!("Line {:06}: opcode {:02X}", i, cpu.bus.read(cpu.pc));
+        println!(
+            "{:06} ({:02X}): {}",
+            i,
+            cpu.bus.read(cpu.pc),
+            actual_line.to_string()
+        );
         assert_eq!(actual_line.to_string(), expected_line.to_string());
         cpu.step();
     }

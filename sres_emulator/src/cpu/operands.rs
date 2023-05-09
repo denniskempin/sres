@@ -15,8 +15,14 @@ pub enum AddressMode {
     AbsoluteLong,
     AbsoluteXIndexed,
     AbsoluteXIndexedLong,
+    AbsoluteYIndexed,
+    AbsoluteYIndexedLong,
     Relative,
     DirectPage,
+    DirectPageXIndexed,
+    DirectPageYIndexed,
+    DirectPageXIndexedIndirect,
+    DirectPageIndirectYIndexed,
     DirectPageIndirect,
     DirectPageIndirectLong,
 }
@@ -60,8 +66,14 @@ impl Operand {
             AddressMode::AbsoluteLong => 3,
             AddressMode::AbsoluteXIndexed => 2,
             AddressMode::AbsoluteXIndexedLong => 3,
+            AddressMode::AbsoluteYIndexed => 2,
+            AddressMode::AbsoluteYIndexedLong => 3,
             AddressMode::Relative => 1,
             AddressMode::DirectPage => 1,
+            AddressMode::DirectPageXIndexed => 1,
+            AddressMode::DirectPageXIndexedIndirect => 1,
+            AddressMode::DirectPageYIndexed => 1,
+            AddressMode::DirectPageIndirectYIndexed => 1,
             AddressMode::DirectPageIndirect => 1,
             AddressMode::DirectPageIndirectLong => 1,
         };
@@ -97,6 +109,11 @@ impl Operand {
             AddressMode::Absolute | AddressMode::AbsoluteLong => {
                 Operand::Address(operand_data, mode, operand_data.to_address())
             }
+            AddressMode::AbsoluteYIndexed | AddressMode::AbsoluteYIndexedLong => Operand::Address(
+                operand_data,
+                mode,
+                (operand_data + cpu.y.value as u32).to_address(),
+            ),
             AddressMode::AbsoluteXIndexed | AddressMode::AbsoluteXIndexedLong => Operand::Address(
                 operand_data,
                 mode,
@@ -116,11 +133,36 @@ impl Operand {
                 mode,
                 (cpu.d as u32 + operand_data).to_address(),
             ),
+            AddressMode::DirectPageXIndexed => Operand::Address(
+                operand_data,
+                mode,
+                (cpu.d as u32 + operand_data + cpu.x.value as u32).to_address(),
+            ),
+            AddressMode::DirectPageYIndexed => Operand::Address(
+                operand_data,
+                mode,
+                (cpu.d as u32 + operand_data + cpu.y.value as u32).to_address(),
+            ),
             AddressMode::DirectPageIndirect => {
                 let indirect_addr = cpu
                     .bus
                     .peek_u16(cpu.d as u32 + operand_data)
                     .unwrap_or_default() as u32;
+                Operand::Address(operand_data, mode, indirect_addr.to_address())
+            }
+            AddressMode::DirectPageXIndexedIndirect => {
+                let indirect_addr = cpu
+                    .bus
+                    .peek_u16(cpu.d as u32 + operand_data + cpu.x.value as u32)
+                    .unwrap_or_default() as u32;
+                Operand::Address(operand_data, mode, indirect_addr.to_address())
+            }
+            AddressMode::DirectPageIndirectYIndexed => {
+                let indirect_addr = cpu
+                    .bus
+                    .peek_u16(cpu.d as u32 + operand_data)
+                    .unwrap_or_default() as u32
+                    + cpu.y.value as u32;
                 Operand::Address(operand_data, mode, indirect_addr.to_address())
             }
             AddressMode::DirectPageIndirectLong => {
@@ -176,11 +218,21 @@ impl Operand {
                 AddressMode::AbsoluteLong => format!("${:06x}", value),
                 AddressMode::AbsoluteXIndexed => format!("${:04x},x", value),
                 AddressMode::AbsoluteXIndexedLong => format!("${:06x},x", value),
+                AddressMode::AbsoluteYIndexed => format!("${:04x},y", value),
+                AddressMode::AbsoluteYIndexedLong => format!("${:06x},y", value),
                 AddressMode::Relative => format!("${:04x}", u32::from(*operand_addr)),
                 AddressMode::DirectPage => format!("${:02x}", value),
                 AddressMode::DirectPageIndirect => format!("(${:02x})", value),
                 AddressMode::DirectPageIndirectLong => format!("[${:02x}]", value),
-                _ => unreachable!(),
+                AddressMode::DirectPageXIndexed => format!("${:02x},x", value),
+                AddressMode::DirectPageXIndexedIndirect => format!("(${:02x},x)", value),
+                AddressMode::DirectPageIndirectYIndexed => format!("(${:02x}),y", value),
+                AddressMode::DirectPageYIndexed => format!("${:02x},y", value),
+                AddressMode::Implied
+                | AddressMode::ImmediateU8
+                | AddressMode::ImmediateA
+                | AddressMode::ImmediateXY
+                | AddressMode::Accumulator => unreachable!(),
             },
         }
     }

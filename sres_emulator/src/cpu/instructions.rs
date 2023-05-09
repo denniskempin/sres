@@ -129,6 +129,10 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x67] = instruction!(adc, AddressMode::DirectPageIndirectLong, Register::A);
     table[0x7D] = instruction!(adc, AddressMode::AbsoluteXIndexed, Register::A);
     table[0x7F] = instruction!(adc, AddressMode::AbsoluteXIndexedLong, Register::A);
+    table[0x79] = instruction!(adc, AddressMode::AbsoluteYIndexed, Register::A);
+    table[0x75] = instruction!(adc, AddressMode::DirectPageXIndexed, Register::A);
+    table[0x61] = instruction!(adc, AddressMode::DirectPageXIndexedIndirect, Register::A);
+    table[0x71] = instruction!(adc, AddressMode::DirectPageIndirectYIndexed, Register::A);
     table[0xE2] = instruction!(sep, AddressMode::ImmediateU8);
     table[0xC2] = instruction!(rep, AddressMode::ImmediateU8);
     table[0xA9] = instruction!(lda, AddressMode::ImmediateA, Register::A);
