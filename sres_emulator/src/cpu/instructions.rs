@@ -123,6 +123,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x4B] = instruction!(phk);
     table[0x08] = instruction!(php);
     table[0xAB] = instruction!(plb);
+    table[0x48] = instruction!(pha, Implied, A);
     table[0x68] = instruction!(pla, Implied, A);
     table[0x69] = instruction!(adc, ImmediateA, A);
     table[0x6D] = instruction!(adc, Absolute, A);
@@ -137,6 +138,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x61] = instruction!(adc, DirectPageXIndexedIndirect, A);
     table[0x71] = instruction!(adc, DirectPageIndirectYIndexed, A);
     table[0x77] = instruction!(adc, DirectPageIndirectYIndexedLong, A);
+    table[0x63] = instruction!(adc, StackRelative, A);
     table[0xE2] = instruction!(sep, ImmediateU8);
     table[0xC2] = instruction!(rep, ImmediateU8);
     table[0xA9] = instruction!(lda, ImmediateA, A);
@@ -215,6 +217,10 @@ fn phk(cpu: &mut Cpu<impl Bus>) {
 
 fn php(cpu: &mut Cpu<impl Bus>) {
     cpu.stack_push(u8::from(cpu.status));
+}
+
+fn pha<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.stack_push(cpu.a.get::<T>());
 }
 
 fn plb(cpu: &mut Cpu<impl Bus>) {

@@ -55,9 +55,9 @@ pub struct Cpu<BusT: Bus> {
     instruction_table: [Instruction<BusT>; 256],
 }
 
-impl<BusT: Bus> Cpu<BusT> {
-    const STACK_BASE: u32 = 0x100;
+const STACK_BASE: u32 = 0;
 
+impl<BusT: Bus> Cpu<BusT> {
     pub fn new(bus: BusT) -> Self {
         Self {
             bus,
@@ -96,10 +96,11 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     fn stack_push<T: UInt>(&mut self, value: T) {
-        value.write_to_bus(
-            &mut self.bus,
-            (Self::STACK_BASE + self.s as u32).to_address(),
-        );
+        // Found the problem!
+        // Writing U16 to the stack is not the same as writing U16 to the bus. It's inverse.
+        // So.. make things simpler by making UInt have an enum that allows us to match here
+        // to implement behavior for U16 and U8.
+        value.write_to_bus(&mut self.bus, (STACK_BASE + self.s as u32).to_address());
         if self.s == 0 {
             return;
         }
@@ -111,10 +112,7 @@ impl<BusT: Bus> Cpu<BusT> {
             return T::zero();
         }
         self.s += T::N_BYTES as u16;
-        T::read_from_bus(
-            &mut self.bus,
-            (Self::STACK_BASE + self.s as u32).to_address(),
-        )
+        T::read_from_bus(&mut self.bus, (STACK_BASE + self.s as u32).to_address())
     }
 
     fn update_negative_zero_flags<T: UInt>(&mut self, value: T) {

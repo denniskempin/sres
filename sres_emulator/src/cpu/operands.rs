@@ -1,5 +1,6 @@
 use super::Cpu;
 use super::UInt;
+use super::STACK_BASE;
 use crate::bus::Bus;
 use crate::memory::Address;
 use crate::memory::ToAddress;
@@ -16,10 +17,13 @@ pub enum AddressMode {
     AbsoluteXIndexed,
     AbsoluteXIndexedLong,
     AbsoluteYIndexed,
+    #[allow(dead_code)]
     AbsoluteYIndexedLong,
+    StackRelative,
     Relative,
     DirectPage,
     DirectPageXIndexed,
+    #[allow(dead_code)]
     DirectPageYIndexed,
     DirectPageXIndexedIndirect,
     DirectPageIndirectYIndexed,
@@ -69,6 +73,7 @@ impl Operand {
             AddressMode::AbsoluteXIndexedLong => 3,
             AddressMode::AbsoluteYIndexed => 2,
             AddressMode::AbsoluteYIndexedLong => 3,
+            AddressMode::StackRelative => 1,
             AddressMode::Relative => 1,
             AddressMode::DirectPage => 1,
             AddressMode::DirectPageXIndexed => 1,
@@ -126,6 +131,7 @@ impl Operand {
                             u32::from(cpu.pc + 2).wrapping_sub(relative_addr.unsigned_abs() as u32)
                         }
                     }
+                    AddressMode::StackRelative => operand_data + cpu.s as u32 + STACK_BASE,
                     AddressMode::DirectPage => cpu.d as u32 + operand_data,
                     AddressMode::DirectPageXIndexed => {
                         cpu.d as u32 + operand_data + cpu.x.value as u32
@@ -152,7 +158,7 @@ impl Operand {
                     AddressMode::DirectPageIndirectYIndexedLong => {
                         cpu.bus
                             .peek_u24(cpu.d as u32 + operand_data)
-                            .unwrap_or_default() as u32
+                            .unwrap_or_default()
                             + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectLong => cpu
@@ -215,6 +221,7 @@ impl Operand {
                 AddressMode::AbsoluteXIndexedLong => format!("${:06x},x", value),
                 AddressMode::AbsoluteYIndexed => format!("${:04x},y", value),
                 AddressMode::AbsoluteYIndexedLong => format!("${:06x},y", value),
+                AddressMode::StackRelative => format!("${:02x},s", value),
                 AddressMode::Relative => format!("${:04x}", u32::from(*operand_addr)),
                 AddressMode::DirectPage => format!("${:02x}", value),
                 AddressMode::DirectPageIndirect => format!("(${:02x})", value),

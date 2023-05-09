@@ -28,6 +28,7 @@ fn run_krom_test(test_name: &str) {
         if i == 362502 {
             break;
         }
+
         let expected_line = expected_line.unwrap();
         let actual_line = cpu.trace();
 
@@ -52,12 +53,7 @@ fn run_krom_test(test_name: &str) {
             }
         }
 
-        println!(
-            "{:06} ({:02X}): {}",
-            i,
-            cpu.bus.read(cpu.pc),
-            actual_line.to_string()
-        );
+        println!("{:06} ({:02X}): {}", i, cpu.bus.read(cpu.pc), actual_line);
         assert_eq!(actual_line.to_string(), expected_line.to_string());
         cpu.step();
     }

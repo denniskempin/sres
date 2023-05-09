@@ -152,6 +152,7 @@ impl UInt for u16 {
 }
 
 #[cfg(test)]
+#[allow(clippy::bool_assert_comparison)]
 mod tests {
     use crate::uint::UInt;
 
