@@ -10,6 +10,7 @@ use crate::bus::Bus;
 use crate::memory::Address;
 use crate::memory::ToAddress;
 use crate::trace::Trace;
+use crate::uint::RegisterSize;
 use crate::uint::UInt;
 
 #[derive(Default)]
@@ -96,23 +97,37 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     fn stack_push<T: UInt>(&mut self, value: T) {
-        // Found the problem!
-        // Writing U16 to the stack is not the same as writing U16 to the bus. It's inverse.
-        // So.. make things simpler by making UInt have an enum that allows us to match here
-        // to implement behavior for U16 and U8.
-        value.write_to_bus(&mut self.bus, (STACK_BASE + self.s as u32).to_address());
         if self.s == 0 {
             return;
         }
-        self.s -= T::N_BYTES as u16;
+        match T::SIZE {
+            RegisterSize::U8 => {
+                self.bus.write(self.s as u32, value.to_u8().unwrap());
+                self.s -= 1;
+            }
+            RegisterSize::U16 => {
+                let bytes = value.to_u16().unwrap().to_le_bytes();
+                self.stack_push(bytes[1]);
+                self.stack_push(bytes[0]);
+            }
+        }
     }
 
     fn stack_pop<T: UInt>(&mut self) -> T {
         if self.s == 0xFF {
             return T::zero();
         }
-        self.s += T::N_BYTES as u16;
-        T::read_from_bus(&mut self.bus, (STACK_BASE + self.s as u32).to_address())
+        match T::SIZE {
+            RegisterSize::U8 => {
+                self.s += 1;
+                let result = self.bus.read(self.s as u32);
+                T::from_u8(result)
+            }
+            RegisterSize::U16 => {
+                let result = u16::from_le_bytes([self.stack_pop(), self.stack_pop()]);
+                T::from_u16(result)
+            }
+        }
     }
 
     fn update_negative_zero_flags<T: UInt>(&mut self, value: T) {
@@ -146,7 +161,9 @@ mod tests {
 
     use tempfile::NamedTempFile;
 
+    use crate::bus::SresBus;
     use crate::cpu::VariableLengthRegister;
+    use crate::memory::Memory;
 
     fn assemble(code: &str) -> Vec<u8> {
         let mut code_file = NamedTempFile::new().unwrap();
@@ -168,6 +185,23 @@ mod tests {
     #[test]
     pub fn test_assembler() {
         assert_eq!(assemble("lda $1234"), [0xAD, 0x34, 0x12]);
+    }
+
+    #[test]
+    pub fn test_stack_u8() {
+        let mut cpu = super::Cpu::new(SresBus::new());
+        cpu.stack_push(0x12_u8);
+        assert_eq!(cpu.bus.read(cpu.s as u32 + 1), 0x12);
+        assert_eq!(cpu.stack_pop::<u8>(), 0x12);
+    }
+
+    #[test]
+    pub fn test_stack() {
+        let mut cpu = super::Cpu::new(SresBus::new());
+        cpu.stack_push(0x1234_u16);
+        assert_eq!(cpu.bus.read(cpu.s as u32 + 1), 0x34);
+        assert_eq!(cpu.bus.read(cpu.s as u32 + 2), 0x12);
+        assert_eq!(cpu.stack_pop::<u16>(), 0x1234);
     }
 
     #[test]

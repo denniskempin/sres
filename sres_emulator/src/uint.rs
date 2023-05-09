@@ -10,11 +10,17 @@ use num_traits::WrappingSub;
 use crate::bus::Bus;
 use crate::memory::Address;
 
+pub enum RegisterSize {
+    U8,
+    U16,
+}
+
 pub trait UInt:
     PrimInt + OverflowingSub + OverflowingAdd + BitXor + WrappingAdd + WrappingSub
 {
     const N_BITS: usize;
     const N_BYTES: usize;
+    const SIZE: RegisterSize;
 
     fn store_in_u16(self, target: &mut u16);
     fn from_u32(target: u32) -> Self;
@@ -55,6 +61,7 @@ impl UInt for u8 {
 
     const N_BITS: usize = 8;
     const N_BYTES: usize = 1;
+    const SIZE: RegisterSize = RegisterSize::U8;
 
     fn bit(&self, index: usize) -> bool {
         Bits::bit(*self, index)
@@ -110,6 +117,7 @@ impl UInt for u16 {
 
     const N_BITS: usize = 16;
     const N_BYTES: usize = 2;
+    const SIZE: RegisterSize = RegisterSize::U16;
 
     fn bit(&self, index: usize) -> bool {
         Bits::bit(*self, index)
