@@ -23,6 +23,7 @@ pub enum AddressMode {
     DirectPageYIndexed,
     DirectPageXIndexedIndirect,
     DirectPageIndirectYIndexed,
+    DirectPageIndirectYIndexedLong,
     DirectPageIndirect,
     DirectPageIndirectLong,
 }
@@ -74,6 +75,7 @@ impl Operand {
             AddressMode::DirectPageXIndexedIndirect => 1,
             AddressMode::DirectPageYIndexed => 1,
             AddressMode::DirectPageIndirectYIndexed => 1,
+            AddressMode::DirectPageIndirectYIndexedLong => 1,
             AddressMode::DirectPageIndirect => 1,
             AddressMode::DirectPageIndirectLong => 1,
         };
@@ -147,6 +149,12 @@ impl Operand {
                             .unwrap_or_default() as u32
                             + cpu.y.value as u32
                     }
+                    AddressMode::DirectPageIndirectYIndexedLong => {
+                        cpu.bus
+                            .peek_u24(cpu.d as u32 + operand_data)
+                            .unwrap_or_default() as u32
+                            + cpu.y.value as u32
+                    }
                     AddressMode::DirectPageIndirectLong => cpu
                         .bus
                         .peek_u24(cpu.d as u32 + operand_data)
@@ -214,6 +222,7 @@ impl Operand {
                 AddressMode::DirectPageXIndexed => format!("${:02x},x", value),
                 AddressMode::DirectPageXIndexedIndirect => format!("(${:02x},x)", value),
                 AddressMode::DirectPageIndirectYIndexed => format!("(${:02x}),y", value),
+                AddressMode::DirectPageIndirectYIndexedLong => format!("[${:02x}],y", value),
                 AddressMode::DirectPageYIndexed => format!("${:02x},y", value),
                 AddressMode::Implied
                 | AddressMode::ImmediateU8
