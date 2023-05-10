@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
-use sres_emulator::bus::SresBus;
+use sres_emulator::bus::TestBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::memory::Memory;
 use sres_emulator::trace::Trace;
@@ -15,8 +15,7 @@ fn run_krom_test(test_name: &str) {
     let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log"));
     let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));
 
-    let mut bus = SresBus::new();
-    bus.cartridge.load_sfc(&rom_path).unwrap();
+    let mut bus = TestBus::with_sfc(&rom_path).unwrap();
     // Fake RDNMI register. NMI is always true.
     bus.write_u8(0x004210, 0xC2);
     let mut cpu = Cpu::new(bus);

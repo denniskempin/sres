@@ -180,9 +180,11 @@ mod tests {
 
     use tempfile::NamedTempFile;
 
-    use crate::bus::SresBus;
+    use crate::bus::TestBus;
     use crate::cpu::VariableLengthRegister;
     use crate::memory::Memory;
+
+    use super::Cpu;
 
     fn assemble(code: &str) -> Vec<u8> {
         let mut code_file = NamedTempFile::new().unwrap();
@@ -201,14 +203,30 @@ mod tests {
         assembled.stdout
     }
 
+    fn cpu_with_program(code: &str) -> Cpu<TestBus> {
+        let assembled = assemble(code);
+        Cpu::new(TestBus::with_program(&assembled))
+    }
+
     #[test]
-    pub fn test_assembler() {
-        assert_eq!(assemble("lda $1234"), [0xAD, 0x34, 0x12]);
+    pub fn test_simple_program() {
+        const PROGRAM: &str = "
+            lda #$12
+            adc #$34
+            sta $1000
+        ";
+        let mut cpu = cpu_with_program(PROGRAM);
+        cpu.step();
+        assert_eq!(cpu.a.value, 0x12);
+        cpu.step();
+        assert_eq!(cpu.a.value, 0x46);
+        cpu.step();
+        assert_eq!(cpu.bus.read_u8(0x1000), 0x46);
     }
 
     #[test]
     pub fn test_stack_u8() {
-        let mut cpu = super::Cpu::new(SresBus::new());
+        let mut cpu = super::Cpu::new(TestBus::default());
         cpu.stack_push_u8(0x12);
         assert_eq!(cpu.bus.read_u8(cpu.s as u32 + 1), 0x12);
         assert_eq!(cpu.stack_pop_u8(), 0x12);
@@ -216,7 +234,7 @@ mod tests {
 
     #[test]
     pub fn test_stack() {
-        let mut cpu = super::Cpu::new(SresBus::new());
+        let mut cpu = super::Cpu::new(TestBus::default());
         cpu.stack_push_u16(0x1234);
         assert_eq!(cpu.bus.read_u8(cpu.s as u32 + 1), 0x34);
         assert_eq!(cpu.bus.read_u8(cpu.s as u32 + 2), 0x12);
