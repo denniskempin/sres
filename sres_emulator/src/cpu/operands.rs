@@ -20,6 +20,7 @@ pub enum AddressMode {
     #[allow(dead_code)]
     AbsoluteYIndexedLong,
     StackRelative,
+    StackRelativeIndirectYIndexed,
     Relative,
     DirectPage,
     DirectPageXIndexed,
@@ -74,6 +75,7 @@ impl Operand {
             AddressMode::AbsoluteYIndexed => 2,
             AddressMode::AbsoluteYIndexedLong => 3,
             AddressMode::StackRelative => 1,
+            AddressMode::StackRelativeIndirectYIndexed => 1,
             AddressMode::Relative => 1,
             AddressMode::DirectPage => 1,
             AddressMode::DirectPageXIndexed => 1,
@@ -132,6 +134,12 @@ impl Operand {
                         }
                     }
                     AddressMode::StackRelative => operand_data + cpu.s as u32 + STACK_BASE,
+                    AddressMode::StackRelativeIndirectYIndexed => {
+                        cpu.bus
+                            .peek_u16(cpu.s as u32 + operand_data)
+                            .unwrap_or_default() as u32
+                            + cpu.y.value as u32
+                    }
                     AddressMode::DirectPage => cpu.d as u32 + operand_data,
                     AddressMode::DirectPageXIndexed => {
                         cpu.d as u32 + operand_data + cpu.x.value as u32
@@ -222,6 +230,7 @@ impl Operand {
                 AddressMode::AbsoluteYIndexed => format!("${:04x},y", value),
                 AddressMode::AbsoluteYIndexedLong => format!("${:06x},y", value),
                 AddressMode::StackRelative => format!("${:02x},s", value),
+                AddressMode::StackRelativeIndirectYIndexed => format!("(${:02x},s),y", value),
                 AddressMode::Relative => format!("${:04x}", u32::from(*operand_addr)),
                 AddressMode::DirectPage => format!("${:02x}", value),
                 AddressMode::DirectPageIndirect => format!("(${:02x})", value),

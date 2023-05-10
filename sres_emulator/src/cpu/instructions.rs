@@ -122,6 +122,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0xFB] = instruction!(xce);
     table[0x4B] = instruction!(phk);
     table[0x08] = instruction!(php);
+    table[0xDA] = instruction!(phx, Implied, X);
     table[0xAB] = instruction!(plb);
     table[0x48] = instruction!(pha, Implied, A);
     table[0x68] = instruction!(pla, Implied, A);
@@ -139,6 +140,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x71] = instruction!(adc, DirectPageIndirectYIndexed, A);
     table[0x77] = instruction!(adc, DirectPageIndirectYIndexedLong, A);
     table[0x63] = instruction!(adc, StackRelative, A);
+    table[0x73] = instruction!(adc, StackRelativeIndirectYIndexed, A);
     table[0xE2] = instruction!(sep, ImmediateU8);
     table[0xC2] = instruction!(rep, ImmediateU8);
     table[0xA9] = instruction!(lda, ImmediateA, A);
@@ -151,6 +153,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     table[0x86] = instruction!(stx, DirectPage, X);
     table[0x8C] = instruction!(sty, Absolute, Y);
     table[0x9C] = instruction!(stz, Absolute);
+    table[0x4C] = instruction!(jmp, Absolute);
     table[0x5C] = instruction!(jml, AbsoluteLong);
     table[0x9A] = instruction!(txs, Implied, X);
     table[0x5B] = instruction!(tcd);
@@ -221,6 +224,9 @@ fn php(cpu: &mut Cpu<impl Bus>) {
 
 fn pha<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.stack_push(cpu.a.get::<T>());
+}
+fn phx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.stack_push(cpu.x.get::<T>());
 }
 
 fn plb(cpu: &mut Cpu<impl Bus>) {
@@ -329,6 +335,10 @@ fn bra(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 fn tcd(cpu: &mut Cpu<impl Bus>) {
     cpu.d = cpu.a.get();
     cpu.update_negative_zero_flags(cpu.d);
+}
+
+fn jmp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.pc = operand.addr().unwrap();
 }
 
 fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {

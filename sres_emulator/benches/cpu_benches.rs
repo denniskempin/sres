@@ -6,6 +6,7 @@ use criterion::BatchSize;
 use criterion::Criterion;
 use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::memory::Memory;
 
 fn criterion_benchmark(c: &mut Criterion) {
     let rom_path = PathBuf::from("sres_emulator/tests/cpu/CPUADC.sfc");
@@ -14,15 +15,15 @@ fn criterion_benchmark(c: &mut Criterion) {
             || {
                 let mut bus = SresBus::new();
                 bus.cartridge.load_sfc(&rom_path).unwrap();
+                // Fake RDNMI register. NMI is always true.
+                bus.write_u8(0x004210, 0xC2);
                 Cpu::new(bus)
             },
             |cpu: &mut Cpu<SresBus>| {
-                for _ in 0..1000 {
-                    cpu.reset();
-                    // Execute first 1000 instructions (That's all that's supported so far)
-                    for _ in 0..1000 {
-                        cpu.step();
-                    }
+                cpu.reset();
+                // The rom will eventually loop indefinitely, so limit to a fixed number of steps.
+                for _ in 0..300000 {
+                    cpu.step();
                 }
             },
             BatchSize::LargeInput,
