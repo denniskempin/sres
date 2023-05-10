@@ -99,7 +99,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         };
     }
 
-    let mut table = [(); 256].map(|_| Instruction::<BusT> {
+    let mut opcodes = [(); 256].map(|_| Instruction::<BusT> {
         execute: |_| {
             panic!("Unimplemented instruction");
         },
@@ -117,68 +117,83 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
 
     use AddressMode::*;
     use Register::*;
-    table[0x78] = instruction!(sei);
-    table[0x18] = instruction!(clc);
-    table[0xFB] = instruction!(xce);
-    table[0x4B] = instruction!(phk);
-    table[0x08] = instruction!(php);
-    table[0xDA] = instruction!(phx, Implied, X);
-    table[0xAB] = instruction!(plb);
-    table[0x48] = instruction!(pha, Implied, A);
-    table[0x68] = instruction!(pla, Implied, A);
-    table[0x69] = instruction!(adc, ImmediateA, A);
-    table[0x6D] = instruction!(adc, Absolute, A);
-    table[0x6F] = instruction!(adc, AbsoluteLong, A);
-    table[0x65] = instruction!(adc, DirectPage, A);
-    table[0x72] = instruction!(adc, DirectPageIndirect, A);
-    table[0x67] = instruction!(adc, DirectPageIndirectLong, A);
-    table[0x7D] = instruction!(adc, AbsoluteXIndexed, A);
-    table[0x7F] = instruction!(adc, AbsoluteXIndexedLong, A);
-    table[0x79] = instruction!(adc, AbsoluteYIndexed, A);
-    table[0x75] = instruction!(adc, DirectPageXIndexed, A);
-    table[0x61] = instruction!(adc, DirectPageXIndexedIndirect, A);
-    table[0x71] = instruction!(adc, DirectPageIndirectYIndexed, A);
-    table[0x77] = instruction!(adc, DirectPageIndirectYIndexedLong, A);
-    table[0x63] = instruction!(adc, StackRelative, A);
-    table[0x73] = instruction!(adc, StackRelativeIndirectYIndexed, A);
-    table[0xE2] = instruction!(sep, ImmediateU8);
-    table[0xC2] = instruction!(rep, ImmediateU8);
-    table[0xA9] = instruction!(lda, ImmediateA, A);
-    table[0xBD] = instruction!(lda, AbsoluteXIndexed, A);
-    table[0xA2] = instruction!(ldx, ImmediateXY, X);
-    table[0xA0] = instruction!(ldy, ImmediateXY, Y);
-    table[0x8D] = instruction!(sta, Absolute, A);
-    table[0x85] = instruction!(sta, DirectPage, A);
-    table[0x8E] = instruction!(stx, Absolute, X);
-    table[0x86] = instruction!(stx, DirectPage, X);
-    table[0x8C] = instruction!(sty, Absolute, Y);
-    table[0x9C] = instruction!(stz, Absolute);
-    table[0x4C] = instruction!(jmp, Absolute);
-    table[0x5C] = instruction!(jml, AbsoluteLong);
-    table[0x9A] = instruction!(txs, Implied, X);
-    table[0x5B] = instruction!(tcd);
-    table[0xCA] = instruction!(dex, Implied, X);
-    table[0x88] = instruction!(dey, Implied, Y);
-    table[0xE8] = instruction!(inx, Implied, X);
-    table[0xEA] = instruction!(nop);
-    table[0xC9] = instruction!(cmp, ImmediateA, A);
-    table[0x4A] = instruction!(lsr, Accumulator);
-    table[0x2C] = instruction!(bit, Absolute);
-    table[0xD0] = instruction!(bne, Relative);
-    table[0x10] = instruction!(bpl, Relative);
-    table[0x80] = instruction!(bra, Relative);
-    table[0xE0] = instruction!(cpx, ImmediateXY, X);
-    table[0x29] = instruction!(and, ImmediateA, A);
-    table[0x20] = instruction!(jsr, Absolute);
-    table[0x24] = instruction!(bit, DirectPage);
-    table[0x60] = instruction!(rts);
-    table[0xA5] = instruction!(lda, DirectPage, A);
-    table[0xCD] = instruction!(cmp, Absolute, A);
-    table[0xF0] = instruction!(beq, Relative);
-    table[0x38] = instruction!(sec);
-    table[0xA6] = instruction!(ldx, DirectPage, X);
-    table[0xEC] = instruction!(cpx, Absolute, X);
-    table
+    opcodes[0x78] = instruction!(sei);
+    opcodes[0x18] = instruction!(clc);
+    opcodes[0xFB] = instruction!(xce);
+    opcodes[0x4B] = instruction!(phk);
+    opcodes[0x08] = instruction!(php);
+    opcodes[0xDA] = instruction!(phx, Implied, X);
+    opcodes[0xAB] = instruction!(plb);
+    opcodes[0x48] = instruction!(pha, Implied, A);
+    opcodes[0x68] = instruction!(pla, Implied, A);
+    opcodes[0x69] = instruction!(adc, ImmediateA, A);
+    opcodes[0x6D] = instruction!(adc, Absolute, A);
+    opcodes[0x6F] = instruction!(adc, AbsoluteLong, A);
+    opcodes[0x65] = instruction!(adc, DirectPage, A);
+    opcodes[0x72] = instruction!(adc, DirectPageIndirect, A);
+    opcodes[0x67] = instruction!(adc, DirectPageIndirectLong, A);
+    opcodes[0x7D] = instruction!(adc, AbsoluteXIndexed, A);
+    opcodes[0x7F] = instruction!(adc, AbsoluteXIndexedLong, A);
+    opcodes[0x79] = instruction!(adc, AbsoluteYIndexed, A);
+    opcodes[0x75] = instruction!(adc, DirectPageXIndexed, A);
+    opcodes[0x61] = instruction!(adc, DirectPageXIndexedIndirect, A);
+    opcodes[0x71] = instruction!(adc, DirectPageIndirectYIndexed, A);
+    opcodes[0x77] = instruction!(adc, DirectPageIndirectYIndexedLong, A);
+    opcodes[0x63] = instruction!(adc, StackRelative, A);
+    opcodes[0x73] = instruction!(adc, StackRelativeIndirectYIndexed, A);
+    opcodes[0xE2] = instruction!(sep, ImmediateU8);
+    opcodes[0xC2] = instruction!(rep, ImmediateU8);
+    opcodes[0xA9] = instruction!(lda, ImmediateA, A);
+    opcodes[0xBD] = instruction!(lda, AbsoluteXIndexed, A);
+    opcodes[0xA2] = instruction!(ldx, ImmediateXY, X);
+    opcodes[0xA0] = instruction!(ldy, ImmediateXY, Y);
+    opcodes[0x8D] = instruction!(sta, Absolute, A);
+    opcodes[0x85] = instruction!(sta, DirectPage, A);
+    opcodes[0x8E] = instruction!(stx, Absolute, X);
+    opcodes[0x86] = instruction!(stx, DirectPage, X);
+    opcodes[0x8C] = instruction!(sty, Absolute, Y);
+    opcodes[0x9C] = instruction!(stz, Absolute);
+    opcodes[0x4C] = instruction!(jmp, Absolute);
+    opcodes[0x5C] = instruction!(jml, AbsoluteLong);
+    opcodes[0x9A] = instruction!(txs, Implied, X);
+    opcodes[0x5B] = instruction!(tcd);
+    opcodes[0xCA] = instruction!(dex, Implied, X);
+    opcodes[0x88] = instruction!(dey, Implied, Y);
+    opcodes[0xE8] = instruction!(inx, Implied, X);
+    opcodes[0xEA] = instruction!(nop);
+    opcodes[0xC9] = instruction!(cmp, ImmediateA, A);
+    opcodes[0x4A] = instruction!(lsr, Accumulator);
+    opcodes[0x2C] = instruction!(bit, Absolute);
+    opcodes[0xD0] = instruction!(bne, Relative);
+    opcodes[0x10] = instruction!(bpl, Relative);
+    opcodes[0x80] = instruction!(bra, Relative);
+    opcodes[0xE0] = instruction!(cpx, ImmediateXY, X);
+    opcodes[0x29] = instruction!(and, ImmediateA, A);
+    opcodes[0x2D] = instruction!(and, Absolute, A);
+    opcodes[0x2F] = instruction!(and, AbsoluteLong, A);
+    opcodes[0x25] = instruction!(and, DirectPage, A);
+    opcodes[0x32] = instruction!(and, DirectPageIndirect, A);
+    opcodes[0x27] = instruction!(and, DirectPageIndirectLong, A);
+    opcodes[0x3D] = instruction!(and, AbsoluteXIndexed, A);
+    opcodes[0x3F] = instruction!(and, AbsoluteXIndexedLong, A);
+    opcodes[0x39] = instruction!(and, AbsoluteYIndexed, A);
+    opcodes[0x35] = instruction!(and, DirectPageXIndexed, A);
+    opcodes[0x21] = instruction!(and, DirectPageXIndexedIndirect, A);
+    opcodes[0x31] = instruction!(and, DirectPageIndirectYIndexed, A);
+    opcodes[0x37] = instruction!(and, DirectPageIndirectYIndexedLong, A);
+    opcodes[0x23] = instruction!(and, StackRelative, A);
+    opcodes[0x33] = instruction!(and, StackRelativeIndirectYIndexed, A);
+    opcodes[0x20] = instruction!(jsr, Absolute);
+    opcodes[0x24] = instruction!(bit, DirectPage);
+    opcodes[0x60] = instruction!(rts);
+    opcodes[0xA5] = instruction!(lda, DirectPage, A);
+    opcodes[0xCD] = instruction!(cmp, Absolute, A);
+    opcodes[0xF0] = instruction!(beq, Relative);
+    opcodes[0xB8] = instruction!(clv);
+    opcodes[0x38] = instruction!(sec);
+    opcodes[0xA6] = instruction!(ldx, DirectPage, X);
+    opcodes[0xEC] = instruction!(cpx, Absolute, X);
+    opcodes
 }
 
 fn nop(_: &mut Cpu<impl Bus>) {}
@@ -238,6 +253,10 @@ fn pla<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     let value = cpu.stack_pop::<T>();
     cpu.a.set(value);
     cpu.update_negative_zero_flags(value);
+}
+
+fn clv(cpu: &mut Cpu<impl Bus>) {
+    cpu.status.overflow = false;
 }
 
 fn rep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {

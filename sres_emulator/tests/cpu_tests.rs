@@ -11,6 +11,11 @@ pub fn test_cpuadc() {
     run_krom_test("CPUADC");
 }
 
+#[test]
+pub fn test_cpuand() {
+    run_krom_test("CPUAND");
+}
+
 fn run_krom_test(test_name: &str) {
     let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log"));
     let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));
