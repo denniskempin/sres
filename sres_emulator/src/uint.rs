@@ -7,9 +7,6 @@ use num_traits::PrimInt;
 use num_traits::WrappingAdd;
 use num_traits::WrappingSub;
 
-use crate::bus::Bus;
-use crate::memory::Address;
-
 pub enum RegisterSize {
     U8,
     U16,
@@ -22,41 +19,48 @@ pub trait UInt:
     const N_BYTES: usize;
     const SIZE: RegisterSize;
 
-    fn store_in_u16(self, target: &mut u16);
+    fn to_u32(self) -> u32;
+    fn to_u16(self) -> u16;
+    fn to_u8(self) -> u8;
+
     fn from_u32(target: u32) -> Self;
     fn from_u16(target: u16) -> Self;
     fn from_u8(target: u8) -> Self;
-    fn peek_from_bus(bus: &mut impl Bus, addr: Address) -> Option<Self>;
-    fn read_from_bus(bus: &mut impl Bus, addr: Address) -> Self;
-    fn write_to_bus(&self, bus: &mut impl Bus, addr: Address);
+
     fn bit(&self, index: usize) -> bool;
 
     fn add_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool);
 }
 
 impl UInt for u8 {
-    fn store_in_u16(self, target: &mut u16) {
-        target.set_bits(0..8, self as u16);
-    }
-
+    #[inline]
     fn from_u32(target: u32) -> Self {
         target as u8
     }
 
+    #[inline]
     fn from_u16(target: u16) -> Self {
         target as u8
     }
 
+    #[inline]
     fn from_u8(target: u8) -> Self {
         target
     }
 
-    fn read_from_bus(bus: &mut impl Bus, addr: Address) -> Self {
-        bus.read(addr)
+    #[inline]
+    fn to_u32(self) -> u32 {
+        self as u32
     }
 
-    fn peek_from_bus(bus: &mut impl Bus, addr: Address) -> Option<Self> {
-        bus.peek(addr)
+    #[inline]
+    fn to_u16(self) -> u16 {
+        self as u16
+    }
+
+    #[inline]
+    fn to_u8(self) -> u8 {
+        self
     }
 
     const N_BITS: usize = 8;
@@ -65,10 +69,6 @@ impl UInt for u8 {
 
     fn bit(&self, index: usize) -> bool {
         Bits::bit(*self, index)
-    }
-
-    fn write_to_bus(&self, bus: &mut impl Bus, addr: Address) {
-        bus.write(addr, *self);
     }
 
     fn add_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool) {
@@ -92,27 +92,34 @@ impl UInt for u8 {
 }
 
 impl UInt for u16 {
-    fn store_in_u16(self, target: &mut u16) {
-        *target = self
-    }
+    #[inline]
     fn from_u32(target: u32) -> Self {
         target as u16
     }
 
+    #[inline]
     fn from_u16(target: u16) -> Self {
         target
     }
 
+    #[inline]
     fn from_u8(target: u8) -> Self {
         target as u16
     }
 
-    fn peek_from_bus(bus: &mut impl Bus, addr: Address) -> Option<Self> {
-        bus.peek_u16(addr)
+    #[inline]
+    fn to_u32(self) -> u32 {
+        self as u32
     }
 
-    fn read_from_bus(bus: &mut impl Bus, addr: Address) -> Self {
-        bus.read_u16(addr)
+    #[inline]
+    fn to_u16(self) -> u16 {
+        self
+    }
+
+    #[inline]
+    fn to_u8(self) -> u8 {
+        self as u8
     }
 
     const N_BITS: usize = 16;
@@ -121,10 +128,6 @@ impl UInt for u16 {
 
     fn bit(&self, index: usize) -> bool {
         Bits::bit(*self, index)
-    }
-
-    fn write_to_bus(&self, bus: &mut impl Bus, addr: Address) {
-        bus.write_u16(addr, *self);
     }
 
     fn add_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool) {

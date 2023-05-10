@@ -88,7 +88,7 @@ impl Operand {
         // Regardless of how many bytes were read, store them all as u32 for simplicity.
         let operand_data: u32 = match operand_size {
             0 => 0,
-            1 => cpu.bus.peek(instruction_addr + 1).unwrap_or_default() as u32,
+            1 => cpu.bus.peek_u8(instruction_addr + 1).unwrap_or_default() as u32,
             2 => cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default() as u32,
             3 => cpu.bus.peek_u24(instruction_addr + 1).unwrap_or_default(),
             _ => unreachable!(),
@@ -194,7 +194,7 @@ impl Operand {
             Self::ImmediateU8(value) => T::from_u8(*value),
             Self::ImmediateU16(value) => T::from_u16(*value),
             Self::Accumulator => cpu.a.get(),
-            _ => T::read_from_bus(&mut cpu.bus, self.addr().unwrap()),
+            _ => cpu.bus.read_generic::<T>(self.addr().unwrap()),
         }
     }
 
@@ -204,7 +204,7 @@ impl Operand {
             Self::Implied => panic!("writing to implied operand"),
             Self::ImmediateU8(_) | Self::ImmediateU16(_) => panic!("writing to immediate operand"),
             Self::Accumulator => cpu.a.set(value),
-            _ => value.write_to_bus(&mut cpu.bus, self.addr().unwrap()),
+            _ => cpu.bus.write_generic::<T>(self.addr().unwrap(), value),
         }
     }
 

@@ -25,7 +25,7 @@ impl Default for SresBus {
 }
 
 impl Memory for SresBus {
-    fn peek<Addr: ToAddress>(&self, addr: Addr) -> Option<u8> {
+    fn peek_u8(&self, addr: impl ToAddress) -> Option<u8> {
         let addr = addr.to_address();
         match addr.offset {
             0x8000..=0xFFFF => {
@@ -42,11 +42,11 @@ impl Memory for SresBus {
         }
     }
 
-    fn read<Addr: ToAddress>(&mut self, addr: Addr) -> u8 {
-        self.peek(addr).unwrap_or(0)
+    fn read_u8(&mut self, addr: impl ToAddress) -> u8 {
+        self.peek_u8(addr).unwrap_or(0)
     }
 
-    fn write<Addr: ToAddress>(&mut self, addr: Addr, val: u8) {
+    fn write_u8(&mut self, addr: impl ToAddress, val: u8) {
         let addr = addr.to_address();
         #[allow(clippy::single_match)]
         match addr.offset {
@@ -85,11 +85,11 @@ mod tests {
         };
         // Access first byte of page 0
         bus.cartridge.rom[0x000000] = 0x12;
-        assert_eq!(bus.read(0x008000), 0x12);
+        assert_eq!(bus.read_u8(0x008000), 0x12);
 
         // Access first byte of page 1
         bus.cartridge.rom[0x008000] = 0x23;
-        assert_eq!(bus.read(0x018000), 0x23);
+        assert_eq!(bus.read_u8(0x018000), 0x23);
     }
 
     #[test]
@@ -104,11 +104,11 @@ mod tests {
         };
 
         // Access first byte of page 0
-        bus.write(0x008000, 0x12);
+        bus.write_u8(0x008000, 0x12);
         assert_eq!(bus.cartridge.rom[0x000000], 0x12);
 
         // Access first byte of page 1
-        bus.write(0x018000, 0x23);
+        bus.write_u8(0x018000, 0x23);
         assert_eq!(bus.cartridge.rom[0x008000], 0x23);
     }
 }

@@ -18,7 +18,7 @@ fn run_krom_test(test_name: &str) {
     let mut bus = SresBus::new();
     bus.cartridge.load_sfc(&rom_path).unwrap();
     // Fake RDNMI register. NMI is always true.
-    bus.write(0x004210, 0xC2);
+    bus.write_u8(0x004210, 0xC2);
     let mut cpu = Cpu::new(bus);
     cpu.reset();
 
@@ -53,7 +53,12 @@ fn run_krom_test(test_name: &str) {
             }
         }
 
-        println!("{:06} ({:02X}): {}", i, cpu.bus.read(cpu.pc), actual_line);
+        println!(
+            "{:06} ({:02X}): {}",
+            i,
+            cpu.bus.read_u8(cpu.pc),
+            actual_line
+        );
         assert_eq!(actual_line.to_string(), expected_line.to_string());
         cpu.step();
     }

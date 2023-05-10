@@ -185,12 +185,12 @@ fn sec(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.stack_push(cpu.pc.offset - 1);
+    cpu.stack_push_u16(cpu.pc.offset - 1);
     cpu.pc = operand.addr().unwrap();
 }
 
 fn rts(cpu: &mut Cpu<impl Bus>) {
-    cpu.pc.offset = cpu.stack_pop();
+    cpu.pc.offset = cpu.stack_pop_u16();
 }
 
 fn beq(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -212,11 +212,11 @@ fn xce(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn phk(cpu: &mut Cpu<impl Bus>) {
-    cpu.stack_push(cpu.db);
+    cpu.stack_push_u8(cpu.db);
 }
 
 fn php(cpu: &mut Cpu<impl Bus>) {
-    cpu.stack_push(u8::from(cpu.status));
+    cpu.stack_push_u8(u8::from(cpu.status));
 }
 
 fn pha<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
@@ -224,12 +224,12 @@ fn pha<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
 }
 
 fn plb(cpu: &mut Cpu<impl Bus>) {
-    cpu.db = cpu.stack_pop();
+    cpu.db = cpu.stack_pop_u8();
     cpu.update_negative_zero_flags(cpu.db);
 }
 
 fn pla<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    let value: T = cpu.stack_pop();
+    let value = cpu.stack_pop::<T>();
     cpu.a.set(value);
     cpu.update_negative_zero_flags(value);
 }
@@ -288,7 +288,7 @@ fn stz(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn txs<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     let value: T = cpu.x.get();
-    cpu.s = value.to_u16().unwrap();
+    cpu.s = value.to_u16();
     cpu.update_negative_zero_flags(value);
 }
 

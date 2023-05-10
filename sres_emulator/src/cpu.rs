@@ -2,6 +2,8 @@ pub mod instructions;
 mod operands;
 pub mod status;
 
+use intbits::Bits;
+
 use self::instructions::build_opcode_table;
 use self::instructions::Instruction;
 use self::instructions::InstructionMeta;
@@ -19,8 +21,15 @@ pub struct VariableLengthRegister {
 }
 
 impl VariableLengthRegister {
-    fn set(&mut self, value: impl UInt) {
-        value.store_in_u16(&mut self.value);
+    fn set<T: UInt>(&mut self, value: T) {
+        match T::SIZE {
+            RegisterSize::U8 => {
+                self.value.set_bits(0..8, value.to_u8() as u16);
+            }
+            RegisterSize::U16 => {
+                self.value = value.to_u16();
+            }
+        }
     }
 
     fn get<T: UInt>(&self) -> T {
@@ -77,7 +86,7 @@ impl<BusT: Bus> Cpu<BusT> {
 
     /// Return the instruction meta data for the instruction at the given address
     fn load_instruction_meta(&mut self, addr: Address) -> (InstructionMeta, Address) {
-        let opcode = self.bus.read(addr);
+        let opcode = self.bus.read_u8(addr);
         (self.instruction_table[opcode as usize].meta)(self, addr)
     }
 
@@ -85,48 +94,58 @@ impl<BusT: Bus> Cpu<BusT> {
         self.pc = Address {
             bank: 0,
             offset: u16::from_le_bytes([
-                self.bus.read(EmuVectorTable::Reset as u32),
-                self.bus.read(EmuVectorTable::Reset as u32 + 1),
+                self.bus.read_u8(EmuVectorTable::Reset as u32),
+                self.bus.read_u8(EmuVectorTable::Reset as u32 + 1),
             ]),
         };
     }
 
     pub fn step(&mut self) {
-        let opcode = self.bus.read(self.pc);
+        let opcode = self.bus.read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self)
     }
 
-    fn stack_push<T: UInt>(&mut self, value: T) {
+    fn stack_push_u8(&mut self, value: u8) {
         if self.s == 0 {
             return;
         }
+        self.bus.write_u8(self.s as u32, value);
+        self.s -= 1;
+    }
+
+    fn stack_push_u16(&mut self, value: u16) {
+        let bytes = value.to_le_bytes();
+        self.stack_push_u8(bytes[1]);
+        self.stack_push_u8(bytes[0]);
+    }
+
+    fn stack_push<T: UInt>(&mut self, value: T) {
         match T::SIZE {
             RegisterSize::U8 => {
-                self.bus.write(self.s as u32, value.to_u8().unwrap());
-                self.s -= 1;
+                self.stack_push_u8(value.to_u8());
             }
             RegisterSize::U16 => {
-                let bytes = value.to_u16().unwrap().to_le_bytes();
-                self.stack_push(bytes[1]);
-                self.stack_push(bytes[0]);
+                self.stack_push_u16(value.to_u16());
             }
         }
     }
 
-    fn stack_pop<T: UInt>(&mut self) -> T {
+    fn stack_pop_u8(&mut self) -> u8 {
         if self.s == 0xFF {
-            return T::zero();
+            return 0;
         }
+        self.s += 1;
+        self.bus.read_u8(self.s as u32)
+    }
+
+    fn stack_pop_u16(&mut self) -> u16 {
+        u16::from_le_bytes([self.stack_pop_u8(), self.stack_pop_u8()])
+    }
+
+    fn stack_pop<T: UInt>(&mut self) -> T {
         match T::SIZE {
-            RegisterSize::U8 => {
-                self.s += 1;
-                let result = self.bus.read(self.s as u32);
-                T::from_u8(result)
-            }
-            RegisterSize::U16 => {
-                let result = u16::from_le_bytes([self.stack_pop(), self.stack_pop()]);
-                T::from_u16(result)
-            }
+            RegisterSize::U8 => T::from_u8(self.stack_pop_u8()),
+            RegisterSize::U16 => T::from_u16(self.stack_pop_u16()),
         }
     }
 
@@ -190,18 +209,18 @@ mod tests {
     #[test]
     pub fn test_stack_u8() {
         let mut cpu = super::Cpu::new(SresBus::new());
-        cpu.stack_push(0x12_u8);
-        assert_eq!(cpu.bus.read(cpu.s as u32 + 1), 0x12);
-        assert_eq!(cpu.stack_pop::<u8>(), 0x12);
+        cpu.stack_push_u8(0x12);
+        assert_eq!(cpu.bus.read_u8(cpu.s as u32 + 1), 0x12);
+        assert_eq!(cpu.stack_pop_u8(), 0x12);
     }
 
     #[test]
     pub fn test_stack() {
         let mut cpu = super::Cpu::new(SresBus::new());
-        cpu.stack_push(0x1234_u16);
-        assert_eq!(cpu.bus.read(cpu.s as u32 + 1), 0x34);
-        assert_eq!(cpu.bus.read(cpu.s as u32 + 2), 0x12);
-        assert_eq!(cpu.stack_pop::<u16>(), 0x1234);
+        cpu.stack_push_u16(0x1234);
+        assert_eq!(cpu.bus.read_u8(cpu.s as u32 + 1), 0x34);
+        assert_eq!(cpu.bus.read_u8(cpu.s as u32 + 2), 0x12);
+        assert_eq!(cpu.stack_pop_u16(), 0x1234);
     }
 
     #[test]
