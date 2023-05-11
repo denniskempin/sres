@@ -180,11 +180,10 @@ mod tests {
 
     use tempfile::NamedTempFile;
 
+    use super::Cpu;
     use crate::bus::TestBus;
     use crate::cpu::VariableLengthRegister;
     use crate::memory::Memory;
-
-    use super::Cpu;
 
     fn assemble(code: &str) -> Vec<u8> {
         let mut code_file = NamedTempFile::new().unwrap();

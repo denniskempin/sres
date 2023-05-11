@@ -22,6 +22,7 @@ pub enum AddressMode {
     StackRelative,
     StackRelativeIndirectYIndexed,
     Relative,
+    RelativeLong,
     DirectPage,
     DirectPageXIndexed,
     #[allow(dead_code)]
@@ -77,6 +78,7 @@ impl Operand {
             AddressMode::StackRelative => 1,
             AddressMode::StackRelativeIndirectYIndexed => 1,
             AddressMode::Relative => 1,
+            AddressMode::RelativeLong => 2,
             AddressMode::DirectPage => 1,
             AddressMode::DirectPageXIndexed => 1,
             AddressMode::DirectPageXIndexedIndirect => 1,
@@ -131,6 +133,14 @@ impl Operand {
                             u32::from(cpu.pc + 2).wrapping_add(relative_addr.unsigned_abs() as u32)
                         } else {
                             u32::from(cpu.pc + 2).wrapping_sub(relative_addr.unsigned_abs() as u32)
+                        }
+                    }
+                    AddressMode::RelativeLong => {
+                        let relative_addr = operand_data as i16;
+                        if relative_addr > 0 {
+                            u32::from(cpu.pc + 3).wrapping_add(relative_addr.unsigned_abs() as u32)
+                        } else {
+                            u32::from(cpu.pc + 3).wrapping_sub(relative_addr.unsigned_abs() as u32)
                         }
                     }
                     AddressMode::StackRelative => operand_data + cpu.s as u32 + STACK_BASE,
@@ -232,6 +242,7 @@ impl Operand {
                 AddressMode::StackRelative => format!("${:02x},s", value),
                 AddressMode::StackRelativeIndirectYIndexed => format!("(${:02x},s),y", value),
                 AddressMode::Relative => format!("${:04x}", u32::from(*operand_addr)),
+                AddressMode::RelativeLong => format!("${:04x}", u32::from(*operand_addr)),
                 AddressMode::DirectPage => format!("${:02x}", value),
                 AddressMode::DirectPageIndirect => format!("(${:02x})", value),
                 AddressMode::DirectPageIndirectLong => format!("[${:02x}]", value),

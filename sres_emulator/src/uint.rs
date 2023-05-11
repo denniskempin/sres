@@ -1,4 +1,5 @@
 use std::ops::BitXor;
+use std::ops::Shl;
 
 use intbits::Bits;
 use num_traits::ops::overflowing::OverflowingAdd;
@@ -13,7 +14,7 @@ pub enum RegisterSize {
 }
 
 pub trait UInt:
-    PrimInt + OverflowingSub + OverflowingAdd + BitXor + WrappingAdd + WrappingSub
+    PrimInt + OverflowingSub + OverflowingAdd + BitXor + WrappingAdd + WrappingSub + Shl
 {
     const N_BITS: usize;
     const N_BYTES: usize;

@@ -117,6 +117,8 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
 
     use AddressMode::*;
     use Register::*;
+    // list all 65816 opcodes
+
     opcodes[0x78] = instruction!(sei);
     opcodes[0x18] = instruction!(clc);
     opcodes[0xFB] = instruction!(xce);
@@ -162,11 +164,39 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xE8] = instruction!(inx, Implied, X);
     opcodes[0xEA] = instruction!(nop);
     opcodes[0xC9] = instruction!(cmp, ImmediateA, A);
+    opcodes[0xCD] = instruction!(cmp, Absolute, A);
+    opcodes[0xCF] = instruction!(cmp, AbsoluteLong, A);
+    opcodes[0xC5] = instruction!(cmp, DirectPage, A);
+    opcodes[0xD2] = instruction!(cmp, DirectPageIndirect, A);
+    opcodes[0xC7] = instruction!(cmp, DirectPageIndirectLong, A);
+    opcodes[0xDD] = instruction!(cmp, AbsoluteXIndexed, A);
+    opcodes[0xDF] = instruction!(cmp, AbsoluteXIndexedLong, A);
+    opcodes[0xD9] = instruction!(cmp, AbsoluteYIndexed, A);
+    opcodes[0xD5] = instruction!(cmp, DirectPageXIndexed, A);
+    opcodes[0xC1] = instruction!(cmp, DirectPageXIndexedIndirect, A);
+    opcodes[0xD1] = instruction!(cmp, DirectPageIndirectYIndexed, A);
+    opcodes[0xD7] = instruction!(cmp, DirectPageIndirectYIndexedLong, A);
+    opcodes[0xC3] = instruction!(cmp, StackRelative, A);
+    opcodes[0xD3] = instruction!(cmp, StackRelativeIndirectYIndexed, A);
+    opcodes[0x0A] = instruction!(asl, Accumulator, A);
+    opcodes[0x0E] = instruction!(asl, Absolute, A);
+    opcodes[0x06] = instruction!(asl, DirectPage, A);
+    opcodes[0x1E] = instruction!(asl, AbsoluteXIndexed, A);
+    opcodes[0x16] = instruction!(asl, DirectPageXIndexed, A);
+    opcodes[0x80] = instruction!(bra, Relative);
+    opcodes[0x82] = instruction!(brl, RelativeLong);
+    opcodes[0x90] = instruction!(bcc, Relative);
+    opcodes[0xB0] = instruction!(bcs, Relative);
+    opcodes[0xF0] = instruction!(beq, Relative);
+    opcodes[0x30] = instruction!(bmi, Relative);
+    opcodes[0xD0] = instruction!(bne, Relative);
+    opcodes[0x10] = instruction!(bpl, Relative);
+    opcodes[0x50] = instruction!(bvc, Relative);
+    opcodes[0x70] = instruction!(bvs, Relative);
     opcodes[0x4A] = instruction!(lsr, Accumulator);
     opcodes[0x2C] = instruction!(bit, Absolute);
     opcodes[0xD0] = instruction!(bne, Relative);
     opcodes[0x10] = instruction!(bpl, Relative);
-    opcodes[0x80] = instruction!(bra, Relative);
     opcodes[0xE0] = instruction!(cpx, ImmediateXY, X);
     opcodes[0x29] = instruction!(and, ImmediateA, A);
     opcodes[0x2D] = instruction!(and, Absolute, A);
@@ -185,6 +215,9 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x33] = instruction!(and, StackRelativeIndirectYIndexed, A);
     opcodes[0x20] = instruction!(jsr, Absolute);
     opcodes[0x24] = instruction!(bit, DirectPage);
+    opcodes[0x34] = instruction!(bit, DirectPageXIndexed);
+    opcodes[0x89] = instruction!(bit, ImmediateU8);
+    opcodes[0x3C] = instruction!(bit, AbsoluteXIndexed);
     opcodes[0x60] = instruction!(rts);
     opcodes[0xA5] = instruction!(lda, DirectPage, A);
     opcodes[0xCD] = instruction!(cmp, Absolute, A);
@@ -207,14 +240,64 @@ fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.pc = operand.addr().unwrap();
 }
 
-fn rts(cpu: &mut Cpu<impl Bus>) {
-    cpu.pc.offset = cpu.stack_pop_u16();
+fn bra(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.pc = operand.addr().unwrap();
+}
+
+fn brl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.pc = operand.addr().unwrap();
+}
+
+fn bcc(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if !cpu.status.carry {
+        cpu.pc = operand.addr().unwrap();
+    }
+}
+
+fn bcs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if cpu.status.carry {
+        cpu.pc = operand.addr().unwrap();
+    }
 }
 
 fn beq(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.zero {
         cpu.pc = operand.addr().unwrap();
     }
+}
+
+fn bne(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if !cpu.status.zero {
+        cpu.pc = operand.addr().unwrap();
+    }
+}
+
+fn bpl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if !cpu.status.negative {
+        cpu.pc = operand.addr().unwrap();
+    }
+}
+
+fn bmi(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if cpu.status.negative {
+        cpu.pc = operand.addr().unwrap();
+    }
+}
+
+fn bvc(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if !cpu.status.overflow {
+        cpu.pc = operand.addr().unwrap();
+    }
+}
+
+fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if cpu.status.overflow {
+        cpu.pc = operand.addr().unwrap();
+    }
+}
+
+fn rts(cpu: &mut Cpu<impl Bus>) {
+    cpu.pc.offset = cpu.stack_pop_u16();
 }
 
 fn sei(cpu: &mut Cpu<impl Bus>) {
@@ -335,22 +418,6 @@ fn dey<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.update_negative_zero_flags(value);
 }
 
-fn bne(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if !cpu.status.zero {
-        cpu.pc = operand.addr().unwrap();
-    }
-}
-
-fn bpl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    if !cpu.status.negative {
-        cpu.pc = operand.addr().unwrap();
-    }
-}
-
-fn bra(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.pc = operand.addr().unwrap();
-}
-
 fn tcd(cpu: &mut Cpu<impl Bus>) {
     cpu.d = cpu.a.get();
     cpu.update_negative_zero_flags(cpu.d);
@@ -391,6 +458,14 @@ fn cmp<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let (value, overflow) = cpu.a.get::<T>().overflowing_sub(&operand_value);
     cpu.update_negative_zero_flags(value);
     cpu.status.carry = !overflow;
+}
+
+fn asl<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let data: T = operand.load(cpu);
+    cpu.status.carry = data.bit(T::N_BITS - 1);
+    let result = data << 1;
+    cpu.update_negative_zero_flags(result);
+    operand.store(cpu, result);
 }
 
 fn adc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
