@@ -31,6 +31,11 @@ pub fn test_cpubit() {
     run_krom_test("CPUBIT");
 }
 
+#[test]
+pub fn test_cpucmp() {
+    run_krom_test("CPUCMP");
+}
+
 fn run_krom_test(test_name: &str) {
     let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log"));
     let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));

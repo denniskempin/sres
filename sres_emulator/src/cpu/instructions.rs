@@ -1,4 +1,3 @@
-use super::status::StatusFlags;
 use super::Cpu;
 use super::UInt;
 use crate::bus::Bus;
@@ -154,6 +153,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x8E] = instruction!(stx, Absolute, X);
     opcodes[0x86] = instruction!(stx, DirectPage, X);
     opcodes[0x8C] = instruction!(sty, Absolute, Y);
+    opcodes[0x84] = instruction!(sty, DirectPage, Y);
     opcodes[0x9C] = instruction!(stz, Absolute);
     opcodes[0x4C] = instruction!(jmp, Absolute);
     opcodes[0x5C] = instruction!(jml, AbsoluteLong);
@@ -226,6 +226,10 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x38] = instruction!(sec);
     opcodes[0xA6] = instruction!(ldx, DirectPage, X);
     opcodes[0xEC] = instruction!(cpx, Absolute, X);
+    opcodes[0xE4] = instruction!(cpx, DirectPage, X);
+    opcodes[0xC0] = instruction!(cpy, ImmediateXY, Y);
+    opcodes[0xCC] = instruction!(cpy, Absolute, Y);
+    opcodes[0xC4] = instruction!(cpy, DirectPage, Y);
     opcodes[0x14] = instruction!(trb, DirectPage, A);
     opcodes[0x1C] = instruction!(trb, Absolute, A);
     opcodes[0x04] = instruction!(tsb, DirectPage, A);
@@ -470,6 +474,13 @@ fn bit<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 fn cpx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let operand_value: T = operand.load(cpu);
     let (value, overflow) = cpu.x.get::<T>().overflowing_sub(&operand_value);
+    cpu.update_negative_zero_flags(value);
+    cpu.status.carry = !overflow;
+}
+
+fn cpy<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let operand_value: T = operand.load(cpu);
+    let (value, overflow) = cpu.y.get::<T>().overflowing_sub(&operand_value);
     cpu.update_negative_zero_flags(value);
     cpu.status.carry = !overflow;
 }

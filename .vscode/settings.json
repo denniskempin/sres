@@ -2,5 +2,4 @@
     "files.watcherExclude": {
         "**/target/**": true
     },
-    "rust-analyzer.checkOnSave.command": "clippy",
 }
