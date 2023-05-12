@@ -42,19 +42,16 @@ pub fn test_cpudec() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpueor() {
     run_krom_test("CPUEOR");
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpuinc() {
     run_krom_test("CPUINC");
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpujmp() {
     run_krom_test("CPUJMP");
 }

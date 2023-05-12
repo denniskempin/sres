@@ -119,6 +119,13 @@ impl<BusT: Bus> Cpu<BusT> {
         self.stack_push_u8(bytes[0]);
     }
 
+    fn stack_push_u24(&mut self, value: u32) {
+        let bytes = value.to_le_bytes();
+        self.stack_push_u8(bytes[2]);
+        self.stack_push_u8(bytes[1]);
+        self.stack_push_u8(bytes[0]);
+    }
+
     fn stack_push<T: UInt>(&mut self, value: T) {
         match T::SIZE {
             RegisterSize::U8 => {
@@ -140,6 +147,15 @@ impl<BusT: Bus> Cpu<BusT> {
 
     fn stack_pop_u16(&mut self) -> u16 {
         u16::from_le_bytes([self.stack_pop_u8(), self.stack_pop_u8()])
+    }
+
+    fn stack_pop_u24(&mut self) -> u32 {
+        u32::from_le_bytes([
+            self.stack_pop_u8(),
+            self.stack_pop_u8(),
+            self.stack_pop_u8(),
+            0,
+        ])
     }
 
     fn stack_pop<T: UInt>(&mut self) -> T {

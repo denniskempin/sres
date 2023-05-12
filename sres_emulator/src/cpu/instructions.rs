@@ -4,6 +4,7 @@ use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
 use crate::memory::Address;
+use crate::memory::ToAddress;
 
 pub struct InstructionMeta {
     pub operation: &'static str,
@@ -200,10 +201,36 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xDE] = instruction!(dec, AbsoluteXIndexed, A);
     opcodes[0xCA] = instruction!(dex, Implied, X);
     opcodes[0x88] = instruction!(dey, Implied, Y);
+    opcodes[0x41] = instruction!(eor, DirectPageXIndexedIndirect, A);
+    opcodes[0x43] = instruction!(eor, StackRelative, A);
+    opcodes[0x49] = instruction!(eor, ImmediateA, A);
+    opcodes[0x45] = instruction!(eor, DirectPage, A);
+    opcodes[0x47] = instruction!(eor, DirectPageIndirectLong, A);
+    opcodes[0x4D] = instruction!(eor, Absolute, A);
+    opcodes[0x4F] = instruction!(eor, AbsoluteLong, A);
+    opcodes[0x51] = instruction!(eor, DirectPageIndirectYIndexed, A);
+    opcodes[0x52] = instruction!(eor, DirectPageIndirect, A);
+    opcodes[0x53] = instruction!(eor, StackRelativeIndirectYIndexed, A);
+    opcodes[0x55] = instruction!(eor, DirectPageXIndexed, A);
+    opcodes[0x57] = instruction!(eor, DirectPageIndirectYIndexedLong, A);
+    opcodes[0x59] = instruction!(eor, AbsoluteYIndexed, A);
+    opcodes[0x5D] = instruction!(eor, AbsoluteXIndexed, A);
+    opcodes[0x5F] = instruction!(eor, AbsoluteXIndexedLong, A);
+    opcodes[0x1A] = instruction!(inc, Accumulator, A);
+    opcodes[0xE6] = instruction!(inc, DirectPage, A);
+    opcodes[0xEE] = instruction!(inc, Absolute, A);
+    opcodes[0xF6] = instruction!(inc, DirectPageXIndexed, A);
+    opcodes[0xFE] = instruction!(inc, AbsoluteXIndexed, A);
     opcodes[0xE8] = instruction!(inx, Implied, X);
+    opcodes[0xC8] = instruction!(iny, Implied, Y);
     opcodes[0x5C] = instruction!(jml, AbsoluteLong);
     opcodes[0x4C] = instruction!(jmp, Absolute);
+    opcodes[0x6C] = instruction!(jmp, AbsoluteIndirect);
+    opcodes[0x7C] = instruction!(jmp, AbsoluteXIndexedIndirect);
+    opcodes[0xDC] = instruction!(jmp, AbsoluteIndirectLong);
     opcodes[0x20] = instruction!(jsr, Absolute);
+    opcodes[0xFC] = instruction!(jsr, AbsoluteXIndexedIndirect);
+    opcodes[0x22] = instruction!(jsl, AbsoluteLong);
     opcodes[0xA5] = instruction!(lda, DirectPage, A);
     opcodes[0xA9] = instruction!(lda, ImmediateA, A);
     opcodes[0xBD] = instruction!(lda, AbsoluteXIndexed, A);
@@ -219,6 +246,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x68] = instruction!(pla, Implied, A);
     opcodes[0xAB] = instruction!(plb);
     opcodes[0xC2] = instruction!(rep, ImmediateU8);
+    opcodes[0x6B] = instruction!(rtl);
     opcodes[0x60] = instruction!(rts);
     opcodes[0x38] = instruction!(sec);
     opcodes[0x78] = instruction!(sei);
@@ -264,6 +292,19 @@ fn tsb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.stack_push_u16(cpu.pc.offset - 1);
     cpu.pc = operand.addr().unwrap();
+}
+
+fn jsl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.stack_push_u24(u32::from(cpu.pc) - 1);
+    cpu.pc = operand.addr().unwrap();
+}
+
+fn rts(cpu: &mut Cpu<impl Bus>) {
+    cpu.pc.offset = cpu.stack_pop_u16();
+}
+
+fn rtl(cpu: &mut Cpu<impl Bus>) {
+    cpu.pc = cpu.stack_pop_u24().to_address();
 }
 
 fn bra(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -320,10 +361,6 @@ fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.overflow {
         cpu.pc = operand.addr().unwrap();
     }
-}
-
-fn rts(cpu: &mut Cpu<impl Bus>) {
-    cpu.pc.offset = cpu.stack_pop_u16();
 }
 
 fn sei(cpu: &mut Cpu<impl Bus>) {
@@ -426,9 +463,21 @@ fn txs<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.update_negative_zero_flags(value);
 }
 
+fn inc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load::<T>(cpu).wrapping_add(&T::one());
+    cpu.update_negative_zero_flags(value);
+    operand.store(cpu, value);
+}
+
 fn inx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     let value: T = cpu.x.get::<T>().wrapping_add(&T::one());
     cpu.x.set(value);
+    cpu.update_negative_zero_flags(value);
+}
+
+fn iny<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    let value: T = cpu.y.get::<T>().wrapping_add(&T::one());
+    cpu.y.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
@@ -448,6 +497,13 @@ fn dey<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     let value: T = cpu.y.get::<T>().wrapping_sub(&T::one());
     cpu.y.set(value);
     cpu.update_negative_zero_flags(value);
+}
+
+fn eor<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let operand_value: T = operand.load(cpu);
+    let result = cpu.a.get::<T>() ^ operand_value;
+    cpu.a.set(result);
+    cpu.update_negative_zero_flags(result);
 }
 
 fn tcd(cpu: &mut Cpu<impl Bus>) {
