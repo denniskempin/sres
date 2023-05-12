@@ -194,7 +194,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x50] = instruction!(bvc, Relative);
     opcodes[0x70] = instruction!(bvs, Relative);
     opcodes[0x4A] = instruction!(lsr, Accumulator);
-    opcodes[0x2C] = instruction!(bit, Absolute);
+    opcodes[0x2C] = instruction!(bit, Absolute, A);
     opcodes[0xD0] = instruction!(bne, Relative);
     opcodes[0x10] = instruction!(bpl, Relative);
     opcodes[0xE0] = instruction!(cpx, ImmediateXY, X);
@@ -214,10 +214,10 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x23] = instruction!(and, StackRelative, A);
     opcodes[0x33] = instruction!(and, StackRelativeIndirectYIndexed, A);
     opcodes[0x20] = instruction!(jsr, Absolute);
-    opcodes[0x24] = instruction!(bit, DirectPage);
-    opcodes[0x34] = instruction!(bit, DirectPageXIndexed);
-    opcodes[0x89] = instruction!(bit, ImmediateU8);
-    opcodes[0x3C] = instruction!(bit, AbsoluteXIndexed);
+    opcodes[0x24] = instruction!(bit, DirectPage, A);
+    opcodes[0x34] = instruction!(bit, DirectPageXIndexed, A);
+    opcodes[0x89] = instruction!(bit, ImmediateA, A);
+    opcodes[0x3C] = instruction!(bit, AbsoluteXIndexed, A);
     opcodes[0x60] = instruction!(rts);
     opcodes[0xA5] = instruction!(lda, DirectPage, A);
     opcodes[0xCD] = instruction!(cmp, Absolute, A);
@@ -226,6 +226,11 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x38] = instruction!(sec);
     opcodes[0xA6] = instruction!(ldx, DirectPage, X);
     opcodes[0xEC] = instruction!(cpx, Absolute, X);
+    opcodes[0x14] = instruction!(trb, DirectPage, A);
+    opcodes[0x1C] = instruction!(trb, Absolute, A);
+    opcodes[0x04] = instruction!(tsb, DirectPage, A);
+    opcodes[0x0C] = instruction!(tsb, Absolute, A);
+
     opcodes
 }
 
@@ -233,6 +238,20 @@ fn nop(_: &mut Cpu<impl Bus>) {}
 
 fn sec(cpu: &mut Cpu<impl Bus>) {
     cpu.status.carry = true;
+}
+
+fn trb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load(cpu);
+    let result = value & !cpu.a.get::<T>();
+    operand.store(cpu, result);
+    cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
+}
+
+fn tsb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load(cpu);
+    let result = value | cpu.a.get::<T>();
+    operand.store(cpu, result);
+    cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
 }
 
 fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -438,12 +457,14 @@ fn and<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.update_negative_zero_flags(result);
 }
 
-fn bit(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value = operand.load::<u8>(cpu);
-    let flags = StatusFlags::from(value);
-    cpu.status.negative = flags.negative;
-    cpu.status.overflow = flags.overflow;
-    cpu.status.zero = (value & cpu.a.get::<u8>()) == 0;
+fn bit<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let operand_value: T = operand.load(cpu);
+    let result: T = cpu.a.get::<T>() & operand_value;
+    if let Operand::Address(_, _, _) = operand {
+        cpu.status.negative = operand_value.bit(T::N_BITS - 1);
+        cpu.status.overflow = operand_value.bit(T::N_BITS - 2);
+    }
+    cpu.status.zero = result == T::zero();
 }
 
 fn cpx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
