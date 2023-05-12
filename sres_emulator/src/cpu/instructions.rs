@@ -193,6 +193,11 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xC0] = instruction!(cpy, ImmediateXY, Y);
     opcodes[0xC4] = instruction!(cpy, DirectPage, Y);
     opcodes[0xCC] = instruction!(cpy, Absolute, Y);
+    opcodes[0x3A] = instruction!(dec, Accumulator, A);
+    opcodes[0xC6] = instruction!(dec, DirectPage, A);
+    opcodes[0xCE] = instruction!(dec, Absolute, A);
+    opcodes[0xD6] = instruction!(dec, DirectPageXIndexed, A);
+    opcodes[0xDE] = instruction!(dec, AbsoluteXIndexed, A);
     opcodes[0xCA] = instruction!(dex, Implied, X);
     opcodes[0x88] = instruction!(dey, Implied, Y);
     opcodes[0xE8] = instruction!(inx, Implied, X);
@@ -425,6 +430,12 @@ fn inx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     let value: T = cpu.x.get::<T>().wrapping_add(&T::one());
     cpu.x.set(value);
     cpu.update_negative_zero_flags(value);
+}
+
+fn dec<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load::<T>(cpu).wrapping_sub(&T::one());
+    cpu.update_negative_zero_flags(value);
+    operand.store(cpu, value);
 }
 
 fn dex<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {

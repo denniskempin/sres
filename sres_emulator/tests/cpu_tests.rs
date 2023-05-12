@@ -37,7 +37,6 @@ pub fn test_cpucmp() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpudec() {
     run_krom_test("CPUDEC");
 }
