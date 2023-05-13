@@ -29,6 +29,14 @@ pub trait UInt:
     fn from_u8(target: u8) -> Self;
 
     fn bit(&self, index: usize) -> bool;
+    fn set_bit(&mut self, index: usize, value: bool);
+
+    fn msb(&self) -> bool {
+        self.bit(Self::N_BITS - 1)
+    }
+    fn lsb(&self) -> bool {
+        self.bit(0)
+    }
 
     fn add_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool);
 }
@@ -70,6 +78,10 @@ impl UInt for u8 {
 
     fn bit(&self, index: usize) -> bool {
         Bits::bit(*self, index)
+    }
+
+    fn set_bit(&mut self, index: usize, value: bool) {
+        Bits::set_bit(self, index, value);
     }
 
     fn add_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool) {
@@ -129,6 +141,10 @@ impl UInt for u16 {
 
     fn bit(&self, index: usize) -> bool {
         Bits::bit(*self, index)
+    }
+
+    fn set_bit(&mut self, index: usize, value: bool) {
+        Bits::set_bit(self, index, value);
     }
 
     fn add_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool) {

@@ -300,6 +300,16 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xFA] = instruction!(plx, Implied, X);
     opcodes[0x7A] = instruction!(ply, Implied, Y);
     opcodes[0xC2] = instruction!(rep, ImmediateU8);
+    opcodes[0x2A] = instruction!(rol, Accumulator, A);
+    opcodes[0x26] = instruction!(rol, DirectPage, A);
+    opcodes[0x2E] = instruction!(rol, Absolute, A);
+    opcodes[0x36] = instruction!(rol, DirectPageXIndexed, A);
+    opcodes[0x3E] = instruction!(rol, AbsoluteXIndexed, A);
+    opcodes[0x6A] = instruction!(ror, Accumulator, A);
+    opcodes[0x66] = instruction!(ror, DirectPage, A);
+    opcodes[0x6E] = instruction!(ror, Absolute, A);
+    opcodes[0x76] = instruction!(ror, DirectPageXIndexed, A);
+    opcodes[0x7E] = instruction!(ror, AbsoluteXIndexed, A);
     opcodes[0x40] = instruction!(rti);
     opcodes[0x6B] = instruction!(rtl);
     opcodes[0x60] = instruction!(rts);
@@ -374,6 +384,26 @@ fn rti(cpu: &mut Cpu<impl Bus>) {
 
 fn rtl(cpu: &mut Cpu<impl Bus>) {
     cpu.pc = cpu.stack_pop_u24().to_address();
+}
+
+fn rol<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load(cpu);
+    let mut result = value << 1;
+    result.set_bit(0, cpu.status.carry);
+    operand.store(cpu, result);
+    cpu.status.carry = value.msb();
+    cpu.status.zero = result == T::zero();
+    cpu.status.negative = result.msb();
+}
+
+fn ror<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let value: T = operand.load(cpu);
+    let mut result = value >> 1;
+    result.set_bit(T::N_BITS - 1, cpu.status.carry);
+    operand.store(cpu, result);
+    cpu.status.carry = value.lsb();
+    cpu.status.zero = result == T::zero();
+    cpu.status.negative = result.msb();
 }
 
 fn bra(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -570,7 +600,7 @@ fn lda<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 fn lsr<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let data: T = operand.load(cpu);
     let result = data >> 1;
-    cpu.status.carry = data.bit(0);
+    cpu.status.carry = data.lsb();
     cpu.update_negative_zero_flags(result);
     operand.store(cpu, result);
 }
@@ -671,7 +701,7 @@ fn bit<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let operand_value: T = operand.load(cpu);
     let result: T = cpu.a.get::<T>() & operand_value;
     if let Operand::Address(_, _, _) = operand {
-        cpu.status.negative = operand_value.bit(T::N_BITS - 1);
+        cpu.status.negative = operand_value.msb();
         cpu.status.overflow = operand_value.bit(T::N_BITS - 2);
     }
     cpu.status.zero = result == T::zero();
@@ -700,7 +730,7 @@ fn cmp<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn asl<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let data: T = operand.load(cpu);
-    cpu.status.carry = data.bit(T::N_BITS - 1);
+    cpu.status.carry = data.msb();
     let result = data << 1;
     cpu.update_negative_zero_flags(result);
     operand.store(cpu, result);
@@ -724,7 +754,7 @@ fn adc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
         }
         cpu.update_negative_zero_flags(result);
         cpu.status.carry = overflow;
-        cpu.status.overflow = ((cpu.a.get::<T>() ^ result) & (value ^ result)).bit(T::N_BITS - 1);
+        cpu.status.overflow = ((cpu.a.get::<T>() ^ result) & (value ^ result)).msb();
         cpu.a.set(result);
     }
 }

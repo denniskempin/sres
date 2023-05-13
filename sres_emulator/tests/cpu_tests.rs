@@ -99,13 +99,11 @@ pub fn test_cpuret() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpurol() {
     run_krom_test("CPUROL");
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpuror() {
     run_krom_test("CPUROR");
 }
