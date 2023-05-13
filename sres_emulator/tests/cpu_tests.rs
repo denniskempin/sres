@@ -89,7 +89,6 @@ pub fn test_cpuphl() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpupsr() {
     run_krom_test("CPUPSR");
 }

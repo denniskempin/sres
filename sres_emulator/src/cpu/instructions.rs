@@ -171,6 +171,8 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x50] = instruction!(bvc, Relative);
     opcodes[0x70] = instruction!(bvs, Relative);
     opcodes[0x18] = instruction!(clc);
+    opcodes[0xD8] = instruction!(cld);
+    opcodes[0x58] = instruction!(cli);
     opcodes[0xB8] = instruction!(clv);
     opcodes[0xC1] = instruction!(cmp, DirectPageXIndexedIndirect, A);
     opcodes[0xC3] = instruction!(cmp, StackRelative, A);
@@ -297,6 +299,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x6B] = instruction!(rtl);
     opcodes[0x60] = instruction!(rts);
     opcodes[0x38] = instruction!(sec);
+    opcodes[0xF8] = instruction!(sed);
     opcodes[0x78] = instruction!(sei);
     opcodes[0xE2] = instruction!(sep, ImmediateU8);
     opcodes[0x85] = instruction!(sta, DirectPage, A);
@@ -321,6 +324,14 @@ fn nop(_: &mut Cpu<impl Bus>) {}
 
 fn sec(cpu: &mut Cpu<impl Bus>) {
     cpu.status.carry = true;
+}
+
+fn sed(cpu: &mut Cpu<impl Bus>) {
+    cpu.status.decimal = true;
+}
+
+fn sei(cpu: &mut Cpu<impl Bus>) {
+    cpu.status.irq_disable = true;
 }
 
 fn trb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -411,12 +422,16 @@ fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     }
 }
 
-fn sei(cpu: &mut Cpu<impl Bus>) {
-    cpu.status.irq_disable = true;
-}
-
 fn clc(cpu: &mut Cpu<impl Bus>) {
     cpu.status.carry = false;
+}
+
+fn cld(cpu: &mut Cpu<impl Bus>) {
+    cpu.status.decimal = false;
+}
+
+fn cli(cpu: &mut Cpu<impl Bus>) {
+    cpu.status.irq_disable = false;
 }
 
 fn xce(cpu: &mut Cpu<impl Bus>) {
