@@ -1,4 +1,7 @@
+use super::status::StatusFlags;
 use super::Cpu;
+use super::EmuVectorTable;
+use super::NativeVectorTable;
 use super::UInt;
 use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
@@ -168,6 +171,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x10] = instruction!(bpl, Relative);
     opcodes[0x80] = instruction!(bra, Relative);
     opcodes[0x82] = instruction!(brl, RelativeLong);
+    opcodes[0x00] = instruction!(brk);
     opcodes[0x50] = instruction!(bvc, Relative);
     opcodes[0x70] = instruction!(bvs, Relative);
     opcodes[0x18] = instruction!(clc);
@@ -296,6 +300,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xFA] = instruction!(plx, Implied, X);
     opcodes[0x7A] = instruction!(ply, Implied, Y);
     opcodes[0xC2] = instruction!(rep, ImmediateU8);
+    opcodes[0x40] = instruction!(rti);
     opcodes[0x6B] = instruction!(rtl);
     opcodes[0x60] = instruction!(rts);
     opcodes[0x38] = instruction!(sec);
@@ -362,6 +367,11 @@ fn rts(cpu: &mut Cpu<impl Bus>) {
     cpu.pc.offset = cpu.stack_pop_u16();
 }
 
+fn rti(cpu: &mut Cpu<impl Bus>) {
+    cpu.status = StatusFlags::from(cpu.stack_pop_u8());
+    cpu.pc = (cpu.stack_pop_u24() + 1).to_address();
+}
+
 fn rtl(cpu: &mut Cpu<impl Bus>) {
     cpu.pc = cpu.stack_pop_u24().to_address();
 }
@@ -420,6 +430,18 @@ fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.overflow {
         cpu.pc = operand.effective_addr().unwrap();
     }
+}
+
+fn brk(cpu: &mut Cpu<impl Bus>) {
+    cpu.stack_push_u24(u32::from(cpu.pc));
+    cpu.stack_push_u8(u8::from(cpu.status));
+    cpu.status.irq_disable = true;
+    let address = if cpu.emulation_mode {
+        cpu.bus.read_u16(EmuVectorTable::Break as u32)
+    } else {
+        cpu.bus.read_u16(NativeVectorTable::Break as u32)
+    };
+    cpu.pc = (address as u32 - 1).to_address();
 }
 
 fn clc(cpu: &mut Cpu<impl Bus>) {

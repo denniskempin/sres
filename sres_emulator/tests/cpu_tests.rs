@@ -94,7 +94,6 @@ pub fn test_cpupsr() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpuret() {
     run_krom_test("CPURET");
 }

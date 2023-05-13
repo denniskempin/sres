@@ -46,6 +46,7 @@ pub enum NativeVectorTable {
 
 pub enum EmuVectorTable {
     Cop = 0xFFF4,
+    Break = 0xFFF6,
     Nmi = 0xFFFA,
     Reset = 0xFFFC,
     Irq = 0xFFFE,
