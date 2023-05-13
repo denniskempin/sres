@@ -9,7 +9,7 @@ use crate::memory::ToAddress;
 pub struct InstructionMeta {
     pub operation: &'static str,
     pub operand_str: Option<String>,
-    pub operand_addr: Option<Address>,
+    pub effective_addr: Option<Address>,
 }
 
 pub struct Instruction<BusT: Bus> {
@@ -37,7 +37,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                         InstructionMeta {
                             operation: stringify!($method),
                             operand_str: None,
-                            operand_addr: None,
+                            effective_addr: None,
                         },
                         instruction_addr + 1,
                     )
@@ -59,7 +59,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                         InstructionMeta {
                             operation: stringify!($method),
                             operand_str: Some(operand.format()),
-                            operand_addr: operand.addr(),
+                            effective_addr: operand.effective_addr(),
                         },
                         next_addr,
                     )
@@ -90,7 +90,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                         InstructionMeta {
                             operation: stringify!($method),
                             operand_str: Some(operand.format()),
-                            operand_addr: operand.addr(),
+                            effective_addr: operand.effective_addr(),
                         },
                         next_addr,
                     )
@@ -108,7 +108,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                 InstructionMeta {
                     operation: "ill",
                     operand_str: None,
-                    operand_addr: None,
+                    effective_addr: None,
                 },
                 addr,
             )
@@ -256,16 +256,43 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xAC] = instruction!(ldy, Absolute, Y);
     opcodes[0xB4] = instruction!(ldy, DirectPageXIndexed, Y);
     opcodes[0xBC] = instruction!(ldy, AbsoluteXIndexed, Y);
-    opcodes[0x4E] = instruction!(lsr, Absolute);
-    opcodes[0x46] = instruction!(lsr, DirectPage);
-    opcodes[0x4A] = instruction!(lsr, Accumulator);
+    opcodes[0x4A] = instruction!(lsr, Accumulator, A);
+    opcodes[0x46] = instruction!(lsr, DirectPage, A);
+    opcodes[0x4E] = instruction!(lsr, Absolute, A);
+    opcodes[0x56] = instruction!(lsr, DirectPageXIndexed, A);
+    opcodes[0x5E] = instruction!(lsr, AbsoluteXIndexed, A);
     opcodes[0xEA] = instruction!(nop);
+    opcodes[0x01] = instruction!(ora, DirectPageXIndexedIndirect, A);
+    opcodes[0x03] = instruction!(ora, StackRelative, A);
+    opcodes[0x09] = instruction!(ora, ImmediateA, A);
+    opcodes[0x05] = instruction!(ora, DirectPage, A);
+    opcodes[0x07] = instruction!(ora, DirectPageIndirectLong, A);
+    opcodes[0x0D] = instruction!(ora, Absolute, A);
+    opcodes[0x0F] = instruction!(ora, AbsoluteLong, A);
+    opcodes[0x11] = instruction!(ora, DirectPageIndirectYIndexed, A);
+    opcodes[0x12] = instruction!(ora, DirectPageIndirect, A);
+    opcodes[0x13] = instruction!(ora, StackRelativeIndirectYIndexed, A);
+    opcodes[0x15] = instruction!(ora, DirectPageXIndexed, A);
+    opcodes[0x17] = instruction!(ora, DirectPageIndirectYIndexedLong, A);
+    opcodes[0x19] = instruction!(ora, AbsoluteYIndexed, A);
+    opcodes[0x1D] = instruction!(ora, AbsoluteXIndexed, A);
+    opcodes[0x1F] = instruction!(ora, AbsoluteXIndexedLong, A);
+    opcodes[0xF4] = instruction!(pea, Absolute);
+    opcodes[0xD4] = instruction!(pei, DirectPageIndirect);
+    opcodes[0x62] = instruction!(per, RelativeLong);
     opcodes[0x48] = instruction!(pha, Implied, A);
+    opcodes[0x8B] = instruction!(phb);
+    opcodes[0x0B] = instruction!(phd);
     opcodes[0x4B] = instruction!(phk);
     opcodes[0x08] = instruction!(php);
     opcodes[0xDA] = instruction!(phx, Implied, X);
+    opcodes[0x5A] = instruction!(phy, Implied, Y);
     opcodes[0x68] = instruction!(pla, Implied, A);
     opcodes[0xAB] = instruction!(plb);
+    opcodes[0x2B] = instruction!(pld);
+    opcodes[0x28] = instruction!(plp);
+    opcodes[0xFA] = instruction!(plx, Implied, X);
+    opcodes[0x7A] = instruction!(ply, Implied, Y);
     opcodes[0xC2] = instruction!(rep, ImmediateU8);
     opcodes[0x6B] = instruction!(rtl);
     opcodes[0x60] = instruction!(rts);
@@ -312,12 +339,12 @@ fn tsb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.stack_push_u16(cpu.pc.offset - 1);
-    cpu.pc = operand.addr().unwrap();
+    cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn jsl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.stack_push_u24(u32::from(cpu.pc) - 1);
-    cpu.pc = operand.addr().unwrap();
+    cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn rts(cpu: &mut Cpu<impl Bus>) {
@@ -329,58 +356,58 @@ fn rtl(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn bra(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.pc = operand.addr().unwrap();
+    cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn brl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.pc = operand.addr().unwrap();
+    cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn bcc(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.carry {
-        cpu.pc = operand.addr().unwrap();
+        cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bcs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.carry {
-        cpu.pc = operand.addr().unwrap();
+        cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn beq(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.zero {
-        cpu.pc = operand.addr().unwrap();
+        cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bne(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.zero {
-        cpu.pc = operand.addr().unwrap();
+        cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bpl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.negative {
-        cpu.pc = operand.addr().unwrap();
+        cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bmi(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.negative {
-        cpu.pc = operand.addr().unwrap();
+        cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bvc(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.overflow {
-        cpu.pc = operand.addr().unwrap();
+        cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.overflow {
-        cpu.pc = operand.addr().unwrap();
+        cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
@@ -396,6 +423,18 @@ fn xce(cpu: &mut Cpu<impl Bus>) {
     (cpu.status.carry, cpu.emulation_mode) = (cpu.emulation_mode, cpu.status.carry);
 }
 
+fn pea(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.stack_push_u16(operand.effective_addr().unwrap().offset);
+}
+
+fn pei(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.stack_push_u16(operand.effective_addr().unwrap().offset);
+}
+
+fn per(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.stack_push_u16(operand.effective_addr().unwrap().offset);
+}
+
 fn phk(cpu: &mut Cpu<impl Bus>) {
     cpu.stack_push_u8(cpu.db);
 }
@@ -407,13 +446,48 @@ fn php(cpu: &mut Cpu<impl Bus>) {
 fn pha<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.stack_push(cpu.a.get::<T>());
 }
+
+fn phb(cpu: &mut Cpu<impl Bus>) {
+    cpu.stack_push_u8(cpu.db);
+}
+
+fn phd(cpu: &mut Cpu<impl Bus>) {
+    cpu.stack_push_u16(cpu.d);
+}
+
 fn phx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.stack_push(cpu.x.get::<T>());
+}
+
+fn phy<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.stack_push(cpu.y.get::<T>());
+}
+
+fn plx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    let value = cpu.stack_pop::<T>();
+    cpu.x.set(value);
+    cpu.update_negative_zero_flags(value);
+}
+
+fn ply<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    let value = cpu.stack_pop::<T>();
+    cpu.y.set(value);
+    cpu.update_negative_zero_flags(value);
 }
 
 fn plb(cpu: &mut Cpu<impl Bus>) {
     cpu.db = cpu.stack_pop_u8();
     cpu.update_negative_zero_flags(cpu.db);
+}
+
+fn pld(cpu: &mut Cpu<impl Bus>) {
+    cpu.d = cpu.stack_pop_u16();
+    cpu.update_negative_zero_flags(cpu.d);
+}
+
+fn plp(cpu: &mut Cpu<impl Bus>) {
+    cpu.status = cpu.stack_pop_u8().into();
+    cpu.update_register_sizes();
 }
 
 fn pla<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
@@ -429,11 +503,13 @@ fn clv(cpu: &mut Cpu<impl Bus>) {
 fn rep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let data: u8 = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) & !data).into();
+    cpu.update_register_sizes();
 }
 
 fn sep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let data: u8 = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) | data).into();
+    cpu.update_register_sizes();
 }
 
 fn ldx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -454,10 +530,10 @@ fn lda<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.update_negative_zero_flags(value);
 }
 
-fn lsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let data: u8 = operand.load(cpu);
+fn lsr<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let data: T = operand.load(cpu);
     let result = data >> 1;
-    cpu.status.carry = data & 1 != 0;
+    cpu.status.carry = data.bit(0);
     cpu.update_negative_zero_flags(result);
     operand.store(cpu, result);
 }
@@ -520,6 +596,13 @@ fn dey<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.update_negative_zero_flags(value);
 }
 
+fn ora<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    let operand_value: T = operand.load(cpu);
+    let result = cpu.a.get::<T>() | operand_value;
+    cpu.a.set(result);
+    cpu.update_negative_zero_flags(result);
+}
+
 fn eor<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let operand_value: T = operand.load(cpu);
     let result = cpu.a.get::<T>() ^ operand_value;
@@ -533,11 +616,11 @@ fn tcd(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn jmp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.pc = operand.addr().unwrap();
+    cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.pc = operand.addr().unwrap();
+    cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn and<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {

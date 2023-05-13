@@ -62,7 +62,6 @@ pub fn test_cpuldr() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpulsr() {
     run_krom_test("CPULSR");
 }
@@ -80,13 +79,11 @@ pub fn test_cpumsc() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpuora() {
     run_krom_test("CPUORA");
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpuphl() {
     run_krom_test("CPUPHL");
 }
@@ -145,8 +142,8 @@ fn run_krom_test(test_name: &str) {
 
     let mut in_nmi_loop = false;
     for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
-        let expected_line = expected_line.unwrap();
-        let actual_line = cpu.trace();
+        let mut expected_line = expected_line.unwrap();
+        let mut actual_line = cpu.trace();
 
         // krom tests will run a loop to wait for nmi:
         // bit $4210; bpl ...;
@@ -175,6 +172,23 @@ fn run_krom_test(test_name: &str) {
             cpu.bus.read_u8(cpu.pc),
             actual_line
         );
+
+        // Fix some BSNES trace inconsistencies:
+
+        // Disassembly for branch instructions prints the absolute operand address, not the
+        // relative address.
+        if expected_line.instruction.starts_with('b') && expected_line.instruction != "bit" {
+            actual_line.operand = "".to_string();
+            expected_line.operand = "".to_string();
+        }
+        // `per` instruction prints relative address as effective address, not the calculated
+        // absolute address.
+        if expected_line.instruction == "per" {
+            actual_line.operand = "".to_string();
+            expected_line.operand = "".to_string();
+            actual_line.operand_addr = None;
+            expected_line.operand_addr = None;
+        }
         assert_eq!(actual_line.to_string(), expected_line.to_string());
         cpu.step();
     }

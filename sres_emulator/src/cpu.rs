@@ -90,6 +90,13 @@ impl<BusT: Bus> Cpu<BusT> {
         (self.instruction_table[opcode as usize].meta)(self, addr)
     }
 
+    fn update_register_sizes(&mut self) {
+        if self.status.index_register_size_or_break {
+            self.x.value = self.x.get::<u8>() as u16;
+            self.y.value = self.y.get::<u8>() as u16;
+        }
+    }
+
     pub fn reset(&mut self) {
         self.pc = Address {
             bank: 0,
@@ -176,7 +183,7 @@ impl<BusT: Bus> Cpu<BusT> {
             pc: self.pc,
             instruction: instruction.operation.to_string(),
             operand: instruction.operand_str.unwrap_or_default(),
-            operand_addr: instruction.operand_addr,
+            operand_addr: instruction.effective_addr,
             a: self.a.value,
             x: self.x.value,
             y: self.y.value,

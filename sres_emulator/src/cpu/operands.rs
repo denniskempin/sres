@@ -121,7 +121,7 @@ impl Operand {
                     Operand::ImmediateU16(operand_data as u16)
                 }
             }
-            // Operand is in memory, calculate address based on address mode.
+            // Operand is in memory, calculate the effective address
             _ => {
                 let operand_addr: u32 = match mode {
                     AddressMode::Absolute | AddressMode::AbsoluteLong => operand_data,
@@ -211,7 +211,7 @@ impl Operand {
     }
 
     #[inline]
-    pub fn addr(&self) -> Option<Address> {
+    pub fn effective_addr(&self) -> Option<Address> {
         match self {
             Self::Implied | Self::Accumulator | Self::ImmediateU8(_) | Self::ImmediateU16(_) => {
                 None
@@ -227,7 +227,7 @@ impl Operand {
             Self::ImmediateU8(value) => T::from_u8(*value),
             Self::ImmediateU16(value) => T::from_u16(*value),
             Self::Accumulator => cpu.a.get(),
-            _ => cpu.bus.read_generic::<T>(self.addr().unwrap()),
+            _ => cpu.bus.read_generic::<T>(self.effective_addr().unwrap()),
         }
     }
 
@@ -237,7 +237,9 @@ impl Operand {
             Self::Implied => panic!("writing to implied operand"),
             Self::ImmediateU8(_) | Self::ImmediateU16(_) => panic!("writing to immediate operand"),
             Self::Accumulator => cpu.a.set(value),
-            _ => cpu.bus.write_generic::<T>(self.addr().unwrap(), value),
+            _ => cpu
+                .bus
+                .write_generic::<T>(self.effective_addr().unwrap(), value),
         }
     }
 
@@ -259,8 +261,8 @@ impl Operand {
                 AddressMode::AbsoluteXIndexedIndirect => format!("(${:04x},x)", value),
                 AddressMode::StackRelative => format!("${:02x},s", value),
                 AddressMode::StackRelativeIndirectYIndexed => format!("(${:02x},s),y", value),
-                AddressMode::Relative => format!("${:04x}", u32::from(*operand_addr)),
-                AddressMode::RelativeLong => format!("${:04x}", u32::from(*operand_addr)),
+                AddressMode::Relative => format!("{:+03x}", *value as i8),
+                AddressMode::RelativeLong => format!("{:+05x}", *value as i16),
                 AddressMode::DirectPage => format!("${:02x}", value),
                 AddressMode::DirectPageIndirect => format!("(${:02x})", value),
                 AddressMode::DirectPageIndirectLong => format!("[${:02x}]", value),
