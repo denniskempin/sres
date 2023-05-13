@@ -57,7 +57,6 @@ pub fn test_cpujmp() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpuldr() {
     run_krom_test("CPULDR");
 }
