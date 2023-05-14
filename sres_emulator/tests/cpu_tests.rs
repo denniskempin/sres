@@ -114,7 +114,6 @@ pub fn test_cpusbc() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpustr() {
     run_krom_test("CPUSTR");
 }

@@ -332,13 +332,31 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xF8] = instruction!(sed);
     opcodes[0x78] = instruction!(sei);
     opcodes[0xE2] = instruction!(sep, ImmediateU8);
+    opcodes[0x81] = instruction!(sta, DirectPageXIndexedIndirect, A);
+    opcodes[0x83] = instruction!(sta, StackRelative, A);
     opcodes[0x85] = instruction!(sta, DirectPage, A);
+    opcodes[0x87] = instruction!(sta, DirectPageIndirectLong, A);
     opcodes[0x8D] = instruction!(sta, Absolute, A);
+    opcodes[0x8F] = instruction!(sta, AbsoluteLong, A);
+    opcodes[0x91] = instruction!(sta, DirectPageIndirectYIndexed, A);
+    opcodes[0x92] = instruction!(sta, DirectPageIndirect, A);
+    opcodes[0x93] = instruction!(sta, StackRelativeIndirectYIndexed, A);
+    opcodes[0x95] = instruction!(sta, DirectPageXIndexed, A);
+    opcodes[0x97] = instruction!(sta, DirectPageIndirectYIndexedLong, A);
+    opcodes[0x99] = instruction!(sta, AbsoluteYIndexed, A);
+    opcodes[0x9D] = instruction!(sta, AbsoluteXIndexed, A);
+    opcodes[0x9F] = instruction!(sta, AbsoluteXIndexedLong, A);
+    opcodes[0xDB] = instruction!(stp);
     opcodes[0x86] = instruction!(stx, DirectPage, X);
     opcodes[0x8E] = instruction!(stx, Absolute, X);
+    opcodes[0x96] = instruction!(stx, DirectPageYIndexed, X);
     opcodes[0x84] = instruction!(sty, DirectPage, Y);
     opcodes[0x8C] = instruction!(sty, Absolute, Y);
-    opcodes[0x9C] = instruction!(stz, Absolute);
+    opcodes[0x94] = instruction!(sty, DirectPageXIndexed, Y);
+    opcodes[0x64] = instruction!(stz, DirectPage, A);
+    opcodes[0x74] = instruction!(stz, DirectPageXIndexed, A);
+    opcodes[0x9C] = instruction!(stz, Absolute, A);
+    opcodes[0x9E] = instruction!(stz, AbsoluteXIndexed, A);
     opcodes[0x5B] = instruction!(tcd);
     opcodes[0x14] = instruction!(trb, DirectPage, A);
     opcodes[0x1C] = instruction!(trb, Absolute, A);
@@ -624,6 +642,10 @@ fn sta<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, cpu.a.get::<T>());
 }
 
+fn stp(cpu: &mut Cpu<impl Bus>) {
+    panic!("stop");
+}
+
 fn sty<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, cpu.y.get::<T>());
 }
@@ -632,8 +654,8 @@ fn stx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, cpu.x.get::<T>());
 }
 
-fn stz(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, 0_u8);
+fn stz<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    operand.store(cpu, T::zero());
 }
 
 fn txs<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
