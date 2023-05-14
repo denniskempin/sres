@@ -313,6 +313,21 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x40] = instruction!(rti);
     opcodes[0x6B] = instruction!(rtl);
     opcodes[0x60] = instruction!(rts);
+    opcodes[0xE1] = instruction!(sbc, DirectPageXIndexedIndirect, A);
+    opcodes[0xE3] = instruction!(sbc, StackRelative, A);
+    opcodes[0xE9] = instruction!(sbc, ImmediateA, A);
+    opcodes[0xE5] = instruction!(sbc, DirectPage, A);
+    opcodes[0xE7] = instruction!(sbc, DirectPageIndirectLong, A);
+    opcodes[0xED] = instruction!(sbc, Absolute, A);
+    opcodes[0xEF] = instruction!(sbc, AbsoluteLong, A);
+    opcodes[0xF1] = instruction!(sbc, DirectPageIndirectYIndexed, A);
+    opcodes[0xF2] = instruction!(sbc, DirectPageIndirect, A);
+    opcodes[0xF3] = instruction!(sbc, StackRelativeIndirectYIndexed, A);
+    opcodes[0xF5] = instruction!(sbc, DirectPageXIndexed, A);
+    opcodes[0xF7] = instruction!(sbc, DirectPageIndirectYIndexedLong, A);
+    opcodes[0xF9] = instruction!(sbc, AbsoluteYIndexed, A);
+    opcodes[0xFD] = instruction!(sbc, AbsoluteXIndexed, A);
+    opcodes[0xFF] = instruction!(sbc, AbsoluteXIndexedLong, A);
     opcodes[0x38] = instruction!(sec);
     opcodes[0xF8] = instruction!(sed);
     opcodes[0x78] = instruction!(sei);
@@ -755,6 +770,29 @@ fn adc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
         cpu.update_negative_zero_flags(result);
         cpu.status.carry = overflow;
         cpu.status.overflow = ((cpu.a.get::<T>() ^ result) & (value ^ result)).msb();
+        cpu.a.set(result);
+    }
+}
+
+fn sbc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if cpu.status.decimal {
+        let value: T = operand.load(cpu);
+        let (result, overflow, carry) = cpu.a.get::<T>().sub_bcd(value, cpu.status.carry);
+        cpu.update_negative_zero_flags(result);
+        cpu.status.carry = carry;
+        cpu.status.overflow = overflow;
+        cpu.a.set(result);
+    } else {
+        let value: T = operand.load(cpu);
+        let (mut result, mut overflow) = cpu.a.get::<T>().overflowing_sub(&value);
+        if !cpu.status.carry {
+            let (result2, overflow2) = result.overflowing_sub(&T::one());
+            result = result2;
+            overflow |= overflow2;
+        }
+        cpu.update_negative_zero_flags(result);
+        cpu.status.carry = !overflow;
+        cpu.status.overflow = ((cpu.a.get::<T>() ^ result) & (!value ^ result)).msb();
         cpu.a.set(result);
     }
 }

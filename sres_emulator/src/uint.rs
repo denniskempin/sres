@@ -39,6 +39,7 @@ pub trait UInt:
     }
 
     fn add_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool);
+    fn sub_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool);
 }
 
 impl UInt for u8 {
@@ -101,6 +102,12 @@ impl UInt for u8 {
         }
         let carry = result > 0xff;
         (result as u8, overflow, carry)
+    }
+
+    fn sub_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool) {
+        let ten_complement = 0x99.wrapping_sub(&rhs);
+        let (result, overflow, carry) = self.add_bcd(ten_complement, carry);
+        (result, !overflow, carry)
     }
 }
 
@@ -176,6 +183,12 @@ impl UInt for u16 {
         }
         let carry = result > 0xffff;
         (result as u16, overflow, carry)
+    }
+
+    fn sub_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool) {
+        let ten_complement = 0x9999.wrapping_sub(&rhs);
+        let (result, overflow, carry) = self.add_bcd(ten_complement, carry);
+        (result, !overflow, carry)
     }
 }
 

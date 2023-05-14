@@ -109,7 +109,6 @@ pub fn test_cpuror() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpusbc() {
     run_krom_test("CPUSBC");
 }
