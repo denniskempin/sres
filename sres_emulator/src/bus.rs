@@ -23,7 +23,17 @@ impl TestBus {
         }
         Ok(bus)
     }
-
+    
+    pub fn with_sfc_data(rom: &[u8]) -> Result<Self> {
+        let mut bus = Self::default();
+        // Load cartridge data into memory
+        let mut cartridge = Cartridge::new();
+        cartridge.load_sfc_data(rom)?;
+        for (i, byte) in cartridge.rom.iter().enumerate() {
+            bus.memory[0x8000 + i] = *byte;
+        }
+        Ok(bus)
+    }
     pub fn with_program(program: &[u8]) -> Self {
         let mut bus = Self::default();
         for (i, byte) in program.iter().enumerate() {
