@@ -357,12 +357,23 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x74] = instruction!(stz, DirectPageXIndexed, A);
     opcodes[0x9C] = instruction!(stz, Absolute, A);
     opcodes[0x9E] = instruction!(stz, AbsoluteXIndexed, A);
+    opcodes[0xAA] = instruction!(tax, Implied, X);
+    opcodes[0xA8] = instruction!(tay, Implied, Y);
     opcodes[0x5B] = instruction!(tcd);
+    opcodes[0x1B] = instruction!(tcs);
+    opcodes[0x7B] = instruction!(tdc);
     opcodes[0x14] = instruction!(trb, DirectPage, A);
     opcodes[0x1C] = instruction!(trb, Absolute, A);
     opcodes[0x04] = instruction!(tsb, DirectPage, A);
     opcodes[0x0C] = instruction!(tsb, Absolute, A);
-    opcodes[0x9A] = instruction!(txs, Implied, X);
+    opcodes[0x9A] = instruction!(txs);
+    opcodes[0x3B] = instruction!(tsc);
+    opcodes[0xBA] = instruction!(tsx, Implied, X);
+    opcodes[0x9B] = instruction!(txy, Implied, X);
+    opcodes[0x8A] = instruction!(txa, Implied, A);
+    opcodes[0x98] = instruction!(tya, Implied, A);
+    opcodes[0xBB] = instruction!(tyx, Implied, Y);
+    opcodes[0xEB] = instruction!(xba);
     opcodes[0xFB] = instruction!(xce);
 
     opcodes
@@ -380,6 +391,69 @@ fn sed(cpu: &mut Cpu<impl Bus>) {
 
 fn sei(cpu: &mut Cpu<impl Bus>) {
     cpu.status.irq_disable = true;
+}
+
+fn txs(cpu: &mut Cpu<impl Bus>) {
+    if cpu.emulation_mode {
+        cpu.s = 0x0100 + cpu.x.get::<u8>() as u16;
+        cpu.update_negative_zero_flags(cpu.x.get::<u8>())
+    }
+    cpu.s = cpu.x.get::<u16>();
+}
+
+fn xba(cpu: &mut Cpu<impl Bus>) {
+    let a = cpu.a.get::<u16>();
+    cpu.a.set(a.swap_bytes());
+    cpu.update_negative_zero_flags(cpu.a.get::<u8>());
+}
+
+fn tsx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.x.set(T::from_u16(cpu.s));
+    cpu.update_negative_zero_flags(cpu.x.get::<T>())
+}
+
+fn txy<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.y.set(cpu.x.get::<T>());
+    cpu.update_negative_zero_flags(cpu.y.get::<T>());
+}
+
+fn txa<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.a.set(cpu.x.get::<T>());
+    cpu.update_negative_zero_flags(cpu.a.get::<T>());
+}
+
+fn tya<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.a.set(cpu.y.get::<T>());
+    cpu.update_negative_zero_flags(cpu.a.get::<T>());
+}
+
+fn tyx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.x.set(cpu.y.get::<T>());
+    cpu.update_negative_zero_flags(cpu.x.get::<T>());
+}
+
+fn tax<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.x.set(cpu.a.get::<T>());
+    cpu.update_negative_zero_flags(cpu.x.get::<T>());
+}
+
+fn tay<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.y.set(cpu.a.get::<T>());
+    cpu.update_negative_zero_flags(cpu.y.get::<T>());
+}
+
+fn tcs(cpu: &mut Cpu<impl Bus>) {
+    cpu.s = cpu.a.get::<u16>();
+}
+
+fn tsc(cpu: &mut Cpu<impl Bus>) {
+    cpu.a.set(cpu.s);
+    cpu.update_negative_zero_flags(cpu.s);
+}
+
+fn tdc(cpu: &mut Cpu<impl Bus>) {
+    cpu.a.set(cpu.d);
+    cpu.update_negative_zero_flags(cpu.d);
 }
 
 fn trb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -521,6 +595,12 @@ fn cli(cpu: &mut Cpu<impl Bus>) {
 
 fn xce(cpu: &mut Cpu<impl Bus>) {
     (cpu.status.carry, cpu.emulation_mode) = (cpu.emulation_mode, cpu.status.carry);
+    if cpu.emulation_mode {
+        cpu.status.accumulator_register_size = true;
+        cpu.status.index_register_size_or_break = true;
+        cpu.s = 0x0100 + (cpu.s & 0x00ff);
+        cpu.update_register_sizes();
+    }
 }
 
 fn pea(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -656,12 +736,6 @@ fn stx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn stz<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, T::zero());
-}
-
-fn txs<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    let value: T = cpu.x.get();
-    cpu.s = value.to_u16();
-    cpu.update_negative_zero_flags(value);
 }
 
 fn inc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {

@@ -119,7 +119,6 @@ pub fn test_cpustr() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cputrn() {
     run_krom_test("CPUTRN");
 }
