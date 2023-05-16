@@ -130,6 +130,10 @@ fn run_krom_test(test_name: &str) {
     let mut bus = TestBus::with_sfc(&rom_path).unwrap();
     // Fake RDNMI register. NMI is always true.
     bus.write_u8(0x004210, 0xC2);
+    // CPUMSC reads 0x20 from $000000 at the first instruction. I cannot figure out why, it
+    // should be mapped to RAM.
+    bus.write_u8(0x000000, 0x20);
+
     let mut cpu = Cpu::new(bus);
     cpu.reset();
 

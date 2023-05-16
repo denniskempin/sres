@@ -194,6 +194,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xD9] = instruction!(cmp, AbsoluteYIndexed, A);
     opcodes[0xDD] = instruction!(cmp, AbsoluteXIndexed, A);
     opcodes[0xDF] = instruction!(cmp, AbsoluteXIndexedLong, A);
+    opcodes[0x02] = instruction!(cop, ImmediateU8);
     opcodes[0xE0] = instruction!(cpx, ImmediateXY, X);
     opcodes[0xE4] = instruction!(cpx, DirectPage, X);
     opcodes[0xEC] = instruction!(cpx, Absolute, X);
@@ -486,7 +487,7 @@ fn rts(cpu: &mut Cpu<impl Bus>) {
 
 fn rti(cpu: &mut Cpu<impl Bus>) {
     cpu.status = StatusFlags::from(cpu.stack_pop_u8());
-    cpu.pc = (cpu.stack_pop_u24() + 1).to_address();
+    cpu.pc = cpu.stack_pop_u24().to_address();
 }
 
 fn rtl(cpu: &mut Cpu<impl Bus>) {
@@ -570,7 +571,7 @@ fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn brk(cpu: &mut Cpu<impl Bus>) {
-    cpu.stack_push_u24(u32::from(cpu.pc));
+    cpu.stack_push_u24(u32::from(cpu.pc) + 1);
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
     let address = if cpu.emulation_mode {
@@ -579,6 +580,18 @@ fn brk(cpu: &mut Cpu<impl Bus>) {
         cpu.bus.read_u16(NativeVectorTable::Break as u32)
     };
     cpu.pc = (address as u32 - 1).to_address();
+}
+
+fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.stack_push_u24(u32::from(cpu.pc) - 1);
+    cpu.stack_push_u8(u8::from(cpu.status));
+    cpu.status.irq_disable = true;
+    let address = if cpu.emulation_mode {
+        cpu.bus.read_u16(EmuVectorTable::Cop as u32)
+    } else {
+        cpu.bus.read_u16(NativeVectorTable::Cop as u32)
+    };
+    cpu.pc = (address as u32).to_address();
 }
 
 fn clc(cpu: &mut Cpu<impl Bus>) {
