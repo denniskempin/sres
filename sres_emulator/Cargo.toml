@@ -18,13 +18,13 @@ itertools = "0.10"
 lazy_static = "1"
 packed_struct = "0.10"
 thiserror = "1.0"
-snafu = "*"
-num-traits = "*"
+snafu = "0.7"
+num-traits = "0.2"
 
 [dev-dependencies]
-tempfile = "*"
-pretty_assertions = "*"
-criterion = "*"
+tempfile = "3.5"
+pretty_assertions = "1.3"
+criterion = "0.4"
 
 
 [[bench]]
