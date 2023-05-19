@@ -14,5 +14,7 @@
 	},
 	"forwardPorts": [
 		8080
-	]
+	],
+	"updateContentCommand": "git lfs pull",
+	"remoteUser": "vscode"
 }
