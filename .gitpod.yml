@@ -5,5 +5,5 @@ image:
 # Run tests as the default task, since there is no program yet.
 tasks:
   - name: "Run tests"
-    init: git lfs pull && cargo build
+    init: git lfs pull && cargo test --no-run
     command: cargo watch -x "nextest run"
