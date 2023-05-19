@@ -1,0 +1,9 @@
+# Use Docker image used in devcontainer
+image:
+  file: .devcontainer/Dockerfile
+
+# Run tests as the default task, since there is no program yet.
+tasks:
+  - name: "Run tests"
+    init: git lfs pull && cargo build
+    command: cargo watch -x "nextest run"

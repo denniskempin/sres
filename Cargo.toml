@@ -2,3 +2,6 @@
 members = [
     "sres_emulator",
 ]
+
+[profile.test]
+opt-level = 1

@@ -2,9 +2,7 @@
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
-	// Configure tool-specific properties.
 	"customizations": {
-		// Configure properties specific to VS Code.
 		"vscode": {
 			"extensions": [
 				"vadimcn.vscode-lldb",

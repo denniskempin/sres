@@ -1,21 +1,8 @@
-FROM menci/archlinuxarm:base-devel
+FROM gitpod/workspace-rust:2023-05-08-21-16-55
 
-RUN pacman -Sy --noconfirm \
-    curl \
-    wget \
-    git \
-    inetutils \
-    nodejs \
-    yarn \
-    python-pip \
-    openssh \
-    fish \
-    rustup
+RUN sudo install-packages xa65
 
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:$PATH
+# Install cargo-binstall
+RUN curl -LsSf "https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz" | tar zxf - -C "$HOME/.cargo/bin"
 
-RUN rustup toolchain install stable --profile minimal
-RUN rustup component add clippy rustfmt
-
+RUN cargo binstall -y cargo-nextest
