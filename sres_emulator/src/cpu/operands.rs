@@ -17,6 +17,7 @@ pub enum AddressMode {
     AbsoluteXIndexed,
     AbsoluteXIndexedLong,
     AbsoluteYIndexed,
+    #[allow(dead_code)]
     AbsoluteYIndexedLong,
     AbsoluteIndirect,
     AbsoluteIndirectLong,
@@ -249,7 +250,7 @@ impl Operand {
             Self::Implied | Self::Accumulator => "".to_string(),
             Self::ImmediateU8(value) => format!("#${:02x}", value),
             Self::ImmediateU16(value) => format!("#${:04x}", value),
-            Self::Address(value, mode, operand_addr) => match mode {
+            Self::Address(value, mode, _) => match mode {
                 AddressMode::Absolute => format!("${:04x}", value),
                 AddressMode::AbsoluteLong => format!("${:06x}", value),
                 AddressMode::AbsoluteXIndexed => format!("${:04x},x", value),

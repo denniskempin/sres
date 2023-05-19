@@ -735,7 +735,7 @@ fn sta<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, cpu.a.get::<T>());
 }
 
-fn stp(cpu: &mut Cpu<impl Bus>) {
+fn stp(_cpu: &mut Cpu<impl Bus>) {
     panic!("stop");
 }
 
