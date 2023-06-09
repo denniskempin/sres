@@ -17,8 +17,6 @@ pub enum AddressMode {
     AbsoluteXIndexed,
     AbsoluteXIndexedLong,
     AbsoluteYIndexed,
-    #[allow(dead_code)]
-    AbsoluteYIndexedLong,
     AbsoluteIndirect,
     AbsoluteIndirectLong,
     AbsoluteXIndexedIndirect,
@@ -76,7 +74,6 @@ impl Operand {
             AddressMode::AbsoluteXIndexed => 2,
             AddressMode::AbsoluteXIndexedLong => 3,
             AddressMode::AbsoluteYIndexed => 2,
-            AddressMode::AbsoluteYIndexedLong => 3,
             AddressMode::AbsoluteIndirect => 2,
             AddressMode::AbsoluteIndirectLong => 2,
             AddressMode::AbsoluteXIndexedIndirect => 2,
@@ -126,9 +123,7 @@ impl Operand {
             _ => {
                 let operand_addr: u32 = match mode {
                     AddressMode::Absolute | AddressMode::AbsoluteLong => operand_data,
-                    AddressMode::AbsoluteYIndexed | AddressMode::AbsoluteYIndexedLong => {
-                        operand_data + cpu.y.value as u32
-                    }
+                    AddressMode::AbsoluteYIndexed => operand_data + cpu.y.value as u32,
                     AddressMode::AbsoluteXIndexed | AddressMode::AbsoluteXIndexedLong => {
                         operand_data + cpu.x.value as u32
                     }
@@ -256,7 +251,6 @@ impl Operand {
                 AddressMode::AbsoluteXIndexed => format!("${:04x},x", value),
                 AddressMode::AbsoluteXIndexedLong => format!("${:06x},x", value),
                 AddressMode::AbsoluteYIndexed => format!("${:04x},y", value),
-                AddressMode::AbsoluteYIndexedLong => format!("${:06x},y", value),
                 AddressMode::AbsoluteIndirect => format!("(${:04x})", value),
                 AddressMode::AbsoluteIndirectLong => format!("[${:04x}]", value),
                 AddressMode::AbsoluteXIndexedIndirect => format!("(${:04x},x)", value),
