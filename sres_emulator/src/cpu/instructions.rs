@@ -380,7 +380,9 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes
 }
 
-fn nop(_: &mut Cpu<impl Bus>) {}
+fn nop(cpu: &mut Cpu<impl Bus>) {
+    cpu.advance_clock(14);
+}
 
 fn sec(cpu: &mut Cpu<impl Bus>) {
     cpu.status.carry = true;
@@ -808,6 +810,7 @@ fn tcd(cpu: &mut Cpu<impl Bus>) {
 
 fn jmp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.pc = operand.effective_addr().unwrap();
+    cpu.advance_clock(3 * 8);
 }
 
 fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {

@@ -63,6 +63,7 @@ pub struct Cpu<BusT: Bus> {
     pub db: u8,
     pub status: StatusFlags,
     pub emulation_mode: bool,
+    pub master_cycle: u64,
     instruction_table: [Instruction<BusT>; 256],
 }
 
@@ -81,6 +82,7 @@ impl<BusT: Bus> Cpu<BusT> {
             status: StatusFlags::default(),
             pc: Address::default(),
             emulation_mode: true,
+            master_cycle: 0,
             instruction_table: build_opcode_table(),
         }
     }
@@ -106,11 +108,20 @@ impl<BusT: Bus> Cpu<BusT> {
                 self.bus.read_u8(EmuVectorTable::Reset as u32 + 1),
             ]),
         };
+        self.master_cycle = 0;
+        self.advance_clock(186);
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> u64 {
+        let cycle_before = self.master_cycle;
         let opcode = self.bus.read_u8(self.pc);
-        (self.instruction_table[opcode as usize].execute)(self)
+        (self.instruction_table[opcode as usize].execute)(self);
+        self.master_cycle - cycle_before
+    }
+
+    fn advance_clock(&mut self, master_cycles: u64) {
+        self.master_cycle += master_cycles;
+        self.bus.advance_master_clock(master_cycles);
     }
 
     fn stack_push_u8(&mut self, value: u8) {
@@ -178,8 +189,9 @@ impl<BusT: Bus> Cpu<BusT> {
         self.status.zero = value.is_zero();
     }
 
-    pub fn trace(&mut self) -> Trace {
+    pub fn trace(&mut self, h_as_cycles: bool) -> Trace {
         let (instruction, _) = self.load_instruction_meta(self.pc.to_address());
+        let ppu_timer = self.bus.ppu_timer();
         Trace {
             pc: self.pc,
             instruction: instruction.operation.to_string(),
@@ -192,6 +204,13 @@ impl<BusT: Bus> Cpu<BusT> {
             d: self.d,
             db: self.db,
             status: self.status,
+            v: ppu_timer.v,
+            h: if h_as_cycles {
+                ppu_timer.h_counter
+            } else {
+                ppu_timer.hdot()
+            },
+            f: ppu_timer.f,
         }
     }
 }
