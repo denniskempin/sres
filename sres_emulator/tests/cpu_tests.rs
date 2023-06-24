@@ -124,7 +124,7 @@ pub fn test_cputrn() {
 }
 
 fn run_krom_test(test_name: &str) {
-    let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log"));
+    let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log.xz"));
     let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));
 
     let mut bus = TestBus::with_sfc(&rom_path).unwrap();
@@ -138,7 +138,7 @@ fn run_krom_test(test_name: &str) {
     cpu.reset();
 
     let mut in_nmi_loop = false;
-    for (i, expected_line) in Trace::from_file(&trace_path).unwrap().enumerate() {
+    for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
         let mut expected_line = expected_line.unwrap();
         let mut actual_line = cpu.trace(false);
 

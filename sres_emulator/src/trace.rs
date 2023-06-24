@@ -7,6 +7,7 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Result;
+use xz2::read::XzDecoder;
 
 use crate::cpu::status::StatusFlags;
 use crate::memory::Address;
@@ -113,6 +114,13 @@ impl FromStr for Trace {
 impl Trace {
     pub fn from_file(path: &Path) -> Result<impl Iterator<Item = Result<Self>>> {
         let trace_reader = io::BufReader::new(File::open(path)?);
+        Ok(trace_reader.lines().map(|l| l?.parse()))
+    }
+
+    pub fn from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<Self>>> {
+        let file = File::open(path)?;
+        let decoder = XzDecoder::new(file);
+        let trace_reader = io::BufReader::new(decoder);
         Ok(trace_reader.lines().map(|l| l?.parse()))
     }
 }
