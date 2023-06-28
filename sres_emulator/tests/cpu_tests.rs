@@ -123,6 +123,23 @@ pub fn test_cputrn() {
     run_krom_test("CPUTRN");
 }
 
+#[test]
+pub fn test_ppu_timing() {
+    let trace_path = PathBuf::from("tests/cpu/PpuTiming-trace.log.xz");
+    let rom_path = PathBuf::from("tests/cpu/PpuTiming.sfc");
+
+    let bus = TestBus::with_sfc(&rom_path).unwrap();
+    let mut cpu = Cpu::new(bus);
+    cpu.reset();
+
+    for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
+        let expected_line = expected_line.unwrap();
+        let actual_line = cpu.trace(false);
+        assert_eq!(actual_line.to_string(), expected_line.to_string(),);
+        cpu.step();
+    }
+}
+
 fn run_krom_test(test_name: &str) {
     let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log.xz"));
     let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));

@@ -6,6 +6,48 @@ use crate::cartridge::Cartridge;
 use crate::memory::Memory;
 use crate::memory::ToAddress;
 
+fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
+    let double_frame_length = 357368 + 357364;
+    let double_frames = master_clock / double_frame_length;
+    let mut f_remainder = master_clock % double_frame_length;
+    let mut f = double_frames * 2;
+    let odd_frame = f_remainder >= 357368;
+    if odd_frame {
+        f += 1;
+        f_remainder -= 357368;
+    }
+
+    let v = if odd_frame && f_remainder >= 1364 * 240 {
+        (f_remainder + 4) / 1364
+    } else {
+        f_remainder / 1364
+    };
+
+    let h_counter = if odd_frame && f_remainder >= 1364 * 240 + 1360 {
+        (f_remainder + 4) % 1364
+    } else {
+        f_remainder % 1364
+    };
+    (f, v, h_counter)
+}
+
+fn fvh_to_master_clock(f: u64, v: u64, h: u64) -> u64 {
+    let f_cycles = if f % 2 == 0 {
+        f * 357366
+    } else {
+        f * 357366 + 2
+    };
+
+    let odd_frame = f % 2 == 1;
+    let v_cycles = if odd_frame && v > 240 {
+        v * 1364 - 4
+    } else {
+        v * 1364
+    };
+
+    f_cycles + v_cycles + h
+}
+
 pub trait Bus: Memory {
     fn ppu_timer(&self) -> PpuTimer;
     fn advance_master_clock(&mut self, master_cycles: u64);
@@ -16,17 +58,28 @@ pub struct TestBus {
     pub ppu_timer: PpuTimer,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PpuTimer {
     pub master_clock: u64,
     pub v: u64,
     pub h_counter: u64,
     pub f: u64,
-    pub remaining_master_cycles: u64,
     pub dram_refresh_position: u64,
 }
 
 impl PpuTimer {
+    pub fn from_master_clock(master_clock: u64) -> Self {
+        let (f, v, h) = master_clock_to_fvh(master_clock);
+
+        Self {
+            master_clock,
+            v,
+            h_counter: h,
+            f,
+            dram_refresh_position: 538,
+        }
+    }
+
     pub fn advance_master_clock(&mut self, master_cycles: u64) {
         for _ in 0..master_cycles {
             self.tick_master_clock();
@@ -41,6 +94,7 @@ impl PpuTimer {
         // See: https://wiki.superfamicom.org/timing#clocks-and-refresh-10
         if self.h_counter == self.dram_refresh_position {
             self.h_counter += 40;
+            self.master_clock += 40;
         }
 
         // Line 240 of each odd frame is 4 cycles shorter.
@@ -84,7 +138,6 @@ impl Default for PpuTimer {
             v: 0,
             h_counter: 0,
             f: 0,
-            remaining_master_cycles: 0,
             dram_refresh_position: 538,
         }
     }
@@ -158,7 +211,16 @@ impl Bus for TestBus {
 
 #[cfg(test)]
 mod tests {
-    use super::PpuTimer;
+    use super::*;
+
+    #[test]
+    fn test_fvh_master_clock_conversion() {
+        for master_clock in 0..=10000000 {
+            let (f, v, h) = master_clock_to_fvh(master_clock);
+            let actual_master_clock = fvh_to_master_clock(f, v, h);
+            assert_eq!(master_clock, actual_master_clock);
+        }
+    }
 
     /// Log of (v, h) from bsnes executing nop's. 14 master cycles between each step.
     #[rustfmt::skip]
@@ -217,12 +279,10 @@ mod tests {
     #[test]
     fn test_ppu_timer() {
         let mut timer = PpuTimer::default();
-        // BSNES starts execution at 186 master cycles
         timer.advance_master_clock(186);
         for (v, h) in V_H_REFERENCE_LOG {
             assert_eq!(timer.v, *v);
             assert_eq!(timer.hdot(), *h);
-            // The log executes a nop at each step, which takes 14 master cycles.
             timer.advance_master_clock(14);
         }
     }
