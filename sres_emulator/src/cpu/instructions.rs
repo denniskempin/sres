@@ -763,6 +763,7 @@ fn inx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     let value: T = cpu.x.get::<T>().wrapping_add(&T::one());
     cpu.x.set(value);
     cpu.update_negative_zero_flags(value);
+    cpu.advance_clock(14);
 }
 
 fn iny<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {

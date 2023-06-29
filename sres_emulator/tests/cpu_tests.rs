@@ -1,146 +1,134 @@
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
-use sres_emulator::bus::TestBus;
+use sres_emulator::bus::{fvh_to_master_clock, TestBus};
 use sres_emulator::cpu::Cpu;
-use sres_emulator::memory::{Address, Memory};
+use sres_emulator::memory::Memory;
 use sres_emulator::trace::Trace;
 
 #[test]
 pub fn test_cpuadc() {
-    run_krom_test("CPUADC");
+    run_krom_test("CPUADC", false, 0);
 }
 
 #[test]
 pub fn test_cpuand() {
-    run_krom_test("CPUAND");
+    run_krom_test("CPUAND", false, 0);
 }
 
 #[test]
 pub fn test_cpuasl() {
-    run_krom_test("CPUASL");
+    run_krom_test("CPUASL", false, 0);
 }
 
 #[test]
 pub fn test_cpubit() {
-    run_krom_test("CPUBIT");
+    run_krom_test("CPUBIT", false, 0);
 }
 
 #[test]
 pub fn test_cpubra() {
-    run_krom_test("CPUBRA");
+    run_krom_test("CPUBRA", false, 0);
 }
 
 #[test]
 pub fn test_cpucmp() {
-    run_krom_test("CPUCMP");
+    run_krom_test("CPUCMP", false, 0);
 }
 
 #[test]
 pub fn test_cpudec() {
-    run_krom_test("CPUDEC");
+    run_krom_test("CPUDEC", false, 0);
 }
 
 #[test]
 pub fn test_cpueor() {
-    run_krom_test("CPUEOR");
+    run_krom_test("CPUEOR", false, 0);
 }
 
 #[test]
 pub fn test_cpuinc() {
-    run_krom_test("CPUINC");
+    run_krom_test("CPUINC", false, 0);
 }
 
 #[test]
 pub fn test_cpujmp() {
-    run_krom_test("CPUJMP");
+    run_krom_test("CPUJMP", false, 0);
 }
 
 #[test]
 pub fn test_cpuldr() {
-    run_krom_test("CPULDR");
+    run_krom_test("CPULDR", false, 0);
 }
 
 #[test]
 pub fn test_cpulsr() {
-    run_krom_test("CPULSR");
+    run_krom_test("CPULSR", false, 0);
 }
 
 #[test]
 #[ignore = "Instructions not implemented yet"]
 pub fn test_cpumov() {
-    run_krom_test("CPUMOV");
+    run_krom_test("CPUMOV", false, 0);
 }
 
 #[test]
 #[ignore = "Instructions not implemented yet"]
 pub fn test_cpumsc() {
-    run_krom_test("CPUMSC");
+    run_krom_test("CPUMSC", false, 0);
 }
 
 #[test]
 pub fn test_cpuora() {
-    run_krom_test("CPUORA");
+    run_krom_test("CPUORA", false, 0);
 }
 
 #[test]
 pub fn test_cpuphl() {
-    run_krom_test("CPUPHL");
+    run_krom_test("CPUPHL", false, 0);
 }
 
 #[test]
 pub fn test_cpupsr() {
-    run_krom_test("CPUPSR");
+    run_krom_test("CPUPSR", false, 0);
 }
 
 #[test]
 pub fn test_cpuret() {
-    run_krom_test("CPURET");
+    run_krom_test("CPURET", false, 0);
 }
 
 #[test]
 pub fn test_cpurol() {
-    run_krom_test("CPUROL");
+    run_krom_test("CPUROL", false, 0);
 }
 
 #[test]
 pub fn test_cpuror() {
-    run_krom_test("CPUROR");
+    run_krom_test("CPUROR", false, 0);
 }
 
 #[test]
 pub fn test_cpusbc() {
-    run_krom_test("CPUSBC");
+    run_krom_test("CPUSBC", false, 0);
 }
 
 #[test]
 pub fn test_cpustr() {
-    run_krom_test("CPUSTR");
+    run_krom_test("CPUSTR", false, 0);
 }
 
 #[test]
 pub fn test_cputrn() {
-    run_krom_test("CPUTRN");
+    run_krom_test("CPUTRN", false, 0);
 }
 
 #[test]
 pub fn test_ppu_timing() {
-    let trace_path = PathBuf::from("tests/cpu/PpuTiming-trace.log.xz");
-    let rom_path = PathBuf::from("tests/cpu/PpuTiming.sfc");
-
-    let bus = TestBus::with_sfc(&rom_path).unwrap();
-    let mut cpu = Cpu::new(bus);
-    cpu.reset();
-
-    for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
-        let expected_line = expected_line.unwrap();
-        let actual_line = cpu.trace(true);
-        assert_eq!(actual_line.to_string(), expected_line.to_string(),);
-        cpu.step();
-    }
+    run_krom_test("PpuTiming", true, 0);
 }
 
-fn run_krom_test(test_name: &str) {
+fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64) {
     let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log.xz"));
     let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));
 
@@ -155,6 +143,8 @@ fn run_krom_test(test_name: &str) {
     cpu.reset();
 
     let mut in_nmi_loop = false;
+    let mut previous_master_cycle = 0;
+    let mut previous_expected_master_cycle = 0;
     for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
         let mut expected_line = expected_line.unwrap();
         if i == 0 {
@@ -163,8 +153,12 @@ fn run_krom_test(test_name: &str) {
                 "Trace file is using dots not H-position"
             );
         }
+        if i > instruction_limit as usize && instruction_limit > 0 {
+            println!("Reached instruction limit, stopping.");
+            break;
+        }
 
-        let mut actual_line = cpu.trace(false);
+        let mut actual_line = cpu.trace(true);
 
         // krom tests will run a loop to wait for nmi:
         // bit $4210; bpl ...;
@@ -185,6 +179,28 @@ fn run_krom_test(test_name: &str) {
                     println!("Line {:06}: Skipping NMI loop", i);
                 }
             }
+        }
+
+        if validate_cycles {
+            // Convert F: V: H: from BSNES trace to master cycles to make it easier to compare how many
+            // cycles each instruction takes (or should take).
+            let expected_master_cycle =
+                fvh_to_master_clock(expected_line.f, expected_line.v, expected_line.h);
+            let expected_duration =
+                expected_master_cycle.saturating_sub(previous_expected_master_cycle);
+            let actual_duration = cpu
+                .bus
+                .ppu_timer
+                .master_clock
+                .saturating_sub(previous_master_cycle);
+            if expected_duration != actual_duration {
+                panic!(
+                    "{:06} Expected instruction duration: {} master cycles. Actual: {}",
+                    i, expected_duration, actual_duration
+                );
+            }
+            previous_master_cycle = cpu.bus.ppu_timer.master_clock;
+            previous_expected_master_cycle = expected_master_cycle;
         }
 
         println!(
@@ -215,6 +231,7 @@ fn run_krom_test(test_name: &str) {
             expected_line.operand_addr = None;
             actual_line.operand_addr = None;
         }
+
         // Skip comparison of PPU V, H, F cycles, as those are not implemented yet.
         assert_eq!(
             actual_line.to_string()[..80],

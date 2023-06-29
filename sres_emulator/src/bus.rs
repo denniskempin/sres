@@ -6,7 +6,7 @@ use crate::cartridge::Cartridge;
 use crate::memory::Memory;
 use crate::memory::ToAddress;
 
-fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
+pub fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
     let double_frame_length = 357368 + 357364;
     let double_frames = master_clock / double_frame_length;
     let mut f_remainder = master_clock % double_frame_length;
@@ -31,7 +31,7 @@ fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
     (f, v, h_counter)
 }
 
-fn fvh_to_master_clock(f: u64, v: u64, h: u64) -> u64 {
+pub fn fvh_to_master_clock(f: u64, v: u64, h: u64) -> u64 {
     let f_cycles = if f % 2 == 0 {
         f * 357366
     } else {
