@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use pretty_assertions::assert_eq;
 use sres_emulator::bus::TestBus;
 use sres_emulator::cpu::Cpu;
-use sres_emulator::memory::Memory;
+use sres_emulator::memory::{Address, Memory};
 use sres_emulator::trace::Trace;
 
 #[test]
@@ -134,7 +134,7 @@ pub fn test_ppu_timing() {
 
     for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
         let expected_line = expected_line.unwrap();
-        let actual_line = cpu.trace(false);
+        let actual_line = cpu.trace(true);
         assert_eq!(actual_line.to_string(), expected_line.to_string(),);
         cpu.step();
     }
@@ -157,6 +157,13 @@ fn run_krom_test(test_name: &str) {
     let mut in_nmi_loop = false;
     for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
         let mut expected_line = expected_line.unwrap();
+        if i == 0 {
+            assert_eq!(
+                expected_line.h, 186,
+                "Trace file is using dots not H-position"
+            );
+        }
+
         let mut actual_line = cpu.trace(false);
 
         // krom tests will run a loop to wait for nmi:
@@ -202,6 +209,11 @@ fn run_krom_test(test_name: &str) {
             expected_line.operand = "".to_string();
             actual_line.operand_addr = None;
             expected_line.operand_addr = None;
+        }
+        // `jmp` instructions in bsnes print an inconsistent effective address. Skip comparison.
+        if expected_line.instruction.starts_with('j') {
+            expected_line.operand_addr = None;
+            actual_line.operand_addr = None;
         }
         // Skip comparison of PPU V, H, F cycles, as those are not implemented yet.
         assert_eq!(
