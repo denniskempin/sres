@@ -3,6 +3,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use crate::cartridge::Cartridge;
+use crate::memory::Address;
 use crate::memory::Memory;
 use crate::memory::ToAddress;
 
@@ -48,9 +49,29 @@ pub fn fvh_to_master_clock(f: u64, v: u64, h: u64) -> u64 {
     f_cycles + v_cycles + h
 }
 
+fn memory_access_speed(addr: Address) -> u64 {
+    let addr: u32 = addr.into();
+    if addr & 0x408000 != 0 {
+        return if addr & 0x800000 != 0 {
+            6 // TODO: rom_speed
+        } else {
+            8
+        };
+    }
+    if (addr + 0x6000) & 0x4000 != 0 {
+        8
+    } else if (addr.saturating_sub(0x4000)) & 0x7e00 != 0 {
+        6
+    } else {
+        12
+    }
+}
+
 pub trait Bus: Memory {
+    fn reset(&mut self);
     fn ppu_timer(&self) -> PpuTimer;
-    fn advance_master_clock(&mut self, master_cycles: u64);
+    fn internal_operation_cycle(&mut self);
+    fn advance_master_clock(&mut self, cycles: u64);
 }
 
 pub struct TestBus {
@@ -190,22 +211,34 @@ impl Memory for TestBus {
     }
 
     fn read_u8(&mut self, addr: impl ToAddress) -> u8 {
+        let addr = addr.to_address();
+        self.advance_master_clock(memory_access_speed(addr));
         self.peek_u8(addr).unwrap_or(0)
     }
 
     fn write_u8(&mut self, addr: impl ToAddress, val: u8) {
         let addr = addr.to_address();
+        self.advance_master_clock(memory_access_speed(addr));
         self.memory[u32::from(addr) as usize] = val;
     }
 }
 
 impl Bus for TestBus {
-    fn advance_master_clock(&mut self, master_cycles: u64) {
-        self.ppu_timer.advance_master_clock(master_cycles);
+    fn internal_operation_cycle(&mut self) {
+        self.advance_master_clock(6);
+    }
+
+    fn advance_master_clock(&mut self, cycles: u64) {
+        self.ppu_timer.advance_master_clock(cycles);
     }
 
     fn ppu_timer(&self) -> PpuTimer {
         self.ppu_timer
+    }
+
+    fn reset(&mut self) {
+        self.ppu_timer = PpuTimer::default();
+        self.advance_master_clock(186);
     }
 }
 

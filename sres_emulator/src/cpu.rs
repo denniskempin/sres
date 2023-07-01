@@ -89,7 +89,7 @@ impl<BusT: Bus> Cpu<BusT> {
 
     /// Return the instruction meta data for the instruction at the given address
     fn load_instruction_meta(&mut self, addr: Address) -> (InstructionMeta, Address) {
-        let opcode = self.bus.read_u8(addr);
+        let opcode = self.bus.peek_u8(addr).unwrap_or_default();
         (self.instruction_table[opcode as usize].meta)(self, addr)
     }
 
@@ -101,27 +101,23 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     pub fn reset(&mut self) {
+        self.bus.reset();
         self.pc = Address {
             bank: 0,
             offset: u16::from_le_bytes([
-                self.bus.read_u8(EmuVectorTable::Reset as u32),
-                self.bus.read_u8(EmuVectorTable::Reset as u32 + 1),
+                self.bus
+                    .peek_u8(EmuVectorTable::Reset as u32)
+                    .unwrap_or_default(),
+                self.bus
+                    .peek_u8(EmuVectorTable::Reset as u32 + 1)
+                    .unwrap_or_default(),
             ]),
         };
-        self.master_cycle = 0;
-        self.advance_clock(186);
     }
 
-    pub fn step(&mut self) -> u64 {
-        let cycle_before = self.master_cycle;
+    pub fn step(&mut self) {
         let opcode = self.bus.read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
-        self.master_cycle - cycle_before
-    }
-
-    fn advance_clock(&mut self, master_cycles: u64) {
-        self.master_cycle += master_cycles;
-        self.bus.advance_master_clock(master_cycles);
     }
 
     fn stack_push_u8(&mut self, value: u8) {

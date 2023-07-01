@@ -1,14 +1,15 @@
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
-use sres_emulator::bus::{fvh_to_master_clock, TestBus};
+use sres_emulator::bus::fvh_to_master_clock;
+use sres_emulator::bus::TestBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::memory::Memory;
 use sres_emulator::trace::Trace;
 
 #[test]
 pub fn test_cpuadc() {
-    run_krom_test("CPUADC", false, 0);
+    run_krom_test("CPUADC", true, 5);
 }
 
 #[test]
@@ -144,7 +145,6 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
 
     let mut in_nmi_loop = false;
     let mut previous_master_cycle = 0;
-    let mut previous_expected_master_cycle = 0;
     for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
         let mut expected_line = expected_line.unwrap();
         if i == 0 {
@@ -186,8 +186,7 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
             // cycles each instruction takes (or should take).
             let expected_master_cycle =
                 fvh_to_master_clock(expected_line.f, expected_line.v, expected_line.h);
-            let expected_duration =
-                expected_master_cycle.saturating_sub(previous_expected_master_cycle);
+            let expected_duration = expected_master_cycle.saturating_sub(previous_master_cycle);
             let actual_duration = cpu
                 .bus
                 .ppu_timer
@@ -200,13 +199,12 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
                 );
             }
             previous_master_cycle = cpu.bus.ppu_timer.master_clock;
-            previous_expected_master_cycle = expected_master_cycle;
         }
 
         println!(
             "{:06} ({:02X}): {}",
             i,
-            cpu.bus.read_u8(cpu.pc),
+            cpu.bus.peek_u8(cpu.pc).unwrap_or_default(),
             actual_line
         );
 
@@ -232,7 +230,7 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
             actual_line.operand_addr = None;
         }
 
-        // Skip comparison of PPU V, H, F cycles, as those are not implemented yet.
+        // Comparison of PPU V, H, F cycles is done separately above.
         assert_eq!(
             actual_line.to_string()[..80],
             expected_line.to_string()[..80],

@@ -381,18 +381,21 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
 }
 
 fn nop(cpu: &mut Cpu<impl Bus>) {
-    cpu.advance_clock(14);
+    cpu.bus.internal_operation_cycle();
 }
 
 fn sec(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.status.carry = true;
 }
 
 fn sed(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.status.decimal = true;
 }
 
 fn sei(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.status.irq_disable = true;
 }
 
@@ -597,18 +600,22 @@ fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
 }
 
 fn clc(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.status.carry = false;
 }
 
 fn cld(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.status.decimal = false;
 }
 
 fn cli(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.status.irq_disable = false;
 }
 
 fn xce(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     (cpu.status.carry, cpu.emulation_mode) = (cpu.emulation_mode, cpu.status.carry);
     if cpu.emulation_mode {
         cpu.status.accumulator_register_size = true;
@@ -631,22 +638,27 @@ fn per(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn phk(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.stack_push_u8(cpu.db);
 }
 
 fn php(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.stack_push_u8(u8::from(cpu.status));
 }
 
 fn pha<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.stack_push(cpu.a.get::<T>());
 }
 
 fn phb(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.stack_push_u8(cpu.db);
 }
 
 fn phd(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.stack_push_u16(cpu.d);
 }
 
@@ -671,16 +683,22 @@ fn ply<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
 }
 
 fn plb(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     cpu.db = cpu.stack_pop_u8();
     cpu.update_negative_zero_flags(cpu.db);
 }
 
 fn pld(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     cpu.d = cpu.stack_pop_u16();
     cpu.update_negative_zero_flags(cpu.d);
 }
 
 fn plp(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     cpu.status = cpu.stack_pop_u8().into();
     cpu.update_register_sizes();
 }
@@ -692,6 +710,7 @@ fn pla<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
 }
 
 fn clv(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.status.overflow = false;
 }
 
@@ -763,7 +782,6 @@ fn inx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     let value: T = cpu.x.get::<T>().wrapping_add(&T::one());
     cpu.x.set(value);
     cpu.update_negative_zero_flags(value);
-    cpu.advance_clock(14);
 }
 
 fn iny<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
@@ -810,8 +828,8 @@ fn tcd(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn jmp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.bus.advance_master_clock(16);
     cpu.pc = operand.effective_addr().unwrap();
-    cpu.advance_clock(3 * 8);
 }
 
 fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
