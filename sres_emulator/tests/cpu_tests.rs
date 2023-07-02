@@ -9,7 +9,7 @@ use sres_emulator::trace::Trace;
 
 #[test]
 pub fn test_cpuadc() {
-    run_krom_test("CPUADC", true, 5);
+    run_krom_test("CPUADC", true, 968);
 }
 
 #[test]
@@ -194,8 +194,10 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
                 .saturating_sub(previous_master_cycle);
             if expected_duration != actual_duration {
                 panic!(
-                    "{:06} Expected instruction duration: {} master cycles. Actual: {}",
-                    i, expected_duration, actual_duration
+                    "  ### Expected duration: {} - Actual: {}, diff: {}",
+                    expected_duration,
+                    actual_duration,
+                    (expected_duration as i64) - (actual_duration as i64),
                 );
             }
             previous_master_cycle = cpu.bus.ppu_timer.master_clock;

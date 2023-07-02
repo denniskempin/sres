@@ -49,21 +49,32 @@ pub fn fvh_to_master_clock(f: u64, v: u64, h: u64) -> u64 {
     f_cycles + v_cycles + h
 }
 
+/// Memory access speed as per memory map. See:
+/// https://wiki.superfamicom.org/memory-mapping#memory-map-67
 fn memory_access_speed(addr: Address) -> u64 {
-    let addr: u32 = addr.into();
-    if addr & 0x408000 != 0 {
-        return if addr & 0x800000 != 0 {
-            6 // TODO: rom_speed
-        } else {
-            8
-        };
-    }
-    if (addr + 0x6000) & 0x4000 != 0 {
-        8
-    } else if (addr.saturating_sub(0x4000)) & 0x7e00 != 0 {
-        6
-    } else {
-        12
+    static FAST: u64 = 6;
+    static SLOW: u64 = 8;
+    static XSLOW: u64 = 12;
+
+    match addr.bank {
+        0x00..=0x3F => match addr.offset {
+            0x0000..=0x1FFF => SLOW,
+            0x2000..=0x3FFF => FAST,
+            0x4000..=0x41FF => XSLOW,
+            0x4200..=0x5FFF => FAST,
+            0x6000..=0xFFFF => SLOW,
+        },
+        0x40..=0x7F => SLOW,
+        0x80..=0xBF => {
+            match addr.offset {
+                0x0000..=0x1FFF => SLOW,
+                0x2000..=0x3FFF => FAST,
+                0x4000..=0x41FF => XSLOW,
+                0x4200..=0x5FFF => FAST,
+                0x6000..=0xFFFF => SLOW, // TODO fastrom support
+            }
+        }
+        0xC0..=0xFF => SLOW, // TODO fastrom support
     }
 }
 
@@ -213,18 +224,21 @@ impl Memory for TestBus {
     fn read_u8(&mut self, addr: impl ToAddress) -> u8 {
         let addr = addr.to_address();
         self.advance_master_clock(memory_access_speed(addr));
+        //println!("  read_u8({addr}): {} cycles", memory_access_speed(addr));
         self.peek_u8(addr).unwrap_or(0)
     }
 
     fn write_u8(&mut self, addr: impl ToAddress, val: u8) {
         let addr = addr.to_address();
         self.advance_master_clock(memory_access_speed(addr));
+        //println!("  write_u8({addr}): {} cycles", memory_access_speed(addr));
         self.memory[u32::from(addr) as usize] = val;
     }
 }
 
 impl Bus for TestBus {
     fn internal_operation_cycle(&mut self) {
+        //println!("  io cycle: 6 cycles");
         self.advance_master_clock(6);
     }
 
