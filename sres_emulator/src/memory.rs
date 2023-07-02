@@ -74,6 +74,16 @@ pub trait Memory {
         u16::from_le_bytes([self.read_u8(addr), self.read_u8(addr + 1)])
     }
 
+    fn read_u24(&mut self, addr: impl ToAddress) -> u32 {
+        let addr = addr.to_address();
+        u32::from_le_bytes([
+            self.read_u8(addr),
+            self.read_u8(addr + 1),
+            self.read_u8(addr + 2),
+            0,
+        ])
+    }
+
     fn write_u16(&mut self, addr: impl ToAddress, value: u16) {
         let addr = addr.to_address();
         let bytes = value.to_le_bytes();

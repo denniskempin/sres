@@ -46,6 +46,149 @@ pub enum Operand {
 impl Operand {
     #[inline]
     pub fn decode(
+        cpu: &mut Cpu<impl Bus>,
+        instruction_addr: Address,
+        mode: AddressMode,
+    ) -> (Self, Address) {
+        // The size of the operand part of the instruction depends on the address mode.
+        let operand_size = match mode {
+            AddressMode::Implied => 0,
+            AddressMode::Accumulator => 0,
+            AddressMode::ImmediateU8 => 1,
+            AddressMode::ImmediateA => {
+                if cpu.status.accumulator_register_size {
+                    1
+                } else {
+                    2
+                }
+            }
+            AddressMode::ImmediateXY => {
+                if cpu.status.index_register_size_or_break {
+                    1
+                } else {
+                    2
+                }
+            }
+            AddressMode::Absolute => 2,
+            AddressMode::AbsoluteLong => 3,
+            AddressMode::AbsoluteXIndexed => 2,
+            AddressMode::AbsoluteXIndexedLong => 3,
+            AddressMode::AbsoluteYIndexed => 2,
+            AddressMode::AbsoluteIndirect => 2,
+            AddressMode::AbsoluteIndirectLong => 2,
+            AddressMode::AbsoluteXIndexedIndirect => 2,
+            AddressMode::StackRelative => 1,
+            AddressMode::StackRelativeIndirectYIndexed => 1,
+            AddressMode::Relative => 1,
+            AddressMode::RelativeLong => 2,
+            AddressMode::DirectPage => 1,
+            AddressMode::DirectPageXIndexed => 1,
+            AddressMode::DirectPageXIndexedIndirect => 1,
+            AddressMode::DirectPageYIndexed => 1,
+            AddressMode::DirectPageIndirectYIndexed => 1,
+            AddressMode::DirectPageIndirectYIndexedLong => 1,
+            AddressMode::DirectPageIndirect => 1,
+            AddressMode::DirectPageIndirectLong => 1,
+        };
+
+        // Regardless of how many bytes were read, store them all as u32 for simplicity.
+        let operand_data: u32 = match operand_size {
+            0 => 0,
+            1 => cpu.bus.read_u8(instruction_addr + 1) as u32,
+            2 => cpu.bus.read_u16(instruction_addr + 1) as u32,
+            3 => cpu.bus.read_u24(instruction_addr + 1),
+            _ => unreachable!(),
+        };
+
+        // Interpret the address mode to figure out where the operand is located.
+        let operand = match mode {
+            AddressMode::Implied => Operand::Implied,
+            AddressMode::Accumulator => Operand::Accumulator,
+            AddressMode::ImmediateU8 => Operand::ImmediateU8(operand_data as u8),
+            AddressMode::ImmediateA => {
+                if cpu.status.accumulator_register_size {
+                    Operand::ImmediateU8(operand_data as u8)
+                } else {
+                    Operand::ImmediateU16(operand_data as u16)
+                }
+            }
+            AddressMode::ImmediateXY => {
+                if cpu.status.index_register_size_or_break {
+                    Operand::ImmediateU8(operand_data as u8)
+                } else {
+                    Operand::ImmediateU16(operand_data as u16)
+                }
+            }
+            // Operand is in memory, calculate the effective address
+            _ => {
+                let operand_addr: u32 = match mode {
+                    AddressMode::Absolute | AddressMode::AbsoluteLong => operand_data,
+                    AddressMode::AbsoluteYIndexed => operand_data + cpu.y.value as u32,
+                    AddressMode::AbsoluteXIndexed | AddressMode::AbsoluteXIndexedLong => {
+                        operand_data + cpu.x.value as u32
+                    }
+                    AddressMode::AbsoluteIndirect => cpu.bus.read_u16(operand_data) as u32,
+                    AddressMode::AbsoluteIndirectLong => cpu.bus.read_u24(operand_data),
+                    AddressMode::AbsoluteXIndexedIndirect => {
+                        cpu.bus.read_u16(operand_data + cpu.x.value as u32) as u32
+                    }
+                    AddressMode::Relative => {
+                        let relative_addr = operand_data as i8;
+                        if relative_addr > 0 {
+                            u32::from(cpu.pc + 2).wrapping_add(relative_addr.unsigned_abs() as u32)
+                        } else {
+                            u32::from(cpu.pc + 2).wrapping_sub(relative_addr.unsigned_abs() as u32)
+                        }
+                    }
+                    AddressMode::RelativeLong => {
+                        let relative_addr = operand_data as i16;
+                        if relative_addr > 0 {
+                            u32::from(cpu.pc + 3).wrapping_add(relative_addr.unsigned_abs() as u32)
+                        } else {
+                            u32::from(cpu.pc + 3).wrapping_sub(relative_addr.unsigned_abs() as u32)
+                        }
+                    }
+                    AddressMode::StackRelative => operand_data + cpu.s as u32 + STACK_BASE,
+                    AddressMode::StackRelativeIndirectYIndexed => {
+                        cpu.bus.read_u16(cpu.s as u32 + operand_data) as u32 + cpu.y.value as u32
+                    }
+                    AddressMode::DirectPage => cpu.d as u32 + operand_data,
+                    AddressMode::DirectPageXIndexed => {
+                        cpu.d as u32 + operand_data + cpu.x.value as u32
+                    }
+                    AddressMode::DirectPageYIndexed => {
+                        cpu.d as u32 + operand_data + cpu.y.value as u32
+                    }
+                    AddressMode::DirectPageIndirect => {
+                        cpu.bus.read_u16(cpu.d as u32 + operand_data) as u32
+                    }
+                    AddressMode::DirectPageXIndexedIndirect => cpu
+                        .bus
+                        .read_u16(cpu.d as u32 + operand_data + cpu.x.value as u32)
+                        as u32,
+                    AddressMode::DirectPageIndirectYIndexed => {
+                        cpu.bus.read_u16(cpu.d as u32 + operand_data) as u32 + cpu.y.value as u32
+                    }
+                    AddressMode::DirectPageIndirectYIndexedLong => {
+                        cpu.bus.read_u24(cpu.d as u32 + operand_data) + cpu.y.value as u32
+                    }
+                    AddressMode::DirectPageIndirectLong => {
+                        cpu.bus.read_u24(cpu.d as u32 + operand_data)
+                    }
+                    AddressMode::Implied
+                    | AddressMode::ImmediateU8
+                    | AddressMode::ImmediateA
+                    | AddressMode::ImmediateXY
+                    | AddressMode::Accumulator => unreachable!(),
+                };
+                Operand::Address(operand_data, mode, operand_addr.to_address())
+            }
+        };
+        (operand, instruction_addr + 1 + operand_size)
+    }
+
+    #[inline]
+    pub fn peek(
         cpu: &Cpu<impl Bus>,
         instruction_addr: Address,
         mode: AddressMode,

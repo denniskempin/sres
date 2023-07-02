@@ -56,8 +56,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                     $method(cpu, &operand);
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) =
-                        Operand::decode(cpu, instruction_addr, $address_mode);
+                    let (operand, next_addr) = Operand::peek(cpu, instruction_addr, $address_mode);
                     (
                         InstructionMeta {
                             operation: stringify!($method),
@@ -87,8 +86,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                     }
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) =
-                        Operand::decode(cpu, instruction_addr, $address_mode);
+                    let (operand, next_addr) = Operand::peek(cpu, instruction_addr, $address_mode);
                     (
                         InstructionMeta {
                             operation: stringify!($method),
@@ -828,7 +826,6 @@ fn tcd(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn jmp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.advance_master_clock(16);
     cpu.pc = operand.effective_addr().unwrap();
 }
 
