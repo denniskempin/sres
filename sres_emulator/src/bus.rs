@@ -88,6 +88,7 @@ pub trait Bus: Memory {
 pub struct TestBus {
     pub memory: Vec<u8>,
     pub ppu_timer: PpuTimer,
+    pub nmi_flag: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -211,6 +212,7 @@ impl Default for TestBus {
         Self {
             memory: vec![0; 0x1000000],
             ppu_timer: PpuTimer::default(),
+            nmi_flag: false,
         }
     }
 }
@@ -225,7 +227,16 @@ impl Memory for TestBus {
         let addr = addr.to_address();
         self.advance_master_clock(memory_access_speed(addr));
         //println!("  read_u8({addr}): {} cycles", memory_access_speed(addr));
-        self.peek_u8(addr).unwrap_or(0)
+        if u32::from(addr) == 0x004210 {
+            if self.nmi_flag {
+                self.nmi_flag = false;
+                0b1111_0010
+            } else {
+                0b0111_0010
+            }
+        } else {
+            self.peek_u8(addr).unwrap_or(0)
+        }
     }
 
     fn write_u8(&mut self, addr: impl ToAddress, val: u8) {
@@ -244,6 +255,12 @@ impl Bus for TestBus {
 
     fn advance_master_clock(&mut self, cycles: u64) {
         self.ppu_timer.advance_master_clock(cycles);
+        if self.ppu_timer.v == 225 && self.ppu_timer.hdot() == 0 {
+            self.nmi_flag = true;
+        }
+        if self.ppu_timer.v == 0 {
+            self.nmi_flag = false;
+        }
     }
 
     fn ppu_timer(&self) -> PpuTimer {

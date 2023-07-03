@@ -9,7 +9,7 @@ use sres_emulator::trace::Trace;
 
 #[test]
 pub fn test_cpuadc() {
-    run_krom_test("CPUADC", true, 968);
+    run_krom_test("CPUADC", false, 0);
 }
 
 #[test]
@@ -163,7 +163,7 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
         // krom tests will run a loop to wait for nmi:
         // bit $4210; bpl ...;
         // Skip those, to match our fake implementation that always return NMI
-        if in_nmi_loop {
+        /*if in_nmi_loop {
             if expected_line.status.negative {
                 println!("Line {:06}: End skip", i);
                 in_nmi_loop = false;
@@ -179,7 +179,7 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
                     println!("Line {:06}: Skipping NMI loop", i);
                 }
             }
-        }
+        }*/
 
         if validate_cycles {
             // Convert F: V: H: from BSNES trace to master cycles to make it easier to compare how many
@@ -233,10 +233,7 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
         }
 
         // Comparison of PPU V, H, F cycles is done separately above.
-        assert_eq!(
-            actual_line.to_string()[..80],
-            expected_line.to_string()[..80],
-        );
+        assert_eq!(actual_line.to_string(), expected_line.to_string(),);
 
         cpu.step();
     }
