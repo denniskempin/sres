@@ -108,6 +108,7 @@ pub struct PpuTimer {
     pub h_counter: u64,
     pub f: u64,
     pub dram_refresh_position: u64,
+    pub nmi_flag: bool,
 }
 
 impl PpuTimer {
@@ -120,6 +121,7 @@ impl PpuTimer {
             h_counter: h,
             f,
             dram_refresh_position: 538,
+            nmi_flag: false,
         }
     }
 
@@ -150,12 +152,18 @@ impl PpuTimer {
         if self.h_counter >= h_duration {
             self.h_counter -= h_duration;
             self.v += 1;
+            if self.v == 225 {
+                self.nmi_flag = true;
+                println!("nmi = true");
+            }
             self.dram_refresh_position = 538 - (self.master_clock & 7);
         }
 
         if self.v >= 262 {
             self.v -= 262;
             self.f += 1;
+            self.nmi_flag = false;
+            println!("nmi = false");
         }
     }
 
@@ -182,6 +190,7 @@ impl Default for PpuTimer {
             h_counter: 0,
             f: 0,
             dram_refresh_position: 538,
+            nmi_flag: false,
         }
     }
 }
@@ -239,9 +248,27 @@ impl Memory for TestBus {
     fn read_u8(&mut self, addr: impl ToAddress) -> u8 {
         let addr = addr.to_address();
         self.clock_speed = memory_access_speed(addr);
-        self.advance_master_clock(self.clock_speed);
         //println!("  read_u8({addr}): {} cycles", memory_access_speed(addr));
-        self.peek_u8(addr).unwrap_or(0)
+        self.ppu_timer.advance_master_clock(self.clock_speed - 6);
+        let value = if u32::from(addr) == 0x004210 {
+            let override_value = self.peek_u8(addr).unwrap_or(0);
+            if override_value > 0 {
+                return override_value;
+            }
+            if self.ppu_timer.nmi_flag {
+                // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
+                if !(self.ppu_timer.v == 225 && self.ppu_timer.h_counter <= 2) {
+                    self.ppu_timer.nmi_flag = false;
+                }
+                0b1111_0010
+            } else {
+                0b0111_0010
+            }
+        } else {
+            self.peek_u8(addr).unwrap_or(0)
+        };
+        self.advance_master_clock(6);
+        value
     }
 
     #[allow(clippy::single_match)]
@@ -249,7 +276,7 @@ impl Memory for TestBus {
         let addr = addr.to_address();
         self.clock_speed = memory_access_speed(addr);
         self.advance_master_clock(self.clock_speed);
-        // println!("  write_u8({addr}): {val:02x}");
+        //println!("  write_u8({addr}): {val:02x}");
         match addr.bank {
             0x00..=0x1F => match addr.offset.bits(8..16) {
                 0x42 => match addr.offset.bits(0..8) {
@@ -302,6 +329,7 @@ impl Bus for TestBus {
         if self.dma_pending > 0 {
             if self.dma_active {
                 let dma_counter = 8 - self.ppu_timer.master_clock % 8;
+                println!("dma: c {}, speed {}", dma_counter, self.clock_speed);
                 self.ppu_timer.advance_master_clock(dma_counter + 8);
                 for channel in 0..8 {
                     if self.dma_pending.bit(channel) {

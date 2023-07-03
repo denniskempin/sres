@@ -676,20 +676,26 @@ fn phd(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn phx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.stack_push(cpu.x.get::<T>());
 }
 
 fn phy<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.stack_push(cpu.y.get::<T>());
 }
 
 fn plx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     let value = cpu.stack_pop::<T>();
     cpu.x.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn ply<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     let value = cpu.stack_pop::<T>();
     cpu.y.set(value);
     cpu.update_negative_zero_flags(value);
@@ -717,6 +723,8 @@ fn plp(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn pla<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     let value = cpu.stack_pop::<T>();
     cpu.a.set(value);
     cpu.update_negative_zero_flags(value);

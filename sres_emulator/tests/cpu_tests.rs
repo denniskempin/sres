@@ -9,7 +9,7 @@ use sres_emulator::trace::Trace;
 
 #[test]
 pub fn test_cpuadc() {
-    run_krom_test("CPUADC", true, 1054);
+    run_krom_test("CPUADC", true, 0);
 }
 
 #[test]
@@ -134,8 +134,10 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
     let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));
 
     let mut bus = TestBus::with_sfc(&rom_path).unwrap();
-    // Fake RDNMI register. NMI is always true.
-    bus.write_u8(0x004210, 0xC2);
+    if !validate_cycles {
+        // Fake RDNMI register. NMI is always true.
+        bus.write_u8(0x004210, 0xC2);
+    }
     // CPUMSC reads 0x20 from $000000 at the first instruction. I cannot figure out why, it
     // should be mapped to RAM.
     bus.write_u8(0x000000, 0x20);
@@ -168,6 +170,9 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
                 println!("Line {:06}: End skip", i);
                 in_nmi_loop = false;
             } else {
+                if validate_cycles {
+                    cpu.step();
+                }
                 continue;
             }
         }

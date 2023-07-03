@@ -123,7 +123,10 @@ impl Operand {
             _ => {
                 let operand_addr: u32 = match mode {
                     AddressMode::Absolute | AddressMode::AbsoluteLong => operand_data,
-                    AddressMode::AbsoluteYIndexed => operand_data + cpu.y.value as u32,
+                    AddressMode::AbsoluteYIndexed => {
+                        cpu.bus.internal_operation_cycle();
+                        operand_data + cpu.y.value as u32
+                    }
                     AddressMode::AbsoluteXIndexed => {
                         cpu.bus.internal_operation_cycle();
                         operand_data + cpu.x.value as u32
@@ -132,6 +135,7 @@ impl Operand {
                     AddressMode::AbsoluteIndirect => cpu.bus.read_u16(operand_data) as u32,
                     AddressMode::AbsoluteIndirectLong => cpu.bus.read_u24(operand_data),
                     AddressMode::AbsoluteXIndexedIndirect => {
+                        cpu.bus.internal_operation_cycle();
                         cpu.bus.read_u16(operand_data + cpu.x.value as u32) as u32
                     }
                     AddressMode::Relative => {
@@ -150,25 +154,36 @@ impl Operand {
                             u32::from(cpu.pc + 3).wrapping_sub(relative_addr.unsigned_abs() as u32)
                         }
                     }
-                    AddressMode::StackRelative => operand_data + cpu.s as u32 + STACK_BASE,
+                    AddressMode::StackRelative => {
+                        cpu.bus.internal_operation_cycle();
+                        operand_data + cpu.s as u32 + STACK_BASE
+                    }
                     AddressMode::StackRelativeIndirectYIndexed => {
+                        cpu.bus.internal_operation_cycle();
+                        cpu.bus.internal_operation_cycle();
                         cpu.bus.read_u16(cpu.s as u32 + operand_data) as u32 + cpu.y.value as u32
                     }
                     AddressMode::DirectPage => cpu.d as u32 + operand_data,
                     AddressMode::DirectPageXIndexed => {
+                        cpu.bus.internal_operation_cycle();
                         cpu.d as u32 + operand_data + cpu.x.value as u32
                     }
                     AddressMode::DirectPageYIndexed => {
+                        cpu.bus.internal_operation_cycle();
                         cpu.d as u32 + operand_data + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirect => {
                         cpu.bus.read_u16(cpu.d as u32 + operand_data) as u32
                     }
-                    AddressMode::DirectPageXIndexedIndirect => cpu
-                        .bus
-                        .read_u16(cpu.d as u32 + operand_data + cpu.x.value as u32)
-                        as u32,
+                    AddressMode::DirectPageXIndexedIndirect => {
+                        cpu.bus.internal_operation_cycle();
+
+                        cpu.bus
+                            .read_u16(cpu.d as u32 + operand_data + cpu.x.value as u32)
+                            as u32
+                    }
                     AddressMode::DirectPageIndirectYIndexed => {
+                        cpu.bus.internal_operation_cycle();
                         cpu.bus.read_u16(cpu.d as u32 + operand_data) as u32 + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectYIndexedLong => {
