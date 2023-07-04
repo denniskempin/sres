@@ -60,7 +60,7 @@ pub fn test_cpujmp() {
 
 #[test]
 pub fn test_cpuldr() {
-    run_krom_test("CPULDR", false, 0);
+    run_krom_test("CPULDR", true, 0);
 }
 
 #[test]

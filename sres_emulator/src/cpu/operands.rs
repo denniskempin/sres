@@ -124,11 +124,15 @@ impl Operand {
                 let operand_addr: u32 = match mode {
                     AddressMode::Absolute | AddressMode::AbsoluteLong => operand_data,
                     AddressMode::AbsoluteYIndexed => {
-                        cpu.bus.internal_operation_cycle();
+                        if !cpu.status.index_register_size_or_break {
+                            cpu.bus.internal_operation_cycle();
+                        }
                         operand_data + cpu.y.value as u32
                     }
                     AddressMode::AbsoluteXIndexed => {
-                        cpu.bus.internal_operation_cycle();
+                        if !cpu.status.index_register_size_or_break {
+                            cpu.bus.internal_operation_cycle();
+                        }
                         operand_data + cpu.x.value as u32
                     }
                     AddressMode::AbsoluteXIndexedLong => operand_data + cpu.x.value as u32,
