@@ -154,7 +154,7 @@ impl PpuTimer {
             self.v += 1;
             if self.v == 225 {
                 self.nmi_flag = true;
-                println!("nmi = true");
+                //println!("nmi = true");
             }
             self.dram_refresh_position = 538 - (self.master_clock & 7);
         }
@@ -163,7 +163,7 @@ impl PpuTimer {
             self.v -= 262;
             self.f += 1;
             self.nmi_flag = false;
-            println!("nmi = false");
+            //println!("nmi = false");
         }
     }
 
@@ -329,7 +329,7 @@ impl Bus for TestBus {
         if self.dma_pending > 0 {
             if self.dma_active {
                 let dma_counter = 8 - self.ppu_timer.master_clock % 8;
-                println!("dma: c {}, speed {}", dma_counter, self.clock_speed);
+                //println!("dma: c {}, speed {}", dma_counter, self.clock_speed);
                 self.ppu_timer.advance_master_clock(dma_counter + 8);
                 for channel in 0..8 {
                     if self.dma_pending.bit(channel) {

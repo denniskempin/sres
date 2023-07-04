@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
@@ -147,6 +148,7 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
 
     let mut in_nmi_loop = false;
     let mut previous_master_cycle = 0;
+    let mut previous_lines: VecDeque<Trace> = VecDeque::new();
     for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
         let mut expected_line = expected_line.unwrap();
         if i == 0 {
@@ -161,13 +163,14 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
         }
 
         let mut actual_line = cpu.trace(true);
+        previous_lines.push_front(actual_line.clone());
+        previous_lines.truncate(50);
 
         // krom tests will run a loop to wait for nmi:
         // bit $4210; bpl ...;
         // Skip those, to match our fake implementation that always return NMI
         if in_nmi_loop {
             if expected_line.status.negative {
-                println!("Line {:06}: End skip", i);
                 in_nmi_loop = false;
             } else {
                 if validate_cycles {
@@ -181,39 +184,9 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
             if let Some(addr) = actual_line.operand_addr {
                 if addr.offset == 0x4210 {
                     in_nmi_loop = true;
-                    println!("Line {:06}: Skipping NMI loop", i);
                 }
             }
         }
-
-        if validate_cycles {
-            // Convert F: V: H: from BSNES trace to master cycles to make it easier to compare how many
-            // cycles each instruction takes (or should take).
-            let expected_master_cycle =
-                fvh_to_master_clock(expected_line.f, expected_line.v, expected_line.h);
-            let expected_duration = expected_master_cycle.saturating_sub(previous_master_cycle);
-            let actual_duration = cpu
-                .bus
-                .ppu_timer
-                .master_clock
-                .saturating_sub(previous_master_cycle);
-            if expected_duration != actual_duration {
-                panic!(
-                    "  ### Expected duration: {} - Actual: {}, diff: {}",
-                    expected_duration,
-                    actual_duration,
-                    (expected_duration as i64) - (actual_duration as i64),
-                );
-            }
-            previous_master_cycle = cpu.bus.ppu_timer.master_clock;
-        }
-
-        println!(
-            "{:06} ({:02X}): {}",
-            i,
-            cpu.bus.peek_u8(cpu.pc).unwrap_or_default(),
-            actual_line
-        );
 
         // Fix some BSNES trace inconsistencies:
 
@@ -237,11 +210,43 @@ fn run_krom_test(test_name: &str, validate_cycles: bool, instruction_limit: u64)
             actual_line.operand_addr = None;
         }
 
-        // Comparison of PPU V, H, F cycles is done separately above.
-        assert_eq!(
-            actual_line.to_string()[..80],
-            expected_line.to_string()[..80],
-        );
+        // Comparison of PPU V, H, F cycles is done separately below.
+        if actual_line.to_string()[..80] != expected_line.to_string()[..80] {
+            println!("Assertion failure at instruction {i}");
+            for line in previous_lines.iter().rev() {
+                println!("{line}");
+            }
+            assert_eq!(
+                actual_line.to_string()[..80],
+                expected_line.to_string()[..80]
+            )
+        }
+
+        if validate_cycles {
+            // Convert F: V: H: from BSNES trace to master cycles to make it easier to compare how many
+            // cycles each instruction takes (or should take).
+            let expected_master_cycle =
+                fvh_to_master_clock(expected_line.f, expected_line.v, expected_line.h);
+            let expected_duration = expected_master_cycle.saturating_sub(previous_master_cycle);
+            let actual_duration = cpu
+                .bus
+                .ppu_timer
+                .master_clock
+                .saturating_sub(previous_master_cycle);
+            if expected_duration != actual_duration {
+                println!("Assertion failure at instruction {i}");
+                for line in previous_lines.iter().rev() {
+                    println!("{line}");
+                }
+                panic!(
+                    "Expected duration: {} - Actual: {}, diff: {}",
+                    expected_duration,
+                    actual_duration,
+                    (expected_duration as i64) - (actual_duration as i64),
+                );
+            }
+            previous_master_cycle = cpu.bus.ppu_timer.master_clock;
+        }
 
         cpu.step();
     }
