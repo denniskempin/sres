@@ -407,62 +407,75 @@ fn txs(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn xba(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     let a = cpu.a.get::<u16>();
     cpu.a.set(a.swap_bytes());
     cpu.update_negative_zero_flags(cpu.a.get::<u8>());
 }
 
 fn tsx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.x.set(T::from_u16(cpu.s));
     cpu.update_negative_zero_flags(cpu.x.get::<T>())
 }
 
 fn txy<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.y.set(cpu.x.get::<T>());
     cpu.update_negative_zero_flags(cpu.y.get::<T>());
 }
 
 fn txa<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.a.set(cpu.x.get::<T>());
     cpu.update_negative_zero_flags(cpu.a.get::<T>());
 }
 
 fn tya<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.a.set(cpu.y.get::<T>());
     cpu.update_negative_zero_flags(cpu.a.get::<T>());
 }
 
 fn tyx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.x.set(cpu.y.get::<T>());
     cpu.update_negative_zero_flags(cpu.x.get::<T>());
 }
 
 fn tax<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.x.set(cpu.a.get::<T>());
     cpu.update_negative_zero_flags(cpu.x.get::<T>());
 }
 
 fn tay<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.y.set(cpu.a.get::<T>());
     cpu.update_negative_zero_flags(cpu.y.get::<T>());
 }
 
 fn tcs(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.s = cpu.a.get::<u16>();
 }
 
 fn tsc(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.a.set(cpu.s);
     cpu.update_negative_zero_flags(cpu.s);
 }
 
 fn tdc(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
     cpu.a.set(cpu.d);
     cpu.update_negative_zero_flags(cpu.d);
 }
 
 fn trb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let value: T = operand.load(cpu);
+    cpu.bus.internal_operation_cycle();
     let result = value & !cpu.a.get::<T>();
     operand.store(cpu, result);
     cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
@@ -470,6 +483,7 @@ fn trb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn tsb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let value: T = operand.load(cpu);
+    cpu.bus.internal_operation_cycle();
     let result = value | cpu.a.get::<T>();
     operand.store(cpu, result);
     cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
@@ -504,6 +518,7 @@ fn rtl(cpu: &mut Cpu<impl Bus>) {
 
 fn rol<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let value: T = operand.load(cpu);
+    cpu.bus.internal_operation_cycle();
     let mut result = value << 1;
     result.set_bit(0, cpu.status.carry);
     operand.store(cpu, result);
@@ -514,6 +529,7 @@ fn rol<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn ror<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let value: T = operand.load(cpu);
+    cpu.bus.internal_operation_cycle();
     let mut result = value >> 1;
     result.set_bit(T::N_BITS - 1, cpu.status.carry);
     operand.store(cpu, result);
@@ -647,6 +663,7 @@ fn pei(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn per(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.bus.internal_operation_cycle();
     cpu.stack_push_u16(operand.effective_addr().unwrap().offset);
 }
 
@@ -906,6 +923,7 @@ fn cmp<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn asl<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let data: T = operand.load(cpu);
+    cpu.bus.internal_operation_cycle();
     cpu.status.carry = data.msb();
     let result = data << 1;
     cpu.update_negative_zero_flags(result);

@@ -14,42 +14,42 @@ pub fn test_cpuadc() {
 
 #[test]
 pub fn test_cpuand() {
-    run_krom_test("CPUAND", false, 0);
+    run_krom_test("CPUAND", true, 0);
 }
 
 #[test]
 pub fn test_cpuasl() {
-    run_krom_test("CPUASL", false, 0);
+    run_krom_test("CPUASL", true, 0);
 }
 
 #[test]
 pub fn test_cpubit() {
-    run_krom_test("CPUBIT", false, 0);
+    run_krom_test("CPUBIT", true, 0);
 }
 
 #[test]
 pub fn test_cpubra() {
-    run_krom_test("CPUBRA", false, 0);
+    run_krom_test("CPUBRA", true, 0);
 }
 
 #[test]
 pub fn test_cpucmp() {
-    run_krom_test("CPUCMP", false, 0);
+    run_krom_test("CPUCMP", true, 0);
 }
 
 #[test]
 pub fn test_cpudec() {
-    run_krom_test("CPUDEC", false, 0);
+    run_krom_test("CPUDEC", true, 0);
 }
 
 #[test]
 pub fn test_cpueor() {
-    run_krom_test("CPUEOR", false, 0);
+    run_krom_test("CPUEOR", true, 0);
 }
 
 #[test]
 pub fn test_cpuinc() {
-    run_krom_test("CPUINC", false, 0);
+    run_krom_test("CPUINC", true, 0);
 }
 
 #[test]
@@ -64,7 +64,7 @@ pub fn test_cpuldr() {
 
 #[test]
 pub fn test_cpulsr() {
-    run_krom_test("CPULSR", false, 0);
+    run_krom_test("CPULSR", true, 0);
 }
 
 #[test]
@@ -81,17 +81,17 @@ pub fn test_cpumsc() {
 
 #[test]
 pub fn test_cpuora() {
-    run_krom_test("CPUORA", false, 0);
+    run_krom_test("CPUORA", true, 0);
 }
 
 #[test]
 pub fn test_cpuphl() {
-    run_krom_test("CPUPHL", false, 0);
+    run_krom_test("CPUPHL", true, 0);
 }
 
 #[test]
 pub fn test_cpupsr() {
-    run_krom_test("CPUPSR", false, 0);
+    run_krom_test("CPUPSR", true, 0);
 }
 
 #[test]
@@ -101,27 +101,27 @@ pub fn test_cpuret() {
 
 #[test]
 pub fn test_cpurol() {
-    run_krom_test("CPUROL", false, 0);
+    run_krom_test("CPUROL", true, 0);
 }
 
 #[test]
 pub fn test_cpuror() {
-    run_krom_test("CPUROR", false, 0);
+    run_krom_test("CPUROR", true, 0);
 }
 
 #[test]
 pub fn test_cpusbc() {
-    run_krom_test("CPUSBC", false, 0);
+    run_krom_test("CPUSBC", true, 0);
 }
 
 #[test]
 pub fn test_cpustr() {
-    run_krom_test("CPUSTR", false, 0);
+    run_krom_test("CPUSTR", true, 0);
 }
 
 #[test]
 pub fn test_cputrn() {
-    run_krom_test("CPUTRN", false, 0);
+    run_krom_test("CPUTRN", true, 0);
 }
 
 #[test]
