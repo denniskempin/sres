@@ -248,7 +248,7 @@ impl Memory for TestBus {
     fn read_u8(&mut self, addr: impl ToAddress) -> u8 {
         let addr = addr.to_address();
         self.clock_speed = memory_access_speed(addr);
-        //println!("  read_u8({addr}): {} cycles", memory_access_speed(addr));
+        //println!("  read_u8({addr}) ({} cycles)", self.clock_speed);
         self.ppu_timer.advance_master_clock(self.clock_speed - 6);
         let value = if u32::from(addr) == 0x004210 {
             let override_value = self.peek_u8(addr).unwrap_or(0);
@@ -276,7 +276,10 @@ impl Memory for TestBus {
         let addr = addr.to_address();
         self.clock_speed = memory_access_speed(addr);
         self.advance_master_clock(self.clock_speed);
-        //println!("  write_u8({addr}): {val:02x}");
+        /* println!(
+            "  write_u8({addr}) = {val:02x} ({} cycles)",
+            self.clock_speed
+        );*/
         match addr.bank {
             0x00..=0x1F => match addr.offset.bits(8..16) {
                 0x42 => match addr.offset.bits(0..8) {
@@ -318,7 +321,7 @@ impl Memory for TestBus {
 
 impl Bus for TestBus {
     fn internal_operation_cycle(&mut self) {
-        //println!("  io cycle: 6 cycles");
+        // println!("  io_cycle: (6 cycles)");
         self.clock_speed = 6;
         self.advance_master_clock(self.clock_speed);
     }

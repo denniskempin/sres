@@ -55,7 +55,7 @@ pub fn test_cpuinc() {
 
 #[test]
 pub fn test_cpujmp() {
-    run_krom_test("CPUJMP", false, 0);
+    run_krom_test("CPUJMP", true, 0);
 }
 
 #[test]
@@ -97,7 +97,7 @@ pub fn test_cpupsr() {
 
 #[test]
 pub fn test_cpuret() {
-    run_krom_test("CPURET", false, 0);
+    run_krom_test("CPURET", true, 0);
 }
 
 #[test]

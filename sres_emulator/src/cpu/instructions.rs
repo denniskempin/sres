@@ -489,13 +489,32 @@ fn tsb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
 }
 
+fn jmp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.pc = operand.effective_addr().unwrap();
+}
+
+fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    cpu.pc = operand.effective_addr().unwrap();
+}
+
 fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    // JSR has an extra IO cycle in the Absolute addressing mode
+    if let Operand::Address(_, address_mode, _) = operand {
+        if *address_mode == AddressMode::Absolute {
+            cpu.bus.internal_operation_cycle();
+        }
+    }
     cpu.stack_push_u16(cpu.pc.offset - 1);
     cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn jsl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    // JSL has an extra IO cycle in the AbsoluteLong addressing mode
+    if let Operand::Address(_, address_mode, _) = operand {
+        if *address_mode == AddressMode::AbsoluteLong {
+            cpu.bus.internal_operation_cycle();
+        }
+    }
     cpu.stack_push_u24(u32::from(cpu.pc) - 1);
     cpu.pc = operand.effective_addr().unwrap();
 }
@@ -508,11 +527,15 @@ fn rts(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn rti(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     cpu.status = StatusFlags::from(cpu.stack_pop_u8());
     cpu.pc = cpu.stack_pop_u24().to_address();
 }
 
 fn rtl(cpu: &mut Cpu<impl Bus>) {
+    cpu.bus.internal_operation_cycle();
+    cpu.bus.internal_operation_cycle();
     cpu.pc = cpu.stack_pop_u24().to_address();
 }
 
@@ -605,6 +628,8 @@ fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn brk(cpu: &mut Cpu<impl Bus>) {
+    // read signature byte, even though it is unused.
+    cpu.bus.read_u8(u32::from(cpu.pc) + 1);
     cpu.stack_push_u24(u32::from(cpu.pc) + 1);
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
@@ -873,14 +898,6 @@ fn tcd(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.internal_operation_cycle();
     cpu.d = cpu.a.get();
     cpu.update_negative_zero_flags(cpu.d);
-}
-
-fn jmp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.pc = operand.effective_addr().unwrap();
-}
-
-fn jml(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn and<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {

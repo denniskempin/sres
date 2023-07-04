@@ -5,7 +5,7 @@ use crate::bus::Bus;
 use crate::memory::Address;
 use crate::memory::ToAddress;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum AddressMode {
     Implied,
     ImmediateU8,
