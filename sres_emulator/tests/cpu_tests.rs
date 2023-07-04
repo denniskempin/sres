@@ -9,7 +9,7 @@ use sres_emulator::trace::Trace;
 
 #[test]
 pub fn test_cpuadc() {
-    run_krom_test("CPUADC", true, 968);
+    run_krom_test("CPUADC", true, 1054);
 }
 
 #[test]
