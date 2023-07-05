@@ -9,6 +9,67 @@ use sres_emulator::memory::Memory;
 use sres_emulator::trace::Trace;
 
 #[test]
+pub fn test_nmi_sub_cycle_accuracy() {
+    static TEST_CASES: &[(u64, u64, bool, bool)] = &[
+        // The `bit $4210` instruction is often used to check the NMI signal, to wait for VSYNC.
+        // This makes the instruction very sensitive to sub-cpu-cycle timing, as the result will
+        // depend on when exactly the signal is read.
+        //
+        // The list below is the result of `bit $4210` executed at various points in the frame. This
+        // matches the behavior of BSNES.
+        //
+        // Starting 1334, the bit instruction will end after NMI and the internal NMI flag will
+        // be set after the instruction is executed.
+        //
+        // Starting 1340, NMI will be high by the time the bit instruction reads the state. Usually
+        // reads from $4210 will reset the NMI flag, but not for the first 4 cycles.
+        //
+        // (V, H, nmi returned by `bit`, internal nmi flag)
+        (224, 1330, false, false),
+        (224, 1332, false, false),
+        (224, 1334, false, true),
+        (224, 1336, false, true),
+        (224, 1338, false, true),
+        (224, 1340, true, true),
+        (224, 1342, true, true),
+        (224, 1344, true, false),
+        (224, 1346, true, false),
+        (224, 1348, true, false),
+        (224, 1350, true, false),
+        (224, 1352, true, false),
+        (224, 1354, true, false),
+        (224, 1356, true, false),
+        (224, 1358, true, false),
+        (224, 1360, true, false),
+        (224, 1362, true, false),
+        (225, 0, true, false),
+    ];
+    for (v, h, expected_nmi, expected_internal_nmi) in TEST_CASES {
+        // Create CPU with `bit $4210` program in memory
+        let mut bus = TestBus::default();
+        bus.write_u16(0x00, 0x2C);
+        bus.write_u16(0x01, 0x4210);
+        let mut cpu = Cpu::new(bus);
+        cpu.reset();
+
+        // Advance PPU timer until (v, h) is reached
+        while cpu.bus.ppu_timer.v != *v || cpu.bus.ppu_timer.h_counter != *h {
+            cpu.bus.ppu_timer.advance_master_clock(2);
+        }
+
+        // Execute `bit $4210` instruction
+        println!("before: {}", cpu.trace(true));
+        cpu.step();
+        println!("after: {}", cpu.trace(true));
+
+        // If the NMI bit is set, the negative status bit will be true.
+        assert_eq!(cpu.status.negative, *expected_nmi);
+        // For the first 4 cycles NMI will remain high, so the internal nmi_flag will still be set.
+        assert_eq!(cpu.bus.ppu_timer.nmi_flag, *expected_internal_nmi);
+    }
+}
+
+#[test]
 pub fn test_cpuadc() {
     run_krom_test("CPUADC");
 }
