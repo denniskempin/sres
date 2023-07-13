@@ -192,8 +192,8 @@ pub fn test_ppu_timing() {
 }
 
 fn run_krom_test(test_name: &str) {
-    let trace_path = PathBuf::from(format!("tests/cpu/{test_name}-trace.log.xz"));
-    let rom_path = PathBuf::from(format!("tests/cpu/{test_name}.sfc"));
+    let trace_path = PathBuf::from(format!("tests/krom_tests/{test_name}-trace.log.xz"));
+    let rom_path = PathBuf::from(format!("tests/krom_tests/{test_name}.sfc"));
 
     let mut bus = TestBus::with_sfc(&rom_path).unwrap();
     // CPUMSC reads 0x20 from $000000 at the first instruction. I cannot figure out why, it
