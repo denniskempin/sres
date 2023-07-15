@@ -24,6 +24,39 @@ impl Add<usize> for Address {
     }
 }
 
+impl Add<u16> for Address {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: u16) -> Self::Output {
+        let bank = self.bank;
+        let offset = self.offset.wrapping_add(rhs as u16);
+        Address { bank, offset }
+    }
+}
+
+impl Add<u32> for Address {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: u32) -> Self::Output {
+        let bank = self.bank;
+        let offset = self.offset.wrapping_add(rhs as u16);
+        Address { bank, offset }
+    }
+}
+
+impl Add<i32> for Address {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: i32) -> Self::Output {
+        let bank = self.bank;
+        let offset = self.offset.wrapping_add(rhs as u16);
+        Address { bank, offset }
+    }
+}
+
 impl From<Address> for u32 {
     #[inline]
     fn from(addr: Address) -> Self {
@@ -87,8 +120,8 @@ pub trait Memory {
     fn write_u16(&mut self, addr: impl ToAddress, value: u16) {
         let addr = addr.to_address();
         let bytes = value.to_le_bytes();
-        self.write_u8(addr, bytes[0]);
         self.write_u8(addr + 1, bytes[1]);
+        self.write_u8(addr, bytes[0]);
     }
 
     fn peek_u24(&self, addr: impl ToAddress) -> Option<u32> {
