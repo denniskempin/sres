@@ -132,14 +132,23 @@ impl Bus for TestBus {
     fn reset(&mut self) {}
 }
 
+const SKIP_OPCODES: &[u8] = &[];
+
 fn run_tomharte_test(test_name: &str) {
     let json_path = PathBuf::from(format!("tests/tomharte_tests/{test_name}.json.xz"));
     let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
 
     for test_case in TestCase::from_xz_file(&json_path) {
-        let initial_state = test_case.initial.create_cpu();
-        let expected_state = test_case.final_.create_cpu();
         let mut actual_state = test_case.initial.create_cpu();
+        let expected_state = test_case.final_.create_cpu();
+        let opcode = actual_state
+            .bus
+            .peek_u8(actual_state.pc)
+            .unwrap_or_default();
+        if SKIP_OPCODES.contains(&opcode) {
+            continue;
+        }
+
         actual_state.step();
 
         let state_matches = actual_state.trace(true) == expected_state.trace(true);
@@ -149,13 +158,9 @@ fn run_tomharte_test(test_name: &str) {
             continue;
         }
 
-        let opcode = initial_state
-            .bus
-            .peek_u8(initial_state.pc)
-            .unwrap_or_default();
         *failed_opcodes.entry(opcode).or_insert(0) += 1;
 
-        println!("Case:   {}", initial_state.trace(true));
+        println!("Case:   {}", test_case.initial.create_cpu().trace(true));
         if !state_matches {
             println!(
                 "Result: {}",
@@ -282,4 +287,51 @@ pub fn test_opcodes_ex() {
 #[ignore = "not passing yet"]
 pub fn test_opcodes_fx() {
     run_tomharte_test("fx");
+}
+
+#[test]
+#[ignore = "only used temporarily for collecting stats about failing tests"]
+fn test_result_stats() {
+    let mut success_cases: HashMap<u8, u32> = HashMap::new();
+    let mut failed_cases: HashMap<u8, u32> = HashMap::new();
+
+    for test_name in [
+        "0x", "1x", "2x", "3x", "4x", "5x", "6x", "7x", "8x", "9x", "ax", "bx", "cx", "dx", "ex",
+        "fx",
+    ] {
+        println!("Testing {}...", test_name);
+
+        let json_path = PathBuf::from(format!("tests/tomharte_tests/{test_name}.json.xz"));
+
+        for test_case in TestCase::from_xz_file(&json_path) {
+            let initial_state = test_case.initial.create_cpu();
+            let expected_state = test_case.final_.create_cpu();
+            let mut actual_state = test_case.initial.create_cpu();
+            actual_state.step();
+            let opcode = initial_state
+                .bus
+                .peek_u8(initial_state.pc)
+                .unwrap_or_default();
+
+            let state_matches = actual_state.trace(true) == expected_state.trace(true);
+            let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
+            let cycles_match = actual_state.bus.cycles.len() == test_case.cycles.len();
+            if !state_matches || !memory_matches || !cycles_match {
+                *failed_cases.entry(opcode).or_insert(0) += 1;
+            } else {
+                *success_cases.entry(opcode).or_insert(0) += 1;
+            }
+        }
+    }
+    for opcode in 0..=0xFF {
+        let success_count = success_cases.get(&opcode).unwrap_or(&0);
+        let failure_count = failed_cases.get(&opcode).unwrap_or(&0);
+        if *success_count == 0 && *failure_count == 0 {
+            continue;
+        }
+        println!("0x{:02X}: {:6}/{:}", opcode, success_count, failure_count);
+    }
+
+    println!("Total success: {}", success_cases.values().sum::<u32>());
+    println!("Total failed: {}", failed_cases.values().sum::<u32>());
 }
