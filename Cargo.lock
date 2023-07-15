@@ -697,6 +697,8 @@ dependencies = [
  "num-traits",
  "packed_struct",
  "pretty_assertions",
+ "serde",
+ "serde_json",
  "snafu",
  "tempfile",
  "thiserror",

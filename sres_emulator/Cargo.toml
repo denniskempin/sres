@@ -26,6 +26,8 @@ xz2 = "0.1.7"
 tempfile = "3.5"
 pretty_assertions = "1.3"
 criterion = "0.4"
+serde = "*"
+serde_json = "*"
 
 [[bench]]
 name = "cpu_benches"

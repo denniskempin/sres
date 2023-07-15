@@ -17,7 +17,7 @@ use crate::uint::UInt;
 
 #[derive(Default)]
 pub struct VariableLengthRegister {
-    value: u16,
+    pub value: u16,
 }
 
 impl VariableLengthRegister {
@@ -88,7 +88,7 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     /// Return the instruction meta data for the instruction at the given address
-    fn load_instruction_meta(&mut self, addr: Address) -> (InstructionMeta, Address) {
+    fn load_instruction_meta(&self, addr: Address) -> (InstructionMeta, Address) {
         let opcode = self.bus.peek_u8(addr).unwrap_or_default();
         (self.instruction_table[opcode as usize].meta)(self, addr)
     }
@@ -156,7 +156,7 @@ impl<BusT: Bus> Cpu<BusT> {
         if self.s == 0xFF {
             return 0;
         }
-        self.s += 1;
+        self.s = self.s.wrapping_add(1);
         self.bus.read_u8(self.s as u32)
     }
 
@@ -185,7 +185,7 @@ impl<BusT: Bus> Cpu<BusT> {
         self.status.zero = value.is_zero();
     }
 
-    pub fn trace(&mut self, h_as_cycles: bool) -> Trace {
+    pub fn trace(&self, h_as_cycles: bool) -> Trace {
         let (instruction, _) = self.load_instruction_meta(self.pc.to_address());
         let ppu_timer = self.bus.ppu_timer();
         Trace {

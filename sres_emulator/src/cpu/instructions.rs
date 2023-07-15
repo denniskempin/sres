@@ -102,7 +102,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
 
     let mut opcodes = [(); 256].map(|_| Instruction::<BusT> {
         execute: |_| {
-            panic!("Unimplemented instruction");
+            println!("Unimplemented instruction");
         },
         meta: |_, addr| {
             (
@@ -638,7 +638,7 @@ fn brk(cpu: &mut Cpu<impl Bus>) {
     } else {
         cpu.bus.read_u16(NativeVectorTable::Break as u32)
     };
-    cpu.pc = (address as u32 - 1).to_address();
+    cpu.pc = ((address as u32).saturating_sub(1)).to_address();
 }
 
 fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
@@ -822,9 +822,7 @@ fn sta<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, cpu.a.get::<T>());
 }
 
-fn stp(_cpu: &mut Cpu<impl Bus>) {
-    panic!("stop");
-}
+fn stp(_cpu: &mut Cpu<impl Bus>) {}
 
 fn sty<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     operand.store(cpu, cpu.y.get::<T>());

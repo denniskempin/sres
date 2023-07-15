@@ -19,7 +19,7 @@ impl Add<usize> for Address {
     #[inline]
     fn add(self, rhs: usize) -> Self::Output {
         let bank = self.bank;
-        let offset = self.offset + rhs as u16;
+        let offset = self.offset.wrapping_add(rhs as u16);
         Address { bank, offset }
     }
 }

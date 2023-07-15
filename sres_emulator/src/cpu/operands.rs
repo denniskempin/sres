@@ -185,6 +185,7 @@ impl Operand {
                         cpu.bus
                             .read_u16(cpu.d as u32 + operand_data + cpu.x.value as u32)
                             as u32
+                            + ((cpu.db as u32) << 16)
                     }
                     AddressMode::DirectPageIndirectYIndexed => {
                         cpu.bus.internal_operation_cycle();
@@ -341,6 +342,7 @@ impl Operand {
                         cpu.bus
                             .peek_u16(cpu.d as u32 + operand_data + cpu.x.value as u32)
                             .unwrap_or_default() as u32
+                            + ((cpu.db as u32) << 16)
                     }
                     AddressMode::DirectPageIndirectYIndexed => {
                         cpu.bus
