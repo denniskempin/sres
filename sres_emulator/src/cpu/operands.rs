@@ -1,3 +1,5 @@
+use intbits::Bits;
+
 use super::Cpu;
 use super::UInt;
 use super::STACK_BASE;
@@ -122,7 +124,13 @@ impl Operand {
             // Operand is in memory, calculate the effective address
             _ => {
                 let operand_addr: u32 = match mode {
-                    AddressMode::Absolute | AddressMode::AbsoluteLong => operand_data,
+                    AddressMode::Absolute => Address {
+                        bank: cpu.db,
+                        offset: operand_data as u16,
+                    }
+                    .into(),
+                    AddressMode::AbsoluteLong => operand_data,
+
                     AddressMode::AbsoluteYIndexed => {
                         if !cpu.status.index_register_size_or_break {
                             cpu.bus.internal_operation_cycle();
@@ -160,42 +168,58 @@ impl Operand {
                     }
                     AddressMode::StackRelative => {
                         cpu.bus.internal_operation_cycle();
-                        operand_data + cpu.s as u32 + STACK_BASE
+                        ((cpu.s as u32 + STACK_BASE).to_address() + operand_data).into()
                     }
                     AddressMode::StackRelativeIndirectYIndexed => {
                         cpu.bus.internal_operation_cycle();
                         cpu.bus.internal_operation_cycle();
-                        cpu.bus.read_u16(cpu.s as u32 + operand_data) as u32 + cpu.y.value as u32
+                        ((cpu.bus.read_u16((cpu.s as u32).to_address() + operand_data) as u32)
+                            .to_address()
+                            + cpu.y.value)
+                            .into()
                     }
-                    AddressMode::DirectPage => cpu.d as u32 + operand_data,
+                    AddressMode::DirectPage => {
+                        if cpu.d.bits(0..8) != 0 {
+                            cpu.bus.internal_operation_cycle();
+                        }
+                        ((cpu.d as u32).to_address() + operand_data).into()
+                    }
                     AddressMode::DirectPageXIndexed => {
                         cpu.bus.internal_operation_cycle();
-                        cpu.d as u32 + operand_data + cpu.x.value as u32
+                        ((cpu.d as u32).to_address() + operand_data as u16 + cpu.x.value).into()
                     }
                     AddressMode::DirectPageYIndexed => {
                         cpu.bus.internal_operation_cycle();
-                        cpu.d as u32 + operand_data + cpu.y.value as u32
+                        ((cpu.d as u32).to_address() + operand_data as u16 + cpu.y.value).into()
                     }
                     AddressMode::DirectPageIndirect => {
-                        cpu.bus.read_u16(cpu.d as u32 + operand_data) as u32
+                        cpu.bus.read_u16((cpu.d as u32).to_address() + operand_data) as u32
                     }
                     AddressMode::DirectPageXIndexedIndirect => {
                         cpu.bus.internal_operation_cycle();
+                        if cpu.d.bits(0..8) > 0 {
+                            cpu.bus.internal_operation_cycle();
+                        }
 
-                        cpu.bus
-                            .read_u16(cpu.d as u32 + operand_data + cpu.x.value as u32)
-                            as u32
+                        cpu.bus.read_u16(
+                            (cpu.d as u32).to_address() + operand_data + cpu.x.value as u32,
+                        ) as u32
                             + ((cpu.db as u32) << 16)
                     }
                     AddressMode::DirectPageIndirectYIndexed => {
                         cpu.bus.internal_operation_cycle();
-                        cpu.bus.read_u16(cpu.d as u32 + operand_data) as u32 + cpu.y.value as u32
+                        cpu.bus.read_u16((cpu.d as u32).to_address() + operand_data) as u32
+                            + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectYIndexedLong => {
-                        cpu.bus.read_u24(cpu.d as u32 + operand_data) + cpu.y.value as u32
+                        cpu.bus.read_u24((cpu.d as u32).to_address() + operand_data)
+                            + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectLong => {
-                        cpu.bus.read_u24(cpu.d as u32 + operand_data)
+                        if cpu.d.bits(0..8) > 0 {
+                            cpu.bus.internal_operation_cycle();
+                        }
+                        cpu.bus.read_u24((cpu.d as u32).to_address() + operand_data)
                     }
                     AddressMode::Implied
                     | AddressMode::ImmediateU8
