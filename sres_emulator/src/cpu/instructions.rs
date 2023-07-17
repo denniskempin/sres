@@ -6,6 +6,8 @@ use super::UInt;
 use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
+use crate::cpu::operands::PeekWrapper;
+use crate::cpu::operands::ReadWrapper;
 use crate::memory::Address;
 
 pub struct InstructionMeta {
@@ -50,12 +52,15 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         ($method: ident, $address_mode: expr) => {
             Instruction::<BusT> {
                 execute: |cpu| {
-                    let (operand, next_addr) = Operand::decode(cpu, cpu.pc, $address_mode);
+                    let pc = cpu.pc;
+                    let (operand, next_addr) =
+                        Operand::decode(&mut ReadWrapper(cpu), pc, $address_mode);
                     cpu.pc = next_addr;
                     $method(cpu, &operand);
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) = Operand::peek(cpu, instruction_addr, $address_mode);
+                    let (operand, next_addr) =
+                        Operand::decode(&mut PeekWrapper(cpu), instruction_addr, $address_mode);
                     (
                         InstructionMeta {
                             operation: stringify!($method),
@@ -71,7 +76,9 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         ($method: ident, $address_mode: expr, $register: expr) => {
             Instruction::<BusT> {
                 execute: |cpu| {
-                    let (operand, next_addr) = Operand::decode(cpu, cpu.pc, $address_mode);
+                    let pc = cpu.pc;
+                    let (operand, next_addr) =
+                        Operand::decode(&mut ReadWrapper(cpu), pc, $address_mode);
                     cpu.pc = next_addr;
                     let is_u8 = match $register {
                         Register::A => cpu.status.accumulator_register_size,
@@ -85,7 +92,8 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                     }
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) = Operand::peek(cpu, instruction_addr, $address_mode);
+                    let (operand, next_addr) =
+                        Operand::decode(&mut PeekWrapper(cpu), instruction_addr, $address_mode);
                     (
                         InstructionMeta {
                             operation: stringify!($method),
