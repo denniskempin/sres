@@ -99,20 +99,20 @@ pub trait Memory {
         let addr = addr.to_address();
         Some(u16::from_le_bytes([
             self.peek_u8(addr)?,
-            self.peek_u8(addr + 1)?,
+            self.peek_u8(u32::from(addr) + 1)?,
         ]))
     }
     fn read_u16(&mut self, addr: impl ToAddress) -> u16 {
         let addr = addr.to_address();
-        u16::from_le_bytes([self.read_u8(addr), self.read_u8(addr + 1)])
+        u16::from_le_bytes([self.read_u8(addr), self.read_u8(u32::from(addr) + 1)])
     }
 
     fn read_u24(&mut self, addr: impl ToAddress) -> u32 {
         let addr = addr.to_address();
         u32::from_le_bytes([
             self.read_u8(addr),
-            self.read_u8(addr + 1),
-            self.read_u8(addr + 2),
+            self.read_u8(u32::from(addr) + 1),
+            self.read_u8(u32::from(addr) + 2),
             0,
         ])
     }
@@ -120,7 +120,7 @@ pub trait Memory {
     fn write_u16(&mut self, addr: impl ToAddress, value: u16) {
         let addr = addr.to_address();
         let bytes = value.to_le_bytes();
-        self.write_u8(addr + 1, bytes[1]);
+        self.write_u8(u32::from(addr) + 1, bytes[1]);
         self.write_u8(addr, bytes[0]);
     }
 
@@ -128,8 +128,8 @@ pub trait Memory {
         let addr = addr.to_address();
         Some(u32::from_le_bytes([
             self.peek_u8(addr)?,
-            self.peek_u8(addr + 1)?,
-            self.peek_u8(addr + 2)?,
+            self.peek_u8(u32::from(addr) + 1)?,
+            self.peek_u8(u32::from(addr) + 2)?,
             0,
         ]))
     }

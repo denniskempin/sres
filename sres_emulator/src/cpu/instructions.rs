@@ -505,7 +505,7 @@ fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
         }
     }
     cpu.stack_push_u16(cpu.pc.offset - 1);
-    cpu.pc = operand.effective_addr().unwrap();
+    cpu.pc.offset = operand.effective_addr().unwrap().offset;
 }
 
 fn jsl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
