@@ -2,7 +2,6 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::ops::Add;
 
-use crate::uint::RegisterSize;
 use crate::uint::U16Ext;
 use crate::uint::U32Ext;
 use crate::uint::UInt;
@@ -58,7 +57,7 @@ impl Add<u16> for Address {
     #[inline]
     fn add(self, rhs: u16) -> Self::Output {
         let bank = self.bank;
-        let offset = self.offset.wrapping_add(rhs as u16);
+        let offset = self.offset.wrapping_add(rhs);
         Address { bank, offset }
     }
 }

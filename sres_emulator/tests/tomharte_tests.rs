@@ -8,7 +8,6 @@ use std::io::BufRead;
 use std::path::PathBuf;
 
 use itertools::Itertools;
-
 use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
@@ -18,7 +17,6 @@ use sres_emulator::bus::PpuTimer;
 use sres_emulator::cpu::status::StatusFlags;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::memory::Address;
-use sres_emulator::memory::Memory;
 use xz2::read::XzDecoder;
 
 #[derive(Serialize, Deserialize)]

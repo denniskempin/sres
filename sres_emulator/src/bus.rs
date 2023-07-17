@@ -5,7 +5,6 @@ use intbits::Bits;
 
 use crate::cartridge::Cartridge;
 use crate::memory::Address;
-use crate::memory::Memory;
 use crate::memory::Wrap;
 use crate::uint::RegisterSize;
 use crate::uint::UInt;

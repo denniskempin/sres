@@ -6,7 +6,6 @@ use sres_emulator::bus::fvh_to_master_clock;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::TestBus;
 use sres_emulator::cpu::Cpu;
-use sres_emulator::memory::Memory;
 use sres_emulator::trace::Trace;
 
 #[test]

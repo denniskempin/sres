@@ -4,9 +4,9 @@ use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::BatchSize;
 use criterion::Criterion;
+use sres_emulator::bus::Bus;
 use sres_emulator::bus::TestBus;
 use sres_emulator::cpu::Cpu;
-use sres_emulator::memory::Memory;
 
 fn criterion_benchmark(c: &mut Criterion) {
     let rom_path = PathBuf::from("sres_emulator/tests/cpu/CPUADC.sfc");
@@ -15,7 +15,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             || {
                 let mut bus = TestBus::with_sfc(&rom_path).unwrap();
                 // Fake RDNMI register. NMI is always true.
-                bus.cycle_write_u8(0x004210, 0xC2);
+                bus.cycle_write_u8(0x004210.into(), 0xC2);
                 Cpu::new(bus)
             },
             |cpu: &mut Cpu<TestBus>| {
