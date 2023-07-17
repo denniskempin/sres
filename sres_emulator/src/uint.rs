@@ -192,6 +192,57 @@ impl UInt for u16 {
     }
 }
 
+pub trait U32Ext {
+    fn low_word(self) -> u16;
+    fn high_word(self) -> u16;
+}
+
+impl U32Ext for u32 {
+    #[inline]
+    fn low_word(self) -> u16 {
+        self as u16
+    }
+
+    #[inline]
+    fn high_word(self) -> u16 {
+        (self >> 16) as u16
+    }
+}
+
+pub trait U16Ext {
+    fn low_byte(self) -> u8;
+    fn high_byte(self) -> u8;
+}
+
+impl U16Ext for u16 {
+    #[inline]
+    fn low_byte(self) -> u8 {
+        self as u8
+    }
+
+    #[inline]
+    fn high_byte(self) -> u8 {
+        (self >> 8) as u8
+    }
+}
+
+pub trait U8Ext {
+    fn low_nibble(self) -> u8;
+    fn high_nibble(self) -> u8;
+}
+
+impl U8Ext for u8 {
+    #[inline]
+    fn low_nibble(self) -> u8 {
+        self & 0x0f
+    }
+
+    #[inline]
+    fn high_nibble(self) -> u8 {
+        (self >> 4) & 0x0f
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::bool_assert_comparison)]
 mod tests {
