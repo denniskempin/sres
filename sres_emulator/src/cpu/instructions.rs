@@ -7,7 +7,6 @@ use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
 use crate::memory::Address;
-use crate::memory::ToAddress;
 
 pub struct InstructionMeta {
     pub operation: &'static str,
@@ -530,13 +529,13 @@ fn rti(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.internal_operation_cycle();
     cpu.bus.internal_operation_cycle();
     cpu.status = StatusFlags::from(cpu.stack_pop_u8());
-    cpu.pc = cpu.stack_pop_u24().to_address();
+    cpu.pc = cpu.stack_pop_u24().into();
 }
 
 fn rtl(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.internal_operation_cycle();
     cpu.bus.internal_operation_cycle();
-    cpu.pc = cpu.stack_pop_u24().to_address();
+    cpu.pc = cpu.stack_pop_u24().into();
 }
 
 fn rol<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
@@ -629,16 +628,18 @@ fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn brk(cpu: &mut Cpu<impl Bus>) {
     // read signature byte, even though it is unused.
-    cpu.bus.read_u8(u32::from(cpu.pc) + 1);
-    cpu.stack_push_u24(u32::from(cpu.pc) + 1);
+    cpu.bus.read_u8(cpu.pc + 1);
+    cpu.stack_push_u24(u32::from(cpu.pc + 1));
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
     let address = if cpu.emulation_mode {
-        cpu.bus.read_u16(EmuVectorTable::Break as u32)
+        cpu.bus
+            .read_u16(Address::new(0, EmuVectorTable::Break as u16))
     } else {
-        cpu.bus.read_u16(NativeVectorTable::Break as u32)
+        cpu.bus
+            .read_u16(Address::new(0, NativeVectorTable::Break as u16))
     };
-    cpu.pc = ((address as u32).saturating_sub(1)).to_address();
+    cpu.pc = ((address as u32).saturating_sub(1)).into();
 }
 
 fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
@@ -646,11 +647,13 @@ fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
     let address = if cpu.emulation_mode {
-        cpu.bus.read_u16(EmuVectorTable::Cop as u32)
+        cpu.bus
+            .read_u16(Address::new(0, EmuVectorTable::Cop as u16))
     } else {
-        cpu.bus.read_u16(NativeVectorTable::Cop as u32)
+        cpu.bus
+            .read_u16(Address::new(0, NativeVectorTable::Cop as u16))
     };
-    cpu.pc = (address as u32).to_address();
+    cpu.pc = (address as u32).into();
 }
 
 fn clc(cpu: &mut Cpu<impl Bus>) {

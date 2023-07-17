@@ -5,7 +5,6 @@ use super::UInt;
 use super::STACK_BASE;
 use crate::bus::Bus;
 use crate::memory::Address;
-use crate::memory::ToAddress;
 use crate::uint::U16Ext;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -164,11 +163,13 @@ impl Operand {
                         }) + cpu.x.value as u32
                     }
                     AddressMode::AbsoluteXIndexedLong => operand_data + cpu.x.value as u32,
-                    AddressMode::AbsoluteIndirect => cpu.bus.read_u16(operand_data) as u32,
-                    AddressMode::AbsoluteIndirectLong => cpu.bus.read_u24(operand_data),
+                    AddressMode::AbsoluteIndirect => cpu.bus.read_u16(operand_data.into()) as u32,
+                    AddressMode::AbsoluteIndirectLong => cpu.bus.read_u24(operand_data.into()),
                     AddressMode::AbsoluteXIndexedIndirect => {
                         cpu.bus.internal_operation_cycle();
-                        cpu.bus.read_u16(operand_data + cpu.x.value as u32) as u32
+                        cpu.bus
+                            .read_u16(Address::from(operand_data) + cpu.x.value as u32)
+                            as u32
                     }
                     AddressMode::Relative => {
                         let relative_addr = operand_data as i8;
@@ -197,13 +198,13 @@ impl Operand {
                     }
                     AddressMode::StackRelative => {
                         cpu.bus.internal_operation_cycle();
-                        ((cpu.s as u32 + STACK_BASE).to_address() + operand_data).into()
+                        (Address::new(0, cpu.s + STACK_BASE) + operand_data).into()
                     }
                     AddressMode::StackRelativeIndirectYIndexed => {
                         cpu.bus.internal_operation_cycle();
                         let value = u32::from(Address {
                             bank: cpu.db,
-                            offset: cpu.bus.read_u16((cpu.s as u32).to_address() + operand_data),
+                            offset: cpu.bus.read_u16(Address::new(0, cpu.s) + operand_data),
                         }) + cpu.y.value as u32;
                         cpu.bus.internal_operation_cycle();
                         value
@@ -212,21 +213,21 @@ impl Operand {
                         if cpu.d.low_byte() != 0 {
                             cpu.bus.internal_operation_cycle();
                         }
-                        ((cpu.d as u32).to_address() + operand_data).into()
+                        (Address::new(0, cpu.d) + operand_data).into()
                     }
                     AddressMode::DirectPageXIndexed => {
                         if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         cpu.bus.internal_operation_cycle();
-                        ((cpu.d as u32).to_address() + operand_data as u16 + cpu.x.value).into()
+                        (Address::new(0, cpu.d) + operand_data as u16 + cpu.x.value).into()
                     }
                     AddressMode::DirectPageYIndexed => {
                         if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         cpu.bus.internal_operation_cycle();
-                        ((cpu.d as u32).to_address() + operand_data as u16 + cpu.y.value).into()
+                        (Address::new(0, cpu.d) + operand_data as u16 + cpu.y.value).into()
                     }
                     AddressMode::DirectPageIndirect => {
                         if cpu.d.low_byte() > 0 {
@@ -234,7 +235,7 @@ impl Operand {
                         }
                         Address {
                             bank: cpu.db,
-                            offset: cpu.bus.read_u16((cpu.d as u32).to_address() + operand_data),
+                            offset: cpu.bus.read_u16(Address::new(0, cpu.d) + operand_data),
                         }
                         .into()
                     }
@@ -247,7 +248,7 @@ impl Operand {
                         Address {
                             bank: cpu.db,
                             offset: cpu.bus.read_u16(
-                                (cpu.d as u32).to_address() + operand_data + cpu.x.value as u32,
+                                Address::new(0, cpu.d) + operand_data + cpu.x.value as u32,
                             ),
                         }
                         .into()
@@ -258,7 +259,7 @@ impl Operand {
                         }
                         let addr = Address {
                             bank: cpu.db,
-                            offset: cpu.bus.read_u16((cpu.d as u32).to_address() + operand_data),
+                            offset: cpu.bus.read_u16(Address::new(0, cpu.d) + operand_data),
                         };
 
                         if !cpu.status.index_register_size_or_break
@@ -272,14 +273,13 @@ impl Operand {
                         if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
-                        cpu.bus.read_u24((cpu.d as u32).to_address() + operand_data)
-                            + cpu.y.value as u32
+                        cpu.bus.read_u24(Address::new(0, cpu.d) + operand_data) + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectLong => {
                         if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
-                        cpu.bus.read_u24((cpu.d as u32).to_address() + operand_data)
+                        cpu.bus.read_u24(Address::new(0, cpu.d) + operand_data)
                     }
                     AddressMode::Implied
                     | AddressMode::ImmediateU8
@@ -287,7 +287,7 @@ impl Operand {
                     | AddressMode::ImmediateXY
                     | AddressMode::Accumulator => unreachable!(),
                 };
-                Operand::Address(operand_data, mode, operand_addr.to_address())
+                Operand::Address(operand_data, mode, operand_addr.into())
             }
         };
         (operand, instruction_addr + 1 + operand_size)
@@ -344,8 +344,18 @@ impl Operand {
         let operand_data: u32 = match operand_size {
             0 => 0,
             1 => cpu.bus.peek_u8(instruction_addr + 1).unwrap_or_default() as u32,
-            2 => cpu.bus.peek_u16(instruction_addr + 1).unwrap_or_default() as u32,
-            3 => cpu.bus.peek_u24(instruction_addr + 1).unwrap_or_default(),
+            // Do not use read_u16. The program counter will wrap around in the memory bank.
+            2 => u16::from_le_bytes([
+                cpu.bus.peek_u8(instruction_addr + 1).unwrap_or_default(),
+                cpu.bus.peek_u8(instruction_addr + 2).unwrap_or_default(),
+            ]) as u32,
+            // Do not use read_u24. The program counter will wrap around in the memory bank.
+            3 => u32::from_le_bytes([
+                cpu.bus.peek_u8(instruction_addr + 1).unwrap_or_default(),
+                cpu.bus.peek_u8(instruction_addr + 2).unwrap_or_default(),
+                cpu.bus.peek_u8(instruction_addr + 3).unwrap_or_default(),
+                0,
+            ]),
             _ => unreachable!(),
         };
 
@@ -371,29 +381,56 @@ impl Operand {
             // Operand is in memory, calculate the effective address
             _ => {
                 let operand_addr: u32 = match mode {
-                    AddressMode::Absolute | AddressMode::AbsoluteLong => operand_data,
-                    AddressMode::AbsoluteYIndexed => operand_data + cpu.y.value as u32,
-                    AddressMode::AbsoluteXIndexed | AddressMode::AbsoluteXIndexedLong => {
-                        operand_data + cpu.x.value as u32
+                    AddressMode::Absolute => Address {
+                        bank: cpu.db,
+                        offset: operand_data as u16,
                     }
+                    .into(),
+                    AddressMode::AbsoluteLong => operand_data,
+
+                    AddressMode::AbsoluteYIndexed => {
+                        let page_cross = operand_data.bits(0..8) + cpu.y.value as u32 > 0xff;
+                        u32::from(Address {
+                            bank: cpu.db,
+                            offset: operand_data as u16,
+                        }) + cpu.y.value as u32
+                    }
+                    AddressMode::AbsoluteXIndexed => {
+                        let page_cross =
+                            operand_data.bits(0..8) + cpu.x.value.bits(0..8) as u32 > 0xff;
+                        u32::from(Address {
+                            bank: cpu.db,
+                            offset: operand_data as u16,
+                        }) + cpu.x.value as u32
+                    }
+                    AddressMode::AbsoluteXIndexedLong => operand_data + cpu.x.value as u32,
                     AddressMode::AbsoluteIndirect => {
-                        cpu.bus.peek_u16(operand_data).unwrap_or_default() as u32
+                        cpu.bus.peek_u16(operand_data.into()).unwrap_or_default() as u32
                     }
                     AddressMode::AbsoluteIndirectLong => {
-                        cpu.bus.peek_u24(operand_data).unwrap_or_default()
+                        cpu.bus.peek_u24(operand_data.into()).unwrap_or_default()
                     }
                     AddressMode::AbsoluteXIndexedIndirect => {
                         cpu.bus
-                            .peek_u16(operand_data + cpu.x.value as u32)
+                            .peek_u16(Address::from(operand_data) + cpu.x.value as u32)
                             .unwrap_or_default() as u32
                     }
                     AddressMode::Relative => {
                         let relative_addr = operand_data as i8;
                         if relative_addr > 0 {
-                            u32::from(cpu.pc + 2).wrapping_add(relative_addr.unsigned_abs() as u32)
+                            Address {
+                                bank: cpu.pc.bank,
+                                offset: (cpu.pc.offset.wrapping_add(2))
+                                    .wrapping_add(relative_addr.unsigned_abs() as u16),
+                            }
                         } else {
-                            u32::from(cpu.pc + 2).wrapping_sub(relative_addr.unsigned_abs() as u32)
+                            Address {
+                                bank: cpu.pc.bank,
+                                offset: (cpu.pc.offset.wrapping_add(2))
+                                    .wrapping_sub(relative_addr.unsigned_abs() as u16),
+                            }
                         }
+                        .into()
                     }
                     AddressMode::RelativeLong => {
                         let relative_addr = operand_data as i16;
@@ -403,46 +440,62 @@ impl Operand {
                             u32::from(cpu.pc + 3).wrapping_sub(relative_addr.unsigned_abs() as u32)
                         }
                     }
-                    AddressMode::StackRelative => operand_data + cpu.s as u32 + STACK_BASE,
-                    AddressMode::StackRelativeIndirectYIndexed => {
-                        cpu.bus
-                            .peek_u16(cpu.s as u32 + operand_data)
-                            .unwrap_or_default() as u32
-                            + cpu.y.value as u32
+                    AddressMode::StackRelative => {
+                        (Address::new(0, cpu.s + STACK_BASE) + operand_data).into()
                     }
-                    AddressMode::DirectPage => cpu.d as u32 + operand_data,
+                    AddressMode::StackRelativeIndirectYIndexed => {
+                        let value = u32::from(Address {
+                            bank: cpu.db,
+                            offset: cpu
+                                .bus
+                                .peek_u16(Address::new(0, cpu.s) + operand_data)
+                                .unwrap_or_default(),
+                        }) + cpu.y.value as u32;
+                        value
+                    }
+                    AddressMode::DirectPage => (Address::new(0, cpu.d) + operand_data).into(),
                     AddressMode::DirectPageXIndexed => {
-                        cpu.d as u32 + operand_data + cpu.x.value as u32
+                        (Address::new(0, cpu.d) + operand_data as u16 + cpu.x.value).into()
                     }
                     AddressMode::DirectPageYIndexed => {
-                        cpu.d as u32 + operand_data + cpu.y.value as u32
+                        (Address::new(0, cpu.d) + operand_data as u16 + cpu.y.value).into()
                     }
-                    AddressMode::DirectPageIndirect => {
-                        cpu.bus
-                            .peek_u16(cpu.d as u32 + operand_data)
-                            .unwrap_or_default() as u32
+                    AddressMode::DirectPageIndirect => Address {
+                        bank: cpu.db,
+                        offset: cpu
+                            .bus
+                            .peek_u16(Address::new(0, cpu.d) + operand_data)
+                            .unwrap_or_default(),
                     }
-                    AddressMode::DirectPageXIndexedIndirect => {
-                        cpu.bus
-                            .peek_u16(cpu.d as u32 + operand_data + cpu.x.value as u32)
-                            .unwrap_or_default() as u32
-                            + ((cpu.db as u32) << 16)
+                    .into(),
+                    AddressMode::DirectPageXIndexedIndirect => Address {
+                        bank: cpu.db,
+                        offset: cpu
+                            .bus
+                            .peek_u16(Address::new(0, cpu.d) + operand_data + cpu.x.value as u32)
+                            .unwrap_or_default(),
                     }
+                    .into(),
                     AddressMode::DirectPageIndirectYIndexed => {
-                        cpu.bus
-                            .peek_u16(cpu.d as u32 + operand_data)
-                            .unwrap_or_default() as u32
-                            + cpu.y.value as u32
+                        let addr = Address {
+                            bank: cpu.db,
+                            offset: cpu
+                                .bus
+                                .peek_u16(Address::new(0, cpu.d) + operand_data)
+                                .unwrap_or_default(),
+                        };
+
+                        u32::from(addr) + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectYIndexedLong => {
                         cpu.bus
-                            .peek_u24(cpu.d as u32 + operand_data)
+                            .peek_u24(Address::new(0, cpu.d) + operand_data)
                             .unwrap_or_default()
                             + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectLong => cpu
                         .bus
-                        .peek_u24(cpu.d as u32 + operand_data)
+                        .peek_u24(Address::new(0, cpu.d) + operand_data)
                         .unwrap_or_default(),
                     AddressMode::Implied
                     | AddressMode::ImmediateU8
@@ -450,7 +503,7 @@ impl Operand {
                     | AddressMode::ImmediateXY
                     | AddressMode::Accumulator => unreachable!(),
                 };
-                Operand::Address(operand_data, mode, operand_addr.to_address())
+                Operand::Address(operand_data, mode, operand_addr.into())
             }
         };
         (operand, instruction_addr + 1 + operand_size)
