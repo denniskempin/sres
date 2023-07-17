@@ -6,6 +6,9 @@ use intbits::Bits;
 use crate::cartridge::Cartridge;
 use crate::memory::Address;
 use crate::memory::Memory;
+use crate::memory::Wrap;
+use crate::uint::RegisterSize;
+use crate::uint::UInt;
 
 pub fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
     let double_frame_length = 357368 + 357364;
@@ -78,11 +81,75 @@ fn memory_access_speed(addr: Address) -> u64 {
     }
 }
 
-pub trait Bus: Memory {
+pub trait Bus {
+    fn peek_u8(&self, addr: Address) -> Option<u8>;
+    fn cycle_io(&mut self);
+    fn cycle_read_u8(&mut self, addr: Address) -> u8;
+    fn cycle_write_u8(&mut self, addr: Address, value: u8);
     fn reset(&mut self);
     fn ppu_timer(&self) -> PpuTimer;
-    fn internal_operation_cycle(&mut self);
-    fn advance_master_clock(&mut self, cycles: u64);
+
+    fn cycle_read_u16(&mut self, addr: Address) -> u16 {
+        u16::from_le_bytes([
+            self.cycle_read_u8(addr),
+            self.cycle_read_u8(addr.add2(1_u16, Wrap::NoWrap)),
+        ])
+    }
+
+    fn cycle_read_u24(&mut self, addr: Address) -> u32 {
+        u32::from_le_bytes([
+            self.cycle_read_u8(addr),
+            self.cycle_read_u8(addr.add2(1_u16, Wrap::NoWrap)),
+            self.cycle_read_u8(addr.add2(2_u16, Wrap::NoWrap)),
+            0,
+        ])
+    }
+
+    #[inline]
+    fn cycle_read_generic<T: UInt>(&mut self, addr: Address) -> T {
+        match T::SIZE {
+            RegisterSize::U8 => T::from_u8(self.cycle_read_u8(addr)),
+            RegisterSize::U16 => T::from_u16(self.cycle_read_u16(addr)),
+        }
+    }
+
+    fn cycle_write_u16(&mut self, addr: Address, value: u16) {
+        let bytes = value.to_le_bytes();
+        self.cycle_write_u8(addr.add2(1_u16, Wrap::NoWrap), bytes[1]);
+        self.cycle_write_u8(addr, bytes[0]);
+    }
+
+    #[inline]
+    fn cycle_write_generic<T: UInt>(&mut self, addr: Address, value: T) {
+        match T::SIZE {
+            RegisterSize::U8 => self.cycle_write_u8(addr, value.to_u8()),
+            RegisterSize::U16 => self.cycle_write_u16(addr, value.to_u16()),
+        }
+    }
+
+    fn peek_u16(&self, addr: Address) -> Option<u16> {
+        Some(u16::from_le_bytes([
+            self.peek_u8(addr)?,
+            self.peek_u8(addr.add2(1_u16, Wrap::NoWrap))?,
+        ]))
+    }
+
+    fn peek_u24(&self, addr: Address) -> Option<u32> {
+        Some(u32::from_le_bytes([
+            self.peek_u8(addr)?,
+            self.peek_u8(addr.add2(1_u16, Wrap::NoWrap))?,
+            self.peek_u8(addr.add2(2_u16, Wrap::NoWrap))?,
+            0,
+        ]))
+    }
+
+    #[inline]
+    fn peek<T: UInt>(&self, addr: Address) -> Option<T> {
+        match T::SIZE {
+            RegisterSize::U8 => self.peek_u8(addr).map(T::from_u8),
+            RegisterSize::U16 => self.peek_u16(addr).map(T::from_u16),
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -223,6 +290,33 @@ impl TestBus {
         }
         bus
     }
+
+    fn advance_master_clock(&mut self, cycles: u64) {
+        self.ppu_timer.advance_master_clock(cycles);
+
+        if self.dma_pending > 0 {
+            if self.dma_active {
+                let dma_counter = 8 - self.ppu_timer.master_clock % 8;
+                //println!("dma: c {}, speed {}", dma_counter, self.clock_speed);
+                self.ppu_timer.advance_master_clock(dma_counter + 8);
+                for channel in 0..8 {
+                    if self.dma_pending.bit(channel) {
+                        let mut length = self.dma_channels[channel as usize].das as u64;
+                        if length == 0 {
+                            length = 0x10000;
+                        }
+                        self.ppu_timer.advance_master_clock(8 + 8 * length);
+                    }
+                }
+                self.ppu_timer
+                    .advance_master_clock(self.clock_speed - dma_counter % self.clock_speed);
+                self.dma_pending = 0;
+                self.dma_active = false;
+            } else {
+                self.dma_active = true;
+            }
+        }
+    }
 }
 
 impl Default for TestBus {
@@ -238,12 +332,12 @@ impl Default for TestBus {
     }
 }
 
-impl Memory for TestBus {
+impl Bus for TestBus {
     fn peek_u8(&self, addr: Address) -> Option<u8> {
         Some(self.memory[u32::from(addr) as usize])
     }
 
-    fn read_u8(&mut self, addr: Address) -> u8 {
+    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
         self.clock_speed = memory_access_speed(addr);
         //println!("  read_u8({addr}) ({} cycles)", self.clock_speed);
         self.ppu_timer.advance_master_clock(self.clock_speed - 6);
@@ -269,7 +363,7 @@ impl Memory for TestBus {
     }
 
     #[allow(clippy::single_match)]
-    fn write_u8(&mut self, addr: Address, val: u8) {
+    fn cycle_write_u8(&mut self, addr: Address, val: u8) {
         self.clock_speed = memory_access_speed(addr);
         self.advance_master_clock(self.clock_speed);
         /* println!(
@@ -313,40 +407,11 @@ impl Memory for TestBus {
             }
         }
     }
-}
 
-impl Bus for TestBus {
-    fn internal_operation_cycle(&mut self) {
+    fn cycle_io(&mut self) {
         // println!("  io_cycle: (6 cycles)");
         self.clock_speed = 6;
         self.advance_master_clock(self.clock_speed);
-    }
-
-    fn advance_master_clock(&mut self, cycles: u64) {
-        self.ppu_timer.advance_master_clock(cycles);
-
-        if self.dma_pending > 0 {
-            if self.dma_active {
-                let dma_counter = 8 - self.ppu_timer.master_clock % 8;
-                //println!("dma: c {}, speed {}", dma_counter, self.clock_speed);
-                self.ppu_timer.advance_master_clock(dma_counter + 8);
-                for channel in 0..8 {
-                    if self.dma_pending.bit(channel) {
-                        let mut length = self.dma_channels[channel as usize].das as u64;
-                        if length == 0 {
-                            length = 0x10000;
-                        }
-                        self.ppu_timer.advance_master_clock(8 + 8 * length);
-                    }
-                }
-                self.ppu_timer
-                    .advance_master_clock(self.clock_speed - dma_counter % self.clock_speed);
-                self.dma_pending = 0;
-                self.dma_active = false;
-            } else {
-                self.dma_active = true;
-            }
-        }
     }
 
     fn ppu_timer(&self) -> PpuTimer {

@@ -128,30 +128,26 @@ struct TestBus {
     pub cycles: Vec<Cycle>,
 }
 
-impl Memory for TestBus {
+impl Bus for TestBus {
     fn peek_u8(&self, addr: Address) -> Option<u8> {
         Some(*self.memory.get(&u32::from(addr)).unwrap_or(&0))
     }
 
-    fn read_u8(&mut self, addr: Address) -> u8 {
+    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
         let value = self.peek_u8(addr).unwrap_or_default();
         self.cycles.push(Cycle::Read(u32::from(addr), value));
         value
     }
 
     #[allow(clippy::single_match)]
-    fn write_u8(&mut self, addr: Address, val: u8) {
+    fn cycle_write_u8(&mut self, addr: Address, val: u8) {
         self.cycles.push(Cycle::Write(u32::from(addr), val));
         self.memory.insert(u32::from(addr), val);
     }
-}
 
-impl Bus for TestBus {
-    fn internal_operation_cycle(&mut self) {
+    fn cycle_io(&mut self) {
         self.cycles.push(Cycle::Internal);
     }
-
-    fn advance_master_clock(&mut self, _: u64) {}
 
     fn ppu_timer(&self) -> PpuTimer {
         PpuTimer::default()
