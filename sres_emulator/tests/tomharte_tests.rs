@@ -19,7 +19,6 @@ use sres_emulator::cpu::status::StatusFlags;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::memory::Address;
 use sres_emulator::memory::Memory;
-use sres_emulator::memory::ToAddress;
 use xz2::read::XzDecoder;
 
 #[derive(Serialize, Deserialize)]
@@ -130,21 +129,18 @@ struct TestBus {
 }
 
 impl Memory for TestBus {
-    fn peek_u8(&self, addr: impl ToAddress) -> Option<u8> {
-        let addr = addr.to_address();
+    fn peek_u8(&self, addr: Address) -> Option<u8> {
         Some(*self.memory.get(&u32::from(addr)).unwrap_or(&0))
     }
 
-    fn read_u8(&mut self, addr: impl ToAddress) -> u8 {
-        let addr = addr.to_address();
+    fn read_u8(&mut self, addr: Address) -> u8 {
         let value = self.peek_u8(addr).unwrap_or_default();
         self.cycles.push(Cycle::Read(u32::from(addr), value));
         value
     }
 
     #[allow(clippy::single_match)]
-    fn write_u8(&mut self, addr: impl ToAddress, val: u8) {
-        let addr = addr.to_address();
+    fn write_u8(&mut self, addr: Address, val: u8) {
         self.cycles.push(Cycle::Write(u32::from(addr), val));
         self.memory.insert(u32::from(addr), val);
     }

@@ -6,7 +6,6 @@ use intbits::Bits;
 use crate::cartridge::Cartridge;
 use crate::memory::Address;
 use crate::memory::Memory;
-use crate::memory::ToAddress;
 
 pub fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
     let double_frame_length = 357368 + 357364;
@@ -240,13 +239,11 @@ impl Default for TestBus {
 }
 
 impl Memory for TestBus {
-    fn peek_u8(&self, addr: impl ToAddress) -> Option<u8> {
-        let addr = addr.to_address();
+    fn peek_u8(&self, addr: Address) -> Option<u8> {
         Some(self.memory[u32::from(addr) as usize])
     }
 
-    fn read_u8(&mut self, addr: impl ToAddress) -> u8 {
-        let addr = addr.to_address();
+    fn read_u8(&mut self, addr: Address) -> u8 {
         self.clock_speed = memory_access_speed(addr);
         //println!("  read_u8({addr}) ({} cycles)", self.clock_speed);
         self.ppu_timer.advance_master_clock(self.clock_speed - 6);
@@ -272,8 +269,7 @@ impl Memory for TestBus {
     }
 
     #[allow(clippy::single_match)]
-    fn write_u8(&mut self, addr: impl ToAddress, val: u8) {
-        let addr = addr.to_address();
+    fn write_u8(&mut self, addr: Address, val: u8) {
         self.clock_speed = memory_access_speed(addr);
         self.advance_master_clock(self.clock_speed);
         /* println!(

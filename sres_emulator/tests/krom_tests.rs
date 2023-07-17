@@ -47,8 +47,8 @@ pub fn test_nmi_sub_cycle_accuracy() {
     for (v, h, expected_nmi, expected_internal_nmi) in TEST_CASES {
         // Create CPU with `bit $4210` program in memory
         let mut bus = TestBus::default();
-        bus.write_u16(0x00, 0x2C);
-        bus.write_u16(0x01, 0x4210);
+        bus.write_u16(0x00.into(), 0x2C);
+        bus.write_u16(0x01.into(), 0x4210);
         let mut cpu = Cpu::new(bus);
         cpu.reset();
 
@@ -198,7 +198,7 @@ fn run_krom_test(test_name: &str) {
     let mut bus = TestBus::with_sfc(&rom_path).unwrap();
     // CPUMSC reads 0x20 from $000000 at the first instruction. I cannot figure out why, it
     // should be mapped to RAM.
-    bus.write_u8(0x000000, 0x20);
+    bus.write_u8(0x000000.into(), 0x20);
 
     let mut cpu = Cpu::new(bus);
     cpu.reset();

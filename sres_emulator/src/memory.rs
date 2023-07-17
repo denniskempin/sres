@@ -2,15 +2,43 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::ops::Add;
 
-use intbits::Bits;
-
 use crate::uint::RegisterSize;
+use crate::uint::U16Ext;
+use crate::uint::U32Ext;
 use crate::uint::UInt;
+
+pub enum Wrap {
+    WrapBank,
+    NoWrap,
+}
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Copy)]
 pub struct Address {
     pub bank: u8,
     pub offset: u16,
+}
+
+impl Address {
+    pub fn new(bank: u8, offset: u16) -> Self {
+        Address { bank, offset }
+    }
+
+    pub fn new_direct_page(bank: u8, page: u8, offset: u8) -> Self {
+        Address {
+            bank,
+            offset: ((page as u16) << 8) | (offset as u16),
+        }
+    }
+
+    pub fn add2<T: UInt>(&self, rhs: T, wrap: Wrap) -> Self {
+        match wrap {
+            Wrap::WrapBank => Address {
+                bank: self.bank,
+                offset: self.offset.wrapping_add(rhs.to_u16()),
+            },
+            Wrap::NoWrap => (u32::from(*self).wrapping_add(rhs.to_u32())).into(),
+        }
+    }
 }
 
 impl Add<usize> for Address {
@@ -64,23 +92,13 @@ impl From<Address> for u32 {
     }
 }
 
-pub trait ToAddress {
-    fn to_address(self) -> Address;
-}
-
-impl ToAddress for Address {
+impl From<u32> for Address {
     #[inline]
-    fn to_address(self) -> Address {
-        self
-    }
-}
-
-impl ToAddress for u32 {
-    #[inline]
-    fn to_address(self) -> Address {
-        let bank = self.bits(16..24) as u8;
-        let offset = self.bits(0..16) as u16;
-        Address { bank, offset }
+    fn from(addr: u32) -> Self {
+        Address {
+            bank: addr.high_word().low_byte(),
+            offset: addr.low_word(),
+        }
     }
 }
 
@@ -91,51 +109,49 @@ impl Display for Address {
 }
 
 pub trait Memory {
-    fn peek_u8(&self, addr: impl ToAddress) -> Option<u8>;
-    fn read_u8(&mut self, addr: impl ToAddress) -> u8;
-    fn write_u8(&mut self, addr: impl ToAddress, value: u8);
+    fn peek_u8(&self, addr: Address) -> Option<u8>;
+    fn read_u8(&mut self, addr: Address) -> u8;
+    fn write_u8(&mut self, addr: Address, value: u8);
 
-    fn peek_u16(&self, addr: impl ToAddress) -> Option<u16> {
-        let addr = addr.to_address();
+    fn peek_u16(&self, addr: Address) -> Option<u16> {
         Some(u16::from_le_bytes([
             self.peek_u8(addr)?,
-            self.peek_u8(u32::from(addr) + 1)?,
+            self.peek_u8(addr.add2(1_u16, Wrap::NoWrap))?,
         ]))
     }
-    fn read_u16(&mut self, addr: impl ToAddress) -> u16 {
-        let addr = addr.to_address();
-        u16::from_le_bytes([self.read_u8(addr), self.read_u8(u32::from(addr) + 1)])
+    fn read_u16(&mut self, addr: Address) -> u16 {
+        u16::from_le_bytes([
+            self.read_u8(addr),
+            self.read_u8(addr.add2(1_u16, Wrap::NoWrap)),
+        ])
     }
 
-    fn read_u24(&mut self, addr: impl ToAddress) -> u32 {
-        let addr = addr.to_address();
+    fn read_u24(&mut self, addr: Address) -> u32 {
         u32::from_le_bytes([
             self.read_u8(addr),
-            self.read_u8(u32::from(addr) + 1),
-            self.read_u8(u32::from(addr) + 2),
+            self.read_u8(addr.add2(1_u16, Wrap::NoWrap)),
+            self.read_u8(addr.add2(2_u16, Wrap::NoWrap)),
             0,
         ])
     }
 
-    fn write_u16(&mut self, addr: impl ToAddress, value: u16) {
-        let addr = addr.to_address();
+    fn write_u16(&mut self, addr: Address, value: u16) {
         let bytes = value.to_le_bytes();
-        self.write_u8(u32::from(addr) + 1, bytes[1]);
+        self.write_u8(addr.add2(1_u16, Wrap::NoWrap), bytes[1]);
         self.write_u8(addr, bytes[0]);
     }
 
-    fn peek_u24(&self, addr: impl ToAddress) -> Option<u32> {
-        let addr = addr.to_address();
+    fn peek_u24(&self, addr: Address) -> Option<u32> {
         Some(u32::from_le_bytes([
             self.peek_u8(addr)?,
-            self.peek_u8(u32::from(addr) + 1)?,
-            self.peek_u8(u32::from(addr) + 2)?,
+            self.peek_u8(addr.add2(1_u16, Wrap::NoWrap))?,
+            self.peek_u8(addr.add2(2_u16, Wrap::NoWrap))?,
             0,
         ]))
     }
 
     #[inline]
-    fn peek<T: UInt>(&self, addr: impl ToAddress) -> Option<T> {
+    fn peek<T: UInt>(&self, addr: Address) -> Option<T> {
         match T::SIZE {
             RegisterSize::U8 => self.peek_u8(addr).map(T::from_u8),
             RegisterSize::U16 => self.peek_u16(addr).map(T::from_u16),
@@ -143,7 +159,7 @@ pub trait Memory {
     }
 
     #[inline]
-    fn read_generic<T: UInt>(&mut self, addr: impl ToAddress) -> T {
+    fn read_generic<T: UInt>(&mut self, addr: Address) -> T {
         match T::SIZE {
             RegisterSize::U8 => T::from_u8(self.read_u8(addr)),
             RegisterSize::U16 => T::from_u16(self.read_u16(addr)),
@@ -151,7 +167,7 @@ pub trait Memory {
     }
 
     #[inline]
-    fn write_generic<T: UInt>(&mut self, addr: impl ToAddress, value: T) {
+    fn write_generic<T: UInt>(&mut self, addr: Address, value: T) {
         match T::SIZE {
             RegisterSize::U8 => self.write_u8(addr, value.to_u8()),
             RegisterSize::U16 => self.write_u16(addr, value.to_u16()),

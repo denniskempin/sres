@@ -11,7 +11,6 @@ use xz2::read::XzDecoder;
 
 use crate::cpu::status::StatusFlags;
 use crate::memory::Address;
-use crate::memory::ToAddress;
 
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
@@ -80,7 +79,7 @@ impl FromStr for Trace {
         Ok(Trace {
             pc: u32::from_str_radix(&s[0..6], 16)
                 .with_context(|| "pc")?
-                .to_address(),
+                .into(),
             instruction: s[7..10].trim().to_string(),
             operand: s[11..21].trim().to_string(),
             operand_addr: {
@@ -91,7 +90,7 @@ impl FromStr for Trace {
                     Some(
                         u32::from_str_radix(addr, 16)
                             .with_context(|| "operand_addr")?
-                            .to_address(),
+                            .into(),
                     )
                 }
             },
