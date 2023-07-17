@@ -97,8 +97,18 @@ impl Operand {
         let operand_data: u32 = match operand_size {
             0 => 0,
             1 => cpu.bus.read_u8(instruction_addr + 1) as u32,
-            2 => cpu.bus.read_u16(instruction_addr + 1) as u32,
-            3 => cpu.bus.read_u24(instruction_addr + 1),
+            // Do not use read_u16. The program counter will wrap around in the memory bank.
+            2 => u16::from_le_bytes([
+                cpu.bus.read_u8(instruction_addr + 1),
+                cpu.bus.read_u8(instruction_addr + 2),
+            ]) as u32,
+            // Do not use read_u24. The program counter will wrap around in the memory bank.
+            3 => u32::from_le_bytes([
+                cpu.bus.read_u8(instruction_addr + 1),
+                cpu.bus.read_u8(instruction_addr + 2),
+                cpu.bus.read_u8(instruction_addr + 3),
+                0,
+            ]),
             _ => unreachable!(),
         };
 

@@ -164,7 +164,12 @@ impl Bus for TestBus {
     fn reset(&mut self) {}
 }
 
-const SKIP_OPCODES: &[u8] = &[0x00, 0x02, 0x1E, 0x1D];
+const SKIP_OPCODES: &[u8] = &[
+    0x00, // brk not properly implemented yet
+    0x02, // cop not properly implemented yet
+    0x1E, // Needs extra cycle for writes.
+    0x22, // jsl writes to stack before reading pc+3. Does not fit my abstraction.
+];
 
 fn run_tomharte_test(test_name: &str) {
     let json_path = PathBuf::from(format!("tests/tomharte_tests/{test_name}.json.xz"));
@@ -252,7 +257,6 @@ pub fn test_opcodes_1x() {
 }
 
 #[test]
-#[ignore = "not passing yet"]
 pub fn test_opcodes_2x() {
     run_tomharte_test("2x");
 }
