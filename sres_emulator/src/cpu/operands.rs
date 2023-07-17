@@ -6,6 +6,7 @@ use super::STACK_BASE;
 use crate::bus::Bus;
 use crate::memory::Address;
 use crate::memory::ToAddress;
+use crate::uint::U16Ext;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum AddressMode {
@@ -208,27 +209,27 @@ impl Operand {
                         value
                     }
                     AddressMode::DirectPage => {
-                        if cpu.d.bits(0..8) != 0 {
+                        if cpu.d.low_byte() != 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         ((cpu.d as u32).to_address() + operand_data).into()
                     }
                     AddressMode::DirectPageXIndexed => {
-                        if cpu.d.bits(0..8) > 0 {
+                        if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         cpu.bus.internal_operation_cycle();
                         ((cpu.d as u32).to_address() + operand_data as u16 + cpu.x.value).into()
                     }
                     AddressMode::DirectPageYIndexed => {
-                        if cpu.d.bits(0..8) > 0 {
+                        if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         cpu.bus.internal_operation_cycle();
                         ((cpu.d as u32).to_address() + operand_data as u16 + cpu.y.value).into()
                     }
                     AddressMode::DirectPageIndirect => {
-                        if cpu.d.bits(0..8) > 0 {
+                        if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         Address {
@@ -239,7 +240,7 @@ impl Operand {
                     }
                     AddressMode::DirectPageXIndexedIndirect => {
                         cpu.bus.internal_operation_cycle();
-                        if cpu.d.bits(0..8) > 0 {
+                        if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
 
@@ -252,7 +253,7 @@ impl Operand {
                         .into()
                     }
                     AddressMode::DirectPageIndirectYIndexed => {
-                        if cpu.d.bits(0..8) > 0 {
+                        if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         let addr = Address {
@@ -261,21 +262,21 @@ impl Operand {
                         };
 
                         if !cpu.status.index_register_size_or_break
-                            || addr.offset.bits(0..8) + cpu.y.value.bits(0..8) > 0xff
+                            || addr.offset.low_byte() as u16 + cpu.y.value.low_byte() as u16 > 0xff
                         {
                             cpu.bus.internal_operation_cycle();
                         }
                         u32::from(addr) + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectYIndexedLong => {
-                        if cpu.d.bits(0..8) > 0 {
+                        if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         cpu.bus.read_u24((cpu.d as u32).to_address() + operand_data)
                             + cpu.y.value as u32
                     }
                     AddressMode::DirectPageIndirectLong => {
-                        if cpu.d.bits(0..8) > 0 {
+                        if cpu.d.low_byte() > 0 {
                             cpu.bus.internal_operation_cycle();
                         }
                         cpu.bus.read_u24((cpu.d as u32).to_address() + operand_data)
