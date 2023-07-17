@@ -111,7 +111,7 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
-        let opcode = self.bus.read_u8(self.pc);
+        let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
     }
 
@@ -119,7 +119,7 @@ impl<BusT: Bus> Cpu<BusT> {
         if self.s == 0 {
             return;
         }
-        self.bus.write_u8(Address::new(0, self.s), value);
+        self.bus.cycle_write_u8(Address::new(0, self.s), value);
         self.s -= 1;
     }
 
@@ -152,7 +152,7 @@ impl<BusT: Bus> Cpu<BusT> {
             return 0;
         }
         self.s = self.s.wrapping_add(1);
-        self.bus.read_u8(Address::new(0, self.s))
+        self.bus.cycle_read_u8(Address::new(0, self.s))
     }
 
     fn stack_pop_u16(&mut self) -> u16 {
@@ -215,7 +215,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use super::Cpu;
-    use crate::bus::TestBus;
+    use crate::bus::{Bus, TestBus};
     use crate::cpu::VariableLengthRegister;
     use crate::memory::{Address, Memory};
 
@@ -254,14 +254,14 @@ mod tests {
         cpu.step();
         assert_eq!(cpu.a.value, 0x46);
         cpu.step();
-        assert_eq!(cpu.bus.read_u8(0x1000.into()), 0x46);
+        assert_eq!(cpu.bus.cycle_read_u8(0x1000.into()), 0x46);
     }
 
     #[test]
     pub fn test_stack_u8() {
         let mut cpu = super::Cpu::new(TestBus::default());
         cpu.stack_push_u8(0x12);
-        assert_eq!(cpu.bus.read_u8(Address::new(0, cpu.s) + 1), 0x12);
+        assert_eq!(cpu.bus.cycle_read_u8(Address::new(0, cpu.s) + 1), 0x12);
         assert_eq!(cpu.stack_pop_u8(), 0x12);
     }
 
@@ -269,8 +269,8 @@ mod tests {
     pub fn test_stack() {
         let mut cpu = super::Cpu::new(TestBus::default());
         cpu.stack_push_u16(0x1234);
-        assert_eq!(cpu.bus.read_u8(Address::new(0, cpu.s) + 1), 0x34);
-        assert_eq!(cpu.bus.read_u8(Address::new(0, cpu.s) + 2), 0x12);
+        assert_eq!(cpu.bus.cycle_read_u8(Address::new(0, cpu.s) + 1), 0x34);
+        assert_eq!(cpu.bus.cycle_read_u8(Address::new(0, cpu.s) + 2), 0x12);
         assert_eq!(cpu.stack_pop_u16(), 0x1234);
     }
 

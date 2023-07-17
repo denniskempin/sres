@@ -378,26 +378,26 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
 }
 
 fn nop(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
 }
 
 fn sec(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.status.carry = true;
 }
 
 fn sed(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.status.decimal = true;
 }
 
 fn sei(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.status.irq_disable = true;
 }
 
 fn txs(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     if cpu.emulation_mode {
         cpu.s = 0x0100 + cpu.x.get::<u8>() as u16;
         cpu.update_negative_zero_flags(cpu.x.get::<u8>())
@@ -406,75 +406,75 @@ fn txs(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn xba(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     let a = cpu.a.get::<u16>();
     cpu.a.set(a.swap_bytes());
     cpu.update_negative_zero_flags(cpu.a.get::<u8>());
 }
 
 fn tsx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.x.set(T::from_u16(cpu.s));
     cpu.update_negative_zero_flags(cpu.x.get::<T>())
 }
 
 fn txy<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.y.set(cpu.x.get::<T>());
     cpu.update_negative_zero_flags(cpu.y.get::<T>());
 }
 
 fn txa<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.a.set(cpu.x.get::<T>());
     cpu.update_negative_zero_flags(cpu.a.get::<T>());
 }
 
 fn tya<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.a.set(cpu.y.get::<T>());
     cpu.update_negative_zero_flags(cpu.a.get::<T>());
 }
 
 fn tyx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.x.set(cpu.y.get::<T>());
     cpu.update_negative_zero_flags(cpu.x.get::<T>());
 }
 
 fn tax<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.x.set(cpu.a.get::<T>());
     cpu.update_negative_zero_flags(cpu.x.get::<T>());
 }
 
 fn tay<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.y.set(cpu.a.get::<T>());
     cpu.update_negative_zero_flags(cpu.y.get::<T>());
 }
 
 fn tcs(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.s = cpu.a.get::<u16>();
 }
 
 fn tsc(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.a.set(cpu.s);
     cpu.update_negative_zero_flags(cpu.s);
 }
 
 fn tdc(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.a.set(cpu.d);
     cpu.update_negative_zero_flags(cpu.d);
 }
 
 fn trb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let value: T = operand.load(cpu);
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let result = value & !cpu.a.get::<T>();
     operand.store(cpu, result);
     cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
@@ -482,7 +482,7 @@ fn trb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn tsb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let value: T = operand.load(cpu);
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let result = value | cpu.a.get::<T>();
     operand.store(cpu, result);
     cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
@@ -500,7 +500,7 @@ fn jsr(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     // JSR has an extra IO cycle in the Absolute addressing mode
     if let Operand::Address(_, address_mode, _) = operand {
         if *address_mode == AddressMode::Absolute {
-            cpu.bus.internal_operation_cycle();
+            cpu.bus.cycle_io();
         }
     }
     cpu.stack_push_u16(cpu.pc.offset - 1);
@@ -511,7 +511,7 @@ fn jsl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     // JSL has an extra IO cycle in the AbsoluteLong addressing mode
     if let Operand::Address(_, address_mode, _) = operand {
         if *address_mode == AddressMode::AbsoluteLong {
-            cpu.bus.internal_operation_cycle();
+            cpu.bus.cycle_io();
         }
     }
     cpu.stack_push_u24(u32::from(cpu.pc) - 1);
@@ -519,28 +519,28 @@ fn jsl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn rts(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     cpu.pc.offset = cpu.stack_pop_u16();
 }
 
 fn rti(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     cpu.status = StatusFlags::from(cpu.stack_pop_u8());
     cpu.pc = cpu.stack_pop_u24().into();
 }
 
 fn rtl(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     cpu.pc = cpu.stack_pop_u24().into();
 }
 
 fn rol<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let value: T = operand.load(cpu);
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let mut result = value << 1;
     result.set_bit(0, cpu.status.carry);
     operand.store(cpu, result);
@@ -551,7 +551,7 @@ fn rol<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn ror<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let value: T = operand.load(cpu);
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let mut result = value >> 1;
     result.set_bit(T::N_BITS - 1, cpu.status.carry);
     operand.store(cpu, result);
@@ -561,83 +561,83 @@ fn ror<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn bra(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn brl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.pc = operand.effective_addr().unwrap();
 }
 
 fn bcc(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.carry {
-        cpu.bus.internal_operation_cycle();
+        cpu.bus.cycle_io();
         cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bcs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.carry {
-        cpu.bus.internal_operation_cycle();
+        cpu.bus.cycle_io();
         cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn beq(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.zero {
-        cpu.bus.internal_operation_cycle();
+        cpu.bus.cycle_io();
         cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bne(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.zero {
-        cpu.bus.internal_operation_cycle();
+        cpu.bus.cycle_io();
         cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bpl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.negative {
-        cpu.bus.internal_operation_cycle();
+        cpu.bus.cycle_io();
         cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bmi(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.negative {
-        cpu.bus.internal_operation_cycle();
+        cpu.bus.cycle_io();
         cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bvc(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if !cpu.status.overflow {
-        cpu.bus.internal_operation_cycle();
+        cpu.bus.cycle_io();
         cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.overflow {
-        cpu.bus.internal_operation_cycle();
+        cpu.bus.cycle_io();
         cpu.pc = operand.effective_addr().unwrap();
     }
 }
 
 fn brk(cpu: &mut Cpu<impl Bus>) {
     // read signature byte, even though it is unused.
-    cpu.bus.read_u8(cpu.pc + 1);
+    cpu.bus.cycle_read_u8(cpu.pc + 1);
     cpu.stack_push_u24(u32::from(cpu.pc + 1));
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
     let address = if cpu.emulation_mode {
         cpu.bus
-            .read_u16(Address::new(0, EmuVectorTable::Break as u16))
+            .cycle_read_u16(Address::new(0, EmuVectorTable::Break as u16))
     } else {
         cpu.bus
-            .read_u16(Address::new(0, NativeVectorTable::Break as u16))
+            .cycle_read_u16(Address::new(0, NativeVectorTable::Break as u16))
     };
     cpu.pc = ((address as u32).saturating_sub(1)).into();
 }
@@ -648,31 +648,31 @@ fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.status.irq_disable = true;
     let address = if cpu.emulation_mode {
         cpu.bus
-            .read_u16(Address::new(0, EmuVectorTable::Cop as u16))
+            .cycle_read_u16(Address::new(0, EmuVectorTable::Cop as u16))
     } else {
         cpu.bus
-            .read_u16(Address::new(0, NativeVectorTable::Cop as u16))
+            .cycle_read_u16(Address::new(0, NativeVectorTable::Cop as u16))
     };
     cpu.pc = (address as u32).into();
 }
 
 fn clc(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.status.carry = false;
 }
 
 fn cld(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.status.decimal = false;
 }
 
 fn cli(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.status.irq_disable = false;
 }
 
 fn xce(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     (cpu.status.carry, cpu.emulation_mode) = (cpu.emulation_mode, cpu.status.carry);
     if cpu.emulation_mode {
         cpu.status.accumulator_register_size = true;
@@ -691,104 +691,104 @@ fn pei(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn per(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.stack_push_u16(operand.effective_addr().unwrap().offset);
 }
 
 fn phk(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.stack_push_u8(cpu.db);
 }
 
 fn php(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.stack_push_u8(u8::from(cpu.status));
 }
 
 fn pha<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.stack_push(cpu.a.get::<T>());
 }
 
 fn phb(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.stack_push_u8(cpu.db);
 }
 
 fn phd(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.stack_push_u16(cpu.d);
 }
 
 fn phx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.stack_push(cpu.x.get::<T>());
 }
 
 fn phy<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.stack_push(cpu.y.get::<T>());
 }
 
 fn plx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     let value = cpu.stack_pop::<T>();
     cpu.x.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn ply<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     let value = cpu.stack_pop::<T>();
     cpu.y.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn plb(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     cpu.db = cpu.stack_pop_u8();
     cpu.update_negative_zero_flags(cpu.db);
 }
 
 fn pld(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     cpu.d = cpu.stack_pop_u16();
     cpu.update_negative_zero_flags(cpu.d);
 }
 
 fn plp(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     cpu.status = cpu.stack_pop_u8().into();
     cpu.update_register_sizes();
 }
 
 fn pla<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
     let value = cpu.stack_pop::<T>();
     cpu.a.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn clv(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.status.overflow = false;
 }
 
 fn rep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let data: u8 = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) & !data).into();
     cpu.update_register_sizes();
 }
 
 fn sep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let data: u8 = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) | data).into();
     cpu.update_register_sizes();
@@ -813,7 +813,7 @@ fn lda<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn lsr<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let data: T = operand.load(cpu);
     let result = data >> 1;
     cpu.status.carry = data.lsb();
@@ -840,42 +840,42 @@ fn stz<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn inc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let value: T = operand.load::<T>(cpu).wrapping_add(&T::one());
     cpu.update_negative_zero_flags(value);
     operand.store(cpu, value);
 }
 
 fn inx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let value: T = cpu.x.get::<T>().wrapping_add(&T::one());
     cpu.x.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn iny<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let value: T = cpu.y.get::<T>().wrapping_add(&T::one());
     cpu.y.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn dec<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let value: T = operand.load::<T>(cpu).wrapping_sub(&T::one());
     cpu.update_negative_zero_flags(value);
     operand.store(cpu, value);
 }
 
 fn dex<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let value: T = cpu.x.get::<T>().wrapping_sub(&T::one());
     cpu.x.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn dey<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     let value: T = cpu.y.get::<T>().wrapping_sub(&T::one());
     cpu.y.set(value);
     cpu.update_negative_zero_flags(value);
@@ -896,7 +896,7 @@ fn eor<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn tcd(cpu: &mut Cpu<impl Bus>) {
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.d = cpu.a.get();
     cpu.update_negative_zero_flags(cpu.d);
 }
@@ -941,7 +941,7 @@ fn cmp<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn asl<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     let data: T = operand.load(cpu);
-    cpu.bus.internal_operation_cycle();
+    cpu.bus.cycle_io();
     cpu.status.carry = data.msb();
     let result = data << 1;
     cpu.update_negative_zero_flags(result);

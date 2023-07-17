@@ -15,7 +15,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             || {
                 let mut bus = TestBus::with_sfc(&rom_path).unwrap();
                 // Fake RDNMI register. NMI is always true.
-                bus.write_u8(0x004210, 0xC2);
+                bus.cycle_write_u8(0x004210, 0xC2);
                 Cpu::new(bus)
             },
             |cpu: &mut Cpu<TestBus>| {
