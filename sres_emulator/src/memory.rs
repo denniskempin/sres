@@ -39,6 +39,15 @@ impl Address {
         }
     }
 
+    pub fn add_detect_page_cross<T: UIntTruncate + Copy>(
+        &self,
+        rhs: T,
+        wrap: Wrap,
+    ) -> (Self, bool) {
+        let page_cross = rhs.to_u8() as u16 + self.offset.to_u8() as u16 > 0xFF;
+        (self.add(rhs, wrap), page_cross)
+    }
+
     pub fn sub<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
         match wrap {
             Wrap::WrapBank => Address {

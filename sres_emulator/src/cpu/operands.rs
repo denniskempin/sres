@@ -186,27 +186,26 @@ impl Operand {
                     AddressMode::AbsoluteLong => Address::from(operand_data),
 
                     AddressMode::AbsoluteYIndexed => {
-                        let page_cross = operand_data.bits(0..8) + bus.cpu().y.value as u32 > 0xff;
-                        if !bus.cpu().status.index_register_size_or_break || page_cross {
-                            bus.cycle_io();
-                        }
-                        Address {
+                        let (addr, page_cross) = Address {
                             bank: bus.cpu().db,
                             offset: operand_data as u16,
                         }
-                        .add(bus.cpu().y.value, Wrap::NoWrap)
+                        .add_detect_page_cross(bus.cpu().y.value, Wrap::NoWrap);
+                        if !bus.cpu().status.index_register_size_or_break || page_cross {
+                            bus.cycle_io();
+                        }
+                        addr
                     }
                     AddressMode::AbsoluteXIndexed => {
-                        let page_cross =
-                            operand_data.bits(0..8) + bus.cpu().x.value.bits(0..8) as u32 > 0xff;
-                        if !bus.cpu().status.index_register_size_or_break || page_cross {
-                            bus.cycle_io();
-                        }
-                        Address {
+                        let (addr, page_cross) = Address {
                             bank: bus.cpu().db,
                             offset: operand_data as u16,
                         }
-                        .add(bus.cpu().x.value, Wrap::NoWrap)
+                        .add_detect_page_cross(bus.cpu().x.value, Wrap::NoWrap);
+                        if !bus.cpu().status.index_register_size_or_break || page_cross {
+                            bus.cycle_io();
+                        }
+                        addr
                     }
                     AddressMode::AbsoluteXIndexedLong => {
                         Address::from(operand_data).add(bus.cpu().x.value, Wrap::NoWrap)
