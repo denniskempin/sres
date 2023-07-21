@@ -10,6 +10,7 @@ use self::instructions::InstructionMeta;
 use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::memory::Address;
+use crate::memory::Wrap;
 use crate::trace::Trace;
 use crate::uint::RegisterSize;
 use crate::uint::UInt;
@@ -105,7 +106,7 @@ impl<BusT: Bus> Cpu<BusT> {
             bank: 0,
             offset: self
                 .bus
-                .peek_u16(Address::new(0, EmuVectorTable::Reset as u16))
+                .peek_u16(Address::new(0, EmuVectorTable::Reset as u16), Wrap::NoWrap)
                 .unwrap_or_default(),
         };
     }
@@ -219,6 +220,7 @@ mod tests {
     use crate::bus::TestBus;
     use crate::cpu::VariableLengthRegister;
     use crate::memory::Address;
+    use crate::memory::Wrap;
 
     fn assemble(code: &str) -> Vec<u8> {
         let mut code_file = NamedTempFile::new().unwrap();
@@ -262,7 +264,11 @@ mod tests {
     pub fn test_stack_u8() {
         let mut cpu = super::Cpu::new(TestBus::default());
         cpu.stack_push_u8(0x12);
-        assert_eq!(cpu.bus.cycle_read_u8(Address::new(0, cpu.s) + 1), 0x12);
+        assert_eq!(
+            cpu.bus
+                .cycle_read_u8(Address::new(0, cpu.s).add(1_u8, Wrap::WrapBank)),
+            0x12
+        );
         assert_eq!(cpu.stack_pop_u8(), 0x12);
     }
 
@@ -270,8 +276,16 @@ mod tests {
     pub fn test_stack() {
         let mut cpu = super::Cpu::new(TestBus::default());
         cpu.stack_push_u16(0x1234);
-        assert_eq!(cpu.bus.cycle_read_u8(Address::new(0, cpu.s) + 1), 0x34);
-        assert_eq!(cpu.bus.cycle_read_u8(Address::new(0, cpu.s) + 2), 0x12);
+        assert_eq!(
+            cpu.bus
+                .cycle_read_u8(Address::new(0, cpu.s).add(1_u8, Wrap::WrapBank)),
+            0x34
+        );
+        assert_eq!(
+            cpu.bus
+                .cycle_read_u8(Address::new(0, cpu.s).add(2_u8, Wrap::WrapBank)),
+            0x12
+        );
         assert_eq!(cpu.stack_pop_u16(), 0x1234);
     }
 

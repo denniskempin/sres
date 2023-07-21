@@ -9,6 +9,7 @@ use crate::cpu::operands::Operand;
 use crate::cpu::operands::PeekWrapper;
 use crate::cpu::operands::ReadWrapper;
 use crate::memory::Address;
+use crate::memory::Wrap;
 
 pub struct InstructionMeta {
     pub operation: &'static str,
@@ -34,7 +35,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
             Instruction::<BusT> {
                 execute: |cpu| {
                     $method(cpu);
-                    cpu.pc = cpu.pc + 1;
+                    cpu.pc = cpu.pc.add(1_u8, Wrap::WrapBank);
                 },
                 meta: |_, instruction_addr| {
                     (
@@ -43,7 +44,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                             operand_str: None,
                             effective_addr: None,
                         },
-                        instruction_addr + 1,
+                        instruction_addr.add(1_u8, Wrap::WrapBank),
                     )
                 },
             }
@@ -636,16 +637,18 @@ fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn brk(cpu: &mut Cpu<impl Bus>) {
     // read signature byte, even though it is unused.
-    cpu.bus.cycle_read_u8(cpu.pc + 1);
-    cpu.stack_push_u24(u32::from(cpu.pc + 1));
+    cpu.bus.cycle_read_u8(cpu.pc.add(1_u8, Wrap::WrapBank));
+    cpu.stack_push_u24(u32::from(cpu.pc.add(1_u8, Wrap::WrapBank)));
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
     let address = if cpu.emulation_mode {
         cpu.bus
-            .cycle_read_u16(Address::new(0, EmuVectorTable::Break as u16))
+            .cycle_read_u16(Address::new(0, EmuVectorTable::Break as u16), Wrap::NoWrap)
     } else {
-        cpu.bus
-            .cycle_read_u16(Address::new(0, NativeVectorTable::Break as u16))
+        cpu.bus.cycle_read_u16(
+            Address::new(0, NativeVectorTable::Break as u16),
+            Wrap::NoWrap,
+        )
     };
     cpu.pc = ((address as u32).saturating_sub(1)).into();
 }
@@ -656,10 +659,10 @@ fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.status.irq_disable = true;
     let address = if cpu.emulation_mode {
         cpu.bus
-            .cycle_read_u16(Address::new(0, EmuVectorTable::Cop as u16))
+            .cycle_read_u16(Address::new(0, EmuVectorTable::Cop as u16), Wrap::NoWrap)
     } else {
         cpu.bus
-            .cycle_read_u16(Address::new(0, NativeVectorTable::Cop as u16))
+            .cycle_read_u16(Address::new(0, NativeVectorTable::Cop as u16), Wrap::NoWrap)
     };
     cpu.pc = (address as u32).into();
 }

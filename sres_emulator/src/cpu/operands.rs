@@ -54,18 +54,18 @@ where
     fn cycle_io(&mut self);
     fn cycle_read_u8(&mut self, addr: Address) -> u8;
 
-    fn cycle_read_u16(&mut self, addr: Address) -> u16 {
+    fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
         u16::from_le_bytes([
             self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add2(1_u16, Wrap::NoWrap)),
+            self.cycle_read_u8(addr.add(1_u16, wrap)),
         ])
     }
 
-    fn cycle_read_u24(&mut self, addr: Address) -> u32 {
+    fn cycle_read_u24(&mut self, addr: Address, wrap: Wrap) -> u32 {
         u32::from_le_bytes([
             self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add2(1_u16, Wrap::NoWrap)),
-            self.cycle_read_u8(addr.add2(2_u16, Wrap::NoWrap)),
+            self.cycle_read_u8(addr.add(1_u16, wrap)),
+            self.cycle_read_u8(addr.add(2_u16, wrap)),
             0,
         ])
     }
@@ -107,7 +107,7 @@ impl Operand {
         mode: AddressMode,
     ) -> (Self, Address) {
         // The size of the operand part of the instruction depends on the address mode.
-        let operand_size = match mode {
+        let operand_size: u8 = match mode {
             AddressMode::Implied => 0,
             AddressMode::Accumulator => 0,
             AddressMode::ImmediateU8 => 1,
@@ -148,21 +148,12 @@ impl Operand {
         };
 
         // Regardless of how many bytes were read, store them all as u32 for simplicity.
+        let next_addr = instruction_addr.add(1_u8, Wrap::WrapBank);
         let operand_data: u32 = match operand_size {
             0 => 0,
-            1 => bus.cycle_read_u8(instruction_addr + 1) as u32,
-            // Do not use read_u16. The program counter will wrap around in the memory bank.
-            2 => u16::from_le_bytes([
-                bus.cycle_read_u8(instruction_addr + 1),
-                bus.cycle_read_u8(instruction_addr + 2),
-            ]) as u32,
-            // Do not use read_u24. The program counter will wrap around in the memory bank.
-            3 => u32::from_le_bytes([
-                bus.cycle_read_u8(instruction_addr + 1),
-                bus.cycle_read_u8(instruction_addr + 2),
-                bus.cycle_read_u8(instruction_addr + 3),
-                0,
-            ]),
+            1 => bus.cycle_read_u8(next_addr) as u32,
+            2 => bus.cycle_read_u16(next_addr, Wrap::WrapBank) as u32,
+            3 => bus.cycle_read_u24(next_addr, Wrap::WrapBank),
             _ => unreachable!(),
         };
 
@@ -203,7 +194,7 @@ impl Operand {
                             bank: bus.cpu().db,
                             offset: operand_data as u16,
                         }
-                        .add2(bus.cpu().y.value, Wrap::NoWrap)
+                        .add(bus.cpu().y.value, Wrap::NoWrap)
                     }
                     AddressMode::AbsoluteXIndexed => {
                         let page_cross =
@@ -215,23 +206,25 @@ impl Operand {
                             bank: bus.cpu().db,
                             offset: operand_data as u16,
                         }
-                        .add2(bus.cpu().x.value, Wrap::NoWrap)
+                        .add(bus.cpu().x.value, Wrap::NoWrap)
                     }
                     AddressMode::AbsoluteXIndexedLong => {
-                        Address::from(operand_data).add2(bus.cpu().x.value, Wrap::NoWrap)
+                        Address::from(operand_data).add(bus.cpu().x.value, Wrap::NoWrap)
                     }
-                    AddressMode::AbsoluteIndirect => {
-                        Address::new(bus.cpu().db, bus.cycle_read_u16(operand_data.into()))
-                    }
+                    AddressMode::AbsoluteIndirect => Address::new(
+                        bus.cpu().db,
+                        bus.cycle_read_u16(operand_data.into(), Wrap::NoWrap),
+                    ),
                     AddressMode::AbsoluteIndirectLong => {
-                        Address::from(bus.cycle_read_u24(operand_data.into()))
+                        Address::from(bus.cycle_read_u24(operand_data.into(), Wrap::NoWrap))
                     }
                     AddressMode::AbsoluteXIndexedIndirect => {
                         bus.cycle_io();
                         Address::new(
                             bus.cpu().db,
                             bus.cycle_read_u16(
-                                Address::from(operand_data) + bus.cpu().x.value as u32,
+                                Address::from(operand_data).add(bus.cpu().x.value, Wrap::WrapBank),
+                                Wrap::NoWrap,
                             ),
                         )
                     }
@@ -256,26 +249,29 @@ impl Operand {
                         if relative_addr > 0 {
                             bus.cpu()
                                 .pc
-                                .add2(3_u8, Wrap::NoWrap)
-                                .add2(relative_addr.unsigned_abs(), Wrap::NoWrap)
+                                .add(3_u8, Wrap::NoWrap)
+                                .add(relative_addr.unsigned_abs(), Wrap::NoWrap)
                         } else {
                             bus.cpu()
                                 .pc
-                                .add2(3_u8, Wrap::NoWrap)
-                                .sub2(relative_addr.unsigned_abs(), Wrap::NoWrap)
+                                .add(3_u8, Wrap::NoWrap)
+                                .sub(relative_addr.unsigned_abs(), Wrap::NoWrap)
                         }
                     }
                     AddressMode::StackRelative => {
                         bus.cycle_io();
-                        Address::new(0, bus.cpu().s + STACK_BASE) + operand_data
+                        Address::new(0, bus.cpu().s + STACK_BASE).add(operand_data, Wrap::WrapBank)
                     }
                     AddressMode::StackRelativeIndirectYIndexed => {
                         bus.cycle_io();
                         let value = Address {
                             bank: bus.cpu().db,
-                            offset: bus.cycle_read_u16(Address::new(0, bus.cpu().s) + operand_data),
+                            offset: bus.cycle_read_u16(
+                                Address::new(0, bus.cpu().s).add(operand_data, Wrap::WrapBank),
+                                Wrap::NoWrap,
+                            ),
                         }
-                        .add2(bus.cpu().y.value, Wrap::NoWrap);
+                        .add(bus.cpu().y.value, Wrap::NoWrap);
                         bus.cycle_io();
                         value
                     }
@@ -283,21 +279,25 @@ impl Operand {
                         if bus.cpu().d.low_byte() != 0 {
                             bus.cycle_io();
                         }
-                        Address::new(0, bus.cpu().d) + operand_data
+                        Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank)
                     }
                     AddressMode::DirectPageXIndexed => {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
                         bus.cycle_io();
-                        Address::new(0, bus.cpu().d) + operand_data as u16 + bus.cpu().x.value
+                        Address::new(0, bus.cpu().d)
+                            .add(operand_data, Wrap::WrapBank)
+                            .add(bus.cpu().x.value, Wrap::WrapBank)
                     }
                     AddressMode::DirectPageYIndexed => {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
                         bus.cycle_io();
-                        Address::new(0, bus.cpu().d) + operand_data as u16 + bus.cpu().y.value
+                        Address::new(0, bus.cpu().d)
+                            .add(operand_data, Wrap::WrapBank)
+                            .add(bus.cpu().y.value, Wrap::WrapBank)
                     }
                     AddressMode::DirectPageIndirect => {
                         if bus.cpu().d.low_byte() > 0 {
@@ -305,7 +305,10 @@ impl Operand {
                         }
                         Address {
                             bank: bus.cpu().db,
-                            offset: bus.cycle_read_u16(Address::new(0, bus.cpu().d) + operand_data),
+                            offset: bus.cycle_read_u16(
+                                Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
+                                Wrap::NoWrap,
+                            ),
                         }
                     }
                     AddressMode::DirectPageXIndexedIndirect => {
@@ -318,8 +321,9 @@ impl Operand {
                             bank: bus.cpu().db,
                             offset: bus.cycle_read_u16(
                                 Address::new(0, bus.cpu().d)
-                                    + operand_data
-                                    + bus.cpu().x.value as u32,
+                                    .add(operand_data, Wrap::WrapBank)
+                                    .add(bus.cpu().x.value, Wrap::WrapBank),
+                                Wrap::NoWrap,
                             ),
                         }
                     }
@@ -329,7 +333,10 @@ impl Operand {
                         }
                         let addr = Address {
                             bank: bus.cpu().db,
-                            offset: bus.cycle_read_u16(Address::new(0, bus.cpu().d) + operand_data),
+                            offset: bus.cycle_read_u16(
+                                Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
+                                Wrap::NoWrap,
+                            ),
                         };
 
                         if !bus.cpu().status.index_register_size_or_break
@@ -338,24 +345,26 @@ impl Operand {
                         {
                             bus.cycle_io();
                         }
-                        addr.add2(bus.cpu().y.value, Wrap::NoWrap)
+                        addr.add(bus.cpu().y.value, Wrap::NoWrap)
                     }
                     AddressMode::DirectPageIndirectYIndexedLong => {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
-                        Address::from(
-                            bus.cycle_read_u24(Address::new(0, bus.cpu().d) + operand_data),
-                        )
-                        .add2(bus.cpu().y.value, Wrap::NoWrap)
+                        Address::from(bus.cycle_read_u24(
+                            Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
+                            Wrap::NoWrap,
+                        ))
+                        .add(bus.cpu().y.value, Wrap::NoWrap)
                     }
                     AddressMode::DirectPageIndirectLong => {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
-                        Address::from(
-                            bus.cycle_read_u24(Address::new(0, bus.cpu().d) + operand_data),
-                        )
+                        Address::from(bus.cycle_read_u24(
+                            Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
+                            Wrap::NoWrap,
+                        ))
                     }
                     AddressMode::Implied
                     | AddressMode::ImmediateU8
@@ -366,7 +375,12 @@ impl Operand {
                 Operand::Address(operand_data, mode, operand_addr)
             }
         };
-        (operand, instruction_addr + 1 + operand_size)
+        (
+            operand,
+            instruction_addr
+                .add(1_u8, Wrap::WrapBank)
+                .add(operand_size, Wrap::WrapBank),
+        )
     }
 
     #[inline]
@@ -388,7 +402,7 @@ impl Operand {
             Self::Accumulator => cpu.a.get(),
             _ => cpu
                 .bus
-                .cycle_read_generic::<T>(self.effective_addr().unwrap()),
+                .cycle_read_generic::<T>(self.effective_addr().unwrap(), Wrap::NoWrap),
         }
     }
 
@@ -398,9 +412,11 @@ impl Operand {
             Self::Implied => panic!("writing to implied operand"),
             Self::ImmediateU8(_) | Self::ImmediateU16(_) => panic!("writing to immediate operand"),
             Self::Accumulator => cpu.a.set(value),
-            _ => cpu
-                .bus
-                .cycle_write_generic::<T>(self.effective_addr().unwrap(), value),
+            _ => cpu.bus.cycle_write_generic::<T>(
+                self.effective_addr().unwrap(),
+                value,
+                Wrap::NoWrap,
+            ),
         }
     }
 

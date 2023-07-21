@@ -88,66 +88,49 @@ pub trait Bus {
     fn reset(&mut self);
     fn ppu_timer(&self) -> PpuTimer;
 
-    fn cycle_read_u16(&mut self, addr: Address) -> u16 {
+    fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
         u16::from_le_bytes([
             self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add2(1_u16, Wrap::NoWrap)),
+            self.cycle_read_u8(addr.add(1_u16, wrap)),
         ])
     }
 
-    fn cycle_read_u24(&mut self, addr: Address) -> u32 {
+    fn cycle_read_u24(&mut self, addr: Address, wrap: Wrap) -> u32 {
         u32::from_le_bytes([
             self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add2(1_u16, Wrap::NoWrap)),
-            self.cycle_read_u8(addr.add2(2_u16, Wrap::NoWrap)),
+            self.cycle_read_u8(addr.add(1_u16, wrap)),
+            self.cycle_read_u8(addr.add(2_u16, wrap)),
             0,
         ])
     }
 
     #[inline]
-    fn cycle_read_generic<T: UInt>(&mut self, addr: Address) -> T {
+    fn cycle_read_generic<T: UInt>(&mut self, addr: Address, wrap: Wrap) -> T {
         match T::SIZE {
             RegisterSize::U8 => T::from_u8(self.cycle_read_u8(addr)),
-            RegisterSize::U16 => T::from_u16(self.cycle_read_u16(addr)),
+            RegisterSize::U16 => T::from_u16(self.cycle_read_u16(addr, wrap)),
         }
     }
 
-    fn cycle_write_u16(&mut self, addr: Address, value: u16) {
+    fn cycle_write_u16(&mut self, addr: Address, value: u16, wrap: Wrap) {
         let bytes = value.to_le_bytes();
-        self.cycle_write_u8(addr.add2(1_u16, Wrap::NoWrap), bytes[1]);
+        self.cycle_write_u8(addr.add(1_u16, wrap), bytes[1]);
         self.cycle_write_u8(addr, bytes[0]);
     }
 
     #[inline]
-    fn cycle_write_generic<T: UInt>(&mut self, addr: Address, value: T) {
+    fn cycle_write_generic<T: UInt>(&mut self, addr: Address, value: T, wrap: Wrap) {
         match T::SIZE {
             RegisterSize::U8 => self.cycle_write_u8(addr, value.to_u8()),
-            RegisterSize::U16 => self.cycle_write_u16(addr, value.to_u16()),
+            RegisterSize::U16 => self.cycle_write_u16(addr, value.to_u16(), wrap),
         }
     }
 
-    fn peek_u16(&self, addr: Address) -> Option<u16> {
+    fn peek_u16(&self, addr: Address, wrap: Wrap) -> Option<u16> {
         Some(u16::from_le_bytes([
             self.peek_u8(addr)?,
-            self.peek_u8(addr.add2(1_u16, Wrap::NoWrap))?,
+            self.peek_u8(addr.add(1_u16, wrap))?,
         ]))
-    }
-
-    fn peek_u24(&self, addr: Address) -> Option<u32> {
-        Some(u32::from_le_bytes([
-            self.peek_u8(addr)?,
-            self.peek_u8(addr.add2(1_u16, Wrap::NoWrap))?,
-            self.peek_u8(addr.add2(2_u16, Wrap::NoWrap))?,
-            0,
-        ]))
-    }
-
-    #[inline]
-    fn peek<T: UInt>(&self, addr: Address) -> Option<T> {
-        match T::SIZE {
-            RegisterSize::U8 => self.peek_u8(addr).map(T::from_u8),
-            RegisterSize::U16 => self.peek_u16(addr).map(T::from_u16),
-        }
     }
 }
 
