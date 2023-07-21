@@ -1,5 +1,3 @@
-use intbits::Bits;
-
 use super::Cpu;
 use super::UInt;
 use super::STACK_BASE;

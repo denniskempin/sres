@@ -9,7 +9,10 @@ use anyhow::Context;
 use anyhow::Result;
 use xz2::read::XzDecoder;
 
+use crate::bus::Bus;
+use crate::bus::SresBus;
 use crate::cpu::status::StatusFlags;
+use crate::cpu::Cpu;
 use crate::memory::Address;
 
 /// Represents a snapshot of the current state of the system.
@@ -121,6 +124,45 @@ impl Trace {
         let decoder = XzDecoder::new(file);
         let trace_reader = io::BufReader::new(decoder);
         Ok(trace_reader.lines().map(|l| l?.parse()))
+    }
+
+    pub fn from_sres_cpu(cpu: &Cpu<SresBus>) -> Self {
+        let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
+        let ppu_timer = cpu.bus.ppu_timer;
+        Trace {
+            pc: cpu.pc,
+            instruction: instruction.operation.to_string(),
+            operand: instruction.operand_str.unwrap_or_default(),
+            operand_addr: instruction.effective_addr,
+            a: cpu.a.value,
+            x: cpu.x.value,
+            y: cpu.y.value,
+            s: cpu.s,
+            d: cpu.d,
+            db: cpu.db,
+            status: cpu.status,
+            v: ppu_timer.v,
+            h: ppu_timer.h_counter,
+            f: ppu_timer.f,
+        }
+    }
+
+    pub fn from_cpu(cpu: &Cpu<impl Bus>) -> Self {
+        let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
+        Trace {
+            pc: cpu.pc,
+            instruction: instruction.operation.to_string(),
+            operand: instruction.operand_str.unwrap_or_default(),
+            operand_addr: instruction.effective_addr,
+            a: cpu.a.value,
+            x: cpu.x.value,
+            y: cpu.y.value,
+            s: cpu.s,
+            d: cpu.d,
+            db: cpu.db,
+            status: cpu.status,
+            ..Default::default()
+        }
     }
 }
 

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use pretty_assertions::assert_eq;
 use sres_emulator::bus::fvh_to_master_clock;
 use sres_emulator::bus::Bus;
-use sres_emulator::bus::TestBus;
+use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::memory::Wrap;
 use sres_emulator::trace::Trace;
@@ -47,7 +47,7 @@ pub fn test_nmi_sub_cycle_accuracy() {
     ];
     for (v, h, expected_nmi, expected_internal_nmi) in TEST_CASES {
         // Create CPU with `bit $4210` program in memory
-        let mut bus = TestBus::default();
+        let mut bus = SresBus::default();
         bus.cycle_write_u16(0x00.into(), 0x2C, Wrap::NoWrap);
         bus.cycle_write_u16(0x01.into(), 0x4210, Wrap::NoWrap);
         let mut cpu = Cpu::new(bus);
@@ -59,9 +59,9 @@ pub fn test_nmi_sub_cycle_accuracy() {
         }
 
         // Execute `bit $4210` instruction
-        println!("before: {}", cpu.trace(true));
+        println!("before: {}", Trace::from_sres_cpu(&cpu));
         cpu.step();
-        println!("after: {}", cpu.trace(true));
+        println!("after: {}", Trace::from_sres_cpu(&cpu));
 
         // If the NMI bit is set, the negative status bit will be true.
         assert_eq!(cpu.status.negative, *expected_nmi);
@@ -196,7 +196,7 @@ fn run_krom_test(test_name: &str) {
     let trace_path = PathBuf::from(format!("tests/krom_tests/{test_name}-trace.log.xz"));
     let rom_path = PathBuf::from(format!("tests/krom_tests/{test_name}.sfc"));
 
-    let mut bus = TestBus::with_sfc(&rom_path).unwrap();
+    let mut bus = SresBus::with_sfc(&rom_path).unwrap();
     // CPUMSC reads 0x20 from $000000 at the first instruction. I cannot figure out why, it
     // should be mapped to RAM.
     bus.cycle_write_u8(0x000000.into(), 0x20);
@@ -215,7 +215,7 @@ fn run_krom_test(test_name: &str) {
             );
         }
 
-        let mut actual_line = cpu.trace(true);
+        let mut actual_line = Trace::from_sres_cpu(&cpu);
         previous_lines.push_front(actual_line.clone());
         previous_lines.truncate(50);
 

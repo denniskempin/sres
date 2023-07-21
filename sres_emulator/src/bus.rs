@@ -86,7 +86,6 @@ pub trait Bus {
     fn cycle_read_u8(&mut self, addr: Address) -> u8;
     fn cycle_write_u8(&mut self, addr: Address, value: u8);
     fn reset(&mut self);
-    fn ppu_timer(&self) -> PpuTimer;
 
     fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
         u16::from_le_bytes([
@@ -140,7 +139,7 @@ pub struct DmaChannel {
     das: u16,
 }
 
-pub struct TestBus {
+pub struct SresBus {
     pub memory: Vec<u8>,
     pub ppu_timer: PpuTimer,
     pub dma_channels: [DmaChannel; 8],
@@ -243,7 +242,7 @@ impl Default for PpuTimer {
     }
 }
 
-impl TestBus {
+impl SresBus {
     pub fn with_sfc(rom_path: &Path) -> Result<Self> {
         let mut bus = Self::default();
         // Load cartridge data into memory
@@ -301,7 +300,7 @@ impl TestBus {
     }
 }
 
-impl Default for TestBus {
+impl Default for SresBus {
     fn default() -> Self {
         Self {
             memory: vec![0; 0x1000000],
@@ -314,7 +313,7 @@ impl Default for TestBus {
     }
 }
 
-impl Bus for TestBus {
+impl Bus for SresBus {
     fn peek_u8(&self, addr: Address) -> Option<u8> {
         Some(self.memory[u32::from(addr) as usize])
     }
@@ -394,10 +393,6 @@ impl Bus for TestBus {
         // println!("  io_cycle: (6 cycles)");
         self.clock_speed = 6;
         self.advance_master_clock(self.clock_speed);
-    }
-
-    fn ppu_timer(&self) -> PpuTimer {
-        self.ppu_timer
     }
 
     fn reset(&mut self) {

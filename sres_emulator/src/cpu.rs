@@ -11,7 +11,6 @@ use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::memory::Address;
 use crate::memory::Wrap;
-use crate::trace::Trace;
 use crate::uint::RegisterSize;
 use crate::uint::UInt;
 
@@ -88,7 +87,7 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     /// Return the instruction meta data for the instruction at the given address
-    fn load_instruction_meta(&self, addr: Address) -> (InstructionMeta, Address) {
+    pub fn load_instruction_meta(&self, addr: Address) -> (InstructionMeta, Address) {
         let opcode = self.bus.peek_u8(addr).unwrap_or_default();
         (self.instruction_table[opcode as usize].meta)(self, addr)
     }
@@ -180,31 +179,6 @@ impl<BusT: Bus> Cpu<BusT> {
         self.status.negative = value.bit(T::N_BITS - 1);
         self.status.zero = value.is_zero();
     }
-
-    pub fn trace(&self, h_as_cycles: bool) -> Trace {
-        let (instruction, _) = self.load_instruction_meta(self.pc);
-        let ppu_timer = self.bus.ppu_timer();
-        Trace {
-            pc: self.pc,
-            instruction: instruction.operation.to_string(),
-            operand: instruction.operand_str.unwrap_or_default(),
-            operand_addr: instruction.effective_addr,
-            a: self.a.value,
-            x: self.x.value,
-            y: self.y.value,
-            s: self.s,
-            d: self.d,
-            db: self.db,
-            status: self.status,
-            v: ppu_timer.v,
-            h: if h_as_cycles {
-                ppu_timer.h_counter
-            } else {
-                ppu_timer.hdot()
-            },
-            f: ppu_timer.f,
-        }
-    }
 }
 
 #[cfg(test)]
@@ -217,7 +191,7 @@ mod tests {
 
     use super::Cpu;
     use crate::bus::Bus;
-    use crate::bus::TestBus;
+    use crate::bus::SresBus;
     use crate::cpu::VariableLengthRegister;
     use crate::memory::Address;
     use crate::memory::Wrap;
@@ -239,9 +213,9 @@ mod tests {
         assembled.stdout
     }
 
-    fn cpu_with_program(code: &str) -> Cpu<TestBus> {
+    fn cpu_with_program(code: &str) -> Cpu<SresBus> {
         let assembled = assemble(code);
-        Cpu::new(TestBus::with_program(&assembled))
+        Cpu::new(SresBus::with_program(&assembled))
     }
 
     #[test]
@@ -262,7 +236,7 @@ mod tests {
 
     #[test]
     pub fn test_stack_u8() {
-        let mut cpu = super::Cpu::new(TestBus::default());
+        let mut cpu = super::Cpu::new(SresBus::default());
         cpu.stack_push_u8(0x12);
         assert_eq!(
             cpu.bus
@@ -274,7 +248,7 @@ mod tests {
 
     #[test]
     pub fn test_stack() {
-        let mut cpu = super::Cpu::new(TestBus::default());
+        let mut cpu = super::Cpu::new(SresBus::default());
         cpu.stack_push_u16(0x1234);
         assert_eq!(
             cpu.bus
