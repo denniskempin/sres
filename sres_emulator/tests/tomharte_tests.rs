@@ -153,7 +153,6 @@ impl Bus for TestBus {
 const SKIP_OPCODES: &[u8] = &[
     0x00, // brk not properly implemented yet
     0x02, // cop not properly implemented yet
-    0x1E, // Needs extra cycle for writes.
     0x22, // jsl writes to stack before reading pc+3. Does not fit my abstraction.
 ];
 
@@ -248,7 +247,6 @@ pub fn test_opcodes_2x() {
 }
 
 #[test]
-#[ignore = "not passing yet"]
 pub fn test_opcodes_3x() {
     run_tomharte_test("3x");
 }

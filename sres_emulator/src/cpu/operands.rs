@@ -35,6 +35,13 @@ pub enum AddressMode {
     DirectPageIndirectLong,
 }
 
+#[derive(Copy, Clone, PartialEq)]
+pub enum RWM {
+    Read,
+    Write,
+    Modify,
+}
+
 #[derive(Copy, Clone)]
 pub enum Operand {
     Implied,
@@ -103,6 +110,7 @@ impl Operand {
         bus: &'a mut WrapperT,
         instruction_addr: Address,
         mode: AddressMode,
+        rwm: RWM,
     ) -> (Self, Address) {
         // The size of the operand part of the instruction depends on the address mode.
         let operand_size: u8 = match mode {
@@ -200,7 +208,10 @@ impl Operand {
                             offset: operand_data as u16,
                         }
                         .add_detect_page_cross(bus.cpu().x.value, Wrap::NoWrap);
-                        if !bus.cpu().status.index_register_size_or_break || page_cross {
+                        if !bus.cpu().status.index_register_size_or_break
+                            || page_cross
+                            || rwm != RWM::Read
+                        {
                             bus.cycle_io();
                         }
                         addr
@@ -332,7 +343,7 @@ impl Operand {
                             bank: bus.cpu().db,
                             offset: bus.cycle_read_u16(
                                 Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
-                                Wrap::NoWrap,
+                                Wrap::WrapBank,
                             ),
                         };
 
@@ -350,7 +361,7 @@ impl Operand {
                         }
                         Address::from(bus.cycle_read_u24(
                             Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
-                            Wrap::NoWrap,
+                            Wrap::WrapBank,
                         ))
                         .add(bus.cpu().y.value, Wrap::NoWrap)
                     }
