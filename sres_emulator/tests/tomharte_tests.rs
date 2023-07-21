@@ -13,10 +13,10 @@ use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
 use sres_emulator::bus::Bus;
-use sres_emulator::bus::PpuTimer;
 use sres_emulator::cpu::status::StatusFlags;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::memory::Address;
+use sres_emulator::trace::Trace;
 use xz2::read::XzDecoder;
 
 #[derive(Serialize, Deserialize)]
@@ -147,10 +147,6 @@ impl Bus for TestBus {
         self.cycles.push(Cycle::Internal);
     }
 
-    fn ppu_timer(&self) -> PpuTimer {
-        PpuTimer::default()
-    }
-
     fn reset(&mut self) {}
 }
 
@@ -181,7 +177,7 @@ fn run_tomharte_test(test_name: &str) {
 
         actual_state.step();
 
-        let state_matches = actual_state.trace(true) == expected_state.trace(true);
+        let state_matches = Trace::from_cpu(&actual_state) == Trace::from_cpu(&expected_state);
         let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
         let cycles_match = actual_state.bus.cycles == test_case.cycles();
         if state_matches && memory_matches && cycles_match {
@@ -194,14 +190,14 @@ fn run_tomharte_test(test_name: &str) {
         println!(
             "Case {:2X}: {}",
             opcode,
-            test_case.initial.create_cpu().trace(true)
+            Trace::from_cpu(&test_case.initial.create_cpu())
         );
         if !state_matches {
             println!(
                 "Result: {}",
                 StrComparison::new(
-                    &actual_state.trace(true).to_string(),
-                    &expected_state.trace(true).to_string()
+                    &Trace::from_cpu(&actual_state).to_string(),
+                    &Trace::from_cpu(&expected_state).to_string()
                 )
             )
         } else {
@@ -353,7 +349,7 @@ fn test_result_stats() {
                 .peek_u8(initial_state.pc)
                 .unwrap_or_default();
 
-            let state_matches = actual_state.trace(true) == expected_state.trace(true);
+            let state_matches = Trace::from_cpu(&actual_state) == Trace::from_cpu(&expected_state);
             let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
             let cycles_match = actual_state.bus.cycles.len() == test_case.cycles().len();
             if !state_matches || !memory_matches || !cycles_match {

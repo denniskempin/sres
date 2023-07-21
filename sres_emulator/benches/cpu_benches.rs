@@ -5,7 +5,7 @@ use criterion::criterion_main;
 use criterion::BatchSize;
 use criterion::Criterion;
 use sres_emulator::bus::Bus;
-use sres_emulator::bus::TestBus;
+use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -13,12 +13,12 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("krom_speed", |b| {
         b.iter_batched_ref(
             || {
-                let mut bus = TestBus::with_sfc(&rom_path).unwrap();
+                let mut bus = SresBus::with_sfc(&rom_path).unwrap();
                 // Fake RDNMI register. NMI is always true.
                 bus.cycle_write_u8(0x004210.into(), 0xC2);
                 Cpu::new(bus)
             },
-            |cpu: &mut Cpu<TestBus>| {
+            |cpu: &mut Cpu<SresBus>| {
                 for _ in 0..10 {
                     cpu.reset();
                     // The rom will eventually loop indefinitely, so limit to a fixed number of steps.
