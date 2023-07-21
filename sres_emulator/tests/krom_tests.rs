@@ -6,6 +6,7 @@ use sres_emulator::bus::fvh_to_master_clock;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::TestBus;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::memory::Wrap;
 use sres_emulator::trace::Trace;
 
 #[test]
@@ -47,8 +48,8 @@ pub fn test_nmi_sub_cycle_accuracy() {
     for (v, h, expected_nmi, expected_internal_nmi) in TEST_CASES {
         // Create CPU with `bit $4210` program in memory
         let mut bus = TestBus::default();
-        bus.cycle_write_u16(0x00.into(), 0x2C);
-        bus.cycle_write_u16(0x01.into(), 0x4210);
+        bus.cycle_write_u16(0x00.into(), 0x2C, Wrap::NoWrap);
+        bus.cycle_write_u16(0x01.into(), 0x4210, Wrap::NoWrap);
         let mut cpu = Cpu::new(bus);
         cpu.reset();
 

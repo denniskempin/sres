@@ -13,13 +13,8 @@ pub enum RegisterSize {
     U16,
 }
 
-pub trait UInt:
-    PrimInt + OverflowingSub + OverflowingAdd + BitXor + WrappingAdd + WrappingSub + Shl
-{
-    const N_BITS: usize;
-    const N_BYTES: usize;
-    const SIZE: RegisterSize;
-
+pub trait UIntTruncate {
+    // TODO: Rename to clarify these will truncate values
     fn to_u32(self) -> u32;
     fn to_u16(self) -> u16;
     fn to_u8(self) -> u8;
@@ -27,6 +22,14 @@ pub trait UInt:
     fn from_u32(target: u32) -> Self;
     fn from_u16(target: u16) -> Self;
     fn from_u8(target: u8) -> Self;
+}
+
+pub trait UInt:
+    PrimInt + OverflowingSub + OverflowingAdd + BitXor + WrappingAdd + WrappingSub + Shl + UIntTruncate
+{
+    const N_BITS: usize;
+    const N_BYTES: usize;
+    const SIZE: RegisterSize;
 
     fn bit(&self, index: usize) -> bool;
     fn set_bit(&mut self, index: usize, value: bool);
@@ -42,7 +45,7 @@ pub trait UInt:
     fn sub_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool);
 }
 
-impl UInt for u8 {
+impl UIntTruncate for u8 {
     #[inline]
     fn from_u32(target: u32) -> Self {
         target as u8
@@ -72,7 +75,9 @@ impl UInt for u8 {
     fn to_u8(self) -> u8 {
         self
     }
+}
 
+impl UInt for u8 {
     const N_BITS: usize = 8;
     const N_BYTES: usize = 1;
     const SIZE: RegisterSize = RegisterSize::U8;
@@ -111,7 +116,7 @@ impl UInt for u8 {
     }
 }
 
-impl UInt for u16 {
+impl UIntTruncate for u16 {
     #[inline]
     fn from_u32(target: u32) -> Self {
         target as u16
@@ -141,7 +146,9 @@ impl UInt for u16 {
     fn to_u8(self) -> u8 {
         self as u8
     }
+}
 
+impl UInt for u16 {
     const N_BITS: usize = 16;
     const N_BYTES: usize = 2;
     const SIZE: RegisterSize = RegisterSize::U16;
@@ -189,6 +196,38 @@ impl UInt for u16 {
         let ten_complement = 0x9999.wrapping_sub(&rhs);
         let (result, overflow, carry) = self.add_bcd(ten_complement, carry);
         (result, !overflow, carry)
+    }
+}
+
+impl UIntTruncate for u32 {
+    #[inline]
+    fn from_u32(target: u32) -> Self {
+        target
+    }
+
+    #[inline]
+    fn from_u16(target: u16) -> Self {
+        target as u32
+    }
+
+    #[inline]
+    fn from_u8(target: u8) -> Self {
+        target as u32
+    }
+
+    #[inline]
+    fn to_u32(self) -> u32 {
+        self
+    }
+
+    #[inline]
+    fn to_u16(self) -> u16 {
+        self as u16
+    }
+
+    #[inline]
+    fn to_u8(self) -> u8 {
+        self as u8
     }
 }
 
