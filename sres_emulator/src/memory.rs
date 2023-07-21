@@ -38,6 +38,16 @@ impl Address {
             Wrap::NoWrap => (u32::from(*self).wrapping_add(rhs.to_u32())).into(),
         }
     }
+
+    pub fn sub2<T: UInt>(&self, rhs: T, wrap: Wrap) -> Self {
+        match wrap {
+            Wrap::WrapBank => Address {
+                bank: self.bank,
+                offset: self.offset.wrapping_sub(rhs.to_u16()),
+            },
+            Wrap::NoWrap => (u32::from(*self).wrapping_sub(rhs.to_u32())).into(),
+        }
+    }
 }
 
 impl Add<usize> for Address {
