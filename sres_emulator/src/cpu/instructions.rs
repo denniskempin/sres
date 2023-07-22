@@ -163,7 +163,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x17] = instruction!(ora, DirectPageIndirectYIndexedLong, Read, A);
     opcodes[0x18] = instruction!(clc);
     opcodes[0x19] = instruction!(ora, AbsoluteYIndexed, Read, A);
-    opcodes[0x1A] = instruction!(inc, Accumulator, Read, A);
+    opcodes[0x1A] = instruction!(inc, Accumulator, Modify, A);
     opcodes[0x1B] = instruction!(tcs);
     opcodes[0x1C] = instruction!(trb, AbsoluteData, Read, A);
     opcodes[0x1D] = instruction!(ora, AbsoluteXIndexed, Read, A);
@@ -367,7 +367,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xE3] = instruction!(sbc, StackRelative, Read, A);
     opcodes[0xE4] = instruction!(cpx, DirectPage, Read, X);
     opcodes[0xE5] = instruction!(sbc, DirectPage, Read, A);
-    opcodes[0xE6] = instruction!(inc, DirectPage, Read, A);
+    opcodes[0xE6] = instruction!(inc, DirectPage, Modify, A);
     opcodes[0xE7] = instruction!(sbc, DirectPageIndirectLong, Read, A);
     opcodes[0xE8] = instruction!(inx, Implied, Read, X);
     opcodes[0xE9] = instruction!(sbc, ImmediateA, Read, A);
@@ -375,7 +375,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xEB] = instruction!(xba);
     opcodes[0xEC] = instruction!(cpx, AbsoluteData, Read, X);
     opcodes[0xED] = instruction!(sbc, AbsoluteData, Read, A);
-    opcodes[0xEE] = instruction!(inc, AbsoluteData, Read, A);
+    opcodes[0xEE] = instruction!(inc, AbsoluteData, Modify, A);
     opcodes[0xEF] = instruction!(sbc, AbsoluteLong, Read, A);
     opcodes[0xF0] = instruction!(beq, Relative, Read);
     opcodes[0xF0] = instruction!(beq, Relative, Read);
@@ -384,7 +384,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xF3] = instruction!(sbc, StackRelativeIndirectYIndexed, Read, A);
     opcodes[0xF4] = instruction!(pea, AbsoluteData, Read);
     opcodes[0xF5] = instruction!(sbc, DirectPageXIndexed, Read, A);
-    opcodes[0xF6] = instruction!(inc, DirectPageXIndexed, Read, A);
+    opcodes[0xF6] = instruction!(inc, DirectPageXIndexed, Modify, A);
     opcodes[0xF7] = instruction!(sbc, DirectPageIndirectYIndexedLong, Read, A);
     opcodes[0xF8] = instruction!(sed);
     opcodes[0xF9] = instruction!(sbc, AbsoluteYIndexed, Read, A);
@@ -392,7 +392,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0xFB] = instruction!(xce);
     opcodes[0xFC] = instruction!(jsr, AbsoluteXIndexedIndirectJump, Read);
     opcodes[0xFD] = instruction!(sbc, AbsoluteXIndexed, Read, A);
-    opcodes[0xFE] = instruction!(inc, AbsoluteXIndexed, Read, A);
+    opcodes[0xFE] = instruction!(inc, AbsoluteXIndexed, Modify, A);
     opcodes[0xFF] = instruction!(sbc, AbsoluteXIndexedLong, Read, A);
     opcodes
 }
@@ -867,8 +867,8 @@ fn stz<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn inc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    cpu.bus.cycle_io();
     let value: T = operand.load::<T>(cpu, Wrap::NoWrap).wrapping_add(&T::one());
+    cpu.bus.cycle_io();
     cpu.update_negative_zero_flags(value);
     operand.store(cpu, value, Wrap::WrapBank);
 }
@@ -946,14 +946,14 @@ fn bit<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn cpx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::WrapBank);
+    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
     let (value, overflow) = cpu.x.get::<T>().overflowing_sub(&operand_value);
     cpu.update_negative_zero_flags(value);
     cpu.status.carry = !overflow;
 }
 
 fn cpy<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::WrapBank);
+    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
     let (value, overflow) = cpu.y.get::<T>().overflowing_sub(&operand_value);
     cpu.update_negative_zero_flags(value);
     cpu.status.carry = !overflow;

@@ -110,9 +110,22 @@ impl UInt for u8 {
     }
 
     fn sub_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool) {
-        let ten_complement = 0x99.wrapping_sub(&rhs);
-        let (result, overflow, carry) = self.add_bcd(ten_complement, carry);
-        (result, !overflow, carry)
+        let lhs = *self as i16;
+        let rhs = rhs as i16 ^ 0xFF;
+
+        let mut result = (lhs & 0x0f) + (rhs & 0x0f) + carry as i16;
+        if result <= 0x0f {
+            result -= 0x06
+        };
+        let carry = result > 0x0f;
+
+        result = (lhs & 0xf0) + (rhs & 0xf0) + ((carry as i16) << 4) + (result & 0x0f);
+        let overflow = !(lhs ^ rhs) & (lhs ^ result) & 0x80 != 0;
+        if result <= 0xff {
+            result -= 0x60
+        }
+        let carry = result > 0xff;
+        (result as u8, overflow, carry)
     }
 }
 
@@ -193,9 +206,34 @@ impl UInt for u16 {
     }
 
     fn sub_bcd(&self, rhs: Self, carry: bool) -> (Self, bool, bool) {
-        let ten_complement = 0x9999.wrapping_sub(&rhs);
-        let (result, overflow, carry) = self.add_bcd(ten_complement, carry);
-        (result, !overflow, carry)
+        let lhs = *self as i32;
+        let rhs = rhs as i32 ^ 0xffff;
+
+        let mut result = (lhs & 0x000f) + (rhs & 0x000f) + carry as i32;
+        if result <= 0x000f {
+            result -= 0x0006;
+        };
+        let carry = result > 0x000f;
+
+        result = (lhs & 0x00f0) + (rhs & 0x00f0) + ((carry as i32) << 4) + (result & 0x000f);
+        if result <= 0x00ff {
+            result -= 0x0060;
+        };
+        let carry = result > 0x00ff;
+
+        result = (lhs & 0x0f00) + (rhs & 0x0f00) + ((carry as i32) << 8) + (result & 0x00ff);
+        if result <= 0x0fff {
+            result -= 0x0600;
+        };
+        let carry = result > 0x0fff;
+
+        result = (lhs & 0xf000) + (rhs & 0xf000) + ((carry as i32) << 12) + (result & 0x0fff);
+        let overflow = !(lhs ^ rhs) & (lhs ^ result) & 0x8000 != 0;
+        if result <= 0xffff {
+            result -= 0x6000;
+        }
+        let carry = result > 0xffff;
+        (result as u16, overflow, carry)
     }
 }
 
