@@ -493,18 +493,18 @@ fn tdc(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn trb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load(cpu, Wrap::NoWrap);
+    let value: T = operand.load(cpu);
     cpu.bus.cycle_io();
     let result = value & !cpu.a.get::<T>();
-    operand.store(cpu, result, Wrap::WrapBank);
+    operand.store(cpu, result);
     cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
 }
 
 fn tsb<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load(cpu, Wrap::NoWrap);
+    let value: T = operand.load(cpu);
     cpu.bus.cycle_io();
     let result = value | cpu.a.get::<T>();
-    operand.store(cpu, result, Wrap::WrapBank);
+    operand.store(cpu, result);
     cpu.status.zero = (value & cpu.a.get::<T>()) == T::zero();
 }
 
@@ -560,22 +560,22 @@ fn rtl(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn rol<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load(cpu, Wrap::NoWrap);
+    let value: T = operand.load(cpu);
     cpu.bus.cycle_io();
     let mut result = value << 1;
     result.set_bit(0, cpu.status.carry);
-    operand.store(cpu, result, Wrap::WrapBank);
+    operand.store(cpu, result);
     cpu.status.carry = value.msb();
     cpu.status.zero = result == T::zero();
     cpu.status.negative = result.msb();
 }
 
 fn ror<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load(cpu, Wrap::NoWrap);
+    let value: T = operand.load(cpu);
     cpu.bus.cycle_io();
     let mut result = value >> 1;
     result.set_bit(T::N_BITS - 1, cpu.status.carry);
-    operand.store(cpu, result, Wrap::WrapBank);
+    operand.store(cpu, result);
     cpu.status.carry = value.lsb();
     cpu.status.zero = result == T::zero();
     cpu.status.negative = result.msb();
@@ -720,7 +720,7 @@ fn per(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn phk(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.cycle_io();
-    cpu.stack_push_u8(cpu.db);
+    cpu.stack_push_u8(cpu.pc.bank);
 }
 
 fn php(cpu: &mut Cpu<impl Bus>) {
@@ -805,47 +805,47 @@ fn clv(cpu: &mut Cpu<impl Bus>) {
 
 fn rep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.bus.cycle_io();
-    let data: u8 = operand.load(cpu, Wrap::NoWrap);
+    let data: u8 = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) & !data).into();
     cpu.update_register_sizes();
 }
 
 fn sep(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     cpu.bus.cycle_io();
-    let data: u8 = operand.load(cpu, Wrap::NoWrap);
+    let data: u8 = operand.load(cpu);
     cpu.status = (u8::from(cpu.status) | data).into();
     cpu.update_register_sizes();
 }
 
 fn ldx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load(cpu, Wrap::NoWrap);
+    let value: T = operand.load(cpu);
     cpu.x.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn ldy<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load(cpu, Wrap::NoWrap);
+    let value: T = operand.load(cpu);
     cpu.y.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn lda<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load(cpu, Wrap::NoWrap);
+    let value: T = operand.load(cpu);
     cpu.a.set(value);
     cpu.update_negative_zero_flags(value);
 }
 
 fn lsr<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let data: T = operand.load(cpu, Wrap::NoWrap);
+    let data: T = operand.load(cpu);
     cpu.bus.cycle_io();
     let result = data >> 1;
     cpu.status.carry = data.lsb();
     cpu.update_negative_zero_flags(result);
-    operand.store(cpu, result, Wrap::WrapBank);
+    operand.store(cpu, result);
 }
 
 fn sta<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, cpu.a.get::<T>(), Wrap::WrapBank);
+    operand.store(cpu, cpu.a.get::<T>());
 }
 
 fn stp(cpu: &mut Cpu<impl Bus>) {
@@ -855,22 +855,22 @@ fn stp(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn sty<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, cpu.y.get::<T>(), Wrap::WrapBank);
+    operand.store(cpu, cpu.y.get::<T>());
 }
 
 fn stx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, cpu.x.get::<T>(), Wrap::WrapBank);
+    operand.store(cpu, cpu.x.get::<T>());
 }
 
 fn stz<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    operand.store(cpu, T::zero(), Wrap::WrapBank);
+    operand.store(cpu, T::zero());
 }
 
 fn inc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load::<T>(cpu, Wrap::NoWrap).wrapping_add(&T::one());
+    let value: T = operand.load::<T>(cpu).wrapping_add(&T::one());
     cpu.bus.cycle_io();
     cpu.update_negative_zero_flags(value);
-    operand.store(cpu, value, Wrap::WrapBank);
+    operand.store(cpu, value);
 }
 
 fn inx<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
@@ -888,10 +888,10 @@ fn iny<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
 }
 
 fn dec<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let value: T = operand.load::<T>(cpu, Wrap::NoWrap).wrapping_sub(&T::one());
+    let value: T = operand.load::<T>(cpu).wrapping_sub(&T::one());
     cpu.bus.cycle_io();
     cpu.update_negative_zero_flags(value);
-    operand.store(cpu, value, Wrap::WrapBank);
+    operand.store(cpu, value);
 }
 
 fn dex<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
@@ -909,14 +909,14 @@ fn dey<T: UInt>(cpu: &mut Cpu<impl Bus>, _: &Operand) {
 }
 
 fn ora<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
+    let operand_value: T = operand.load(cpu);
     let result = cpu.a.get::<T>() | operand_value;
     cpu.a.set(result);
     cpu.update_negative_zero_flags(result);
 }
 
 fn eor<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
+    let operand_value: T = operand.load(cpu);
     let result = cpu.a.get::<T>() ^ operand_value;
     cpu.a.set(result);
     cpu.update_negative_zero_flags(result);
@@ -929,14 +929,14 @@ fn tcd(cpu: &mut Cpu<impl Bus>) {
 }
 
 fn and<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
+    let operand_value: T = operand.load(cpu);
     let result = cpu.a.get::<T>() & operand_value;
     cpu.a.set(result);
     cpu.update_negative_zero_flags(result);
 }
 
 fn bit<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
+    let operand_value: T = operand.load(cpu);
     let result: T = cpu.a.get::<T>() & operand_value;
     if let Operand::Address(_, _, _) = operand {
         cpu.status.negative = operand_value.msb();
@@ -946,45 +946,45 @@ fn bit<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 }
 
 fn cpx<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
+    let operand_value: T = operand.load(cpu);
     let (value, overflow) = cpu.x.get::<T>().overflowing_sub(&operand_value);
     cpu.update_negative_zero_flags(value);
     cpu.status.carry = !overflow;
 }
 
 fn cpy<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
+    let operand_value: T = operand.load(cpu);
     let (value, overflow) = cpu.y.get::<T>().overflowing_sub(&operand_value);
     cpu.update_negative_zero_flags(value);
     cpu.status.carry = !overflow;
 }
 
 fn cmp<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let operand_value: T = operand.load(cpu, Wrap::NoWrap);
+    let operand_value: T = operand.load(cpu);
     let (value, overflow) = cpu.a.get::<T>().overflowing_sub(&operand_value);
     cpu.update_negative_zero_flags(value);
     cpu.status.carry = !overflow;
 }
 
 fn asl<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
-    let data: T = operand.load(cpu, Wrap::NoWrap);
+    let data: T = operand.load(cpu);
     cpu.bus.cycle_io();
     cpu.status.carry = data.msb();
     let result = data << 1;
     cpu.update_negative_zero_flags(result);
-    operand.store(cpu, result, Wrap::WrapBank);
+    operand.store(cpu, result);
 }
 
 fn adc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.decimal {
-        let value: T = operand.load(cpu, Wrap::NoWrap);
+        let value: T = operand.load(cpu);
         let (result, overflow, carry) = cpu.a.get::<T>().add_bcd(value, cpu.status.carry);
         cpu.update_negative_zero_flags(result);
         cpu.status.carry = carry;
         cpu.status.overflow = overflow;
         cpu.a.set(result);
     } else {
-        let value: T = operand.load(cpu, Wrap::NoWrap);
+        let value: T = operand.load(cpu);
         let (mut result, mut overflow) = cpu.a.get::<T>().overflowing_add(&value);
         if cpu.status.carry {
             let (result2, overflow2) = result.overflowing_add(&T::one());
@@ -1000,14 +1000,14 @@ fn adc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
 fn sbc<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
     if cpu.status.decimal {
-        let value: T = operand.load(cpu, Wrap::NoWrap);
+        let value: T = operand.load(cpu);
         let (result, overflow, carry) = cpu.a.get::<T>().sub_bcd(value, cpu.status.carry);
         cpu.update_negative_zero_flags(result);
         cpu.status.carry = carry;
         cpu.status.overflow = overflow;
         cpu.a.set(result);
     } else {
-        let value: T = operand.load(cpu, Wrap::NoWrap);
+        let value: T = operand.load(cpu);
         let (mut result, mut overflow) = cpu.a.get::<T>().overflowing_sub(&value);
         if !cpu.status.carry {
             let (result2, overflow2) = result.overflowing_sub(&T::one());
