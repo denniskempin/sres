@@ -19,7 +19,8 @@ pub enum AddressMode {
     AbsoluteXIndexed,
     AbsoluteXIndexedLong,
     AbsoluteYIndexed,
-    AbsoluteIndirect,
+    AbsoluteIndirectData,
+    AbsoluteIndirectJump,
     AbsoluteIndirectLong,
     AbsoluteXIndexedIndirect,
     StackRelative,
@@ -137,7 +138,8 @@ impl Operand {
             AddressMode::AbsoluteXIndexed => 2,
             AddressMode::AbsoluteXIndexedLong => 3,
             AddressMode::AbsoluteYIndexed => 2,
-            AddressMode::AbsoluteIndirect => 2,
+            AddressMode::AbsoluteIndirectData => 2,
+            AddressMode::AbsoluteIndirectJump => 2,
             AddressMode::AbsoluteIndirectLong => 2,
             AddressMode::AbsoluteXIndexedIndirect => 2,
             AddressMode::StackRelative => 1,
@@ -224,8 +226,12 @@ impl Operand {
                     AddressMode::AbsoluteXIndexedLong => {
                         Address::from(operand_data).add(bus.cpu().x.value, Wrap::NoWrap)
                     }
-                    AddressMode::AbsoluteIndirect => Address::new(
+                    AddressMode::AbsoluteIndirectData => Address::new(
                         bus.cpu().db,
+                        bus.cycle_read_u16(operand_data.into(), Wrap::NoWrap),
+                    ),
+                    AddressMode::AbsoluteIndirectJump => Address::new(
+                        bus.cpu().pc.bank,
                         bus.cycle_read_u16(operand_data.into(), Wrap::NoWrap),
                     ),
                     AddressMode::AbsoluteIndirectLong => {
@@ -281,7 +287,7 @@ impl Operand {
                             bank: bus.cpu().db,
                             offset: bus.cycle_read_u16(
                                 Address::new(0, bus.cpu().s).add(operand_data, Wrap::WrapBank),
-                                Wrap::NoWrap,
+                                Wrap::WrapBank,
                             ),
                         }
                         .add(bus.cpu().y.value, Wrap::NoWrap);
@@ -446,7 +452,8 @@ impl Operand {
                 AddressMode::AbsoluteXIndexed => format!("${:04x},x", value),
                 AddressMode::AbsoluteXIndexedLong => format!("${:06x},x", value),
                 AddressMode::AbsoluteYIndexed => format!("${:04x},y", value),
-                AddressMode::AbsoluteIndirect => format!("(${:04x})", value),
+                AddressMode::AbsoluteIndirectData => format!("(${:04x})", value),
+                AddressMode::AbsoluteIndirectJump => format!("(${:04x})", value),
                 AddressMode::AbsoluteIndirectLong => format!("[${:04x}]", value),
                 AddressMode::AbsoluteXIndexedIndirect => format!("(${:04x},x)", value),
                 AddressMode::StackRelative => format!("${:02x},s", value),
