@@ -27,9 +27,7 @@ const SKIP_OPCODES: &[u8] = &[
     0x02, // cop not properly implemented yet
     0x40, // RTI return address is off by one from BSNES behavior
     0x44, // MVP not implemented yet
-    0x4B, // PHK test cases possibly broken
     0x54, // MVN not implemented yet
-    0xC4, // CPY test case possibly broken
 ];
 
 #[test]
@@ -152,33 +150,21 @@ fn run_tomharte_test(test_name: &str) {
             opcode,
             Trace::from_cpu(&test_case.initial.create_cpu())
         );
-        if !state_matches {
-            println!(
-                "Result: {}",
-                StrComparison::new(
-                    &Trace::from_cpu(&actual_state).to_string(),
-                    &Trace::from_cpu(&expected_state).to_string()
-                )
+        println!(
+            "Result: {}",
+            StrComparison::new(
+                &Trace::from_cpu(&actual_state).to_string(),
+                &Trace::from_cpu(&expected_state).to_string()
             )
-        }
-
-        if !memory_matches {
-            println!(
-                "Memory: {}",
-                Comparison::new(&actual_state.bus.memory, &expected_state.bus.memory)
-            )
-        } else {
-            println!("Memory: {:?}", actual_state.bus.memory);
-        }
-
-        if !cycles_match {
-            println!(
-                "Cycles: {}",
-                Comparison::new(&actual_state.bus.cycles, &test_case.cycles())
-            )
-        } else {
-            println!("Cycles: {:?}", actual_state.bus.cycles);
-        }
+        );
+        println!(
+            "Memory: {}",
+            Comparison::new(&actual_state.bus.memory, &expected_state.bus.memory)
+        );
+        println!(
+            "Cycles: {}",
+            Comparison::new(&actual_state.bus.cycles, &test_case.cycles())
+        );
     }
 
     if !failed_opcodes.is_empty() {

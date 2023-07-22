@@ -7,6 +7,7 @@ use crate::uint::UIntTruncate;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub enum Wrap {
+    WrapPage,
     WrapBank,
     NoWrap,
 }
@@ -31,6 +32,11 @@ impl Address {
 
     pub fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
         match wrap {
+            Wrap::WrapPage => Address {
+                bank: self.bank,
+                offset: (self.offset & 0xFF00)
+                    + (self.offset as u8).wrapping_add(rhs.to_u8()) as u16,
+            },
             Wrap::WrapBank => Address {
                 bank: self.bank,
                 offset: self.offset.wrapping_add(rhs.to_u16()),
@@ -50,6 +56,11 @@ impl Address {
 
     pub fn sub<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
         match wrap {
+            Wrap::WrapPage => Address {
+                bank: self.bank,
+                offset: (self.offset & 0xFF00)
+                    + (self.offset as u8).wrapping_sub(rhs.to_u8()) as u16,
+            },
             Wrap::WrapBank => Address {
                 bank: self.bank,
                 offset: self.offset.wrapping_sub(rhs.to_u16()),

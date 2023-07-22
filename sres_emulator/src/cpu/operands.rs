@@ -36,6 +36,20 @@ pub enum AddressMode {
     DirectPageIndirectLong,
 }
 
+fn is_direct_page(address_mode: AddressMode) -> bool {
+    matches!(
+        address_mode,
+        AddressMode::DirectPage
+            | AddressMode::DirectPageXIndexed
+            | AddressMode::DirectPageYIndexed
+            | AddressMode::DirectPageXIndexedIndirect
+            | AddressMode::DirectPageIndirectYIndexed
+            | AddressMode::DirectPageIndirectYIndexedLong
+            | AddressMode::DirectPageIndirect
+            | AddressMode::DirectPageIndirectLong
+    )
+}
+
 #[derive(Copy, Clone, PartialEq)]
 pub enum Rwm {
     Read,
@@ -411,27 +425,33 @@ impl Operand {
     }
 
     #[inline]
-    pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, wrap: Wrap) -> T {
+    pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl Bus>) -> T {
         match self {
             Self::Implied => panic!("loading implied operand"),
             Self::ImmediateU8(value) => T::from_u8(*value),
             Self::ImmediateU16(value) => T::from_u16(*value),
             Self::Accumulator => cpu.a.get(),
-            _ => cpu
-                .bus
-                .cycle_read_generic::<T>(self.effective_addr().unwrap(), wrap),
+            Self::Address(_, address_mode, addr) => {
+                let wrap = if is_direct_page(*address_mode) {
+                    Wrap::WrapBank
+                } else {
+                    Wrap::NoWrap
+                };
+                cpu.bus.cycle_read_generic::<T>(*addr, wrap)
+            }
         }
     }
 
     #[inline]
-    pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, value: T, wrap: Wrap) {
+    pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, value: T) {
         match self {
             Self::Implied => panic!("writing to implied operand"),
             Self::ImmediateU8(_) | Self::ImmediateU16(_) => panic!("writing to immediate operand"),
             Self::Accumulator => cpu.a.set(value),
-            _ => cpu
-                .bus
-                .cycle_write_generic::<T>(self.effective_addr().unwrap(), value, wrap),
+            Self::Address(_, _, addr) => {
+                cpu.bus
+                    .cycle_write_generic::<T>(*addr, value, Wrap::WrapBank);
+            }
         }
     }
 
