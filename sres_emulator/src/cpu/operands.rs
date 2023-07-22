@@ -233,7 +233,7 @@ impl Operand {
                         bus.cycle_read_u16(operand_data.into(), Wrap::NoWrap),
                     ),
                     AddressMode::AbsoluteIndirectLong => {
-                        Address::from(bus.cycle_read_u24(operand_data.into(), Wrap::NoWrap))
+                        Address::from(bus.cycle_read_u24(operand_data.into(), Wrap::WrapBank))
                     }
                     AddressMode::AbsoluteXIndexedIndirectJump => {
                         bus.cycle_io();
@@ -411,7 +411,7 @@ impl Operand {
     }
 
     #[inline]
-    pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl Bus>) -> T {
+    pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, wrap: Wrap) -> T {
         match self {
             Self::Implied => panic!("loading implied operand"),
             Self::ImmediateU8(value) => T::from_u8(*value),
@@ -419,21 +419,19 @@ impl Operand {
             Self::Accumulator => cpu.a.get(),
             _ => cpu
                 .bus
-                .cycle_read_generic::<T>(self.effective_addr().unwrap(), Wrap::NoWrap),
+                .cycle_read_generic::<T>(self.effective_addr().unwrap(), wrap),
         }
     }
 
     #[inline]
-    pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, value: T) {
+    pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, value: T, wrap: Wrap) {
         match self {
             Self::Implied => panic!("writing to implied operand"),
             Self::ImmediateU8(_) | Self::ImmediateU16(_) => panic!("writing to immediate operand"),
             Self::Accumulator => cpu.a.set(value),
-            _ => cpu.bus.cycle_write_generic::<T>(
-                self.effective_addr().unwrap(),
-                value,
-                Wrap::WrapBank,
-            ),
+            _ => cpu
+                .bus
+                .cycle_write_generic::<T>(self.effective_addr().unwrap(), value, wrap),
         }
     }
 

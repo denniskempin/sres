@@ -301,25 +301,21 @@ pub fn test_opcodes_9x() {
 }
 
 #[test]
-#[ignore = "not passing yet"]
 pub fn test_opcodes_ax() {
     run_tomharte_test("ax");
 }
 
 #[test]
-#[ignore = "not passing yet"]
 pub fn test_opcodes_bx() {
     run_tomharte_test("bx");
 }
 
 #[test]
-#[ignore = "not passing yet"]
 pub fn test_opcodes_cx() {
     run_tomharte_test("cx");
 }
 
 #[test]
-#[ignore = "not passing yet"]
 pub fn test_opcodes_dx() {
     run_tomharte_test("dx");
 }
@@ -359,6 +355,9 @@ fn test_result_stats() {
                 .bus
                 .peek_u8(initial_state.pc)
                 .unwrap_or_default();
+            if SKIP_OPCODES.contains(&opcode) {
+                continue;
+            }
 
             let state_matches = Trace::from_cpu(&actual_state) == Trace::from_cpu(&expected_state);
             let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
