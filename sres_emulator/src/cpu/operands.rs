@@ -19,10 +19,9 @@ pub enum AddressMode {
     AbsoluteXIndexed,
     AbsoluteXIndexedLong,
     AbsoluteYIndexed,
-    AbsoluteIndirectData,
     AbsoluteIndirectJump,
     AbsoluteIndirectLong,
-    AbsoluteXIndexedIndirect,
+    AbsoluteXIndexedIndirectJump,
     StackRelative,
     StackRelativeIndirectYIndexed,
     Relative,
@@ -40,6 +39,7 @@ pub enum AddressMode {
 #[derive(Copy, Clone, PartialEq)]
 pub enum Rwm {
     Read,
+    Write,
     Modify,
 }
 
@@ -138,10 +138,9 @@ impl Operand {
             AddressMode::AbsoluteXIndexed => 2,
             AddressMode::AbsoluteXIndexedLong => 3,
             AddressMode::AbsoluteYIndexed => 2,
-            AddressMode::AbsoluteIndirectData => 2,
             AddressMode::AbsoluteIndirectJump => 2,
             AddressMode::AbsoluteIndirectLong => 2,
-            AddressMode::AbsoluteXIndexedIndirect => 2,
+            AddressMode::AbsoluteXIndexedIndirectJump => 2,
             AddressMode::StackRelative => 1,
             AddressMode::StackRelativeIndirectYIndexed => 1,
             AddressMode::Relative => 1,
@@ -204,7 +203,10 @@ impl Operand {
                             offset: operand_data as u16,
                         }
                         .add_detect_page_cross(bus.cpu().y.value, Wrap::NoWrap);
-                        if !bus.cpu().status.index_register_size_or_break || page_cross {
+                        if !bus.cpu().status.index_register_size_or_break
+                            || page_cross
+                            || rwm != Rwm::Read
+                        {
                             bus.cycle_io();
                         }
                         addr
@@ -226,10 +228,6 @@ impl Operand {
                     AddressMode::AbsoluteXIndexedLong => {
                         Address::from(operand_data).add(bus.cpu().x.value, Wrap::NoWrap)
                     }
-                    AddressMode::AbsoluteIndirectData => Address::new(
-                        bus.cpu().db,
-                        bus.cycle_read_u16(operand_data.into(), Wrap::NoWrap),
-                    ),
                     AddressMode::AbsoluteIndirectJump => Address::new(
                         bus.cpu().pc.bank,
                         bus.cycle_read_u16(operand_data.into(), Wrap::NoWrap),
@@ -237,12 +235,13 @@ impl Operand {
                     AddressMode::AbsoluteIndirectLong => {
                         Address::from(bus.cycle_read_u24(operand_data.into(), Wrap::NoWrap))
                     }
-                    AddressMode::AbsoluteXIndexedIndirect => {
+                    AddressMode::AbsoluteXIndexedIndirectJump => {
                         bus.cycle_io();
                         Address::new(
-                            bus.cpu().db,
+                            bus.cpu().pc.bank,
                             bus.cycle_read_u16(
-                                Address::from(operand_data).add(bus.cpu().x.value, Wrap::WrapBank),
+                                Address::new(bus.cpu().pc.bank, operand_data as u16)
+                                    .add(bus.cpu().x.value, Wrap::WrapBank),
                                 Wrap::NoWrap,
                             ),
                         )
@@ -250,17 +249,15 @@ impl Operand {
                     AddressMode::Relative => {
                         let relative_addr = operand_data as i8;
                         if relative_addr > 0 {
-                            Address {
-                                bank: bus.cpu().pc.bank,
-                                offset: (bus.cpu().pc.offset.wrapping_add(2))
-                                    .wrapping_add(relative_addr.unsigned_abs() as u16),
-                            }
+                            bus.cpu()
+                                .pc
+                                .add(2_u8, Wrap::WrapBank)
+                                .add(relative_addr.unsigned_abs(), Wrap::WrapBank)
                         } else {
-                            Address {
-                                bank: bus.cpu().pc.bank,
-                                offset: (bus.cpu().pc.offset.wrapping_add(2))
-                                    .wrapping_sub(relative_addr.unsigned_abs() as u16),
-                            }
+                            bus.cpu()
+                                .pc
+                                .add(2_u8, Wrap::WrapBank)
+                                .sub(relative_addr.unsigned_abs(), Wrap::WrapBank)
                         }
                     }
                     AddressMode::RelativeLong => {
@@ -268,13 +265,13 @@ impl Operand {
                         if relative_addr > 0 {
                             bus.cpu()
                                 .pc
-                                .add(3_u8, Wrap::NoWrap)
-                                .add(relative_addr.unsigned_abs(), Wrap::NoWrap)
+                                .add(3_u8, Wrap::WrapBank)
+                                .add(relative_addr.unsigned_abs(), Wrap::WrapBank)
                         } else {
                             bus.cpu()
                                 .pc
-                                .add(3_u8, Wrap::NoWrap)
-                                .sub(relative_addr.unsigned_abs(), Wrap::NoWrap)
+                                .add(3_u8, Wrap::WrapBank)
+                                .sub(relative_addr.unsigned_abs(), Wrap::WrapBank)
                         }
                     }
                     AddressMode::StackRelative => {
@@ -357,14 +354,15 @@ impl Operand {
                                 Wrap::WrapBank,
                             ),
                         };
-
+                        let (addr, page_cross) =
+                            addr.add_detect_page_cross(bus.cpu().y.value, Wrap::NoWrap);
                         if !bus.cpu().status.index_register_size_or_break
-                            || addr.offset.low_byte() as u16 + bus.cpu().y.value.low_byte() as u16
-                                > 0xff
+                            || page_cross
+                            || rwm != Rwm::Read
                         {
                             bus.cycle_io();
                         }
-                        addr.add(bus.cpu().y.value, Wrap::NoWrap)
+                        addr
                     }
                     AddressMode::DirectPageIndirectYIndexedLong => {
                         if bus.cpu().d.low_byte() > 0 {
@@ -434,7 +432,7 @@ impl Operand {
             _ => cpu.bus.cycle_write_generic::<T>(
                 self.effective_addr().unwrap(),
                 value,
-                Wrap::NoWrap,
+                Wrap::WrapBank,
             ),
         }
     }
@@ -452,10 +450,9 @@ impl Operand {
                 AddressMode::AbsoluteXIndexed => format!("${:04x},x", value),
                 AddressMode::AbsoluteXIndexedLong => format!("${:06x},x", value),
                 AddressMode::AbsoluteYIndexed => format!("${:04x},y", value),
-                AddressMode::AbsoluteIndirectData => format!("(${:04x})", value),
                 AddressMode::AbsoluteIndirectJump => format!("(${:04x})", value),
                 AddressMode::AbsoluteIndirectLong => format!("[${:04x}]", value),
-                AddressMode::AbsoluteXIndexedIndirect => format!("(${:04x},x)", value),
+                AddressMode::AbsoluteXIndexedIndirectJump => format!("(${:04x},x)", value),
                 AddressMode::StackRelative => format!("${:02x},s", value),
                 AddressMode::StackRelativeIndirectYIndexed => format!("(${:02x},s),y", value),
                 AddressMode::Relative => format!("{:+03x}", *value as i8),
