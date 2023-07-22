@@ -11,6 +11,7 @@ use crate::cpu::operands::ReadWrapper;
 use crate::cpu::operands::Rwm;
 use crate::memory::Address;
 use crate::memory::Wrap;
+use crate::uint::RegisterSize;
 
 pub struct InstructionMeta {
     pub operation: &'static str,
@@ -206,22 +207,22 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x42] = instruction!(wdm);
     opcodes[0x43] = instruction!(eor, StackRelative, Read, A);
     opcodes[0x45] = instruction!(eor, DirectPage, Read, A);
-    opcodes[0x46] = instruction!(lsr, DirectPage, Read, A);
+    opcodes[0x46] = instruction!(lsr, DirectPage, Modify, A);
     opcodes[0x47] = instruction!(eor, DirectPageIndirectLong, Read, A);
     opcodes[0x48] = instruction!(pha, Implied, Read, A);
     opcodes[0x49] = instruction!(eor, ImmediateA, Read, A);
-    opcodes[0x4A] = instruction!(lsr, Accumulator, Read, A);
+    opcodes[0x4A] = instruction!(lsr, Accumulator, Modify, A);
     opcodes[0x4B] = instruction!(phk);
     opcodes[0x4C] = instruction!(jmp, AbsoluteJump, Read);
     opcodes[0x4D] = instruction!(eor, AbsoluteData, Read, A);
-    opcodes[0x4E] = instruction!(lsr, AbsoluteData, Read, A);
+    opcodes[0x4E] = instruction!(lsr, AbsoluteData, Modify, A);
     opcodes[0x4F] = instruction!(eor, AbsoluteLong, Read, A);
     opcodes[0x50] = instruction!(bvc, Relative, Read);
     opcodes[0x51] = instruction!(eor, DirectPageIndirectYIndexed, Read, A);
     opcodes[0x52] = instruction!(eor, DirectPageIndirect, Read, A);
     opcodes[0x53] = instruction!(eor, StackRelativeIndirectYIndexed, Read, A);
     opcodes[0x55] = instruction!(eor, DirectPageXIndexed, Read, A);
-    opcodes[0x56] = instruction!(lsr, DirectPageXIndexed, Read, A);
+    opcodes[0x56] = instruction!(lsr, DirectPageXIndexed, Modify, A);
     opcodes[0x57] = instruction!(eor, DirectPageIndirectYIndexedLong, Read, A);
     opcodes[0x58] = instruction!(cli);
     opcodes[0x59] = instruction!(eor, AbsoluteYIndexed, Read, A);
@@ -229,7 +230,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x5B] = instruction!(tcd);
     opcodes[0x5C] = instruction!(jml, AbsoluteLong, Read);
     opcodes[0x5D] = instruction!(eor, AbsoluteXIndexed, Read, A);
-    opcodes[0x5E] = instruction!(lsr, AbsoluteXIndexed, Read, A);
+    opcodes[0x5E] = instruction!(lsr, AbsoluteXIndexed, Modify, A);
     opcodes[0x5F] = instruction!(eor, AbsoluteXIndexedLong, Read, A);
     opcodes[0x60] = instruction!(rts);
     opcodes[0x61] = instruction!(adc, DirectPageXIndexedIndirect, Read, A);
@@ -243,7 +244,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x69] = instruction!(adc, ImmediateA, Read, A);
     opcodes[0x6A] = instruction!(ror, Accumulator, Read, A);
     opcodes[0x6B] = instruction!(rtl);
-    opcodes[0x6C] = instruction!(jmp, AbsoluteIndirect, Read);
+    opcodes[0x6C] = instruction!(jmp, AbsoluteIndirectJump, Read);
     opcodes[0x6D] = instruction!(adc, AbsoluteData, Read, A);
     opcodes[0x6E] = instruction!(ror, AbsoluteData, Read, A);
     opcodes[0x6F] = instruction!(adc, AbsoluteLong, Read, A);
@@ -540,8 +541,8 @@ fn jsl(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 fn rts(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
-    cpu.bus.cycle_io();
     cpu.pc.offset = cpu.stack_pop_u16();
+    cpu.bus.cycle_io();
 }
 
 fn rti(cpu: &mut Cpu<impl Bus>) {
