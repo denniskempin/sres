@@ -1,3 +1,7 @@
+/// Executes CPU-only tests using test data at https://github.com/TomHarte/ProcessorTests
+///
+/// The data provides thousands of test cases with initial CPU state and expected CPU state after
+/// executing one instruction.
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
@@ -19,137 +23,6 @@ use sres_emulator::memory::Address;
 use sres_emulator::trace::Trace;
 use xz2::read::XzDecoder;
 
-#[derive(Serialize, Deserialize)]
-struct TestCpuState {
-    pc: u16,
-    s: u16,
-    p: u8,
-    a: u16,
-    x: u16,
-    y: u16,
-    dbr: u8,
-    d: u16,
-    pbr: u8,
-    e: u8,
-    ram: Vec<(u32, u8)>,
-}
-
-impl TestCpuState {
-    fn create_cpu(&self) -> Cpu<TestBus> {
-        let mut bus = TestBus::default();
-        for (addr, value) in &self.ram {
-            bus.memory.insert(*addr, *value);
-        }
-        let mut cpu = Cpu::new(bus);
-        cpu.pc = Address {
-            bank: self.pbr,
-            offset: self.pc,
-        };
-        cpu.s = self.s;
-        cpu.status = StatusFlags::from(self.p);
-        cpu.a.value = self.a;
-        cpu.x.value = self.x;
-        cpu.y.value = self.y;
-        cpu.db = self.dbr;
-        cpu.d = self.d;
-        cpu.emulation_mode = self.e == 1;
-        cpu
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-struct TestCase {
-    name: String,
-    initial: TestCpuState,
-    #[serde(rename = "final")]
-    final_: TestCpuState,
-    #[serde(rename = "cycles")]
-    raw_cycles: Vec<(Option<u32>, Option<u8>, String)>,
-}
-
-impl TestCase {
-    fn from_xz_file(path: &PathBuf) -> impl Iterator<Item = Self> {
-        let file = File::open(path).unwrap();
-        let reader = io::BufReader::new(XzDecoder::new(file));
-        // To speed things up, read json file line-by-line instead of reading the whole vector at
-        // once.
-        reader.lines().map(|line| {
-            let line = line.unwrap();
-            // Trim array syntax from each line
-            let trimmed = line
-                .trim_end_matches(']')
-                .trim_end_matches(',')
-                .trim_start_matches('[');
-
-            serde_json::from_str::<Self>(trimmed).unwrap()
-        })
-    }
-
-    fn cycles(&self) -> Vec<Cycle> {
-        self.raw_cycles
-            .iter()
-            .map(|(addr, value, state)| {
-                if !(state.contains('p') || state.contains('d')) {
-                    Cycle::Internal
-                } else if state.contains('r') {
-                    Cycle::Read(addr.unwrap_or_default(), value.unwrap_or_default())
-                } else if state.contains('w') {
-                    Cycle::Write(addr.unwrap_or_default(), value.unwrap_or_default())
-                } else {
-                    Cycle::Internal
-                }
-            })
-            .collect()
-    }
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-enum Cycle {
-    Read(u32, u8),
-    Write(u32, u8),
-    Internal,
-}
-
-impl Debug for Cycle {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Cycle::Read(addr, value) => write!(f, "R({:06X})={:02X}", addr, value),
-            Cycle::Write(addr, value) => write!(f, "W({:06X})={:02X}", addr, value),
-            Cycle::Internal => write!(f, "I"),
-        }
-    }
-}
-
-#[derive(Default)]
-struct TestBus {
-    pub memory: HashMap<u32, u8>,
-    pub cycles: Vec<Cycle>,
-}
-
-impl Bus for TestBus {
-    fn peek_u8(&self, addr: Address) -> Option<u8> {
-        Some(*self.memory.get(&u32::from(addr)).unwrap_or(&0))
-    }
-
-    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
-        let value = self.peek_u8(addr).unwrap_or_default();
-        self.cycles.push(Cycle::Read(u32::from(addr), value));
-        value
-    }
-
-    #[allow(clippy::single_match)]
-    fn cycle_write_u8(&mut self, addr: Address, val: u8) {
-        self.cycles.push(Cycle::Write(u32::from(addr), val));
-        self.memory.insert(u32::from(addr), val);
-    }
-
-    fn cycle_io(&mut self) {
-        self.cycles.push(Cycle::Internal);
-    }
-
-    fn reset(&mut self) {}
-}
-
 const SKIP_OPCODES: &[u8] = &[
     0x00, // brk not properly implemented yet
     0x02, // cop not properly implemented yet
@@ -159,81 +32,6 @@ const SKIP_OPCODES: &[u8] = &[
     0x54, // MVN not implemented yet
     0xC4, // CPY test case possibly broken
 ];
-
-fn run_tomharte_test(test_name: &str) {
-    let json_path = PathBuf::from(format!("tests/tomharte_tests/{test_name}.json.xz"));
-    let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
-
-    for test_case in TestCase::from_xz_file(&json_path) {
-        let mut actual_state = test_case.initial.create_cpu();
-        let expected_state = test_case.final_.create_cpu();
-        let opcode = actual_state
-            .bus
-            .peek_u8(actual_state.pc)
-            .unwrap_or_default();
-        if opcode == 1 {
-            continue;
-        }
-        if SKIP_OPCODES.contains(&opcode) {
-            continue;
-        }
-
-        actual_state.step();
-
-        let state_matches = Trace::from_cpu(&actual_state) == Trace::from_cpu(&expected_state);
-        let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
-        // Only compare cycle count. No need to be perfectly accurate with the order.
-        let cycles_match = actual_state.bus.cycles.len() == test_case.cycles().len();
-
-        if state_matches && memory_matches && cycles_match {
-            continue;
-        }
-
-        *failed_opcodes.entry(opcode).or_insert(0) += 1;
-
-        println!();
-        println!(
-            "Case {:2X}: {}",
-            opcode,
-            Trace::from_cpu(&test_case.initial.create_cpu())
-        );
-        if !state_matches {
-            println!(
-                "Result: {}",
-                StrComparison::new(
-                    &Trace::from_cpu(&actual_state).to_string(),
-                    &Trace::from_cpu(&expected_state).to_string()
-                )
-            )
-        }
-
-        if !memory_matches {
-            println!(
-                "Memory: {}",
-                Comparison::new(&actual_state.bus.memory, &expected_state.bus.memory)
-            )
-        } else {
-            println!("Memory: {:?}", actual_state.bus.memory);
-        }
-
-        if !cycles_match {
-            println!(
-                "Cycles: {}",
-                Comparison::new(&actual_state.bus.cycles, &test_case.cycles())
-            )
-        } else {
-            println!("Cycles: {:?}", actual_state.bus.cycles);
-        }
-    }
-
-    if !failed_opcodes.is_empty() {
-        println!("Failing tests by opcode:");
-        for failed_opcode in failed_opcodes.iter().sorted() {
-            println!("0x{:02X}: {}", failed_opcode.0, failed_opcode.1);
-        }
-        panic!("Some tests failed");
-    }
-}
 
 #[test]
 pub fn test_opcodes_0x() {
@@ -313,4 +111,231 @@ pub fn test_opcodes_ex() {
 #[test]
 pub fn test_opcodes_fx() {
     run_tomharte_test("fx");
+}
+
+/// Executes the test cases provided by tomharte_tests/{test_name}.json.xz
+fn run_tomharte_test(test_name: &str) {
+    let json_path = PathBuf::from(format!("tests/tomharte_tests/{test_name}.json.xz"));
+    let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
+
+    for test_case in TestCase::from_xz_file(&json_path) {
+        let mut actual_state = test_case.initial.create_cpu();
+        let expected_state = test_case.final_.create_cpu();
+        let opcode = actual_state
+            .bus
+            .peek_u8(actual_state.pc)
+            .unwrap_or_default();
+        if opcode == 1 {
+            continue;
+        }
+        if SKIP_OPCODES.contains(&opcode) {
+            continue;
+        }
+
+        actual_state.step();
+
+        // Compare before asserting to print additional information on failures
+        let state_matches = Trace::from_cpu(&actual_state) == Trace::from_cpu(&expected_state);
+        let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
+        // Only compare cycle count. No need to be perfectly accurate with the order.
+        let cycles_match = actual_state.bus.cycles.len() == test_case.cycles().len();
+
+        if state_matches && memory_matches && cycles_match {
+            // Test case passed!
+            continue;
+        }
+
+        *failed_opcodes.entry(opcode).or_insert(0) += 1;
+
+        println!();
+        println!(
+            "Case {:2X}: {}",
+            opcode,
+            Trace::from_cpu(&test_case.initial.create_cpu())
+        );
+        if !state_matches {
+            println!(
+                "Result: {}",
+                StrComparison::new(
+                    &Trace::from_cpu(&actual_state).to_string(),
+                    &Trace::from_cpu(&expected_state).to_string()
+                )
+            )
+        }
+
+        if !memory_matches {
+            println!(
+                "Memory: {}",
+                Comparison::new(&actual_state.bus.memory, &expected_state.bus.memory)
+            )
+        } else {
+            println!("Memory: {:?}", actual_state.bus.memory);
+        }
+
+        if !cycles_match {
+            println!(
+                "Cycles: {}",
+                Comparison::new(&actual_state.bus.cycles, &test_case.cycles())
+            )
+        } else {
+            println!("Cycles: {:?}", actual_state.bus.cycles);
+        }
+    }
+
+    if !failed_opcodes.is_empty() {
+        println!("Failing tests by opcode:");
+        for failed_opcode in failed_opcodes.iter().sorted() {
+            println!("0x{:02X}: {}", failed_opcode.0, failed_opcode.1);
+        }
+        panic!("Some tests failed");
+    }
+}
+
+/// CPU State format of the format described in
+/// https://github.com/TomHarte/ProcessorTests/tree/main/65816
+#[derive(Serialize, Deserialize)]
+struct TestCpuState {
+    pc: u16,
+    s: u16,
+    p: u8,
+    a: u16,
+    x: u16,
+    y: u16,
+    dbr: u8,
+    d: u16,
+    pbr: u8,
+    e: u8,
+    ram: Vec<(u32, u8)>,
+}
+
+impl TestCpuState {
+    /// Create a CPU instance with the state described in the test case.
+    fn create_cpu(&self) -> Cpu<TestBus> {
+        let mut bus = TestBus::default();
+        for (addr, value) in &self.ram {
+            bus.memory.insert(*addr, *value);
+        }
+        let mut cpu = Cpu::new(bus);
+        cpu.pc = Address {
+            bank: self.pbr,
+            offset: self.pc,
+        };
+        cpu.s = self.s;
+        cpu.status = StatusFlags::from(self.p);
+        cpu.a.value = self.a;
+        cpu.x.value = self.x;
+        cpu.y.value = self.y;
+        cpu.db = self.dbr;
+        cpu.d = self.d;
+        cpu.emulation_mode = self.e == 1;
+        cpu
+    }
+}
+
+/// A test implementation of the `Bus`.
+///
+/// Stores memore sparsely and records all bus cycles for comparison to the test data.
+#[derive(Default)]
+struct TestBus {
+    pub memory: HashMap<u32, u8>,
+    pub cycles: Vec<Cycle>,
+}
+
+impl Bus for TestBus {
+    fn peek_u8(&self, addr: Address) -> Option<u8> {
+        Some(*self.memory.get(&u32::from(addr)).unwrap_or(&0))
+    }
+
+    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
+        let value = self.peek_u8(addr).unwrap_or_default();
+        self.cycles.push(Cycle::Read(u32::from(addr), value));
+        value
+    }
+
+    #[allow(clippy::single_match)]
+    fn cycle_write_u8(&mut self, addr: Address, val: u8) {
+        self.cycles.push(Cycle::Write(u32::from(addr), val));
+        self.memory.insert(u32::from(addr), val);
+    }
+
+    fn cycle_io(&mut self) {
+        self.cycles.push(Cycle::Internal);
+    }
+
+    fn reset(&mut self) {}
+}
+
+/// A single test case, parsed from the JSON format described in
+/// https://github.com/TomHarte/ProcessorTests/tree/main/65816
+#[derive(Serialize, Deserialize)]
+struct TestCase {
+    /// Human readable name of the test case
+    name: String,
+    /// CPU state before execution
+    initial: TestCpuState,
+    /// CPU state after execution
+    #[serde(rename = "final")]
+    final_: TestCpuState,
+    /// Bus cycles during execution (address, value, state string)
+    #[serde(rename = "cycles")]
+    raw_cycles: Vec<(Option<u32>, Option<u8>, String)>,
+}
+
+impl TestCase {
+    /// Returns an iterator of test cases read from the compressed JSON file at `path`.
+    fn from_xz_file(path: &PathBuf) -> impl Iterator<Item = Self> {
+        let file = File::open(path).unwrap();
+        let reader = io::BufReader::new(XzDecoder::new(file));
+        // To speed things up, read json file line-by-line instead of reading the whole vector at
+        // once.
+        reader.lines().map(|line| {
+            let line = line.unwrap();
+            // Trim array syntax from each line
+            let trimmed = line
+                .trim_end_matches(']')
+                .trim_end_matches(',')
+                .trim_start_matches('[');
+
+            serde_json::from_str::<Self>(trimmed).unwrap()
+        })
+    }
+
+    /// Translates the JSON format cycles into the `Cycle` format.
+    fn cycles(&self) -> Vec<Cycle> {
+        self.raw_cycles
+            .iter()
+            .map(|(addr, value, state)| {
+                if !(state.contains('p') || state.contains('d')) {
+                    Cycle::Internal
+                } else if state.contains('r') {
+                    Cycle::Read(addr.unwrap_or_default(), value.unwrap_or_default())
+                } else if state.contains('w') {
+                    Cycle::Write(addr.unwrap_or_default(), value.unwrap_or_default())
+                } else {
+                    Cycle::Internal
+                }
+            })
+            .collect()
+    }
+}
+
+/// Description of a bus cycle
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum Cycle {
+    /// The bus was in read mode: (addr, value read)
+    Read(u32, u8),
+    /// The bus was in write mode: (addr, value written)
+    Write(u32, u8),
+    /// The bus performed an internal operation
+    Internal,
+}
+
+impl Debug for Cycle {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Cycle::Read(addr, value) => write!(f, "R({:06X})={:02X}", addr, value),
+            Cycle::Write(addr, value) => write!(f, "W({:06X})={:02X}", addr, value),
+            Cycle::Internal => write!(f, "I"),
+        }
+    }
 }
