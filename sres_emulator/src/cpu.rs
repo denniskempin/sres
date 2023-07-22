@@ -116,11 +116,8 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     fn stack_push_u8(&mut self, value: u8) {
-        if self.s == 0 {
-            return;
-        }
         self.bus.cycle_write_u8(Address::new(0, self.s), value);
-        self.s -= 1;
+        self.s = self.s.wrapping_sub(1);
     }
 
     fn stack_push_u16(&mut self, value: u16) {
@@ -148,9 +145,6 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     fn stack_pop_u8(&mut self) -> u8 {
-        if self.s == 0xFF {
-            return 0;
-        }
         self.s = self.s.wrapping_add(1);
         self.bus.cycle_read_u8(Address::new(0, self.s))
     }
