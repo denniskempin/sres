@@ -242,7 +242,7 @@ impl Operand {
                             bus.cycle_read_u16(
                                 Address::new(bus.cpu().pc.bank, operand_data as u16)
                                     .add(bus.cpu().x.value, Wrap::WrapBank),
-                                Wrap::NoWrap,
+                                Wrap::WrapBank,
                             ),
                         )
                     }
