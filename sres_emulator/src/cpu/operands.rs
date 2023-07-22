@@ -13,7 +13,8 @@ pub enum AddressMode {
     ImmediateA,  // Immediate value based on accumulator register size
     ImmediateXY, // Immediate value based on index register size
     Accumulator,
-    Absolute,
+    AbsoluteData,
+    AbsoluteJump,
     AbsoluteLong,
     AbsoluteXIndexed,
     AbsoluteXIndexedLong,
@@ -36,9 +37,8 @@ pub enum AddressMode {
 }
 
 #[derive(Copy, Clone, PartialEq)]
-pub enum RWM {
+pub enum Rwm {
     Read,
-    Write,
     Modify,
 }
 
@@ -110,7 +110,7 @@ impl Operand {
         bus: &'a mut WrapperT,
         instruction_addr: Address,
         mode: AddressMode,
-        rwm: RWM,
+        rwm: Rwm,
     ) -> (Self, Address) {
         // The size of the operand part of the instruction depends on the address mode.
         let operand_size: u8 = match mode {
@@ -131,7 +131,8 @@ impl Operand {
                     2
                 }
             }
-            AddressMode::Absolute => 2,
+            AddressMode::AbsoluteData => 2,
+            AddressMode::AbsoluteJump => 2,
             AddressMode::AbsoluteLong => 3,
             AddressMode::AbsoluteXIndexed => 2,
             AddressMode::AbsoluteXIndexedLong => 3,
@@ -185,8 +186,12 @@ impl Operand {
             // Operand is in memory, calculate the effective address
             _ => {
                 let operand_addr: Address = match mode {
-                    AddressMode::Absolute => Address {
+                    AddressMode::AbsoluteData => Address {
                         bank: bus.cpu().db,
+                        offset: operand_data as u16,
+                    },
+                    AddressMode::AbsoluteJump => Address {
+                        bank: bus.cpu().pc.bank,
                         offset: operand_data as u16,
                     },
                     AddressMode::AbsoluteLong => Address::from(operand_data),
@@ -210,7 +215,7 @@ impl Operand {
                         .add_detect_page_cross(bus.cpu().x.value, Wrap::NoWrap);
                         if !bus.cpu().status.index_register_size_or_break
                             || page_cross
-                            || rwm != RWM::Read
+                            || rwm != Rwm::Read
                         {
                             bus.cycle_io();
                         }
@@ -331,7 +336,7 @@ impl Operand {
                                 Address::new(0, bus.cpu().d)
                                     .add(operand_data, Wrap::WrapBank)
                                     .add(bus.cpu().x.value, Wrap::WrapBank),
-                                Wrap::NoWrap,
+                                Wrap::WrapBank,
                             ),
                         }
                     }
@@ -435,7 +440,8 @@ impl Operand {
             Self::ImmediateU8(value) => format!("#${:02x}", value),
             Self::ImmediateU16(value) => format!("#${:04x}", value),
             Self::Address(value, mode, _) => match mode {
-                AddressMode::Absolute => format!("${:04x}", value),
+                AddressMode::AbsoluteData => format!("${:04x}", value),
+                AddressMode::AbsoluteJump => format!("${:04x}", value),
                 AddressMode::AbsoluteLong => format!("${:06x}", value),
                 AddressMode::AbsoluteXIndexed => format!("${:04x},x", value),
                 AddressMode::AbsoluteXIndexedLong => format!("${:06x},x", value),
