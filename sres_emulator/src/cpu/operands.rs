@@ -52,6 +52,9 @@ pub enum AccessMode {
 
 /// A decoded operand. The operand may be an immediate value, the accumulator register, or lives
 /// at a specific address in memory.
+///
+/// The associated methods of this enum are inlined to allow the compiler to optimize away any
+/// unnecessary branches, especially when called with a constant address mode in the opcode table.
 #[derive(Copy, Clone)]
 pub enum Operand {
     Implied,
