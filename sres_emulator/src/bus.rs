@@ -362,7 +362,7 @@ impl Bus for SresBus {
                     }
                 },
                 0x43 => {
-                    let channel = addr.offset.bits(4..8);
+                    let channel = addr.offset.bits(4..8) % 8;
                     match addr.offset.bits(0..4) {
                         0x5 => {
                             self.dma_channels[channel as usize]
@@ -383,9 +383,7 @@ impl Bus for SresBus {
                     self.memory[u32::from(addr) as usize] = val;
                 }
             },
-            _ => {
-                unimplemented!("Banks > 0x1F are not implemented yet.");
-            }
+            _ => {}
         }
     }
 

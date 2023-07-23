@@ -105,9 +105,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     }
 
     let mut opcodes = [(); 256].map(|_| Instruction::<BusT> {
-        execute: |_| {
-            println!("Unimplemented instruction");
-        },
+        execute: |_| {},
         meta: |_, addr| {
             (
                 InstructionMeta {
