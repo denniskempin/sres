@@ -1,7 +1,6 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use sres_emulator::bus::TestBus;
 use sres_emulator::cartridge::Cartridge;
 
 fuzz_target!(|data: &[u8]| {
