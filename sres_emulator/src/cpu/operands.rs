@@ -1,3 +1,7 @@
+/// This module handles loading of operands used by instructions.
+///
+/// Each instruction in the [opcode table](build_opcode_table) has an associated
+/// address mode, which is decoded here to handle how the operand is loaded and stored.
 use super::Cpu;
 use super::UInt;
 use super::STACK_BASE;
@@ -6,6 +10,7 @@ use crate::memory::Address;
 use crate::memory::Wrap;
 use crate::uint::U16Ext;
 
+/// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]
 pub enum AddressMode {
     Implied,
@@ -36,27 +41,17 @@ pub enum AddressMode {
     DirectPageIndirectLong,
 }
 
-fn is_direct_page(address_mode: AddressMode) -> bool {
-    matches!(
-        address_mode,
-        AddressMode::DirectPage
-            | AddressMode::DirectPageXIndexed
-            | AddressMode::DirectPageYIndexed
-            | AddressMode::DirectPageXIndexedIndirect
-            | AddressMode::DirectPageIndirectYIndexed
-            | AddressMode::DirectPageIndirectYIndexedLong
-            | AddressMode::DirectPageIndirect
-            | AddressMode::DirectPageIndirectLong
-    )
-}
-
+/// Describes how the instruction will access the operand. This may subtly affect the
+/// load/store behavior.
 #[derive(Copy, Clone, PartialEq)]
-pub enum Rwm {
+pub enum AccessMode {
     Read,
     Write,
     Modify,
 }
 
+/// A decoded operand. The operand may be an immediate value, the accumulator register, or lives
+/// at a specific address in memory.
 #[derive(Copy, Clone)]
 pub enum Operand {
     Implied,
@@ -66,66 +61,40 @@ pub enum Operand {
     Address(u32, AddressMode, Address),
 }
 
-pub trait ReadOrPeekWrapper<'a, T: Bus>
-where
-    Self: Sized,
-{
-    fn cpu(&self) -> &Cpu<T>;
-    fn cycle_io(&mut self);
-    fn cycle_read_u8(&mut self, addr: Address) -> u8;
-
-    fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
-        u16::from_le_bytes([
-            self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add(1_u16, wrap)),
-        ])
-    }
-
-    fn cycle_read_u24(&mut self, addr: Address, wrap: Wrap) -> u32 {
-        u32::from_le_bytes([
-            self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add(1_u16, wrap)),
-            self.cycle_read_u8(addr.add(2_u16, wrap)),
-            0,
-        ])
-    }
-}
-
-pub struct PeekWrapper<'a, T: Bus>(pub &'a Cpu<T>);
-impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for PeekWrapper<'a, T> {
-    fn cpu(&self) -> &Cpu<T> {
-        self.0
-    }
-
-    fn cycle_io(&mut self) {}
-
-    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
-        self.0.bus.peek_u8(addr).unwrap_or_default()
-    }
-}
-
-pub struct ReadWrapper<'a, T: Bus>(pub &'a mut Cpu<T>);
-impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for ReadWrapper<'a, T> {
-    fn cpu(&self) -> &Cpu<T> {
-        self.0
-    }
-
-    fn cycle_io(&mut self) {
-        self.0.bus.cycle_io()
-    }
-
-    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
-        self.0.bus.cycle_read_u8(addr)
-    }
-}
-
 impl Operand {
+    /// Decodes the next operand located at the program counter.
+    ///
+    /// Returns the operand and address of the next instruction.
     #[inline]
-    pub fn decode<'a, BusT: Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
+    pub fn decode(cpu: &mut Cpu<impl Bus>, mode: AddressMode, rwm: AccessMode) -> (Self, Address) {
+        let pc = cpu.pc;
+        Self::decode_impl(&mut ReadWrapper(cpu), pc, mode, rwm)
+    }
+
+    /// Peeks at the operand at `instruction_addr` without modifying the system state.
+    ///
+    /// Returns the operand and address of the next instruction.
+    #[inline]
+    pub fn peek(
+        cpu: &Cpu<impl Bus>,
+        instruction_addr: Address,
+        mode: AddressMode,
+        rwm: AccessMode,
+    ) -> (Self, Address) {
+        Self::decode_impl(&mut PeekWrapper(cpu), instruction_addr, mode, rwm)
+    }
+
+    /// Decodes an operand from the bus.
+    ///
+    /// Uses the [ReadOrPeekWrapper] to use the same logic for decoding operands during
+    /// execution (where read cycles will modify the system state), and decoding
+    /// operands for disassemply without modifying the system state.
+    #[inline]
+    fn decode_impl<'a, BusT: Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
         bus: &'a mut WrapperT,
         instruction_addr: Address,
         mode: AddressMode,
-        rwm: Rwm,
+        rwm: AccessMode,
     ) -> (Self, Address) {
         // The size of the operand part of the instruction depends on the address mode.
         let operand_size: u8 = match mode {
@@ -219,7 +188,7 @@ impl Operand {
                         .add_detect_page_cross(bus.cpu().y.value, Wrap::NoWrap);
                         if !bus.cpu().status.index_register_size_or_break
                             || page_cross
-                            || rwm != Rwm::Read
+                            || rwm != AccessMode::Read
                         {
                             bus.cycle_io();
                         }
@@ -233,7 +202,7 @@ impl Operand {
                         .add_detect_page_cross(bus.cpu().x.value, Wrap::NoWrap);
                         if !bus.cpu().status.index_register_size_or_break
                             || page_cross
-                            || rwm != Rwm::Read
+                            || rwm != AccessMode::Read
                         {
                             bus.cycle_io();
                         }
@@ -372,7 +341,7 @@ impl Operand {
                             addr.add_detect_page_cross(bus.cpu().y.value, Wrap::NoWrap);
                         if !bus.cpu().status.index_register_size_or_break
                             || page_cross
-                            || rwm != Rwm::Read
+                            || rwm != AccessMode::Read
                         {
                             bus.cycle_io();
                         }
@@ -414,6 +383,7 @@ impl Operand {
         )
     }
 
+    /// Returns the effective [Address] of the operand lies in memory. None otherwise.
     #[inline]
     pub fn effective_addr(&self) -> Option<Address> {
         match self {
@@ -424,6 +394,9 @@ impl Operand {
         }
     }
 
+    /// Load the operand. This may perform [bus](Bus) cycles to load the operand from memory.
+    ///
+    /// This method supports both u8 and u16 operands.
     #[inline]
     pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl Bus>) -> T {
         match self {
@@ -432,7 +405,7 @@ impl Operand {
             Self::ImmediateU16(value) => T::from_u16(*value),
             Self::Accumulator => cpu.a.get(),
             Self::Address(_, address_mode, addr) => {
-                let wrap = if is_direct_page(*address_mode) {
+                let wrap = if matches!(*address_mode, AddressMode::DirectPage) {
                     Wrap::WrapBank
                 } else {
                     Wrap::NoWrap
@@ -442,6 +415,9 @@ impl Operand {
         }
     }
 
+    /// Store the operand. This may perform [bus](Bus) cycles to save the operand to memory.
+    ///
+    /// This method supports both u8 and u16 operands.
     #[inline]
     pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, value: T) {
         match self {
@@ -455,6 +431,9 @@ impl Operand {
         }
     }
 
+    /// Formats the operand as a human-readable string.
+    ///
+    /// The format matches that of BSNES disassembly.
     #[inline]
     pub fn format(&self) -> String {
         match self {
@@ -490,5 +469,69 @@ impl Operand {
                 | AddressMode::Accumulator => unreachable!(),
             },
         }
+    }
+}
+
+/// A wrapper around a CPU that will either perform reads on a mutable bus or
+/// peeks on an immutable bus.
+///
+/// This allows logic for decoding of operands to be re-used for execution (mutable bus)
+/// and disassembly generation (immutable bus).
+trait ReadOrPeekWrapper<'a, T: Bus>
+where
+    Self: Sized,
+{
+    /// Returns an immutable reference to the underlying CPU.
+    fn cpu(&self) -> &Cpu<T>;
+
+    fn cycle_io(&mut self);
+    fn cycle_read_u8(&mut self, addr: Address) -> u8;
+
+    fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
+        u16::from_le_bytes([
+            self.cycle_read_u8(addr),
+            self.cycle_read_u8(addr.add(1_u16, wrap)),
+        ])
+    }
+
+    fn cycle_read_u24(&mut self, addr: Address, wrap: Wrap) -> u32 {
+        u32::from_le_bytes([
+            self.cycle_read_u8(addr),
+            self.cycle_read_u8(addr.add(1_u16, wrap)),
+            self.cycle_read_u8(addr.add(2_u16, wrap)),
+            0,
+        ])
+    }
+}
+
+/// Implements ReadOrPeekWrapper for an immutable bus. Will perform peek's instead
+/// of read's, since a read operation will modify the state of the system.
+struct PeekWrapper<'a, T: Bus>(pub &'a Cpu<T>);
+impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for PeekWrapper<'a, T> {
+    fn cpu(&self) -> &Cpu<T> {
+        self.0
+    }
+
+    fn cycle_io(&mut self) {}
+
+    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
+        self.0.bus.peek_u8(addr).unwrap_or_default()
+    }
+}
+
+/// Implements ReadOrPeekWrapper for a mutable bus. Will perform read bus cycles that
+/// will modify the system state.
+struct ReadWrapper<'a, T: Bus>(pub &'a mut Cpu<T>);
+impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for ReadWrapper<'a, T> {
+    fn cpu(&self) -> &Cpu<T> {
+        self.0
+    }
+
+    fn cycle_io(&mut self) {
+        self.0.bus.cycle_io()
+    }
+
+    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
+        self.0.bus.cycle_read_u8(addr)
     }
 }
