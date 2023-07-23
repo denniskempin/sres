@@ -9,7 +9,7 @@ use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
 
 fn criterion_benchmark(c: &mut Criterion) {
-    let rom_path = PathBuf::from("sres_emulator/tests/cpu/CPUADC.sfc");
+    let rom_path = PathBuf::from("tests/krom_tests/CPUADC.sfc");
     c.bench_function("krom_speed", |b| {
         b.iter_batched_ref(
             || {

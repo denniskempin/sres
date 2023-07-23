@@ -11,6 +11,7 @@ use std::io;
 use std::io::BufRead;
 use std::path::PathBuf;
 
+use itertools::Itertools;
 use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
@@ -122,9 +123,6 @@ fn run_tomharte_test(test_name: &str) {
             .bus
             .peek_u8(actual_state.pc)
             .unwrap_or_default();
-        if opcode == 1 {
-            continue;
-        }
         if SKIP_OPCODES.contains(&opcode) {
             continue;
         }
