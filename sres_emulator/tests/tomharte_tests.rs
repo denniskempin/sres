@@ -113,7 +113,8 @@ pub fn test_opcodes_fx() {
 
 /// Executes the test cases provided by tomharte_tests/{test_name}.json.xz
 fn run_tomharte_test(test_name: &str) {
-    let json_path = PathBuf::from(format!("tests/tomharte_tests/{test_name}.json.xz"));
+    let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let json_path = root_dir.join(format!("tests/tomharte_tests/{test_name}.json.xz"));
     let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
 
     for test_case in TestCase::from_xz_file(&json_path) {

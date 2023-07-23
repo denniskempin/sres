@@ -1,12 +1,13 @@
-pub mod instructions;
+mod instructions;
+mod opcode_table;
 mod operands;
 pub mod status;
 
 use intbits::Bits;
 
-use self::instructions::build_opcode_table;
-use self::instructions::Instruction;
-use self::instructions::InstructionMeta;
+use self::opcode_table::build_opcode_table;
+use self::opcode_table::Instruction;
+use self::opcode_table::InstructionMeta;
 use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::memory::Address;
