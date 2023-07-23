@@ -4,11 +4,9 @@ use super::EmuVectorTable;
 use super::NativeVectorTable;
 use super::UInt;
 use crate::bus::Bus;
+use crate::cpu::operands::AccessMode;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
-use crate::cpu::operands::PeekWrapper;
-use crate::cpu::operands::ReadWrapper;
-use crate::cpu::operands::Rwm;
 use crate::memory::Address;
 use crate::memory::Wrap;
 
@@ -54,19 +52,14 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         ($method: ident, $address_mode: expr, $rwm: expr) => {
             Instruction::<BusT> {
                 execute: |cpu| {
-                    let pc = cpu.pc;
-                    let (operand, next_addr) =
-                        Operand::decode(&mut ReadWrapper(cpu), pc, $address_mode, $rwm);
+                    let (operand, next_addr) = Operand::decode(cpu, $address_mode, $rwm);
+
                     cpu.pc = next_addr;
                     $method(cpu, &operand);
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) = Operand::decode(
-                        &mut PeekWrapper(cpu),
-                        instruction_addr,
-                        $address_mode,
-                        $rwm,
-                    );
+                    let (operand, next_addr) =
+                        Operand::peek(cpu, instruction_addr, $address_mode, $rwm);
                     (
                         InstructionMeta {
                             operation: stringify!($method),
@@ -82,9 +75,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         ($method: ident, $address_mode: expr, $rwm: expr, $register: expr) => {
             Instruction::<BusT> {
                 execute: |cpu| {
-                    let pc = cpu.pc;
-                    let (operand, next_addr) =
-                        Operand::decode(&mut ReadWrapper(cpu), pc, $address_mode, $rwm);
+                    let (operand, next_addr) = Operand::decode(cpu, $address_mode, $rwm);
                     cpu.pc = next_addr;
                     let is_u8 = match $register {
                         Register::A => cpu.status.accumulator_register_size,
@@ -98,12 +89,8 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                     }
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) = Operand::decode(
-                        &mut PeekWrapper(cpu),
-                        instruction_addr,
-                        $address_mode,
-                        $rwm,
-                    );
+                    let (operand, next_addr) =
+                        Operand::peek(cpu, instruction_addr, $address_mode, $rwm);
                     (
                         InstructionMeta {
                             operation: stringify!($method),
@@ -133,9 +120,9 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         },
     });
 
+    use AccessMode::*;
     use AddressMode::*;
     use Register::*;
-    use Rwm::*;
     opcodes[0x00] = instruction!(brk);
     opcodes[0x01] = instruction!(ora, DirectPageXIndexedIndirect, Read, A);
     opcodes[0x02] = instruction!(cop, ImmediateU8, Read);
