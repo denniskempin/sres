@@ -131,7 +131,6 @@ pub fn test_cpulsr() {
 }
 
 #[test]
-#[ignore = "Instructions not implemented yet"]
 pub fn test_cpumov() {
     run_krom_test("CPUMOV");
 }
