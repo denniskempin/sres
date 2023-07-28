@@ -39,6 +39,7 @@ pub enum AddressMode {
     DirectPageIndirectYIndexedLong,
     DirectPageIndirect,
     DirectPageIndirectLong,
+    MoveAddressPair, // Used by MVN and MVP
 }
 
 /// Describes how the instruction will access the operand. This may subtly affect the
@@ -62,6 +63,7 @@ pub enum Operand {
     ImmediateU8(u8),
     ImmediateU16(u16),
     Address(u32, AddressMode, Address),
+    MoveAddressPair(u8, u8),
 }
 
 impl Operand {
@@ -139,6 +141,7 @@ impl Operand {
             AddressMode::DirectPageIndirectYIndexedLong => 1,
             AddressMode::DirectPageIndirect => 1,
             AddressMode::DirectPageIndirectLong => 1,
+            AddressMode::MoveAddressPair => 2,
         };
 
         // Regardless of how many bytes were read, store them all as u32 for simplicity.
@@ -170,6 +173,10 @@ impl Operand {
                     Operand::ImmediateU16(operand_data as u16)
                 }
             }
+            AddressMode::MoveAddressPair => Operand::MoveAddressPair(
+                (operand_data as u16).high_byte(),
+                (operand_data as u16).low_byte(),
+            ),
             // Operand is in memory, calculate the effective address
             _ => {
                 let operand_addr: Address = match mode {
@@ -373,7 +380,8 @@ impl Operand {
                     | AddressMode::ImmediateU8
                     | AddressMode::ImmediateA
                     | AddressMode::ImmediateXY
-                    | AddressMode::Accumulator => unreachable!(),
+                    | AddressMode::Accumulator
+                    | AddressMode::MoveAddressPair => unreachable!(),
                 };
                 Operand::Address(operand_data, mode, operand_addr)
             }
@@ -390,9 +398,11 @@ impl Operand {
     #[inline]
     pub fn effective_addr(&self) -> Option<Address> {
         match self {
-            Self::Implied | Self::Accumulator | Self::ImmediateU8(_) | Self::ImmediateU16(_) => {
-                None
-            }
+            Self::Implied
+            | Self::Accumulator
+            | Self::ImmediateU8(_)
+            | Self::ImmediateU16(_)
+            | Self::MoveAddressPair(_, _) => None,
             Self::Address(_, _, addr) => Some(*addr),
         }
     }
@@ -404,6 +414,7 @@ impl Operand {
     pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl Bus>) -> T {
         match self {
             Self::Implied => panic!("loading implied operand"),
+            Self::MoveAddressPair(_, _) => panic!("loading from MoveAddressPair"),
             Self::ImmediateU8(value) => T::from_u8(*value),
             Self::ImmediateU16(value) => T::from_u16(*value),
             Self::Accumulator => cpu.a.get(),
@@ -425,6 +436,7 @@ impl Operand {
     pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, value: T) {
         match self {
             Self::Implied => panic!("writing to implied operand"),
+            Self::MoveAddressPair(_, _) => panic!("writing to MoveAddressPair"),
             Self::ImmediateU8(_) | Self::ImmediateU16(_) => panic!("writing to immediate operand"),
             Self::Accumulator => cpu.a.set(value),
             Self::Address(_, _, addr) => {
@@ -443,6 +455,7 @@ impl Operand {
             Self::Implied | Self::Accumulator => "".to_string(),
             Self::ImmediateU8(value) => format!("#${:02x}", value),
             Self::ImmediateU16(value) => format!("#${:04x}", value),
+            Self::MoveAddressPair(s, d) => format!("${:02x}, ${:02x}", s, d),
             Self::Address(value, mode, _) => match mode {
                 AddressMode::AbsoluteData => format!("${:04x}", value),
                 AddressMode::AbsoluteJump => format!("${:04x}", value),
@@ -469,7 +482,8 @@ impl Operand {
                 | AddressMode::ImmediateU8
                 | AddressMode::ImmediateA
                 | AddressMode::ImmediateXY
-                | AddressMode::Accumulator => unreachable!(),
+                | AddressMode::Accumulator
+                | AddressMode::MoveAddressPair => unreachable!(),
             },
         }
     }

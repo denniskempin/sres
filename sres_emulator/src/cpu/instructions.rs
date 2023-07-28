@@ -652,3 +652,49 @@ pub fn wai(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
 }
+
+pub fn mvn(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if let Operand::MoveAddressPair(source_bank, destination_bank) = *operand {
+        cpu.db = destination_bank;
+
+        let value = cpu
+            .bus
+            .cycle_read_u8(Address::new(source_bank, cpu.x.value));
+        cpu.bus
+            .cycle_write_u8(Address::new(destination_bank, cpu.y.value), value);
+        cpu.bus.cycle_io();
+        cpu.bus.cycle_io();
+
+        cpu.a.value = cpu.a.value.wrapping_sub(1);
+        cpu.x.value = cpu.x.value.wrapping_add(1);
+        cpu.y.value = cpu.y.value.wrapping_add(1);
+
+        // Keep PC on this instruction until move is complete
+        if cpu.a.value != 0xFFFF {
+            cpu.pc = cpu.pc.sub(3_u8, Wrap::NoWrap);
+        }
+    }
+}
+
+pub fn mvp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
+    if let Operand::MoveAddressPair(source_bank, destination_bank) = *operand {
+        cpu.db = destination_bank;
+
+        let value = cpu
+            .bus
+            .cycle_read_u8(Address::new(source_bank, cpu.x.value));
+        cpu.bus
+            .cycle_write_u8(Address::new(destination_bank, cpu.y.value), value);
+        cpu.bus.cycle_io();
+        cpu.bus.cycle_io();
+
+        cpu.a.value = cpu.a.value.wrapping_sub(1);
+        cpu.x.value = cpu.x.value.wrapping_sub(1);
+        cpu.y.value = cpu.y.value.wrapping_sub(1);
+
+        // Keep PC on this instruction until move is complete
+        if cpu.a.value != 0xFFFF {
+            cpu.pc = cpu.pc.sub(3_u8, Wrap::NoWrap);
+        }
+    }
+}

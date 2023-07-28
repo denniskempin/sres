@@ -27,8 +27,8 @@ const SKIP_OPCODES: &[u8] = &[
     0x00, // brk not properly implemented yet
     0x02, // cop not properly implemented yet
     0x40, // RTI return address is off by one from BSNES behavior
-    0x44, // MVP not implemented yet
-    0x54, // MVN not implemented yet
+    0x44, // MVP test cases seem to follow a very different implementation
+    0x54, // MVN test cases seem to follow a very different implementation
 ];
 
 #[test]

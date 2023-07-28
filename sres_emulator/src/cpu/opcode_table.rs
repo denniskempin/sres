@@ -200,6 +200,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x41] = instruction!(eor, DirectPageXIndexedIndirect, Read, A);
     opcodes[0x42] = instruction!(wdm);
     opcodes[0x43] = instruction!(eor, StackRelative, Read, A);
+    opcodes[0x44] = instruction!(mvp, MoveAddressPair, Modify);
     opcodes[0x45] = instruction!(eor, DirectPage, Read, A);
     opcodes[0x46] = instruction!(lsr, DirectPage, Modify, A);
     opcodes[0x47] = instruction!(eor, DirectPageIndirectLong, Read, A);
@@ -215,6 +216,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
     opcodes[0x51] = instruction!(eor, DirectPageIndirectYIndexed, Read, A);
     opcodes[0x52] = instruction!(eor, DirectPageIndirect, Read, A);
     opcodes[0x53] = instruction!(eor, StackRelativeIndirectYIndexed, Read, A);
+    opcodes[0x54] = instruction!(mvn, MoveAddressPair, Modify);
     opcodes[0x55] = instruction!(eor, DirectPageXIndexed, Read, A);
     opcodes[0x56] = instruction!(lsr, DirectPageXIndexed, Modify, A);
     opcodes[0x57] = instruction!(eor, DirectPageIndirectYIndexedLong, Read, A);
