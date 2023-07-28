@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
+use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fs::File;
 use std::io;
@@ -24,9 +25,6 @@ use sres_emulator::trace::Trace;
 use xz2::read::XzDecoder;
 
 const SKIP_OPCODES: &[u8] = &[
-    0x00, // brk not properly implemented yet
-    0x02, // cop not properly implemented yet
-    0x40, // RTI return address is off by one from BSNES behavior
     0x44, // MVP test cases seem to follow a very different implementation
     0x54, // MVN test cases seem to follow a very different implementation
 ];
@@ -158,7 +156,10 @@ fn run_tomharte_test(test_name: &str) {
         );
         println!(
             "Memory: {}",
-            Comparison::new(&actual_state.bus.memory, &expected_state.bus.memory)
+            StrComparison::new(
+                &actual_state.bus.memory.to_string(),
+                &expected_state.bus.memory.to_string()
+            )
         );
         println!(
             "Cycles: {}",
@@ -197,7 +198,7 @@ impl TestCpuState {
     fn create_cpu(&self) -> Cpu<TestBus> {
         let mut bus = TestBus::default();
         for (addr, value) in &self.ram {
-            bus.memory.insert(*addr, *value);
+            bus.memory.set(Address::from(*addr), *value);
         }
         let mut cpu = Cpu::new(bus);
         cpu.pc = Address {
@@ -216,18 +217,43 @@ impl TestCpuState {
     }
 }
 
+/// Implements a sparse memory HashMap with a readable display format.
+#[derive(Default, PartialEq)]
+struct SparseMemory {
+    pub memory: HashMap<u32, u8>,
+}
+
+impl SparseMemory {
+    pub fn get(&self, addr: Address) -> Option<u8> {
+        self.memory.get(&u32::from(addr)).copied()
+    }
+
+    pub fn set(&mut self, addr: Address, value: u8) {
+        self.memory.insert(u32::from(addr), value);
+    }
+}
+
+impl Display for SparseMemory {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for (addr, value) in self.memory.iter().sorted() {
+            writeln!(f, "${:06X}: {:02X}", addr, value)?;
+        }
+        Ok(())
+    }
+}
+
 /// A test implementation of the `Bus`.
 ///
 /// Stores memore sparsely and records all bus cycles for comparison to the test data.
 #[derive(Default)]
 struct TestBus {
-    pub memory: HashMap<u32, u8>,
+    pub memory: SparseMemory,
     pub cycles: Vec<Cycle>,
 }
 
 impl Bus for TestBus {
     fn peek_u8(&self, addr: Address) -> Option<u8> {
-        Some(*self.memory.get(&u32::from(addr)).unwrap_or(&0))
+        self.memory.get(addr)
     }
 
     fn cycle_read_u8(&mut self, addr: Address) -> u8 {
@@ -239,7 +265,7 @@ impl Bus for TestBus {
     #[allow(clippy::single_match)]
     fn cycle_write_u8(&mut self, addr: Address, val: u8) {
         self.cycles.push(Cycle::Write(u32::from(addr), val));
-        self.memory.insert(u32::from(addr), val);
+        self.memory.set(addr, val);
     }
 
     fn cycle_io(&mut self) {
