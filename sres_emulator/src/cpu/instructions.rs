@@ -169,7 +169,7 @@ pub fn rti(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.cycle_io();
     cpu.status = StatusFlags::from(cpu.stack_pop_u8());
     cpu.update_register_sizes();
-    cpu.pc = Address::from(cpu.stack_pop_u24());
+    cpu.pc = Address::from(cpu.stack_pop_u24()).sub(1_u8, Wrap::WrapBank);
 }
 
 pub fn rtl(cpu: &mut Cpu<impl Bus>) {
@@ -269,25 +269,30 @@ pub fn bvs(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 pub fn brk(cpu: &mut Cpu<impl Bus>) {
     // read signature byte, even though it is unused.
     cpu.bus.cycle_read_u8(cpu.pc.add(1_u8, Wrap::WrapBank));
-    cpu.stack_push_u24(u32::from(cpu.pc.add(1_u8, Wrap::WrapBank)));
+    cpu.stack_push_u24(u32::from(cpu.pc.add(2_u8, Wrap::WrapBank)));
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
-    let address = if cpu.emulation_mode {
-        cpu.bus
-            .cycle_read_u16(Address::new(0, EmuVectorTable::Break as u16), Wrap::NoWrap)
-    } else {
-        cpu.bus.cycle_read_u16(
-            Address::new(0, NativeVectorTable::Break as u16),
-            Wrap::NoWrap,
-        )
-    };
-    cpu.pc = ((address as u32).saturating_sub(1)).into();
+    cpu.status.decimal = false;
+    let address = Address::new(
+        0,
+        if cpu.emulation_mode {
+            cpu.bus
+                .cycle_read_u16(Address::new(0, EmuVectorTable::Break as u16), Wrap::NoWrap)
+        } else {
+            cpu.bus.cycle_read_u16(
+                Address::new(0, NativeVectorTable::Break as u16),
+                Wrap::NoWrap,
+            )
+        },
+    );
+    cpu.pc = address.sub(1_u8, Wrap::NoWrap);
 }
 
 pub fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
-    cpu.stack_push_u24(u32::from(cpu.pc) - 1);
+    cpu.stack_push_u24(u32::from(cpu.pc));
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
+    cpu.status.decimal = false;
     let address = if cpu.emulation_mode {
         cpu.bus
             .cycle_read_u16(Address::new(0, EmuVectorTable::Cop as u16), Wrap::NoWrap)
