@@ -127,10 +127,11 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
         },
     });
 
-    use super::instructions::*;
     use AccessMode::*;
     use AddressMode::*;
     use Register::*;
+
+    use super::instructions::*;
     opcodes[0x00] = instruction!(brk);
     opcodes[0x01] = instruction!(ora, DirectPageXIndexedIndirect, Read, A);
     opcodes[0x02] = instruction!(cop, ImmediateU8, Read);
