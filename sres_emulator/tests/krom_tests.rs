@@ -2,11 +2,11 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
-use sres_emulator::bus::fvh_to_master_clock;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::memory::Wrap;
+use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
 
 #[test]
