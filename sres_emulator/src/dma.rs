@@ -16,6 +16,12 @@ impl DmaController {
     /// Writes to 0x43XX set DMA parameters
     pub fn write_43xx_parameter(&mut self, addr: u8, value: u8) {
         let channel = addr.high_nibble() % 8;
+        println!(
+            "channel {channel} 0x{:02X} = {:08b} (0x{:02X})",
+            addr.low_nibble(),
+            value,
+            value,
+        );
         match addr.low_nibble() {
             0x0 => {
                 self.dma_channels[channel as usize].parameters =
@@ -84,6 +90,7 @@ impl DmaController {
     }
 
     pub fn write_420b_dma_enable(&mut self, value: u8) {
+        println!("dma enable: {:08b}", value);
         self.dma_pending = value;
     }
 
@@ -109,6 +116,7 @@ impl DmaController {
         let transfers: Vec<(Address, Address)> = Vec::new();
         for channel in 0..8_usize {
             if self.dma_pending.bit(channel) {
+                println!("{channel}: {:?}", self.dma_channels[channel]);
                 let mut length = self.dma_channels[channel].byte_count as u64;
                 if length == 0 {
                     length = 0x10000;
