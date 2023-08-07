@@ -1,4 +1,6 @@
 use std::collections::VecDeque;
+use std::io::BufWriter;
+use std::io::Write;
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
@@ -273,4 +275,57 @@ fn run_rom_test(test_name: &str) {
         previous_master_cycle = cpu.bus.ppu_timer.master_clock;
         cpu.step();
     }
+}
+
+#[test]
+pub fn test_dma_vram() {
+    // This rom will generate a test sequence 0x00..0xFF in WRAM at 0x0000, then copies it into VRAM via
+    // a DMA transfer and copies it back into WRAM at 0x0100.
+    let cpu = run_test_rom("dma_vram");
+    let expected: Vec<u8> = (0x00..=0xFF).collect();
+
+    // Validate the test sequence at 0x0000
+    assert_eq!(
+        format_memory(&cpu.bus.memory[0x0000..=0x00FF]),
+        format_memory(&expected),
+    );
+
+    // Validate the test sequence in VRAM
+    assert_eq!(
+        format_memory(&cpu.bus.ppu.vram[0x0000..=0x00FF]),
+        format_memory(&expected),
+    );
+
+    // Validate the test sequence after it's copied back into WRAM at 0x0100
+    assert_eq!(
+        format_memory(&cpu.bus.memory[0x0100..=0x01FF]),
+        format_memory(&expected),
+    );
+}
+
+fn run_test_rom(test_name: &str) -> Cpu<SresBus> {
+    let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
+
+    let mut cpu = Cpu::new(SresBus::with_sfc(&rom_path).unwrap());
+    cpu.reset();
+
+    while !cpu.halt {
+        cpu.step();
+        println!("{}", Trace::from_cpu(&cpu));
+    }
+    cpu
+}
+
+fn format_memory(memory: &[u8]) -> String {
+    let mut writer = BufWriter::new(Vec::new());
+    for chunks in memory.chunks(16) {
+        for chunk in chunks {
+            write!(&mut writer, "{:02X} ", *chunk).unwrap();
+        }
+        writeln!(&mut writer).unwrap();
+    }
+
+    let bytes = writer.into_inner().unwrap();
+    String::from_utf8(bytes).unwrap()
 }

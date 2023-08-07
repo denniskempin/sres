@@ -2,6 +2,7 @@ use intbits::Bits;
 use packed_struct::prelude::*;
 
 use crate::memory::Address;
+use crate::memory::Wrap;
 use crate::uint::U16Ext;
 use crate::uint::U8Ext;
 
@@ -113,13 +114,30 @@ impl DmaController {
         }
 
         let mut duration = 16 - master_clock % 8;
-        let transfers: Vec<(Address, Address)> = Vec::new();
-        for channel in 0..8_usize {
-            if self.dma_pending.bit(channel) {
-                println!("{channel}: {:?}", self.dma_channels[channel]);
-                let mut length = self.dma_channels[channel].byte_count as u64;
+        let mut transfers: Vec<(Address, Address)> = Vec::new();
+        for channel_idx in 0..8_usize {
+            if self.dma_pending.bit(channel_idx) {
+                let channel = &mut self.dma_channels[channel_idx];
+                println!("{channel_idx}: {channel:?}");
+                let mut length = channel.byte_count as u64;
                 if length == 0 {
                     length = 0x10000;
+                }
+                for idx in 0..length {
+                    if channel.parameters.direction {
+                        transfers.push((channel.destination_address, channel.source_address));
+                    } else {
+                        transfers.push((channel.source_address, channel.destination_address));
+                    }
+
+                    if idx % 2 == 0 {
+                        channel.destination_address =
+                            channel.destination_address.add(1_u8, Wrap::NoWrap);
+                    } else {
+                        channel.destination_address =
+                            channel.destination_address.sub(1_u8, Wrap::NoWrap);
+                    }
+                    channel.source_address = channel.source_address.add(1_u8, Wrap::NoWrap);
                 }
 
                 duration += 8 + 8 * length;
@@ -144,7 +162,7 @@ impl Default for DmaChannel {
         Self {
             parameters: DmaParameters::default(),
             source_address: Address::default(),
-            destination_address: Address::new(0, 0x20FF),
+            destination_address: Address::new(0, 0x21FF),
             byte_count: 0,
         }
     }

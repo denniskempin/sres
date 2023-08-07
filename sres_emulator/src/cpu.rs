@@ -64,6 +64,7 @@ pub struct Cpu<BusT: Bus> {
     pub status: StatusFlags,
     pub emulation_mode: bool,
     pub master_cycle: u64,
+    pub halt: bool,
     instruction_table: [Instruction<BusT>; 256],
 }
 
@@ -83,6 +84,7 @@ impl<BusT: Bus> Cpu<BusT> {
             pc: Address::default(),
             emulation_mode: true,
             master_cycle: 0,
+            halt: false,
             instruction_table: build_opcode_table(),
         }
     }
