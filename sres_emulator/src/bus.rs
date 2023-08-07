@@ -6,6 +6,7 @@ use crate::cartridge::Cartridge;
 use crate::dma::DmaController;
 use crate::memory::Address;
 use crate::memory::Wrap;
+use crate::ppu::Ppu;
 use crate::timer::PpuTimer;
 use crate::uint::RegisterSize;
 use crate::uint::U16Ext;
@@ -69,6 +70,7 @@ pub struct SresBus {
     pub ppu_timer: PpuTimer,
     pub clock_speed: u64,
     pub dma_controller: DmaController,
+    pub ppu: Ppu,
 }
 
 impl Default for SresBus {
@@ -78,6 +80,7 @@ impl Default for SresBus {
             ppu_timer: PpuTimer::default(),
             clock_speed: 8,
             dma_controller: DmaController::default(),
+            ppu: Ppu::new(),
         }
     }
 }
@@ -104,6 +107,7 @@ impl SresBus {
         }
         Ok(bus)
     }
+
     pub fn with_program(program: &[u8]) -> Self {
         let mut bus = Self::default();
         for (i, byte) in program.iter().enumerate() {
@@ -113,22 +117,24 @@ impl SresBus {
     }
 
     fn read_u8(&mut self, addr: Address) -> u8 {
-        if u32::from(addr) == 0x004210 {
-            let override_value = self.peek_u8(addr).unwrap_or(0);
-            if override_value > 0 {
-                return override_value;
-            }
-            if self.ppu_timer.nmi_flag {
-                // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
-                if !(self.ppu_timer.v == 225 && self.ppu_timer.h_counter <= 2) {
-                    self.ppu_timer.nmi_flag = false;
+        match u32::from(addr) {
+            0x004210 => {
+                let override_value = self.peek_u8(addr).unwrap_or(0);
+                if override_value > 0 {
+                    return override_value;
                 }
-                0b1111_0010
-            } else {
-                0b0111_0010
+                if self.ppu_timer.nmi_flag {
+                    // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
+                    if !(self.ppu_timer.v == 225 && self.ppu_timer.h_counter <= 2) {
+                        self.ppu_timer.nmi_flag = false;
+                    }
+                    0b1111_0010
+                } else {
+                    0b0111_0010
+                }
             }
-        } else {
-            self.peek_u8(addr).unwrap_or(0)
+            0x002100..=0x00213F => self.ppu.read_ppu_register(addr.offset.low_byte()),
+            _ => self.peek_u8(addr).unwrap_or(0),
         }
     }
 
@@ -136,6 +142,7 @@ impl SresBus {
     fn write_u8(&mut self, addr: Address, val: u8) {
         match addr.bank {
             0x00..=0x1F => match addr.offset {
+                0x2100..=0x213F => self.ppu.write_ppu_register(addr.offset.low_byte(), val),
                 0x420B => self.dma_controller.write_420b_dma_enable(val),
                 0x4300..=0x43FF => self
                     .dma_controller
@@ -155,7 +162,8 @@ impl SresBus {
         {
             self.ppu_timer.advance_master_clock(duration);
             for (source, destination) in transfers {
-                println!("{} -> {}", source, destination);
+                let value = self.read_u8(source);
+                self.write_u8(destination, value);
             }
         }
         self.dma_controller.update_state();

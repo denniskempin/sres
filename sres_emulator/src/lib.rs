@@ -3,6 +3,7 @@ pub mod cartridge;
 pub mod cpu;
 pub mod dma;
 pub mod memory;
+pub mod ppu;
 pub mod timer;
 pub mod trace;
 mod uint;

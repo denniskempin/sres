@@ -476,6 +476,7 @@ pub fn stp(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
+    cpu.halt = true;
 }
 
 pub fn sty<T: UInt>(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
