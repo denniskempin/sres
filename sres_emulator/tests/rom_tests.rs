@@ -312,7 +312,6 @@ fn run_test_rom(test_name: &str) -> Cpu<SresBus> {
 
     while !cpu.halt {
         cpu.step();
-        println!("{}", Trace::from_cpu(&cpu));
     }
     cpu
 }

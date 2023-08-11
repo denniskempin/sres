@@ -4,14 +4,19 @@ mod operands;
 pub mod status;
 
 use intbits::Bits;
+use log::log_enabled;
+use log::trace;
+use log::Level;
 
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 use self::opcode_table::InstructionMeta;
 use self::status::StatusFlags;
 use crate::bus::Bus;
+use crate::logging;
 use crate::memory::Address;
 use crate::memory::Wrap;
+use crate::trace::Trace;
 use crate::uint::RegisterSize;
 use crate::uint::UInt;
 
@@ -72,6 +77,7 @@ const STACK_BASE: u16 = 0;
 
 impl<BusT: Bus> Cpu<BusT> {
     pub fn new(bus: BusT) -> Self {
+        logging::init();
         Self {
             bus,
             a: Default::default(),
@@ -114,6 +120,12 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
+        if log_enabled!(target: "cpu_state", Level::Trace) {
+            trace!(target: "cpu_state", "{}", Trace::from_cpu(self));
+        } else if log_enabled!(target: "instructions", Level::Trace) {
+            let (instruction, _) = self.load_instruction_meta(self.pc);
+            trace!(target: "instructions", "{} {}", instruction.operation, instruction.operand_str.unwrap_or_default());
+        }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
     }

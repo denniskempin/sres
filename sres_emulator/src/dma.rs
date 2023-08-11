@@ -1,4 +1,5 @@
 use intbits::Bits;
+use log::info;
 use packed_struct::prelude::*;
 
 use crate::memory::Address;
@@ -17,7 +18,7 @@ impl DmaController {
     /// Writes to 0x43XX set DMA parameters
     pub fn write_43xx_parameter(&mut self, addr: u8, value: u8) {
         let channel = addr.high_nibble() % 8;
-        println!(
+        info!(
             "channel {channel} 0x{:02X} = {:08b} (0x{:02X})",
             addr.low_nibble(),
             value,
@@ -91,7 +92,7 @@ impl DmaController {
     }
 
     pub fn write_420b_dma_enable(&mut self, value: u8) {
-        println!("dma enable: {:08b}", value);
+        info!("dma enable: {:08b}", value);
         self.dma_pending = value;
     }
 
@@ -118,7 +119,7 @@ impl DmaController {
         for channel_idx in 0..8_usize {
             if self.dma_pending.bit(channel_idx) {
                 let channel = &mut self.dma_channels[channel_idx];
-                println!("{channel_idx}: {channel:?}");
+                info!("{channel_idx}: {channel:?}");
                 let mut length = channel.byte_count as u64;
                 if length == 0 {
                     length = 0x10000;
