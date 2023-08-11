@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use anyhow::Result;
+use log::trace;
 
 use crate::cartridge::Cartridge;
 use crate::dma::DmaController;
@@ -177,7 +178,7 @@ impl Bus for SresBus {
 
     fn cycle_read_u8(&mut self, addr: Address) -> u8 {
         self.clock_speed = memory_access_speed(addr);
-        //println!("  read_u8({addr}) ({} cycles)", self.clock_speed);
+        trace!(target: "cycles", "cycle read {addr} ({} cycles)", self.clock_speed);
         self.ppu_timer.advance_master_clock(self.clock_speed - 6);
         let value = self.read_u8(addr);
         self.advance_master_clock(6);
@@ -188,15 +189,16 @@ impl Bus for SresBus {
     fn cycle_write_u8(&mut self, addr: Address, val: u8) {
         self.clock_speed = memory_access_speed(addr);
         self.advance_master_clock(self.clock_speed);
-        /* println!(
-            "  write_u8({addr}) = {val:02x} ({} cycles)",
+        trace!(
+            target: "cycles",
+            "cycle write {addr} = {val:02x} ({} cycles)",
             self.clock_speed
-        );*/
+        );
         self.write_u8(addr, val);
     }
 
     fn cycle_io(&mut self) {
-        // println!("  io_cycle: (6 cycles)");
+        trace!(target: "cycles", "cycle io (6 cycles)");
         self.clock_speed = 6;
         self.advance_master_clock(self.clock_speed);
     }
