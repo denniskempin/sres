@@ -20,6 +20,7 @@ use serde::Serialize;
 use sres_emulator::bus::Bus;
 use sres_emulator::cpu::status::StatusFlags;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::logging;
 use sres_emulator::memory::Address;
 use sres_emulator::trace::Trace;
 use xz2::read::XzDecoder;
@@ -111,6 +112,7 @@ pub fn test_opcodes_fx() {
 
 /// Executes the test cases provided by tomharte_tests/{test_name}.json.xz
 fn run_tomharte_test(test_name: &str) {
+    logging::test_init(false);
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let json_path = root_dir.join(format!("tests/tomharte_tests/{test_name}.json.xz"));
     let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
