@@ -1,12 +1,13 @@
-use std::collections::VecDeque;
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::PathBuf;
 
+use log::error;
 use pretty_assertions::assert_eq;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::logging;
 use sres_emulator::memory::Wrap;
 use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
@@ -194,6 +195,8 @@ pub fn test_ppu_timing() {
 }
 
 fn run_rom_test(test_name: &str) {
+    logging::test_init(false);
+
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let trace_path = root_dir.join(format!("tests/rom_tests/{test_name}-trace.log.xz"));
     let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
@@ -207,7 +210,6 @@ fn run_rom_test(test_name: &str) {
     cpu.reset();
 
     let mut previous_master_cycle = 0;
-    let mut previous_lines: VecDeque<Trace> = VecDeque::new();
     for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
         let mut expected_line = expected_line.unwrap();
         if i == 0 {
@@ -218,8 +220,6 @@ fn run_rom_test(test_name: &str) {
         }
 
         let mut actual_line = Trace::from_sres_cpu(&cpu);
-        previous_lines.push_front(actual_line.clone());
-        previous_lines.truncate(50);
 
         // Fix some BSNES trace inconsistencies:
 
@@ -244,10 +244,7 @@ fn run_rom_test(test_name: &str) {
         }
 
         if actual_line != expected_line {
-            println!("Assertion failure at instruction {i}");
-            for line in previous_lines.iter().rev() {
-                println!("{line}");
-            }
+            error!("Assertion failure at instruction {i}");
 
             // Convert F: V: H: from BSNES trace to master cycles to make it easier to compare how
             // many cycles each instruction takes (or should take).
@@ -260,7 +257,7 @@ fn run_rom_test(test_name: &str) {
                 .master_clock
                 .saturating_sub(previous_master_cycle);
             if expected_duration != actual_duration {
-                println!(
+                error!(
                     "Expected duration: {} - Actual: {}, diff: {}",
                     expected_duration,
                     actual_duration,
@@ -304,6 +301,8 @@ pub fn test_dma_vram() {
 }
 
 fn run_test_rom(test_name: &str) -> Cpu<SresBus> {
+    logging::test_init(false);
+
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
 

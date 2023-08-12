@@ -1,15 +1,112 @@
+use std::collections::VecDeque;
+use std::sync::Mutex;
 use std::sync::Once;
+
+use env_logger::filter::Filter;
+use log::Log;
+use log::{LevelFilter, Record};
+
+use colored::*;
 
 static ONCE_INIT: Once = Once::new();
 
+static TRACE_CONTEXT_LINES: usize = 20;
+
+/// A special logger implementation that uses env_logger for configuring filters
+/// and implements a custom logging format.
+///
+/// To reduce the number of trace log lines, this logger will log them into a ring buffer. When
+/// When a higher log level record is logged, the previous trace logs are printed to provide
+/// context.
+struct SresLogger {
+    /// Contains the last `TRACE_CONTEXT_LINES` of trace-level logs.
+    trace_logs: Mutex<VecDeque<String>>,
+    filter: Filter,
+}
+
+impl SresLogger {
+    pub fn new(filter: Filter) -> Self {
+        log::set_max_level(filter.filter());
+        Self {
+            trace_logs: Mutex::new(VecDeque::new()),
+            filter,
+        }
+    }
+
+    fn format_record(&self, record: &Record) -> String {
+        match record.level() {
+            log::Level::Error => {
+                format!("{} {}", "E".red().bold(), record.args().to_string().red())
+            }
+            log::Level::Warn => format!(
+                "{} {}",
+                "W".yellow().bold(),
+                record.args().to_string().yellow()
+            ),
+            log::Level::Info => format!(
+                "{} {}",
+                "I".blue().bold(),
+                record.args().to_string().normal()
+            ),
+            log::Level::Debug => format!("{} {}", "D".blue(), record.args().to_string().normal()),
+            log::Level::Trace => format!("{}", record.args().to_string().dimmed()),
+        }
+    }
+}
+
+impl Log for SresLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        self.filter.enabled(metadata)
+    }
+
+    fn log(&self, record: &Record) {
+        if !self.filter.matches(record) {
+            return;
+        }
+        let record_str = self.format_record(record);
+        let mut trace_logs = self.trace_logs.lock().unwrap();
+        if record.level() == LevelFilter::Trace {
+            trace_logs.push_front(record_str);
+            trace_logs.truncate(TRACE_CONTEXT_LINES);
+        } else {
+            if trace_logs.len() > 0 {
+                if trace_logs.len() == TRACE_CONTEXT_LINES {
+                    println!("{}", "...".dimmed());
+                }
+                for log in trace_logs.drain(0..).rev() {
+                    println!("{}", log);
+                }
+            }
+            println!("{}", record_str);
+        }
+    }
+
+    fn flush(&self) {}
+}
+
 pub fn init() {
     ONCE_INIT.call_once(|| {
-        env_logger::builder()
-            .filter_level(log::LevelFilter::Trace)
-            .format_timestamp(None)
-            .format_target(false)
-            .init();
+        let filter_config = std::env::var("SRES_LOG").unwrap_or("error".to_string());
+        let filter = env_logger::filter::Builder::new()
+            .parse(&filter_config)
+            .build();
+        log::set_boxed_logger(Box::new(SresLogger::new(filter))).unwrap();
+    });
+}
 
-        // run initialization here
+pub fn test_init(verbose: bool) {
+    ONCE_INIT.call_once(|| {
+        let filter_config = std::env::var("SRES_LOG").unwrap_or(
+            if verbose {
+                "info,cpu_state=trace"
+            } else {
+                "error"
+            }
+            .to_string(),
+        );
+        let filter = env_logger::filter::Builder::new()
+            .parse(&filter_config)
+            .build();
+        log::set_boxed_logger(Box::new(SresLogger::new(filter))).unwrap();
     });
 }
