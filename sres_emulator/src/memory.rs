@@ -30,6 +30,14 @@ impl Address {
         }
     }
 
+    pub fn add_signed(&self, rhs: i32, wrap: Wrap) -> Self {
+        if rhs > 0 {
+            self.add(rhs.unsigned_abs(), wrap)
+        } else {
+            self.sub(rhs.unsigned_abs(), wrap)
+        }
+    }
+
     pub fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
         match wrap {
             Wrap::WrapPage => Address {
