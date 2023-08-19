@@ -1,5 +1,7 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::io::BufWriter;
+use std::io::Write;
 
 use crate::uint::U16Ext;
 use crate::uint::U32Ext;
@@ -99,4 +101,30 @@ impl Display for Address {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "${:02X}{:04X}", self.bank, self.offset)
     }
+}
+
+pub fn format_memory(memory: &[u8]) -> String {
+    let mut writer = BufWriter::new(Vec::new());
+    for chunks in memory.chunks(16) {
+        for chunk in chunks {
+            write!(&mut writer, "{:02X} ", *chunk).unwrap();
+        }
+        writeln!(&mut writer).unwrap();
+    }
+
+    let bytes = writer.into_inner().unwrap();
+    String::from_utf8(bytes).unwrap()
+}
+
+pub fn format_memory_u16(memory: &[u16]) -> String {
+    let mut writer = BufWriter::new(Vec::new());
+    for chunks in memory.chunks(16) {
+        for chunk in chunks {
+            write!(&mut writer, "{:04X} ", *chunk).unwrap();
+        }
+        writeln!(&mut writer).unwrap();
+    }
+
+    let bytes = writer.into_inner().unwrap();
+    String::from_utf8(bytes).unwrap()
 }
