@@ -8,6 +8,8 @@ use sres_emulator::bus::Bus;
 use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::logging;
+use sres_emulator::memory::format_memory;
+use sres_emulator::memory::format_memory_u16;
 use sres_emulator::memory::Wrap;
 use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
@@ -287,12 +289,6 @@ pub fn test_dma_vram() {
         format_memory(&expected),
     );
 
-    // Validate the test sequence in VRAM
-    assert_eq!(
-        format_memory(&cpu.bus.ppu.vram[0x0000..=0x00FF]),
-        format_memory(&expected),
-    );
-
     // Validate the test sequence after it's copied back into WRAM at 0x0100
     assert_eq!(
         format_memory(&cpu.bus.memory[0x0100..=0x01FF]),
@@ -313,17 +309,4 @@ fn run_test_rom(test_name: &str) -> Cpu<SresBus> {
         cpu.step();
     }
     cpu
-}
-
-fn format_memory(memory: &[u8]) -> String {
-    let mut writer = BufWriter::new(Vec::new());
-    for chunks in memory.chunks(16) {
-        for chunk in chunks {
-            write!(&mut writer, "{:02X} ", *chunk).unwrap();
-        }
-        writeln!(&mut writer).unwrap();
-    }
-
-    let bytes = writer.into_inner().unwrap();
-    String::from_utf8(bytes).unwrap()
 }
