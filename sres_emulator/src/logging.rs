@@ -2,11 +2,11 @@ use std::collections::VecDeque;
 use std::sync::Mutex;
 use std::sync::Once;
 
-use env_logger::filter::Filter;
-use log::Log;
-use log::{LevelFilter, Record};
-
 use colored::*;
+use env_logger::filter::Filter;
+use log::LevelFilter;
+use log::Log;
+use log::Record;
 
 static ONCE_INIT: Once = Once::new();
 
@@ -100,7 +100,7 @@ pub fn test_init(verbose: bool) {
             if verbose {
                 "info,cpu_state=trace"
             } else {
-                "error"
+                "warn"
             }
             .to_string(),
         );

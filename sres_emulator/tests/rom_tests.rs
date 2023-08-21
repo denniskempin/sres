@@ -1,7 +1,7 @@
-use std::io::BufWriter;
-use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 
+use image::RgbaImage;
 use log::error;
 use pretty_assertions::assert_eq;
 use sres_emulator::bus::Bus;
@@ -9,7 +9,6 @@ use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::logging;
 use sres_emulator::memory::format_memory;
-use sres_emulator::memory::format_memory_u16;
 use sres_emulator::memory::Wrap;
 use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
@@ -273,6 +272,32 @@ fn run_rom_test(test_name: &str) {
 
         previous_master_cycle = cpu.bus.ppu_timer.master_clock;
         cpu.step();
+    }
+
+    let tileset_path = root_dir.join(format!("tests/rom_tests/{test_name}-bg1_tileset"));
+    compare_to_golden(
+        &cpu.bus.ppu.backgrounds[0].debug_render_tileset(&cpu.bus.ppu.vram),
+        &tileset_path,
+    );
+
+    let tilemap_path = root_dir.join(format!("tests/rom_tests/{test_name}-bg1_tilemap"));
+    compare_to_golden(
+        &cpu.bus.ppu.backgrounds[0].debug_render_tilemap(&cpu.bus.ppu.vram),
+        &tilemap_path,
+    );
+}
+
+fn compare_to_golden(image: &RgbaImage, path_prefix: &Path) {
+    let golden_path = path_prefix.with_extension("png");
+    if golden_path.exists() {
+        let golden: RgbaImage = image::open(&golden_path).unwrap().into_rgba8();
+        if golden != *image {
+            let actual_path = golden_path.with_extension("actual.png");
+            image.save(&actual_path).unwrap();
+            panic!("Image does not match golden. See {:?}", actual_path);
+        }
+    } else {
+        image.save(golden_path).unwrap();
     }
 }
 
