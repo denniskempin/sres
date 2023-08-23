@@ -10,7 +10,7 @@ use log::Level;
 
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
-use self::opcode_table::InstructionMeta;
+pub use self::opcode_table::InstructionMeta;
 use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::memory::Address;
@@ -76,7 +76,7 @@ const STACK_BASE: u16 = 0;
 
 impl<BusT: Bus> Cpu<BusT> {
     pub fn new(bus: BusT) -> Self {
-        Self {
+        let mut cpu = Self {
             bus,
             a: Default::default(),
             x: Default::default(),
@@ -90,13 +90,24 @@ impl<BusT: Bus> Cpu<BusT> {
             master_cycle: 0,
             halt: false,
             instruction_table: build_opcode_table(),
-        }
+        };
+        cpu.reset();
+        cpu
     }
 
     /// Return the instruction meta data for the instruction at the given address
     pub fn load_instruction_meta(&self, addr: Address) -> (InstructionMeta, Address) {
         let opcode = self.bus.peek_u8(addr).unwrap_or_default();
         (self.instruction_table[opcode as usize].meta)(self, addr)
+    }
+
+    pub fn peek_next_operations(&self, count: usize) -> impl Iterator<Item = InstructionMeta> + '_ {
+        let mut pc = self.pc;
+        (0..count).map(move |_| {
+            let (meta, new_pc) = self.load_instruction_meta(pc);
+            pc = new_pc;
+            meta
+        })
     }
 
     fn update_register_sizes(&mut self) {

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "sres_emulator",
+    "sres_egui",
 ]
 
 [profile.test]

@@ -1,0 +1,36 @@
+[package]
+name = "sres_egui"
+version = "0.1.0"
+authors = ["Dennis Kempin <dennis.kempin@gmail.com>"]
+edition = "2021"
+rust-version = "1.62"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "1.0"
+argh = "0.1"
+cpal = { version = "0.14", features = ["wasm-bindgen"]}
+eframe = "0.20"
+egui = "0.20"
+gilrs = "0.10"
+itertools = "0.10"
+sres_emulator = { path = "../sres_emulator" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tracing-chrome = "0.7"
+tracing-subscriber = "0.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+base64 = "0.20"
+console_error_panic_hook = "0.1"
+tracing-wasm = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["Storage"] }
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-O4']
