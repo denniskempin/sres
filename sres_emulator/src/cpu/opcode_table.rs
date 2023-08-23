@@ -14,6 +14,7 @@ use crate::memory::Wrap;
 
 /// Metadata about a decoded instruction. Used to generate disassembly.
 pub struct InstructionMeta {
+    pub address: Address,
     pub operation: &'static str,
     pub operand_str: Option<String>,
     pub effective_addr: Option<Address>,
@@ -48,6 +49,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                 meta: |_, instruction_addr| {
                     (
                         InstructionMeta {
+                            address: instruction_addr,
                             operation: stringify!($method),
                             operand_str: None,
                             effective_addr: None,
@@ -71,6 +73,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                         Operand::peek(cpu, instruction_addr, $address_mode, $access_mode);
                     (
                         InstructionMeta {
+                            address: instruction_addr,
                             operation: stringify!($method),
                             operand_str: Some(operand.format()),
                             effective_addr: operand.effective_addr(),
@@ -102,6 +105,7 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
                         Operand::peek(cpu, instruction_addr, $address_mode, $access_mode);
                     (
                         InstructionMeta {
+                            address: instruction_addr,
                             operation: stringify!($method),
                             operand_str: Some(operand.format()),
                             effective_addr: operand.effective_addr(),
@@ -115,14 +119,15 @@ pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
 
     let mut opcodes = [(); 256].map(|_| Instruction::<BusT> {
         execute: |_| {},
-        meta: |_, addr| {
+        meta: |_, instruction_addr| {
             (
                 InstructionMeta {
+                    address: instruction_addr,
                     operation: "ill",
                     operand_str: None,
                     effective_addr: None,
                 },
-                addr,
+                instruction_addr,
             )
         },
     });

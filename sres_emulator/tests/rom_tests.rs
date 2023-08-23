@@ -1,6 +1,10 @@
+use std::fs::File;
+use std::io;
+use std::io::BufRead;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Result;
 use image::RgbaImage;
 use log::error;
 use pretty_assertions::assert_eq;
@@ -211,7 +215,7 @@ fn run_rom_test(test_name: &str) {
     cpu.reset();
 
     let mut previous_master_cycle = 0;
-    for (i, expected_line) in Trace::from_xz_file(&trace_path).unwrap().enumerate() {
+    for (i, expected_line) in trace_log_from_xz_file(&trace_path).unwrap().enumerate() {
         let mut expected_line = expected_line.unwrap();
         if i == 0 {
             assert_eq!(
@@ -334,4 +338,12 @@ fn run_test_rom(test_name: &str) -> Cpu<SresBus> {
         cpu.step();
     }
     cpu
+}
+
+pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<Trace>>> {
+    use xz2::read::XzDecoder;
+    let file = File::open(path)?;
+    let decoder = XzDecoder::new(file);
+    let trace_reader = io::BufReader::new(decoder);
+    Ok(trace_reader.lines().map(|l| l?.parse()))
 }
