@@ -12,9 +12,7 @@ pub struct DebugUi {
 
 impl DebugUi {
     pub fn new(_cc: &CreationContext<'_>) -> Self {
-        DebugUi {
-            command: Some(DebugCommand::Run),
-        }
+        DebugUi { command: None }
     }
 
     fn run_command(&mut self, emulator: &mut System, command: DebugCommand, delta_t: f64) {

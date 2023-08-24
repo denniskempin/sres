@@ -16,6 +16,7 @@ use sres_emulator::memory::format_memory;
 use sres_emulator::memory::Wrap;
 use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
+use sres_emulator::System;
 
 #[test]
 pub fn test_nmi_sub_cycle_accuracy() {
@@ -55,10 +56,16 @@ pub fn test_nmi_sub_cycle_accuracy() {
     ];
     for (v, h, expected_nmi, expected_internal_nmi) in TEST_CASES {
         // Create CPU with `bit $4210` program in memory
-        let mut bus = SresBus::default();
-        bus.cycle_write_u16(0x00.into(), 0x2C, Wrap::NoWrap);
-        bus.cycle_write_u16(0x01.into(), 0x4210, Wrap::NoWrap);
-        let mut cpu = Cpu::new(bus);
+        let mut system = System::new();
+        system
+            .cpu
+            .bus
+            .cycle_write_u16(0x00.into(), 0x2C, Wrap::NoWrap);
+        system
+            .cpu
+            .bus
+            .cycle_write_u16(0x01.into(), 0x4210, Wrap::NoWrap);
+        let cpu = &mut system.cpu;
         cpu.reset();
 
         // Advance PPU timer until (v, h) is reached
@@ -206,12 +213,12 @@ fn run_rom_test(test_name: &str) {
     let trace_path = root_dir.join(format!("tests/rom_tests/{test_name}-trace.log.xz"));
     let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
 
-    let mut bus = SresBus::with_sfc(&rom_path).unwrap();
+    let mut system = System::with_sfc(&rom_path).unwrap();
     // CPUMSC reads 0x20 from $000000 at the first instruction. I cannot figure out why, it
     // should be mapped to RAM.
-    bus.cycle_write_u8(0x000000.into(), 0x20);
+    system.cpu.bus.cycle_write_u8(0x000000.into(), 0x20);
 
-    let mut cpu = Cpu::new(bus);
+    let cpu = &mut system.cpu;
     cpu.reset();
 
     let mut previous_master_cycle = 0;
@@ -331,13 +338,13 @@ fn run_test_rom(test_name: &str) -> Cpu<SresBus> {
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
 
-    let mut cpu = Cpu::new(SresBus::with_sfc(&rom_path).unwrap());
-    cpu.reset();
+    let mut system = System::with_sfc(&rom_path).unwrap();
+    system.cpu.reset();
 
-    while !cpu.halt {
-        cpu.step();
+    while !system.cpu.halt {
+        system.cpu.step();
     }
-    cpu
+    system.cpu
 }
 
 pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<Trace>>> {

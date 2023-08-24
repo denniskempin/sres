@@ -3,6 +3,9 @@ mod opcode_table;
 mod operands;
 pub mod status;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use intbits::Bits;
 use log::log_enabled;
 use log::trace;
@@ -13,6 +16,7 @@ use self::opcode_table::Instruction;
 pub use self::opcode_table::InstructionMeta;
 use self::status::StatusFlags;
 use crate::bus::Bus;
+use crate::debugger::Debugger;
 use crate::memory::Address;
 use crate::memory::Wrap;
 use crate::trace::Trace;
@@ -70,6 +74,7 @@ pub struct Cpu<BusT: Bus> {
     pub master_cycle: u64,
     pub halt: bool,
     instruction_table: [Instruction<BusT>; 256],
+    pub debugger: Option<Rc<RefCell<Debugger>>>,
 }
 
 const STACK_BASE: u16 = 0;
@@ -90,6 +95,7 @@ impl<BusT: Bus> Cpu<BusT> {
             master_cycle: 0,
             halt: false,
             instruction_table: build_opcode_table(),
+            debugger: None,
         };
         cpu.reset();
         cpu
@@ -131,6 +137,9 @@ impl<BusT: Bus> Cpu<BusT> {
     pub fn step(&mut self) {
         if log_enabled!(target: "cpu_state", Level::Trace) {
             trace!(target: "cpu_state", "{}", Trace::from_cpu(self));
+        }
+        if let Some(debugger) = &self.debugger {
+            debugger.borrow_mut().before_instruction(self.pc);
         }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
@@ -198,6 +207,7 @@ impl<BusT: Bus> Cpu<BusT> {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Debug;
     use std::io::Write;
     use std::process::Command;
     use std::str::from_utf8;
@@ -208,8 +218,10 @@ mod tests {
     use crate::bus::Bus;
     use crate::bus::SresBus;
     use crate::cpu::VariableLengthRegister;
+    use crate::debugger::Debugger;
     use crate::memory::Address;
     use crate::memory::Wrap;
+    use crate::System;
 
     fn assemble(code: &str) -> Vec<u8> {
         let mut code_file = NamedTempFile::new().unwrap();
@@ -230,6 +242,7 @@ mod tests {
 
     fn cpu_with_program(code: &str) -> Cpu<SresBus> {
         let assembled = assemble(code);
+        // TODO: Use a test bus instead of SresBus/System
         Cpu::new(SresBus::with_program(&assembled))
     }
 
@@ -251,7 +264,8 @@ mod tests {
 
     #[test]
     pub fn test_stack_u8() {
-        let mut cpu = super::Cpu::new(SresBus::default());
+        // TODO: Use a test bus instead of SresBus/System
+        let mut cpu = System::new().cpu;
         cpu.stack_push_u8(0x12);
         assert_eq!(
             cpu.bus
@@ -263,7 +277,8 @@ mod tests {
 
     #[test]
     pub fn test_stack() {
-        let mut cpu = super::Cpu::new(SresBus::default());
+        // TODO: Use a test bus instead of SresBus/System
+        let mut cpu = System::new().cpu;
         cpu.stack_push_u16(0x1234);
         assert_eq!(
             cpu.bus

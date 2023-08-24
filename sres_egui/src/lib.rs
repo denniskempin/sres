@@ -16,6 +16,7 @@ use egui::InputState;
 use egui::Layout;
 use egui::Sense;
 use egui::TextureHandle;
+use egui::TextureOptions;
 use egui::Ui;
 use sres_emulator::System;
 use tracing::instrument;
@@ -47,7 +48,6 @@ pub struct EmulatorApp {
     emulator: System,
     loaded_rom: Option<Rom>,
     framebuffer_texture: TextureHandle,
-    debug_mode: bool,
     debug_ui: DebugUi,
 }
 
@@ -63,7 +63,6 @@ impl EmulatorApp {
                 ColorImage::example(),
                 Default::default(),
             ),
-            debug_mode: true,
             debug_ui: DebugUi::new(cc),
         };
 
@@ -75,6 +74,7 @@ impl EmulatorApp {
 
     fn load_rom(&mut self, rom: Rom) {
         self.emulator = System::with_sfc_bytes(&rom.sfc_data).unwrap();
+        self.emulator.enable_debugger();
         self.loaded_rom = Some(rom);
     }
 
@@ -118,13 +118,28 @@ impl EmulatorApp {
             });
             columns[1].with_layout(Layout::right_to_left(egui::Align::Min), |ui| {
                 if ui.button("Debug").clicked() {
-                    self.debug_mode = !self.debug_mode;
+                    if self.emulator.debugger.is_some() {
+                        self.emulator.disable_debugger()
+                    } else {
+                        self.emulator.enable_debugger()
+                    }
                 }
             });
         });
     }
 
     fn main_display(&mut self, ui: &mut Ui) {
+        let framebuffer = self.emulator.cpu.bus.ppu.backgrounds[0]
+            .debug_render_tilemap(&self.emulator.cpu.bus.ppu.vram);
+
+        self.framebuffer_texture.set(
+            ColorImage::from_rgba_unmultiplied(
+                [framebuffer.width() as usize, framebuffer.height() as usize],
+                framebuffer.as_raw(),
+            ),
+            TextureOptions::default(),
+        );
+
         let desired_size = ui.available_size();
         let (whole_rect, _) =
             ui.allocate_exact_size(desired_size, Sense::focusable_noninteractive());
@@ -155,7 +170,7 @@ impl eframe::App for EmulatorApp {
 
         self.update_keys(&ctx.input());
 
-        if !self.debug_mode {
+        if self.emulator.debugger.is_none() {
             self.emulator
                 .execute_for_duration(ctx.input().stable_dt as f64);
         } else {

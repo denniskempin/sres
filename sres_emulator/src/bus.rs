@@ -1,9 +1,12 @@
+use std::cell::RefCell;
 use std::path::Path;
+use std::rc::Rc;
 
 use anyhow::Result;
 use log::trace;
 
 use crate::cartridge::Cartridge;
+use crate::debugger::Debugger;
 use crate::dma::DmaController;
 use crate::memory::Address;
 use crate::memory::Wrap;
@@ -72,23 +75,23 @@ pub struct SresBus {
     pub clock_speed: u64,
     pub dma_controller: DmaController,
     pub ppu: Ppu,
+    pub debugger: Option<Rc<RefCell<Debugger>>>,
 }
 
-impl Default for SresBus {
-    fn default() -> Self {
+impl SresBus {
+    pub fn new() -> Self {
         Self {
             memory: vec![0; 0x1000000],
             ppu_timer: PpuTimer::default(),
             clock_speed: 8,
             dma_controller: DmaController::default(),
             ppu: Ppu::new(),
+            debugger: None,
         }
     }
-}
 
-impl SresBus {
     pub fn with_sfc(rom_path: &Path) -> Result<Self> {
-        let mut bus = Self::default();
+        let mut bus = Self::new();
         // Load cartridge data into memory
         let mut cartridge = Cartridge::new();
         cartridge.load_sfc(rom_path)?;
@@ -99,7 +102,7 @@ impl SresBus {
     }
 
     pub fn with_sfc_data(rom: &[u8]) -> Result<Self> {
-        let mut bus = Self::default();
+        let mut bus = Self::new();
         // Load cartridge data into memory
         let mut cartridge = Cartridge::new();
         cartridge.load_sfc_data(rom)?;
@@ -110,7 +113,7 @@ impl SresBus {
     }
 
     pub fn with_program(program: &[u8]) -> Self {
-        let mut bus = Self::default();
+        let mut bus = Self::new();
         for (i, byte) in program.iter().enumerate() {
             bus.memory[i] = *byte;
         }
@@ -168,6 +171,12 @@ impl SresBus {
             }
         }
         self.dma_controller.update_state();
+    }
+}
+
+impl Default for SresBus {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
