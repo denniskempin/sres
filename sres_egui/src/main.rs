@@ -44,7 +44,7 @@ fn main() {
     });
 
     eframe::run_native(
-        "NES Emulator",
+        "Super Rust Entertainment System",
         native_options,
         Box::new(|cc| Box::new(EmulatorApp::new(cc, rom))),
     );

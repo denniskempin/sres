@@ -20,6 +20,7 @@ use serde::Serialize;
 use sres_emulator::bus::Bus;
 use sres_emulator::cpu::status::StatusFlags;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::debugger::Debugger;
 use sres_emulator::logging;
 use sres_emulator::memory::Address;
 use sres_emulator::trace::Trace;

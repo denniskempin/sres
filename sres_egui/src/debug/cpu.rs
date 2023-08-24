@@ -28,6 +28,11 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
 
 pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
     ui.label(RichText::new("Operations").strong());
+    if let Some(debugger) = &emulator.debugger {
+        for meta in debugger.borrow().previous_instructions(&emulator.cpu) {
+            disassembly_line(ui, meta, false);
+        }
+    }
     for (idx, meta) in emulator.cpu.peek_next_operations(30).enumerate() {
         disassembly_line(ui, meta, idx == 0);
     }
