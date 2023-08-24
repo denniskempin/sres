@@ -6,6 +6,7 @@ use argh::FromArgs;
 use egui::vec2;
 use sres_egui::EmulatorApp;
 use sres_egui::Rom;
+use sres_emulator::logging;
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_subscriber::prelude::*;
 
@@ -22,8 +23,8 @@ struct ResArgs {
 }
 
 fn main() {
+    logging::init();
     let args: ResArgs = argh::from_env();
-
     let _tracing_guard = if let Some(trace_file) = args.trace_file {
         let (chrome_layer, guard) = ChromeLayerBuilder::new().file(trace_file).build();
         tracing_subscriber::registry().with(chrome_layer).init();

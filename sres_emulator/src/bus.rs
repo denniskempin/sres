@@ -121,6 +121,11 @@ impl SresBus {
     }
 
     fn read_u8(&mut self, addr: Address) -> u8 {
+        if let Some(debugger) = &self.debugger {
+            debugger
+                .borrow_mut()
+                .on_cpu_memory_access(crate::debugger::MemoryAccess::Read(addr));
+        }
         match u32::from(addr) {
             0x004210 => {
                 let override_value = self.peek_u8(addr).unwrap_or(0);
@@ -138,12 +143,28 @@ impl SresBus {
                 }
             }
             0x002100..=0x00213F => self.ppu.read_ppu_register(addr.offset.low_byte()),
-            _ => self.peek_u8(addr).unwrap_or(0),
+            _ => {
+                if let Some(value) = self.peek_u8(addr) {
+                    value
+                } else {
+                    if let Some(debugger) = &self.debugger {
+                        debugger
+                            .borrow_mut()
+                            .on_error(format!("Invalid read from {}", addr));
+                    }
+                    0
+                }
+            }
         }
     }
 
     #[allow(clippy::single_match)]
     fn write_u8(&mut self, addr: Address, val: u8) {
+        if let Some(debugger) = &self.debugger {
+            debugger
+                .borrow_mut()
+                .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, val));
+        }
         match addr.bank {
             0x00..=0x1F => match addr.offset {
                 0x2100..=0x213F => self.ppu.write_ppu_register(addr.offset.low_byte(), val),
@@ -153,7 +174,13 @@ impl SresBus {
                     .write_43xx_parameter(addr.offset.low_byte(), val),
                 _ => self.memory[u32::from(addr) as usize] = val,
             },
-            _ => {}
+            _ => {
+                if let Some(debugger) = &self.debugger {
+                    debugger
+                        .borrow_mut()
+                        .on_error(format!("Invalid write to {}", addr));
+                }
+            }
         }
     }
 
@@ -203,6 +230,7 @@ impl Bus for SresBus {
             "cycle write {addr} = {val:02x} ({} cycles)",
             self.clock_speed
         );
+
         self.write_u8(addr, val);
     }
 

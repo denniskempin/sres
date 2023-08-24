@@ -17,7 +17,13 @@ use anyhow::Result;
 
 use bus::SresBus;
 use cpu::Cpu;
-use debugger::Debugger;
+use debugger::{BreakReason, Debugger};
+
+pub enum ExecutionResult {
+    Normal,
+    Halt,
+    Break(BreakReason),
+}
 
 pub struct System {
     pub cpu: Cpu<SresBus>,
@@ -57,33 +63,39 @@ impl System {
         self.cpu.bus.debugger = None;
     }
 
-    pub fn execute_until<F>(&mut self, should_break: F)
+    pub fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
     where
         F: Fn(&Cpu<SresBus>) -> bool,
     {
         loop {
             if self.cpu.halt {
-                return;
+                return ExecutionResult::Halt;
             }
 
             self.cpu.step();
 
+            if let Some(debugger) = &self.debugger {
+                if let Some(break_reason) = debugger.borrow_mut().break_reason.take() {
+                    return ExecutionResult::Break(break_reason);
+                }
+            }
+
             if should_break(&self.cpu) {
-                return;
+                return ExecutionResult::Normal;
             }
         }
     }
 
-    pub fn execute_until_halt(&mut self) {
+    pub fn execute_until_halt(&mut self) -> ExecutionResult {
         self.execute_until(|cpu| cpu.halt)
     }
 
-    pub fn execute_one_frame(&mut self) {
+    pub fn execute_one_frame(&mut self) -> ExecutionResult {
         let current_frame = self.cpu.bus.ppu_timer.f;
         self.execute_until(|cpu| cpu.bus.ppu_timer.f > current_frame)
     }
 
-    pub fn execute_for_duration(&mut self, _seconds: f64) {
+    pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {
         // TODO: Implement frame skip/doubling if not running at 60fps
         self.execute_one_frame()
     }

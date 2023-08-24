@@ -3,6 +3,8 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::rc::Rc;
 
+use log::error;
+
 use super::cpu::InstructionMeta;
 use crate::bus::SresBus;
 use crate::cpu::Cpu;
@@ -10,12 +12,12 @@ use crate::memory::Address;
 use crate::util::RingBuffer;
 
 pub enum MemoryAccess {
-    Read(u16),
-    Write(u16, u8),
+    Read(Address),
+    Write(Address, u8),
 }
 
 impl MemoryAccess {
-    pub fn addr(&self) -> u16 {
+    pub fn addr(&self) -> Address {
         match self {
             MemoryAccess::Read(addr) => *addr,
             MemoryAccess::Write(addr, _) => *addr,
@@ -26,16 +28,16 @@ impl MemoryAccess {
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone)]
 pub enum Trigger {
-    CpuMemoryRead(Range<u16>),
-    CpuMemoryWrite(Range<u16>),
+    CpuMemoryRead(Range<u32>),
+    CpuMemoryWrite(Range<u32>),
     ExecutionError,
 }
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone)]
 pub enum BreakReason {
-    CpuMemoryRead(u16),
-    CpuMemoryWrite(u16),
+    CpuMemoryRead(Address),
+    CpuMemoryWrite(Address),
     ExecutionError(String),
 }
 
@@ -43,10 +45,10 @@ impl Display for BreakReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             BreakReason::CpuMemoryRead(addr) => {
-                write!(f, "CPU memory read at address {:04X}", addr)
+                write!(f, "CPU memory read at address {}", addr)
             }
             BreakReason::CpuMemoryWrite(addr) => {
-                write!(f, "CPU memory write at address {:04X}", addr)
+                write!(f, "CPU memory write at address {}", addr)
             }
             BreakReason::ExecutionError(e) => e.fmt(f),
         }
@@ -88,11 +90,8 @@ impl Debugger {
     }
 
     pub fn on_error(&mut self, msg: String) {
-        for trigger in self.breakpoints.iter() {
-            if let Trigger::ExecutionError = trigger {
-                self.break_reason = Some(BreakReason::ExecutionError(msg.clone()));
-            }
-        }
+        error!("{}", msg);
+        self.break_reason = Some(BreakReason::ExecutionError(msg.clone()));
     }
 
     pub fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
@@ -100,14 +99,14 @@ impl Debugger {
             match trigger {
                 Trigger::CpuMemoryRead(range) => {
                     if let MemoryAccess::Read(addr) = access {
-                        if range.contains(&addr) {
+                        if range.contains(&u32::from(addr)) {
                             self.break_reason = Some(BreakReason::CpuMemoryRead(addr));
                         }
                     }
                 }
                 Trigger::CpuMemoryWrite(range) => {
                     if let MemoryAccess::Write(addr, _) = access {
-                        if range.contains(&addr) {
+                        if range.contains(&u32::from(addr)) {
                             self.break_reason = Some(BreakReason::CpuMemoryWrite(addr));
                         }
                     }
