@@ -1,8 +1,9 @@
-use std::{borrow::BorrowMut, fmt::Debug, ops::Deref};
+use std::fmt::Debug;
 
 use eframe::CreationContext;
 use egui::Ui;
-use sres_emulator::{ExecutionResult, System};
+use sres_emulator::ExecutionResult;
+use sres_emulator::System;
 
 mod cpu;
 

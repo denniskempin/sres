@@ -118,7 +118,7 @@ impl EmulatorApp {
             });
             columns[1].with_layout(Layout::right_to_left(egui::Align::Min), |ui| {
                 if ui.button("Debug").clicked() {
-                    if self.emulator.debugger.is_some() {
+                    if self.emulator.is_debugger_enabled() {
                         self.emulator.disable_debugger()
                     } else {
                         self.emulator.enable_debugger()
@@ -170,7 +170,7 @@ impl eframe::App for EmulatorApp {
 
         self.update_keys(&ctx.input());
 
-        if self.emulator.debugger.is_none() {
+        if !self.emulator.is_debugger_enabled() {
             self.emulator
                 .execute_for_duration(ctx.input().stable_dt as f64);
         } else {

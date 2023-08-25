@@ -3,9 +3,6 @@ mod opcode_table;
 mod operands;
 pub mod status;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use intbits::Bits;
 use log::log_enabled;
 use log::trace;
@@ -16,7 +13,7 @@ use self::opcode_table::Instruction;
 pub use self::opcode_table::InstructionMeta;
 use self::status::StatusFlags;
 use crate::bus::Bus;
-use crate::debugger::Debugger;
+use crate::debugger::DebuggerRef;
 use crate::memory::Address;
 use crate::memory::Wrap;
 use crate::trace::Trace;
@@ -74,13 +71,13 @@ pub struct Cpu<BusT: Bus> {
     pub master_cycle: u64,
     pub halt: bool,
     instruction_table: [Instruction<BusT>; 256],
-    pub debugger: Option<Rc<RefCell<Debugger>>>,
+    pub debugger: DebuggerRef,
 }
 
 const STACK_BASE: u16 = 0;
 
 impl<BusT: Bus> Cpu<BusT> {
-    pub fn new(bus: BusT) -> Self {
+    pub fn new(bus: BusT, debugger: DebuggerRef) -> Self {
         let mut cpu = Self {
             bus,
             a: Default::default(),
@@ -95,7 +92,7 @@ impl<BusT: Bus> Cpu<BusT> {
             master_cycle: 0,
             halt: false,
             instruction_table: build_opcode_table(),
-            debugger: None,
+            debugger,
         };
         cpu.reset();
         cpu
@@ -138,9 +135,7 @@ impl<BusT: Bus> Cpu<BusT> {
         if log_enabled!(target: "cpu_state", Level::Trace) {
             trace!(target: "cpu_state", "{}", Trace::from_cpu(self));
         }
-        if let Some(debugger) = &self.debugger {
-            debugger.borrow_mut().before_instruction(self.pc);
-        }
+        self.debugger.before_instruction(self.pc);
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
     }
@@ -207,7 +202,7 @@ impl<BusT: Bus> Cpu<BusT> {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
+
     use std::io::Write;
     use std::process::Command;
     use std::str::from_utf8;
@@ -218,7 +213,7 @@ mod tests {
     use crate::bus::Bus;
     use crate::bus::SresBus;
     use crate::cpu::VariableLengthRegister;
-    use crate::debugger::Debugger;
+    use crate::debugger::DebuggerRef;
     use crate::memory::Address;
     use crate::memory::Wrap;
     use crate::System;
@@ -242,8 +237,12 @@ mod tests {
 
     fn cpu_with_program(code: &str) -> Cpu<SresBus> {
         let assembled = assemble(code);
+        let debugger = DebuggerRef::new();
         // TODO: Use a test bus instead of SresBus/System
-        Cpu::new(SresBus::with_program(&assembled))
+        Cpu::new(
+            SresBus::with_program(&assembled, debugger.clone()),
+            debugger,
+        )
     }
 
     #[test]

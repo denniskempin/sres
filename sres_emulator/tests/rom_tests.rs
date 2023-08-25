@@ -74,9 +74,9 @@ pub fn test_nmi_sub_cycle_accuracy() {
         }
 
         // Execute `bit $4210` instruction
-        println!("before: {}", Trace::from_sres_cpu(&cpu));
+        println!("before: {}", Trace::from_sres_cpu(cpu));
         cpu.step();
-        println!("after: {}", Trace::from_sres_cpu(&cpu));
+        println!("after: {}", Trace::from_sres_cpu(cpu));
 
         // If the NMI bit is set, the negative status bit will be true.
         assert_eq!(cpu.status.negative, *expected_nmi);
@@ -231,7 +231,7 @@ fn run_rom_test(test_name: &str) {
             );
         }
 
-        let mut actual_line = Trace::from_sres_cpu(&cpu);
+        let mut actual_line = Trace::from_sres_cpu(cpu);
 
         // Fix some BSNES trace inconsistencies:
 
