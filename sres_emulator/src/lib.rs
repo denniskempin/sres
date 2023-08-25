@@ -11,13 +11,13 @@ pub mod trace;
 pub mod uint;
 pub mod util;
 
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::path::Path;
 
 use anyhow::Result;
-
 use bus::SresBus;
 use cpu::Cpu;
-use debugger::{BreakReason, Debugger};
+use debugger::BreakReason;
+use debugger::DebuggerRef;
 
 pub enum ExecutionResult {
     Normal,
@@ -27,40 +27,55 @@ pub enum ExecutionResult {
 
 pub struct System {
     pub cpu: Cpu<SresBus>,
-    pub debugger: Option<Rc<RefCell<Debugger>>>,
+    pub debugger: DebuggerRef,
 }
 
 impl System {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Self::with_bus(SresBus::new())
-    }
-
-    pub fn with_sfc_bytes(sfc_data: &[u8]) -> Result<Self> {
-        Ok(Self::with_bus(SresBus::with_sfc_data(sfc_data)?))
-    }
-
-    pub fn with_sfc(sfc_path: &Path) -> Result<Self> {
-        Ok(Self::with_bus(SresBus::with_sfc(sfc_path)?))
-    }
-
-    fn with_bus(bus: SresBus) -> Self {
-        System {
-            cpu: Cpu::new(bus),
-            debugger: None,
+        let debugger = DebuggerRef::new();
+        Self {
+            cpu: Cpu::new(SresBus::new(debugger.clone()), debugger.clone()),
+            debugger,
         }
     }
 
+    pub fn with_sfc_bytes(sfc_data: &[u8]) -> Result<Self> {
+        let debugger = DebuggerRef::new();
+        Ok(Self {
+            cpu: Cpu::new(
+                SresBus::with_sfc_data(sfc_data, debugger.clone())?,
+                debugger.clone(),
+            ),
+            debugger,
+        })
+    }
+
+    pub fn with_sfc(sfc_path: &Path) -> Result<Self> {
+        let debugger = DebuggerRef::new();
+        Ok(Self {
+            cpu: Cpu::new(
+                SresBus::with_sfc(sfc_path, debugger.clone())?,
+                debugger.clone(),
+            ),
+            debugger,
+        })
+    }
+
+    pub fn is_debugger_enabled(&self) -> bool {
+        self.debugger.enabled
+    }
+
     pub fn enable_debugger(&mut self) {
-        self.debugger = Some(Debugger::new());
-        self.cpu.debugger = self.debugger.clone();
-        self.cpu.bus.debugger = self.debugger.clone();
+        self.debugger.enabled = true;
+        self.cpu.debugger.enabled = true;
+        self.cpu.bus.debugger.enabled = true;
     }
 
     pub fn disable_debugger(&mut self) {
-        self.debugger = None;
-        self.cpu.debugger = None;
-        self.cpu.bus.debugger = None;
+        self.debugger.enabled = false;
+        self.cpu.debugger.enabled = false;
+        self.cpu.bus.debugger.enabled = false;
     }
 
     pub fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
@@ -74,10 +89,8 @@ impl System {
 
             self.cpu.step();
 
-            if let Some(debugger) = &self.debugger {
-                if let Some(break_reason) = debugger.borrow_mut().break_reason.take() {
-                    return ExecutionResult::Break(break_reason);
-                }
+            if let Some(break_reason) = self.debugger.take_break_reason() {
+                return ExecutionResult::Break(break_reason);
             }
 
             if should_break(&self.cpu) {

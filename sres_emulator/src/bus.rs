@@ -1,12 +1,10 @@
-use std::cell::RefCell;
 use std::path::Path;
-use std::rc::Rc;
 
 use anyhow::Result;
 use log::trace;
 
 use crate::cartridge::Cartridge;
-use crate::debugger::Debugger;
+use crate::debugger::DebuggerRef;
 use crate::dma::DmaController;
 use crate::memory::Address;
 use crate::memory::Wrap;
@@ -75,23 +73,23 @@ pub struct SresBus {
     pub clock_speed: u64,
     pub dma_controller: DmaController,
     pub ppu: Ppu,
-    pub debugger: Option<Rc<RefCell<Debugger>>>,
+    pub debugger: DebuggerRef,
 }
 
 impl SresBus {
-    pub fn new() -> Self {
+    pub fn new(debugger: DebuggerRef) -> Self {
         Self {
             memory: vec![0; 0x1000000],
             ppu_timer: PpuTimer::default(),
             clock_speed: 8,
             dma_controller: DmaController::default(),
             ppu: Ppu::new(),
-            debugger: None,
+            debugger,
         }
     }
 
-    pub fn with_sfc(rom_path: &Path) -> Result<Self> {
-        let mut bus = Self::new();
+    pub fn with_sfc(rom_path: &Path, debugger: DebuggerRef) -> Result<Self> {
+        let mut bus = Self::new(debugger);
         // Load cartridge data into memory
         let mut cartridge = Cartridge::new();
         cartridge.load_sfc(rom_path)?;
@@ -101,8 +99,8 @@ impl SresBus {
         Ok(bus)
     }
 
-    pub fn with_sfc_data(rom: &[u8]) -> Result<Self> {
-        let mut bus = Self::new();
+    pub fn with_sfc_data(rom: &[u8], debugger: DebuggerRef) -> Result<Self> {
+        let mut bus = Self::new(debugger);
         // Load cartridge data into memory
         let mut cartridge = Cartridge::new();
         cartridge.load_sfc_data(rom)?;
@@ -112,8 +110,8 @@ impl SresBus {
         Ok(bus)
     }
 
-    pub fn with_program(program: &[u8]) -> Self {
-        let mut bus = Self::new();
+    pub fn with_program(program: &[u8], debugger: DebuggerRef) -> Self {
+        let mut bus = Self::new(debugger);
         for (i, byte) in program.iter().enumerate() {
             bus.memory[i] = *byte;
         }
@@ -121,11 +119,8 @@ impl SresBus {
     }
 
     fn read_u8(&mut self, addr: Address) -> u8 {
-        if let Some(debugger) = &self.debugger {
-            debugger
-                .borrow_mut()
-                .on_cpu_memory_access(crate::debugger::MemoryAccess::Read(addr));
-        }
+        self.debugger
+            .on_cpu_memory_access(crate::debugger::MemoryAccess::Read(addr));
         match u32::from(addr) {
             0x004210 => {
                 let override_value = self.peek_u8(addr).unwrap_or(0);
@@ -147,11 +142,8 @@ impl SresBus {
                 if let Some(value) = self.peek_u8(addr) {
                     value
                 } else {
-                    if let Some(debugger) = &self.debugger {
-                        debugger
-                            .borrow_mut()
-                            .on_error(format!("Invalid read from {}", addr));
-                    }
+                    self.debugger
+                        .on_error(format!("Invalid read from {}", addr));
                     0
                 }
             }
@@ -160,11 +152,8 @@ impl SresBus {
 
     #[allow(clippy::single_match)]
     fn write_u8(&mut self, addr: Address, val: u8) {
-        if let Some(debugger) = &self.debugger {
-            debugger
-                .borrow_mut()
-                .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, val));
-        }
+        self.debugger
+            .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, val));
         match addr.bank {
             0x00..=0x1F => match addr.offset {
                 0x2100..=0x213F => self.ppu.write_ppu_register(addr.offset.low_byte(), val),
@@ -175,11 +164,7 @@ impl SresBus {
                 _ => self.memory[u32::from(addr) as usize] = val,
             },
             _ => {
-                if let Some(debugger) = &self.debugger {
-                    debugger
-                        .borrow_mut()
-                        .on_error(format!("Invalid write to {}", addr));
-                }
+                self.debugger.on_error(format!("Invalid write to {}", addr));
             }
         }
     }
@@ -198,12 +183,6 @@ impl SresBus {
             }
         }
         self.dma_controller.update_state();
-    }
-}
-
-impl Default for SresBus {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

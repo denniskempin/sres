@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::fmt::Display;
+use std::ops::Deref;
 use std::ops::Range;
 use std::rc::Rc;
 
@@ -55,30 +56,87 @@ impl Display for BreakReason {
     }
 }
 
+/// A wrapper around Rc<RefCell<Debugger>> to access a shared instance of the debugger.
+///
+/// Each instance has it's own `enabled` flag to enable/disable access to the debugger
+/// and default to sensible no-op behavior. This prevents frequent access to the
+/// Rc<RefCell<>> when the debugger is disabled.
 #[derive(Clone)]
-pub struct Debugger {
+pub struct DebuggerRef {
+    pub enabled: bool,
+    inner: Rc<RefCell<Debugger>>,
+}
+
+impl DebuggerRef {
+    pub fn new() -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(Debugger::new())),
+            enabled: false,
+        }
+    }
+
+    pub fn previous_instructions(&self, cpu: &Cpu<SresBus>) -> Vec<InstructionMeta> {
+        if self.enabled {
+            self.inner.borrow().previous_instructions(cpu)
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn before_instruction(&mut self, pc: Address) {
+        if self.enabled {
+            self.inner.deref().borrow_mut().before_instruction(pc);
+        }
+    }
+
+    pub fn take_break_reason(&mut self) -> Option<BreakReason> {
+        if self.enabled {
+            self.inner.deref().borrow_mut().take_break_reason()
+        } else {
+            None
+        }
+    }
+
+    pub fn on_error(&mut self, msg: String) {
+        if self.enabled {
+            self.inner.deref().borrow_mut().on_error(msg);
+        }
+    }
+
+    pub fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
+        if self.enabled {
+            self.inner.deref().borrow_mut().on_cpu_memory_access(access);
+        }
+    }
+}
+
+impl Default for DebuggerRef {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+struct Debugger {
     pub breakpoints: Vec<Trigger>,
     pub break_reason: Option<BreakReason>,
     pub last_pcs: RingBuffer<Address, 32>,
 }
 
 impl Debugger {
-    pub fn new() -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self {
+    pub fn new() -> Self {
+        Self {
             breakpoints: vec![Trigger::ExecutionError],
             break_reason: None,
             last_pcs: RingBuffer::default(),
-        }))
+        }
     }
 
-    pub fn previous_instructions<'a>(
-        &'a self,
-        cpu: &'a Cpu<SresBus>,
-    ) -> impl Iterator<Item = InstructionMeta> + 'a {
+    pub fn previous_instructions(&self, cpu: &Cpu<SresBus>) -> Vec<InstructionMeta> {
         self.last_pcs
             .iter()
             .map(move |pc| cpu.load_instruction_meta(*pc).0)
             .rev()
+            .collect()
     }
 
     pub fn before_instruction(&mut self, pc: Address) {
@@ -91,7 +149,7 @@ impl Debugger {
 
     pub fn on_error(&mut self, msg: String) {
         error!("{}", msg);
-        self.break_reason = Some(BreakReason::ExecutionError(msg.clone()));
+        self.break_reason = Some(BreakReason::ExecutionError(msg));
     }
 
     pub fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
