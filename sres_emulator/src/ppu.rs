@@ -3,15 +3,14 @@ use image::RgbaImage;
 use intbits::Bits;
 use log::debug;
 
+use crate::memory::Address;
 use crate::uint::U16Ext;
 use crate::uint::U8Ext;
 
 pub struct Ppu {
     pub vram: Vram,
-
     pub backgrounds: [Background; 4],
 }
-
 impl Ppu {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -21,37 +20,52 @@ impl Ppu {
         }
     }
 
-    /// Writes to 0x2100..0x213F are handled by the PPU
-    pub fn write_ppu_register(&mut self, addr: u8, value: u8) {
-        match addr {
-            0x07..=0x0A => {
-                let bg_id = (addr - 0x07) as usize;
-                self.backgrounds[bg_id].tilemap_addr = (((value as usize) << 9) & 0xFFFF) >> 1;
-            }
-            0x0B => {
-                self.backgrounds[0].tileset_addr = (value.low_nibble() as usize) << 12;
-                self.backgrounds[1].tileset_addr = (value.high_nibble() as usize) << 12;
-            }
-            0x0C => {
-                self.backgrounds[2].tileset_addr = (value.low_nibble() as usize) << 12;
-                self.backgrounds[3].tileset_addr = (value.high_nibble() as usize) << 12;
-            }
-            0x15 => self.vram.increment_mode = value.bit(7),
-            0x16 => self.vram.set_address_low(value),
-            0x17 => self.vram.set_address_high(value),
-            0x18 => self.vram.write_selected_low(value),
-            0x19 => self.vram.write_selected_high(value),
+    pub fn bus_read(&mut self, addr: Address) -> u8 {
+        match addr.offset {
+            0x2139 => self.vram.read_vmdatalread(),
+            0x213A => self.vram.read_vmdatahread(),
+            _ => 0,
+        }
+    }
+
+    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+        match addr.offset {
+            0x2139 => Some(self.vram.peek_vmdatalread()),
+            0x213A => Some(self.vram.peek_vmdatahread()),
+            _ => None,
+        }
+    }
+
+    pub fn bus_write(&mut self, addr: Address, value: u8) {
+        match addr.offset {
+            0x2107..=0x210A => self.write_bgnsc(addr, value),
+            0x210B => self.write_bg12nba(value),
+            0x210C => self.write_bg34nba(value),
+            0x2115 => self.vram.write_vmain(value),
+            0x2116 => self.vram.write_vmaddl(value),
+            0x2117 => self.vram.write_vmaddh(value),
+            0x2118 => self.vram.write_vmdatal(value),
+            0x2119 => self.vram.write_vmdatah(value),
             _ => (),
         }
     }
 
-    /// Reads from 0x2100..0x213F are handled by the PPU
-    pub fn read_ppu_register(&mut self, addr: u8) -> u8 {
-        match addr {
-            0x39 => self.vram.read_selected_low(),
-            0x3A => self.vram.read_selected_high(),
-            _ => 0,
-        }
+    /// Register 2107..210A: BGNSC - BG1..BG4 tilemap base address
+    fn write_bgnsc(&mut self, addr: Address, value: u8) {
+        let bg_id = (addr.offset - 0x2107) as usize;
+        self.backgrounds[bg_id].tilemap_addr = (((value as usize) << 9) & 0xFFFF) >> 1;
+    }
+
+    /// Register 210B: BG12NBA - Tileset base address for BG1 and BG2
+    fn write_bg12nba(&mut self, value: u8) {
+        self.backgrounds[0].tileset_addr = (value.low_nibble() as usize) << 12;
+        self.backgrounds[1].tileset_addr = (value.high_nibble() as usize) << 12;
+    }
+
+    /// Register 210C: BG34NBA - Tileset base address for BG3 and BG4
+    fn write_bg34nba(&mut self, value: u8) {
+        self.backgrounds[2].tileset_addr = (value.low_nibble() as usize) << 12;
+        self.backgrounds[3].tileset_addr = (value.high_nibble() as usize) << 12;
     }
 }
 
@@ -64,7 +78,7 @@ pub struct Vram {
 
 impl Vram {
     #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             memory: vec![0; 0x20000],
             current_addr: 0,
@@ -73,41 +87,25 @@ impl Vram {
         }
     }
 
-    pub fn set_address_low(&mut self, value: u8) {
+    /// Register 2115: VMAIN - Video port control
+    fn write_vmain(&mut self, value: u8) {
+        self.increment_mode = value.bit(7)
+    }
+
+    /// Register 2116: VMADDL - VRAM word address low
+    fn write_vmaddl(&mut self, value: u8) {
         self.current_addr.set_low_byte(value);
         self.read_latch = true;
     }
 
-    pub fn set_address_high(&mut self, value: u8) {
+    /// Register 2117: VMADDH - VRAM word address high
+    fn write_vmaddh(&mut self, value: u8) {
         self.current_addr.set_high_byte(value);
         self.read_latch = true;
     }
 
-    pub fn read_selected_low(&mut self) -> u8 {
-        let value = self.memory[self.current_addr as usize].low_byte();
-        if !self.increment_mode {
-            if self.read_latch {
-                self.read_latch = false;
-            } else {
-                self.current_addr = self.current_addr.wrapping_add(1);
-            }
-        }
-        value
-    }
-
-    pub fn read_selected_high(&mut self) -> u8 {
-        let value = self.memory[self.current_addr as usize].high_byte();
-        if self.increment_mode {
-            if self.read_latch {
-                self.read_latch = false;
-            } else {
-                self.current_addr = self.current_addr.wrapping_add(1);
-            }
-        }
-        value
-    }
-
-    pub fn write_selected_low(&mut self, value: u8) {
+    /// Register 2118: VMDATAL - VRAM data write low
+    fn write_vmdatal(&mut self, value: u8) {
         debug!(
             "VRAM[{:04X}, {:04X}].low = {}",
             self.current_addr,
@@ -120,14 +118,50 @@ impl Vram {
         }
     }
 
-    pub fn write_selected_high(&mut self, value: u8) {
+    /// Register 2119: VMDATAH - VRAM data write high
+    fn write_vmdatah(&mut self, value: u8) {
         debug!("VRAM[{:04X}].high = {}", self.current_addr, value);
         self.memory[self.current_addr as usize].set_high_byte(value);
         if self.increment_mode {
             self.current_addr = self.current_addr.wrapping_add(1);
         }
     }
+
+    /// Register 2139: VMDATALREAD - VRAM data read low
+    fn read_vmdatalread(&mut self) -> u8 {
+        let value = self.peek_vmdatalread();
+        if !self.increment_mode {
+            if self.read_latch {
+                self.read_latch = false;
+            } else {
+                self.current_addr = self.current_addr.wrapping_add(1);
+            }
+        }
+        value
+    }
+
+    fn peek_vmdatalread(&self) -> u8 {
+        self.memory[self.current_addr as usize].low_byte()
+    }
+
+    /// Register 213A: VMDATAHREAD - VRAM data read high
+    fn read_vmdatahread(&mut self) -> u8 {
+        let value = self.peek_vmdatahread();
+        if self.increment_mode {
+            if self.read_latch {
+                self.read_latch = false;
+            } else {
+                self.current_addr = self.current_addr.wrapping_add(1);
+            }
+        }
+        value
+    }
+
+    fn peek_vmdatahread(&self) -> u8 {
+        self.memory[self.current_addr as usize].high_byte()
+    }
 }
+
 #[derive(Default, Copy, Clone, Debug)]
 pub struct Background {
     tilemap_addr: usize,
