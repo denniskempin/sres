@@ -137,7 +137,7 @@ impl SresBus {
                     0b0111_0010
                 }
             }
-            0x002100..=0x00213F => self.ppu.read_ppu_register(addr.offset.low_byte()),
+            0x002100..=0x00213F => self.ppu.bus_read(addr),
             _ => {
                 if let Some(value) = self.peek_u8(addr) {
                     value
@@ -156,7 +156,7 @@ impl SresBus {
             .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, val));
         match addr.bank {
             0x00..=0x1F => match addr.offset {
-                0x2100..=0x213F => self.ppu.write_ppu_register(addr.offset.low_byte(), val),
+                0x2100..=0x213F => self.ppu.bus_write(addr, val),
                 0x420B => self.dma_controller.write_420b_dma_enable(val),
                 0x4300..=0x43FF => self
                     .dma_controller
