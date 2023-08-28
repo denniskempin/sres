@@ -70,12 +70,14 @@ impl System {
         self.debugger.enabled = true;
         self.cpu.debugger.enabled = true;
         self.cpu.bus.debugger.enabled = true;
+        self.cpu.bus.dma_controller.debugger.enabled = false;
     }
 
     pub fn disable_debugger(&mut self) {
         self.debugger.enabled = false;
         self.cpu.debugger.enabled = false;
         self.cpu.bus.debugger.enabled = false;
+        self.cpu.bus.dma_controller.debugger.enabled = false;
     }
 
     pub fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult

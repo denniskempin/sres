@@ -11,7 +11,6 @@ use crate::memory::Wrap;
 use crate::ppu::Ppu;
 use crate::timer::PpuTimer;
 use crate::uint::RegisterSize;
-use crate::uint::U16Ext;
 use crate::uint::UInt;
 
 pub trait Bus {
@@ -82,7 +81,7 @@ impl SresBus {
             memory: vec![0; 0x1000000],
             ppu_timer: PpuTimer::default(),
             clock_speed: 8,
-            dma_controller: DmaController::default(),
+            dma_controller: DmaController::new(debugger.clone()),
             ppu: Ppu::new(),
             debugger,
         }
@@ -157,10 +156,7 @@ impl SresBus {
         match addr.bank {
             0x00..=0x1F => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_write(addr, val),
-                0x420B => self.dma_controller.write_420b_dma_enable(val),
-                0x4300..=0x43FF => self
-                    .dma_controller
-                    .write_43xx_parameter(addr.offset.low_byte(), val),
+                0x420B | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, val),
                 _ => self.memory[u32::from(addr) as usize] = val,
             },
             _ => {

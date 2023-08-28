@@ -1,102 +1,31 @@
 use std::fmt::Display;
 
 use intbits::Bits;
-use log::error;
 use log::info;
 use packed_struct::prelude::*;
 
+use crate::debugger::DebuggerRef;
 use crate::memory::Address;
 use crate::memory::Wrap;
 use crate::uint::U16Ext;
 use crate::uint::U8Ext;
 
-#[derive(Default)]
 pub struct DmaController {
     dma_channels: [DmaChannel; 8],
     dma_pending: u8,
     dma_active: bool,
+    pub debugger: DebuggerRef,
 }
 
 impl DmaController {
-    /// Writes to 0x43XX set DMA parameters
-    pub fn write_43xx_parameter(&mut self, addr: u8, value: u8) {
-        let channel = addr.high_nibble() % 8;
-        match addr.low_nibble() {
-            0x0 => {
-                self.dma_channels[channel as usize].parameters =
-                    DmaParameters::unpack_from_slice(&[value]).unwrap()
-            }
-            0x1 => {
-                self.dma_channels[channel as usize]
-                    .bus_b_address
-                    .offset
-                    .set_low_byte(value);
-            }
-            0x2 => {
-                self.dma_channels[channel as usize]
-                    .bus_a_address
-                    .offset
-                    .set_low_byte(value);
-            }
-            0x3 => {
-                self.dma_channels[channel as usize]
-                    .bus_a_address
-                    .offset
-                    .set_high_byte(value);
-            }
-            0x4 => {
-                self.dma_channels[channel as usize].bus_a_address.bank = value;
-            }
-            0x5 => {
-                self.dma_channels[channel as usize]
-                    .byte_count
-                    .set_low_byte(value);
-            }
-            0x6 => {
-                self.dma_channels[channel as usize]
-                    .byte_count
-                    .set_high_byte(value);
-            }
-            _ => {
-                error!("Unimplemented register: 0x43{:02X}", addr)
-            }
+    pub fn new(debugger: DebuggerRef) -> Self {
+        Self {
+            dma_channels: Default::default(),
+            dma_pending: 0,
+            dma_active: false,
+            debugger,
         }
     }
-
-    /// Reads back the dma parameters at address 0x43xx
-    pub fn read_43xx_parameter(&mut self, addr: u8) -> u8 {
-        let channel = addr.high_nibble() % 8;
-        match addr.low_nibble() {
-            0x0 => self.dma_channels[channel as usize]
-                .parameters
-                .pack()
-                .unwrap()[0],
-            0x1 => self.dma_channels[channel as usize]
-                .bus_b_address
-                .offset
-                .low_byte(),
-            0x2 => self.dma_channels[channel as usize]
-                .bus_a_address
-                .offset
-                .low_byte(),
-            0x3 => self.dma_channels[channel as usize]
-                .bus_a_address
-                .offset
-                .high_byte(),
-            0x4 => self.dma_channels[channel as usize].bus_a_address.bank,
-            0x5 => self.dma_channels[channel as usize].byte_count.low_byte(),
-            0x6 => self.dma_channels[channel as usize].byte_count.high_byte(),
-            _ => {
-                error!("Unimplemented register: 0x43{:02X}", addr);
-                0
-            }
-        }
-    }
-
-    pub fn write_420b_dma_enable(&mut self, value: u8) {
-        self.dma_pending = value;
-    }
-
     pub fn update_state(&mut self) {
         if self.dma_active {
             self.dma_active = false;
@@ -165,6 +94,144 @@ impl DmaController {
         duration += clock_speed - duration % clock_speed;
 
         Some((transfers, duration))
+    }
+
+    pub fn bus_read(&mut self, addr: Address) -> u8 {
+        match self.bus_peek(addr) {
+            Some(value) => value,
+            None => {
+                self.debugger
+                    .on_error(format!("Invalid read from {}", addr));
+                0
+            }
+        }
+    }
+
+    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+        match addr.offset {
+            0x420B => Some(self.peek_mdmaen()),
+            0x43..=0x43FF => {
+                let low_byte = addr.offset.low_byte();
+                let channel = low_byte.high_nibble() as usize % 8;
+                match low_byte.low_nibble() {
+                    0x0 => Some(self.peek_dmapn(channel)),
+                    0x1 => Some(self.peek_bbadn(channel)),
+                    0x2 => Some(self.peek_a1tnl(channel)),
+                    0x3 => Some(self.peek_a1tnh(channel)),
+                    0x4 => Some(self.peek_a1bn(channel)),
+                    0x5 => Some(self.peek_dasnl(channel)),
+                    0x6 => Some(self.peek_dasnh(channel)),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    pub fn bus_write(&mut self, addr: Address, value: u8) {
+        match addr.offset {
+            0x420B => self.write_mdmaen(value),
+            0x43..=0x43FF => {
+                let low_byte = addr.offset.low_byte();
+                let channel = low_byte.high_nibble() as usize % 8;
+                match low_byte.low_nibble() {
+                    0x0 => self.write_dmapn(channel, value),
+                    0x1 => self.write_bbadn(channel, value),
+                    0x2 => self.write_a1tnl(channel, value),
+                    0x3 => self.write_a1tnh(channel, value),
+                    0x4 => self.write_a1bn(channel, value),
+                    0x5 => self.write_dasnl(channel, value),
+                    0x6 => self.write_dasnh(channel, value),
+                    _ => {
+                        self.debugger.on_error(format!("Invalid write to {}", addr));
+                    }
+                }
+            }
+            _ => {
+                self.debugger.on_error(format!("Invalid write to {}", addr));
+            }
+        }
+    }
+
+    /// Register 420B: MDMAEN - DMA enable
+    fn write_mdmaen(&mut self, value: u8) {
+        self.dma_pending = value;
+    }
+
+    fn peek_mdmaen(&self) -> u8 {
+        self.dma_pending
+    }
+
+    /// Register 43N0: DMAPn - DMA channel N control
+    fn write_dmapn(&mut self, channel: usize, value: u8) {
+        self.dma_channels[channel].parameters = DmaParameters::unpack_from_slice(&[value]).unwrap();
+    }
+
+    fn peek_dmapn(&self, channel: usize) -> u8 {
+        self.dma_channels[channel].parameters.pack().unwrap()[0]
+    }
+
+    /// Register 43N1: BBADn - DMA channel N B-bus address
+    fn write_bbadn(&mut self, channel: usize, value: u8) {
+        self.dma_channels[channel]
+            .bus_b_address
+            .offset
+            .set_low_byte(value);
+    }
+
+    fn peek_bbadn(&self, channel: usize) -> u8 {
+        self.dma_channels[channel].bus_b_address.offset.low_byte()
+    }
+
+    /// Register 43N2: A1TnL - DMA channel N A-bus address low
+    fn write_a1tnl(&mut self, channel: usize, value: u8) {
+        self.dma_channels[channel]
+            .bus_a_address
+            .offset
+            .set_low_byte(value);
+    }
+
+    fn peek_a1tnl(&self, channel: usize) -> u8 {
+        self.dma_channels[channel].bus_a_address.offset.low_byte()
+    }
+
+    /// Register 43N3: A1TnH - DMA channel N A-bus address high
+    fn write_a1tnh(&mut self, channel: usize, value: u8) {
+        self.dma_channels[channel]
+            .bus_a_address
+            .offset
+            .set_high_byte(value);
+    }
+
+    fn peek_a1tnh(&self, channel: usize) -> u8 {
+        self.dma_channels[channel].bus_a_address.offset.high_byte()
+    }
+
+    /// Register 43N4: A1Bn - DMA channel N A-bus bank
+    fn write_a1bn(&mut self, channel: usize, value: u8) {
+        self.dma_channels[channel].bus_a_address.bank = value;
+    }
+
+    fn peek_a1bn(&self, channel: usize) -> u8 {
+        self.dma_channels[channel].bus_a_address.bank
+    }
+
+    /// Register 43N5: DASnL - DMA channel N byte count low
+    fn write_dasnl(&mut self, channel: usize, value: u8) {
+        self.dma_channels[channel].byte_count.set_low_byte(value);
+    }
+
+    fn peek_dasnl(&self, channel: usize) -> u8 {
+        self.dma_channels[channel].byte_count.low_byte()
+    }
+
+    /// Register 43N6: DASnH - DMA channel N byte count high
+    fn write_dasnh(&mut self, channel: usize, value: u8) {
+        self.dma_channels[channel].byte_count.set_high_byte(value);
+    }
+
+    fn peek_dasnh(&self, channel: usize) -> u8 {
+        self.dma_channels[channel].byte_count.high_byte()
     }
 }
 
