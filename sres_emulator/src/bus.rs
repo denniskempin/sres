@@ -20,6 +20,7 @@ pub trait Bus {
     fn cycle_write_u8(&mut self, addr: Address, value: u8);
     fn reset(&mut self);
 
+    #[inline]
     fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
         u16::from_le_bytes([
             self.cycle_read_u8(addr),
@@ -27,6 +28,7 @@ pub trait Bus {
         ])
     }
 
+    #[inline]
     fn cycle_read_u24(&mut self, addr: Address, wrap: Wrap) -> u32 {
         u32::from_le_bytes([
             self.cycle_read_u8(addr),
@@ -44,6 +46,7 @@ pub trait Bus {
         }
     }
 
+    #[inline]
     fn cycle_write_u16(&mut self, addr: Address, value: u16, wrap: Wrap) {
         let bytes = value.to_le_bytes();
         self.cycle_write_u8(addr.add(1_u16, wrap), bytes[1]);
@@ -58,6 +61,7 @@ pub trait Bus {
         }
     }
 
+    #[inline]
     fn peek_u16(&self, addr: Address, wrap: Wrap) -> Option<u16> {
         Some(u16::from_le_bytes([
             self.peek_u8(addr)?,
@@ -66,8 +70,16 @@ pub trait Bus {
     }
 }
 
+enum MemoryBlock {
+    Ram(usize),
+    Rom(usize),
+    Register,
+    Unmapped,
+}
+
 pub struct SresBus {
-    pub memory: Vec<u8>,
+    pub wram: Vec<u8>,
+    pub rom: Vec<u8>,
     pub ppu_timer: PpuTimer,
     pub clock_speed: u64,
     pub dma_controller: DmaController,
@@ -78,7 +90,8 @@ pub struct SresBus {
 impl SresBus {
     pub fn new(debugger: DebuggerRef) -> Self {
         Self {
-            memory: vec![0; 0x1000000],
+            wram: vec![0; 0x4000000],
+            rom: vec![0; 0x4000000],
             ppu_timer: PpuTimer::default(),
             clock_speed: 8,
             dma_controller: DmaController::new(debugger.clone()),
@@ -93,7 +106,7 @@ impl SresBus {
         let mut cartridge = Cartridge::new();
         cartridge.load_sfc(rom_path)?;
         for (i, byte) in cartridge.rom.iter().enumerate() {
-            bus.memory[0x8000 + i] = *byte;
+            bus.rom[i] = *byte;
         }
         Ok(bus)
     }
@@ -104,7 +117,7 @@ impl SresBus {
         let mut cartridge = Cartridge::new();
         cartridge.load_sfc_data(rom)?;
         for (i, byte) in cartridge.rom.iter().enumerate() {
-            bus.memory[0x8000 + i] = *byte;
+            bus.rom[i] = *byte;
         }
         Ok(bus)
     }
@@ -112,56 +125,87 @@ impl SresBus {
     pub fn with_program(program: &[u8], debugger: DebuggerRef) -> Self {
         let mut bus = Self::new(debugger);
         for (i, byte) in program.iter().enumerate() {
-            bus.memory[i] = *byte;
+            bus.wram[i] = *byte;
         }
         bus
     }
 
-    fn read_u8(&mut self, addr: Address) -> u8 {
+    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+        match self.map_memory(addr) {
+            MemoryBlock::Ram(offset) => Some(self.wram[offset]),
+            MemoryBlock::Rom(offset) => Some(self.rom[offset]),
+            MemoryBlock::Register => match addr.offset {
+                0x2100..=0x213F => self.ppu.bus_peek(addr),
+                0x4210 => Some(self.peek_rdnmi()),
+                0x420B | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
+                _ => None,
+            },
+            MemoryBlock::Unmapped => None,
+        }
+    }
+
+    pub fn bus_read(&mut self, addr: Address) -> u8 {
         self.debugger
             .on_cpu_memory_access(crate::debugger::MemoryAccess::Read(addr));
-        match u32::from(addr) {
-            0x004210 => {
-                let override_value = self.peek_u8(addr).unwrap_or(0);
-                if override_value > 0 {
-                    return override_value;
-                }
-                if self.ppu_timer.nmi_flag {
-                    // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
-                    if !(self.ppu_timer.v == 225 && self.ppu_timer.h_counter <= 2) {
-                        self.ppu_timer.nmi_flag = false;
-                    }
-                    0b1111_0010
-                } else {
-                    0b0111_0010
-                }
-            }
-            0x002100..=0x00213F => self.ppu.bus_read(addr),
-            _ => {
-                if let Some(value) = self.peek_u8(addr) {
-                    value
-                } else {
+        match self.map_memory(addr) {
+            MemoryBlock::Ram(offset) => self.wram[offset],
+            MemoryBlock::Rom(offset) => self.rom[offset],
+            MemoryBlock::Register => match addr.offset {
+                0x2100..=0x213F => self.ppu.bus_read(addr),
+                0x4210 => self.read_rdnmi(),
+                0x420B | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
+                _ => {
                     self.debugger
-                        .on_error(format!("Invalid read from {}", addr));
+                        .on_error(format!("Invalid read from register {}", addr));
                     0
                 }
+            },
+            MemoryBlock::Unmapped => {
+                self.debugger
+                    .on_error(format!("Invalid read from {}", addr));
+                0
             }
         }
     }
 
     #[allow(clippy::single_match)]
-    fn write_u8(&mut self, addr: Address, val: u8) {
+    fn bus_write(&mut self, addr: Address, value: u8) {
         self.debugger
-            .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, val));
-        match addr.bank {
-            0x00..=0x1F => match addr.offset {
-                0x2100..=0x213F => self.ppu.bus_write(addr, val),
-                0x420B | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, val),
-                _ => self.memory[u32::from(addr) as usize] = val,
+            .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, value));
+
+        match self.map_memory(addr) {
+            MemoryBlock::Ram(offset) => self.wram[offset] = value,
+            MemoryBlock::Rom(offset) => self.rom[offset] = value,
+            MemoryBlock::Register => match addr.offset {
+                0x2100..=0x213F => self.ppu.bus_write(addr, value),
+                0x420B | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
+                _ => {
+                    self.debugger
+                        .on_error(format!("Invalid write to register {}", addr));
+                }
             },
-            _ => {
+            MemoryBlock::Unmapped => {
                 self.debugger.on_error(format!("Invalid write to {}", addr));
             }
+        }
+    }
+
+    fn map_memory(&self, addr: Address) -> MemoryBlock {
+        match addr.bank {
+            0x00..=0x3F => match addr.offset {
+                0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
+                0x2000..=0x7FFF => MemoryBlock::Register,
+                0x8000..=0xFFFF => {
+                    MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize - 0x8000))
+                }
+            },
+            0x40..=0x7D => MemoryBlock::Rom(
+                0x200000 + (addr.bank as usize - 0x40) * 0x10000 + addr.offset as usize,
+            ),
+            0x7E..=0x7F => {
+                MemoryBlock::Ram((addr.bank as usize - 0x7E) * 0x10000 + addr.offset as usize)
+            }
+            _ => MemoryBlock::Unmapped,
         }
     }
 
@@ -174,24 +218,44 @@ impl SresBus {
         {
             self.ppu_timer.advance_master_clock(duration);
             for (source, destination) in transfers {
-                let value = self.read_u8(source);
-                self.write_u8(destination, value);
+                let value = self.bus_read(source);
+                self.bus_write(destination, value);
             }
         }
         self.dma_controller.update_state();
+    }
+
+    /// Register $4210: RDNMI - Read NMI Flag
+    fn read_rdnmi(&mut self) -> u8 {
+        let value = self.peek_rdnmi();
+        if self.ppu_timer.nmi_flag {
+            // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
+            if !(self.ppu_timer.v == 225 && self.ppu_timer.h_counter <= 2) {
+                self.ppu_timer.nmi_flag = false;
+            }
+        }
+        value
+    }
+
+    fn peek_rdnmi(&self) -> u8 {
+        if self.ppu_timer.nmi_flag {
+            0b1111_0010
+        } else {
+            0b0111_0010
+        }
     }
 }
 
 impl Bus for SresBus {
     fn peek_u8(&self, addr: Address) -> Option<u8> {
-        Some(self.memory[u32::from(addr) as usize])
+        self.bus_peek(addr)
     }
 
     fn cycle_read_u8(&mut self, addr: Address) -> u8 {
         self.clock_speed = memory_access_speed(addr);
         trace!(target: "cycles", "cycle read {addr} ({} cycles)", self.clock_speed);
         self.ppu_timer.advance_master_clock(self.clock_speed - 6);
-        let value = self.read_u8(addr);
+        let value = self.bus_read(addr);
         self.advance_master_clock(6);
         value
     }
@@ -206,7 +270,7 @@ impl Bus for SresBus {
             self.clock_speed
         );
 
-        self.write_u8(addr, val);
+        self.bus_write(addr, val);
     }
 
     fn cycle_io(&mut self) {
