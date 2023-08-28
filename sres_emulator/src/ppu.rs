@@ -106,12 +106,7 @@ impl Vram {
 
     /// Register 2118: VMDATAL - VRAM data write low
     fn write_vmdatal(&mut self, value: u8) {
-        debug!(
-            "VRAM[{:04X}, {:04X}].low = {}",
-            self.current_addr,
-            self.current_addr << 1,
-            value
-        );
+        debug!("VRAM[{:04X}].low = {}", self.current_addr, value);
         self.memory[self.current_addr as usize].set_low_byte(value);
         if !self.increment_mode {
             self.current_addr = self.current_addr.wrapping_add(1);
