@@ -2,7 +2,9 @@ use std::path::Path;
 
 use anyhow::Result;
 use log::trace;
+use log::warn;
 
+use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::debugger::DebuggerRef;
 use crate::dma::DmaController;
@@ -84,6 +86,7 @@ pub struct SresBus {
     pub clock_speed: u64,
     pub dma_controller: DmaController,
     pub ppu: Ppu,
+    pub apu: Apu,
     pub debugger: DebuggerRef,
 }
 
@@ -96,6 +99,7 @@ impl SresBus {
             clock_speed: 8,
             dma_controller: DmaController::new(debugger.clone()),
             ppu: Ppu::new(),
+            apu: Apu::new(),
             debugger,
         }
     }
@@ -136,8 +140,9 @@ impl SresBus {
             MemoryBlock::Rom(offset) => Some(self.rom[offset]),
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_peek(addr),
+                0x2140..=0x217F => self.apu.bus_peek(addr),
                 0x4210 => Some(self.peek_rdnmi()),
-                0x420B | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
+                0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
                 _ => None,
             },
             MemoryBlock::Unmapped => None,
@@ -152,8 +157,9 @@ impl SresBus {
             MemoryBlock::Rom(offset) => self.rom[offset],
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_read(addr),
+                0x2140..=0x217F => self.apu.bus_read(addr),
                 0x4210 => self.read_rdnmi(),
-                0x420B | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
+                0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
                 _ => {
                     self.debugger
                         .on_error(format!("Invalid read from register {}", addr));
@@ -178,7 +184,9 @@ impl SresBus {
             MemoryBlock::Rom(offset) => self.rom[offset] = value,
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_write(addr, value),
-                0x420B | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
+                0x2140..=0x217F => self.apu.bus_write(addr, value),
+                0x4200 => self.write_nmitimen(value),
+                0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 _ => {
                     self.debugger
                         .on_error(format!("Invalid write to register {}", addr));
@@ -209,23 +217,14 @@ impl SresBus {
         }
     }
 
-    fn advance_master_clock(&mut self, cycles: u64) {
-        self.ppu_timer.advance_master_clock(cycles);
+    /// Register $4200: NMITIMEN - NMI, Timer and IRQ Enable/Flag
 
-        if let Some((transfers, duration)) = self
-            .dma_controller
-            .pending_transfers(self.ppu_timer.master_clock, self.clock_speed)
-        {
-            self.ppu_timer.advance_master_clock(duration);
-            for (source, destination) in transfers {
-                let value = self.bus_read(source);
-                self.bus_write(destination, value);
-            }
-        }
-        self.dma_controller.update_state();
+    fn write_nmitimen(&mut self, value: u8) {
+        warn!("NMITINEN = {:02X} Not implemented", value);
     }
 
     /// Register $4210: RDNMI - Read NMI Flag
+
     fn read_rdnmi(&mut self) -> u8 {
         let value = self.peek_rdnmi();
         if self.ppu_timer.nmi_flag {
@@ -243,6 +242,22 @@ impl SresBus {
         } else {
             0b0111_0010
         }
+    }
+
+    fn advance_master_clock(&mut self, cycles: u64) {
+        self.ppu_timer.advance_master_clock(cycles);
+
+        if let Some((transfers, duration)) = self
+            .dma_controller
+            .pending_transfers(self.ppu_timer.master_clock, self.clock_speed)
+        {
+            self.ppu_timer.advance_master_clock(duration);
+            for (source, destination) in transfers {
+                let value = self.bus_read(source);
+                self.bus_write(destination, value);
+            }
+        }
+        self.dma_controller.update_state();
     }
 }
 

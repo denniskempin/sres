@@ -29,6 +29,7 @@ impl MemoryAccess {
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone)]
 pub enum Trigger {
+    ProgramCounter(Range<u32>),
     CpuMemoryRead(Range<u32>),
     CpuMemoryWrite(Range<u32>),
     ExecutionError,
@@ -37,6 +38,7 @@ pub enum Trigger {
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone)]
 pub enum BreakReason {
+    ProgramCounter(Address),
     CpuMemoryRead(Address),
     CpuMemoryWrite(Address),
     ExecutionError(String),
@@ -45,6 +47,9 @@ pub enum BreakReason {
 impl Display for BreakReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            BreakReason::ProgramCounter(addr) => {
+                write!(f, "Program counter reached address {}", addr)
+            }
             BreakReason::CpuMemoryRead(addr) => {
                 write!(f, "CPU memory read at address {}", addr)
             }
@@ -125,7 +130,7 @@ struct Debugger {
 impl Debugger {
     pub fn new() -> Self {
         Self {
-            breakpoints: vec![Trigger::ExecutionError],
+            breakpoints: vec![],
             break_reason: None,
             last_pcs: RingBuffer::default(),
         }
@@ -141,6 +146,13 @@ impl Debugger {
 
     pub fn before_instruction(&mut self, pc: Address) {
         self.last_pcs.push(pc);
+        for trigger in self.breakpoints.iter() {
+            if let Trigger::ProgramCounter(range) = trigger {
+                if range.contains(&u32::from(pc)) {
+                    self.break_reason = Some(BreakReason::ProgramCounter(pc));
+                }
+            }
+        }
     }
 
     pub fn take_break_reason(&mut self) -> Option<BreakReason> {
@@ -149,7 +161,11 @@ impl Debugger {
 
     pub fn on_error(&mut self, msg: String) {
         error!("{}", msg);
-        self.break_reason = Some(BreakReason::ExecutionError(msg));
+        for trigger in self.breakpoints.iter() {
+            if let Trigger::ExecutionError = trigger {
+                self.break_reason = Some(BreakReason::ExecutionError(msg.clone()));
+            }
+        }
     }
 
     pub fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
