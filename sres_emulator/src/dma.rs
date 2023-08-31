@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use intbits::Bits;
 use log::info;
+use log::warn;
 use packed_struct::prelude::*;
 
 use crate::debugger::DebuggerRef;
@@ -109,7 +110,6 @@ impl DmaController {
 
     pub fn bus_peek(&self, addr: Address) -> Option<u8> {
         match addr.offset {
-            0x420B => Some(self.peek_mdmaen()),
             0x43..=0x43FF => {
                 let low_byte = addr.offset.low_byte();
                 let channel = low_byte.high_nibble() as usize % 8;
@@ -131,6 +131,7 @@ impl DmaController {
     pub fn bus_write(&mut self, addr: Address, value: u8) {
         match addr.offset {
             0x420B => self.write_mdmaen(value),
+            0x420C => self.write_hdmaen(value),
             0x43..=0x43FF => {
                 let low_byte = addr.offset.low_byte();
                 let channel = low_byte.high_nibble() as usize % 8;
@@ -158,8 +159,9 @@ impl DmaController {
         self.dma_pending = value;
     }
 
-    fn peek_mdmaen(&self) -> u8 {
-        self.dma_pending
+    /// Register 420C: HDMAEN - HDMA enable
+    fn write_hdmaen(&mut self, value: u8) {
+        warn!("HDMAEN={:02X} not implemented", value);
     }
 
     /// Register 43N0: DMAPn - DMA channel N control
