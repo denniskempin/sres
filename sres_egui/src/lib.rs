@@ -156,9 +156,11 @@ impl eframe::App for EmulatorApp {
     #[instrument(skip_all)]
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         // Load new program if a file is dropped on the app
-        if !ctx.input().raw.dropped_files.is_empty() {
-            self.load_dropped_file(&ctx.input().raw.dropped_files[0]);
-        }
+        ctx.input(|input| {
+            if !input.raw.dropped_files.is_empty() {
+                self.load_dropped_file(&input.raw.dropped_files[0]);
+            }
+        });
 
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             self.menu_bar(ui);
@@ -167,15 +169,17 @@ impl eframe::App for EmulatorApp {
         if self.loaded_rom.is_none() {
             return;
         }
+        ctx.input(|input| {
+            self.update_keys(input);
+        });
 
-        self.update_keys(&ctx.input());
+        let (stable_dt, unstable_dt) =
+            ctx.input(|input| (input.stable_dt as f64, input.unstable_dt as f64));
 
         if !self.emulator.is_debugger_enabled() {
-            self.emulator
-                .execute_for_duration(ctx.input().stable_dt as f64);
+            self.emulator.execute_for_duration(stable_dt);
         } else {
-            self.debug_ui
-                .run_emulator(&mut self.emulator, ctx.input().unstable_dt as f64);
+            self.debug_ui.run_emulator(&mut self.emulator, unstable_dt);
 
             egui::SidePanel::right("right_debug_panel")
                 .resizable(false)
