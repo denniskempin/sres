@@ -114,7 +114,10 @@ fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &Textur
 
 fn tileset_widget(ui: &mut Ui, background: &Background, tileset_texture: &TextureHandle) {
     ui.vertical(|ui| {
-        ui.label(format!("Tileset (0x{:04X})", background.tileset_addr));
+        ui.label(format!(
+            "Tileset (0x{:04X}, {})",
+            background.tileset_addr, background.bit_depth
+        ));
         ui.image(tileset_texture, Vec2::new(512.0, 512.0));
     });
 }
