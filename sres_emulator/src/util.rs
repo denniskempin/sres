@@ -31,3 +31,9 @@ impl<T, const N: usize> Default for RingBuffer<T, N> {
         }
     }
 }
+
+/// Abstract interface for image::RgbaImage or egui::ColorImage.
+pub trait ImageBackend {
+    fn new(width: u32, height: u32) -> Self;
+    fn set_pixel(&mut self, index: (u32, u32), value: [u8; 4]);
+}

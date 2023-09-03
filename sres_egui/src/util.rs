@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use egui::Color32;
 use egui::ColorImage;
 use egui::ImageData;
-use sres_emulator::ppu::ImageBackend;
+use sres_emulator::util::ImageBackend;
 
 #[derive(Clone)]
 pub struct RingBuffer<T, const N: usize> {
