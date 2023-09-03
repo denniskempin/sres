@@ -97,18 +97,37 @@ impl Ppu {
     }
 
     /// Register 2107..210A: BGNSC - BG1..BG4 tilemap base address
+    /// 7  bit  0
+    /// ---- ----
+    /// AAAA AAYX
+    /// |||| ||||
+    /// |||| |||+- Horizontal tilemap count (0 = 1 tilemap, 1 = 2 tilemaps)
+    /// |||| ||+-- Vertical tilemap count (0 = 1 tilemap, 1 = 2 tilemaps)
+    /// ++++-++--- Tilemap VRAM address (word address = AAAAAA << 10)
     fn write_bgnsc(&mut self, addr: Address, value: u8) {
         let bg_id = (addr.offset - 0x2107) as usize;
         self.backgrounds[bg_id].tilemap_addr = (((value as usize) << 9) & 0xFFFF) >> 1;
     }
 
     /// Register 210B: BG12NBA - Tileset base address for BG1 and BG2
+    /// 7  bit  0
+    /// ---- ----
+    /// BBBB AAAA
+    /// |||| ||||
+    /// |||| ++++- BG1 CHR word base address (word address = AAAA << 12)
+    /// ++++------ BG2 CHR word base address (word address = BBBB << 12)
     fn write_bg12nba(&mut self, value: u8) {
         self.backgrounds[0].tileset_addr = (value.low_nibble() as usize) << 12;
         self.backgrounds[1].tileset_addr = (value.high_nibble() as usize) << 12;
     }
 
     /// Register 210C: BG34NBA - Tileset base address for BG3 and BG4
+    /// 7  bit  0
+    /// ---- ----
+    /// DDDD CCCC
+    /// |||| ||||
+    /// |||| ++++- BG3 CHR word base address (word address = CCCC << 12)
+    /// ++++------ BG4 CHR word base address (word address = DDDD << 12)
     fn write_bg34nba(&mut self, value: u8) {
         self.backgrounds[2].tileset_addr = (value.low_nibble() as usize) << 12;
         self.backgrounds[3].tileset_addr = (value.high_nibble() as usize) << 12;
@@ -189,6 +208,23 @@ impl Vram {
     }
 
     /// Register 2115: VMAIN - Video port control
+    /// 7  bit  0
+    /// ---- ----
+    /// M... RRII
+    /// |    ||||
+    /// |    ||++- Address increment amount:
+    /// |    ||     0: Increment by 1 word
+    /// |    ||     1: Increment by 32 words
+    /// |    ||     2: Increment by 128 words
+    /// |    ||     3: Increment by 128 words
+    /// |    ++--- Address remapping: (VMADD -> Internal)
+    /// |           0: None
+    /// |           1: Remap rrrrrrrr YYYccccc -> rrrrrrrr cccccYYY (2bpp)
+    /// |           2: Remap rrrrrrrY YYcccccP -> rrrrrrrc ccccPYYY (4bpp)
+    /// |           3: Remap rrrrrrYY YcccccPP -> rrrrrrcc cccPPYYY (8bpp)
+    /// +--------- Address increment mode:
+    ///             0: Increment after writing $2118 or reading $2139
+    ///             1: Increment after writing $2119 or reading $213A
     fn write_vmain(&mut self, value: u8) {
         self.increment_mode = value.bit(7)
     }

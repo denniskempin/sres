@@ -155,16 +155,52 @@ impl DmaController {
     }
 
     /// Register 420B: MDMAEN - DMA enable
+    /// 7  bit  0
+    /// ---- ----
+    /// 7654 3210
+    /// |||| ||||
+    /// |||| |||+- Channel 0 select
+    /// |||| ||+-- Channel 1 select
+    /// |||| |+--- Channel 2 select
+    /// |||| +---- Channel 3 select
+    /// |||+------ Channel 4 select
+    /// ||+------- Channel 5 select
+    /// |+-------- Channel 6 select
+    /// +--------- Channel 7 select
     fn write_mdmaen(&mut self, value: u8) {
         self.dma_pending = value;
     }
 
     /// Register 420C: HDMAEN - HDMA enable
+    /// 7  bit  0
+    /// ---- ----
+    /// 7654 3210
+    /// |||| ||||
+    /// |||| |||+- Channel 0 HDMA enable
+    /// |||| ||+-- Channel 1 HDMA enable
+    /// |||| |+--- Channel 2 HDMA enable
+    /// |||| +---- Channel 3 HDMA enable
+    /// |||+------ Channel 4 HDMA enable
+    /// ||+------- Channel 5 HDMA enable
+    /// |+-------- Channel 6 HDMA enable
+    /// +--------- Channel 7 HDMA enable
     fn write_hdmaen(&mut self, value: u8) {
         warn!("HDMAEN={:02X} not implemented", value);
     }
 
     /// Register 43N0: DMAPn - DMA channel N control
+    /// 7  bit  0
+    /// ---- ----
+    /// DIxA APPP
+    /// |||| ||||
+    /// |||| |+++- Transfer pattern (see below)
+    /// |||+-+---- Address adjust mode (DMA only):
+    /// |||         0:   Increment A bus address after copy
+    /// |||         1/3: Fixed
+    /// |||         2:   Decrement A bus address after copy
+    /// ||+------- (Unused)
+    /// |+-------- Indirect (HDMA only)
+    /// +--------- Direction: 0=Copy from A to B, 1=Copy from B to A
     fn write_dmapn(&mut self, channel: usize, value: u8) {
         self.dma_channels[channel].parameters = DmaParameters::unpack_from_slice(&[value]).unwrap();
     }
