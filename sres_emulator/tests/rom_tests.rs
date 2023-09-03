@@ -14,6 +14,7 @@ use sres_emulator::cpu::Cpu;
 use sres_emulator::logging;
 use sres_emulator::memory::format_memory;
 use sres_emulator::memory::Wrap;
+use sres_emulator::ppu::BackgroundId;
 use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
 use sres_emulator::System;
@@ -287,13 +288,13 @@ fn run_rom_test(test_name: &str) {
 
     let tileset_path = root_dir.join(format!("tests/rom_tests/{test_name}-bg1_tileset"));
     compare_to_golden(
-        &cpu.bus.ppu.backgrounds[0].debug_render_tileset(&cpu.bus.ppu.vram),
+        &cpu.bus.ppu.debug_render_tileset(BackgroundId::BG0),
         &tileset_path,
     );
 
     let tilemap_path = root_dir.join(format!("tests/rom_tests/{test_name}-bg1_tilemap"));
     compare_to_golden(
-        &cpu.bus.ppu.backgrounds[0].debug_render_tilemap(&cpu.bus.ppu.vram),
+        &cpu.bus.ppu.debug_render_tilemap(BackgroundId::BG0),
         &tilemap_path,
     );
 }

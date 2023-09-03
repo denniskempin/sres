@@ -1,4 +1,5 @@
 mod debug;
+pub mod util;
 mod wasm;
 
 use std::ffi::OsStr;
@@ -18,10 +19,12 @@ use egui::Sense;
 use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
+use sres_emulator::ppu::BackgroundId;
 use sres_emulator::System;
 use tracing::instrument;
 
 use self::debug::DebugUi;
+use self::util::SetFromRgbaImage;
 
 const PROGRAMS: &[(&str, &[u8])] = &[];
 
@@ -129,14 +132,13 @@ impl EmulatorApp {
     }
 
     fn main_display(&mut self, ui: &mut Ui) {
-        let framebuffer = self.emulator.cpu.bus.ppu.backgrounds[0]
-            .debug_render_tilemap(&self.emulator.cpu.bus.ppu.vram);
-
-        self.framebuffer_texture.set(
-            ColorImage::from_rgba_unmultiplied(
-                [framebuffer.width() as usize, framebuffer.height() as usize],
-                framebuffer.as_raw(),
-            ),
+        self.framebuffer_texture.set_from_rgba_image(
+            &self
+                .emulator
+                .cpu
+                .bus
+                .ppu
+                .debug_render_tilemap(BackgroundId::BG0),
             TextureOptions::default(),
         );
 
@@ -165,7 +167,6 @@ impl eframe::App for EmulatorApp {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             self.menu_bar(ui);
         });
-
         if self.loaded_rom.is_none() {
             return;
         }
@@ -187,12 +188,20 @@ impl eframe::App for EmulatorApp {
                     ui.style_mut().override_font_id = Some(FontId::monospace(12.0));
                     self.debug_ui.right_debug_panel(ui, &self.emulator);
                 });
+
+            egui::TopBottomPanel::bottom("bottom_debug_panel").show(ctx, |ui| {
+                self.debug_ui.bottom_debug_panel(ui, &self.emulator);
+            });
         }
 
         // Render emulator display
         egui::CentralPanel::default().show(ctx, |ui| {
             self.main_display(ui);
         });
+
+        if self.emulator.is_debugger_enabled() {
+            self.debug_ui.modals(ctx, &mut self.emulator);
+        }
 
         // Always repaint to keep rendering at 60Hz.
         ctx.request_repaint()

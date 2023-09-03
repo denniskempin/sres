@@ -1,10 +1,12 @@
 use std::collections::vec_deque::Iter;
 use std::collections::VecDeque;
 
-use bincode::Decode;
-use bincode::Encode;
+use egui::ColorImage;
+use egui::TextureHandle;
+use egui::TextureOptions;
+use image::RgbaImage;
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Clone)]
 pub struct RingBuffer<T, const N: usize> {
     pub stack: VecDeque<T>,
 }
@@ -32,5 +34,21 @@ impl<T, const N: usize> Default for RingBuffer<T, N> {
         Self {
             stack: Default::default(),
         }
+    }
+}
+
+pub trait SetFromRgbaImage {
+    fn set_from_rgba_image(&mut self, image: &RgbaImage, options: TextureOptions);
+}
+
+impl SetFromRgbaImage for TextureHandle {
+    fn set_from_rgba_image(&mut self, image: &RgbaImage, options: TextureOptions) {
+        self.set(
+            ColorImage::from_rgba_unmultiplied(
+                [image.width() as usize, image.height() as usize],
+                image.as_raw(),
+            ),
+            options,
+        );
     }
 }

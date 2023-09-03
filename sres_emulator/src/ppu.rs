@@ -1,7 +1,11 @@
+use std::fmt::Display;
+use std::fmt::Formatter;
+
 use image::Rgba;
 use image::RgbaImage;
 use intbits::Bits;
 use log::debug;
+use packed_struct::prelude::PackedStruct;
 
 use crate::memory::Address;
 use crate::uint::U16Ext;
@@ -9,6 +13,7 @@ use crate::uint::U8Ext;
 
 pub struct Ppu {
     pub vram: Vram,
+    pub bg_mode: BgMode,
     pub backgrounds: [Background; 4],
 }
 impl Ppu {
@@ -16,6 +21,7 @@ impl Ppu {
     pub fn new() -> Self {
         Self {
             vram: Vram::new(),
+            bg_mode: BgMode::default(),
             backgrounds: [Background::default(); 4],
         }
     }
@@ -38,6 +44,7 @@ impl Ppu {
 
     pub fn bus_write(&mut self, addr: Address, value: u8) {
         match addr.offset {
+            0x2105 => self.write_bgmode(value),
             0x2107..=0x210A => self.write_bgnsc(addr, value),
             0x210B => self.write_bg12nba(value),
             0x210C => self.write_bg34nba(value),
@@ -48,6 +55,28 @@ impl Ppu {
             0x2119 => self.vram.write_vmdatah(value),
             _ => (),
         }
+    }
+
+    /// Register 2105: BGMODE
+    fn write_bgmode(&mut self, value: u8) {
+        self.bg_mode = BgMode::unpack(&[value]).unwrap();
+
+        use BitDepth::*;
+        let bit_depths = match self.bg_mode.bg_mode {
+            0 => (Bpp2, Bpp2, Bpp2, Bpp2),
+            1 => (Bpp4, Bpp4, Bpp2, Disabled),
+            2 => (Bpp4, Bpp4, Opt, Disabled),
+            3 => (Bpp8, Bpp4, Disabled, Disabled),
+            4 => (Bpp8, Bpp2, Opt, Disabled),
+            5 => (Bpp4, Bpp2, Disabled, Disabled),
+            6 => (Bpp4, Disabled, Opt, Disabled),
+            7 => (Bpp8, Disabled, Disabled, Disabled),
+            _ => unreachable!(),
+        };
+        self.backgrounds[0].bit_depth = bit_depths.0;
+        self.backgrounds[1].bit_depth = bit_depths.1;
+        self.backgrounds[2].bit_depth = bit_depths.2;
+        self.backgrounds[3].bit_depth = bit_depths.3;
     }
 
     /// Register 2107..210A: BGNSC - BG1..BG4 tilemap base address
@@ -66,6 +95,91 @@ impl Ppu {
     fn write_bg34nba(&mut self, value: u8) {
         self.backgrounds[2].tileset_addr = (value.low_nibble() as usize) << 12;
         self.backgrounds[3].tileset_addr = (value.high_nibble() as usize) << 12;
+    }
+
+    // Debug APIs
+
+    pub fn debug_render_tileset(&self, background_id: BackgroundId) -> RgbaImage {
+        let bg = &self.backgrounds[background_id as usize];
+        let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
+        let mut image = RgbaImage::new(16 * 8, 16 * 8);
+        for tile_idx in 0..256 {
+            let tile_x: u32 = (tile_idx % 16) * 8;
+            let tile_y: u32 = (tile_idx / 16) * 8;
+            let tile_addr = (tile_idx * 8) as usize;
+            for (row_idx, row) in tileset_data[tile_addr..(tile_addr + 8)].iter().enumerate() {
+                let low = row.low_byte();
+                let high = row.high_byte();
+                for col_idx in 0..8 {
+                    let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
+                    image[(tile_x + (7 - col_idx), tile_y + row_idx as u32)] = if pixel > 0 {
+                        Rgba([255, 255, 255, 255])
+                    } else {
+                        Rgba([0, 0, 0, 255])
+                    };
+                }
+            }
+        }
+        image
+    }
+
+    pub fn debug_render_tilemap(&self, background_id: BackgroundId) -> RgbaImage {
+        let bg = &self.backgrounds[background_id as usize];
+        let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
+        let tilemap_data = &self.vram.memory[bg.tilemap_addr..bg.tilemap_addr + 0x2000];
+        let mut image = RgbaImage::new(32 * 8, 32 * 8);
+        for tile_y_idx in 0..32_u32 {
+            for tile_x_idx in 0..32_u32 {
+                let entry = tilemap_data[(tile_y_idx as usize) * 32 + tile_x_idx as usize];
+                let tile_idx = entry.bits(0..=9) as u32;
+                let tile_addr = (tile_idx * 8) as usize;
+                let tile_x: u32 = tile_x_idx * 8;
+                let tile_y: u32 = tile_y_idx * 8;
+                for (row_idx, row) in tileset_data[tile_addr..(tile_addr + 8)].iter().enumerate() {
+                    let low = row.low_byte();
+                    let high = row.high_byte();
+                    for col_idx in 0..8 {
+                        let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
+                        image[(tile_x + (7 - col_idx), tile_y + row_idx as u32)] = if pixel > 0 {
+                            Rgba([255, 255, 255, 255])
+                        } else {
+                            Rgba([0, 0, 0, 255])
+                        };
+                    }
+                }
+            }
+        }
+        image
+    }
+}
+
+#[derive(PackedStruct, Clone, Copy, PartialEq, Eq, Default)]
+#[packed_struct(bit_numbering = "msb0")]
+pub struct BgMode {
+    #[packed_field(bits = "0..=2")]
+    pub bg_mode: u8,
+    pub bg3_prio: bool,
+    pub character_size: [bool; 4],
+}
+
+impl BgMode {
+    pub fn to_pretty_string(&self) -> String {
+        fn size_str(size: bool) -> &'static str {
+            if size {
+                "16"
+            } else {
+                "8"
+            }
+        }
+        format!(
+            "BGMODE{}, BG3 Prio: {}, BG0={}, BG1={}, BG2={}, BG3={}",
+            self.bg_mode,
+            self.bg3_prio,
+            size_str(self.character_size[0]),
+            size_str(self.character_size[1]),
+            size_str(self.character_size[2]),
+            size_str(self.character_size[3])
+        )
     }
 }
 
@@ -157,61 +271,51 @@ impl Vram {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug)]
-pub struct Background {
-    tilemap_addr: usize,
-    tileset_addr: usize,
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
+pub enum BackgroundId {
+    #[default]
+    BG0 = 0,
+    BG1 = 1,
+    BG2 = 2,
+    BG3 = 3,
 }
 
-impl Background {
-    pub fn debug_render_tileset(&self, vram: &Vram) -> RgbaImage {
-        let tileset_data = &vram.memory[self.tileset_addr..self.tileset_addr + 0x2000];
-        let mut image = RgbaImage::new(16 * 8, 16 * 8);
-        for tile_idx in 0..256 {
-            let tile_x: u32 = (tile_idx % 16) * 8;
-            let tile_y: u32 = (tile_idx / 16) * 8;
-            let tile_addr = (tile_idx * 8) as usize;
-            for (row_idx, row) in tileset_data[tile_addr..(tile_addr + 8)].iter().enumerate() {
-                let low = row.low_byte();
-                let high = row.high_byte();
-                for col_idx in 0..8 {
-                    let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
-                    image[(tile_x + (7 - col_idx), tile_y + row_idx as u32)] = if pixel > 0 {
-                        Rgba([255, 255, 255, 255])
-                    } else {
-                        Rgba([0, 0, 0, 255])
-                    };
-                }
-            }
+impl Display for BackgroundId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BackgroundId::BG0 => write!(f, "BG0"),
+            BackgroundId::BG1 => write!(f, "BG1"),
+            BackgroundId::BG2 => write!(f, "BG2"),
+            BackgroundId::BG3 => write!(f, "BG3"),
         }
-        image
     }
+}
 
-    pub fn debug_render_tilemap(&self, vram: &Vram) -> RgbaImage {
-        let tileset_data = &vram.memory[self.tileset_addr..self.tileset_addr + 0x2000];
-        let tilemap_data = &vram.memory[self.tilemap_addr..self.tilemap_addr + 0x2000];
-        let mut image = RgbaImage::new(32 * 8, 32 * 8);
-        for tile_y_idx in 0..32_u32 {
-            for tile_x_idx in 0..32_u32 {
-                let entry = tilemap_data[(tile_y_idx as usize) * 32 + tile_x_idx as usize];
-                let tile_idx = entry.bits(0..=9) as u32;
-                let tile_addr = (tile_idx * 8) as usize;
-                let tile_x: u32 = tile_x_idx * 8;
-                let tile_y: u32 = tile_y_idx * 8;
-                for (row_idx, row) in tileset_data[tile_addr..(tile_addr + 8)].iter().enumerate() {
-                    let low = row.low_byte();
-                    let high = row.high_byte();
-                    for col_idx in 0..8 {
-                        let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
-                        image[(tile_x + (7 - col_idx), tile_y + row_idx as u32)] = if pixel > 0 {
-                            Rgba([255, 255, 255, 255])
-                        } else {
-                            Rgba([0, 0, 0, 255])
-                        };
-                    }
-                }
-            }
+#[derive(Default, Copy, Clone, Debug)]
+pub struct Background {
+    pub bit_depth: BitDepth,
+    pub tilemap_addr: usize,
+    pub tileset_addr: usize,
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+pub enum BitDepth {
+    #[default]
+    Disabled,
+    Bpp2,
+    Bpp4,
+    Bpp8,
+    Opt,
+}
+
+impl Display for BitDepth {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BitDepth::Disabled => write!(f, "Disabled"),
+            BitDepth::Bpp2 => write!(f, "2bpp"),
+            BitDepth::Bpp4 => write!(f, "4bpp"),
+            BitDepth::Bpp8 => write!(f, "8bpp"),
+            BitDepth::Opt => write!(f, "Opt"),
         }
-        image
     }
 }

@@ -2558,6 +2558,7 @@ dependencies = [
  "console_error_panic_hook",
  "eframe",
  "egui",
+ "image",
  "sres_emulator",
  "tracing",
  "tracing-chrome",

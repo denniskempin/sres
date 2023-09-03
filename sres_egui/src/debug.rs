@@ -1,22 +1,27 @@
+mod cpu;
+mod ppu;
+
 use std::fmt::Debug;
 
 use eframe::CreationContext;
+use egui::Context;
 use egui::Ui;
+use ppu::PpuDebugWindow;
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
-
-mod cpu;
 
 pub struct DebugUi {
     command: Option<DebugCommand>,
     alert: Alert,
+    ppu_debug: PpuDebugWindow,
 }
 
 impl DebugUi {
-    pub fn new(_cc: &CreationContext<'_>) -> Self {
+    pub fn new(cc: &CreationContext) -> Self {
         DebugUi {
             command: None,
             alert: Alert::default(),
+            ppu_debug: PpuDebugWindow::new(cc),
         }
     }
 
@@ -73,14 +78,27 @@ impl DebugUi {
         }
     }
 
-    pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
-        self.alert.render(ui);
+    pub fn modals(&mut self, ctx: &Context, emulator: &mut System) {
+        self.alert.render(ctx);
+        self.ppu_debug.show(ctx, emulator);
+    }
 
+    pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
         cpu::debug_controls_widget(ui, self.command, |command| self.command = command);
         ui.separator();
         cpu::cpu_state_widget(ui, emulator);
         ui.separator();
         cpu::disassembly_widget(ui, emulator);
+    }
+
+    pub fn bottom_debug_panel(&mut self, ui: &mut Ui, _emulator: &System) {
+        ui.horizontal(|ui| {
+            if ui.button("PPU").clicked() {
+                self.ppu_debug.open = !self.ppu_debug.open;
+            }
+            ui.button("APU").clicked();
+            if ui.button("Memory").clicked() {}
+        });
     }
 }
 
@@ -99,10 +117,10 @@ pub struct Alert {
 }
 
 impl Alert {
-    pub fn render(&mut self, ui: &mut Ui) {
+    pub fn render(&mut self, ctx: &Context) {
         egui::Window::new("Error")
             .open(&mut self.is_open)
-            .show(ui.ctx(), |ui| {
+            .show(ctx, |ui| {
                 ui.label(self.text.clone());
             });
     }
