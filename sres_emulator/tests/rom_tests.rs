@@ -15,9 +15,9 @@ use sres_emulator::logging;
 use sres_emulator::memory::format_memory;
 use sres_emulator::memory::Wrap;
 use sres_emulator::ppu::BackgroundId;
-use sres_emulator::ppu::ImageBackend;
 use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
+use sres_emulator::util::ImageBackend;
 use sres_emulator::System;
 
 #[test]
