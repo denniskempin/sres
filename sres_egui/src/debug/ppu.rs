@@ -37,9 +37,8 @@ impl PpuDebugWindow {
     }
 }
 
-pub fn ppu_status_widget(ui: &mut Ui, ppu: &Ppu, ppu_timer: &PpuTimer) {
+pub fn ppu_status_widget(ui: &mut Ui, _ppu: &Ppu, ppu_timer: &PpuTimer) {
     ui.label(format!("V, H: ({}, {})", ppu_timer.v, ppu_timer.hdot()));
-    ui.label(ppu.bg_mode.to_pretty_string());
 }
 
 struct PpuBackgroundWidget {
@@ -115,8 +114,8 @@ fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &Textur
 fn tileset_widget(ui: &mut Ui, background: &Background, tileset_texture: &TextureHandle) {
     ui.vertical(|ui| {
         ui.label(format!(
-            "Tileset (0x{:04X}, {})",
-            background.tileset_addr, background.bit_depth
+            "Tileset (0x{:04X}, {}, {})",
+            background.tileset_addr, background.bit_depth, background.tile_size
         ));
         ui.image(tileset_texture, Vec2::new(512.0, 512.0));
     });

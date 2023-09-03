@@ -5,7 +5,6 @@ use image::Rgba;
 use image::RgbaImage;
 use intbits::Bits;
 use log::debug;
-use packed_struct::prelude::PackedStruct;
 
 use crate::memory::Address;
 use crate::uint::U16Ext;
@@ -13,7 +12,6 @@ use crate::uint::U8Ext;
 
 pub struct Ppu {
     pub vram: Vram,
-    pub bg_mode: BgMode,
     pub backgrounds: [Background; 4],
 }
 impl Ppu {
@@ -21,7 +19,6 @@ impl Ppu {
     pub fn new() -> Self {
         Self {
             vram: Vram::new(),
-            bg_mode: BgMode::default(),
             backgrounds: [Background::default(); 4],
         }
     }
@@ -58,11 +55,20 @@ impl Ppu {
     }
 
     /// Register 2105: BGMODE
+    /// 7  bit  0
+    /// ---- ----
+    /// 4321 PMMM
+    /// |||| ||||
+    /// |||| |+++- BG mode
+    /// |||| +---- Mode 1 BG3 priority (0 = normal, 1 = high)
+    /// |||+------ BG1 character size (0 = 8x8, 1 = 16x16)
+    /// ||+------- BG2 character size (0 = 8x8, 1 = 16x16)
+    /// |+-------- BG3 character size (0 = 8x8, 1 = 16x16)
+    /// +--------- BG4 character size (0 = 8x8, 1 = 16x16)
     fn write_bgmode(&mut self, value: u8) {
-        self.bg_mode = BgMode::unpack(&[value]).unwrap();
-
+        let bg_mode = value.bits(0..=2);
         use BitDepth::*;
-        let bit_depths = match self.bg_mode.bg_mode {
+        let bit_depths = match bg_mode {
             0 => (Bpp2, Bpp2, Bpp2, Bpp2),
             1 => (Bpp4, Bpp4, Bpp2, Disabled),
             2 => (Bpp4, Bpp4, Opt, Disabled),
@@ -77,6 +83,17 @@ impl Ppu {
         self.backgrounds[1].bit_depth = bit_depths.1;
         self.backgrounds[2].bit_depth = bit_depths.2;
         self.backgrounds[3].bit_depth = bit_depths.3;
+
+        fn to_tile_size(value: bool) -> TileSize {
+            if value {
+                TileSize::Size16x16
+            } else {
+                TileSize::Size8x8
+            }
+        }
+        for i in 0..4 {
+            self.backgrounds[i].tile_size = to_tile_size(value.bit(4 + i));
+        }
     }
 
     /// Register 2107..210A: BGNSC - BG1..BG4 tilemap base address
@@ -150,36 +167,6 @@ impl Ppu {
             }
         }
         image
-    }
-}
-
-#[derive(PackedStruct, Clone, Copy, PartialEq, Eq, Default)]
-#[packed_struct(bit_numbering = "msb0")]
-pub struct BgMode {
-    #[packed_field(bits = "0..=2")]
-    pub bg_mode: u8,
-    pub bg3_prio: bool,
-    pub character_size: [bool; 4],
-}
-
-impl BgMode {
-    pub fn to_pretty_string(&self) -> String {
-        fn size_str(size: bool) -> &'static str {
-            if size {
-                "16"
-            } else {
-                "8"
-            }
-        }
-        format!(
-            "BGMODE{}, BG3 Prio: {}, BG0={}, BG1={}, BG2={}, BG3={}",
-            self.bg_mode,
-            self.bg3_prio,
-            size_str(self.character_size[0]),
-            size_str(self.character_size[1]),
-            size_str(self.character_size[2]),
-            size_str(self.character_size[3])
-        )
     }
 }
 
@@ -294,6 +281,7 @@ impl Display for BackgroundId {
 #[derive(Default, Copy, Clone, Debug)]
 pub struct Background {
     pub bit_depth: BitDepth,
+    pub tile_size: TileSize,
     pub tilemap_addr: usize,
     pub tileset_addr: usize,
 }
@@ -316,6 +304,22 @@ impl Display for BitDepth {
             BitDepth::Bpp4 => write!(f, "4bpp"),
             BitDepth::Bpp8 => write!(f, "8bpp"),
             BitDepth::Opt => write!(f, "Opt"),
+        }
+    }
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+pub enum TileSize {
+    #[default]
+    Size8x8,
+    Size16x16,
+}
+
+impl Display for TileSize {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TileSize::Size8x8 => write!(f, "8x8"),
+            TileSize::Size16x16 => write!(f, "16x16"),
         }
     }
 }
