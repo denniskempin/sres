@@ -55,7 +55,7 @@ fn disassembly_line(ui: &mut Ui, meta: InstructionMeta, current: bool) {
                 text = text.color(Color32::LIGHT_YELLOW);
             } else if operand_str.starts_with('#') {
                 text = text.color(Color32::LIGHT_GREEN);
-            } else if operand_str.starts_with('+') {
+            } else if operand_str.starts_with('+') | operand_str.starts_with('-') {
                 text = text.color(Color32::LIGHT_RED);
             }
             ui.label(text);
