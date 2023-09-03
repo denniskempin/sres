@@ -218,13 +218,29 @@ impl SresBus {
     }
 
     /// Register $4200: NMITIMEN - NMI, Timer and IRQ Enable/Flag
-
+    /// 7  bit  0
+    /// ---- ----
+    /// N.VH ...J
+    /// | ||    |
+    /// | ||    +- Joypad auto-read enable
+    /// | ++------ H/V timer IRQ:
+    /// |           00 = Disable timer
+    /// |           01 = IRQ when H counter == HTIME
+    /// |           10 = IRQ when V counter == VTIME and H counter == 0
+    /// |           11 = IRQ when V counter == VTIME and H counter == HTIME
+    /// +--------- Vblank NMI enable
     fn write_nmitimen(&mut self, value: u8) {
         warn!("NMITINEN = {:02X} Not implemented", value);
     }
 
     /// Register $4210: RDNMI - Read NMI Flag
-
+    /// 7  bit  0
+    /// ---- ----
+    /// Nxxx VVVV
+    /// |||| ||||
+    /// |||| ++++- CPU version
+    /// |+++------ (Open bus)
+    /// +--------- Vblank flag
     fn read_rdnmi(&mut self) -> u8 {
         let value = self.peek_rdnmi();
         if self.ppu_timer.nmi_flag {
