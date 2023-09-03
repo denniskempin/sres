@@ -11,7 +11,7 @@ use sres_emulator::ppu::Ppu;
 use sres_emulator::timer::PpuTimer;
 use sres_emulator::System;
 
-use crate::util::SetFromRgbaImage;
+use crate::util::EguiImageBackend;
 
 pub struct PpuDebugWindow {
     pub open: bool,
@@ -65,12 +65,12 @@ impl PpuBackgroundWidget {
     }
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
-        self.tilemap_texture.set_from_rgba_image(
-            &ppu.debug_render_tilemap(self.selected_bg),
+        self.tilemap_texture.set(
+            ppu.debug_render_tilemap::<EguiImageBackend>(self.selected_bg),
             TextureOptions::default(),
         );
-        self.tileset_texture.set_from_rgba_image(
-            &ppu.debug_render_tileset(self.selected_bg),
+        self.tileset_texture.set(
+            ppu.debug_render_tileset::<EguiImageBackend>(self.selected_bg),
             TextureOptions::default(),
         );
     }

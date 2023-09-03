@@ -1,10 +1,10 @@
 use std::collections::vec_deque::Iter;
 use std::collections::VecDeque;
 
+use egui::Color32;
 use egui::ColorImage;
-use egui::TextureHandle;
-use egui::TextureOptions;
-use image::RgbaImage;
+use egui::ImageData;
+use sres_emulator::ppu::ImageBackend;
 
 #[derive(Clone)]
 pub struct RingBuffer<T, const N: usize> {
@@ -36,19 +36,25 @@ impl<T, const N: usize> Default for RingBuffer<T, N> {
         }
     }
 }
-
-pub trait SetFromRgbaImage {
-    fn set_from_rgba_image(&mut self, image: &RgbaImage, options: TextureOptions);
+pub struct EguiImageBackend {
+    inner: ColorImage,
 }
 
-impl SetFromRgbaImage for TextureHandle {
-    fn set_from_rgba_image(&mut self, image: &RgbaImage, options: TextureOptions) {
-        self.set(
-            ColorImage::from_rgba_unmultiplied(
-                [image.width() as usize, image.height() as usize],
-                image.as_raw(),
-            ),
-            options,
-        );
+impl ImageBackend for EguiImageBackend {
+    fn new(width: u32, height: u32) -> Self {
+        EguiImageBackend {
+            inner: ColorImage::new([width as usize, height as usize], Color32::TRANSPARENT),
+        }
+    }
+
+    fn set_pixel(&mut self, index: (u32, u32), value: [u8; 4]) {
+        self.inner[(index.0 as usize, index.1 as usize)] =
+            Color32::from_rgba_premultiplied(value[0], value[1], value[2], value[3]);
+    }
+}
+
+impl From<EguiImageBackend> for ImageData {
+    fn from(value: EguiImageBackend) -> Self {
+        ImageData::Color(value.inner)
     }
 }

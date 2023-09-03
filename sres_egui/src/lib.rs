@@ -22,9 +22,9 @@ use egui::Ui;
 use sres_emulator::ppu::BackgroundId;
 use sres_emulator::System;
 use tracing::instrument;
+use util::EguiImageBackend;
 
 use self::debug::DebugUi;
-use self::util::SetFromRgbaImage;
 
 const PROGRAMS: &[(&str, &[u8])] = &[];
 
@@ -132,13 +132,12 @@ impl EmulatorApp {
     }
 
     fn main_display(&mut self, ui: &mut Ui) {
-        self.framebuffer_texture.set_from_rgba_image(
-            &self
-                .emulator
+        self.framebuffer_texture.set(
+            self.emulator
                 .cpu
                 .bus
                 .ppu
-                .debug_render_tilemap(BackgroundId::BG0),
+                .debug_render_tilemap::<EguiImageBackend>(BackgroundId::BG0),
             TextureOptions::default(),
         );
 

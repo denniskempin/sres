@@ -1,8 +1,6 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
 
-use image::Rgba;
-use image::RgbaImage;
 use intbits::Bits;
 use log::debug;
 
@@ -135,10 +133,13 @@ impl Ppu {
 
     // Debug APIs
 
-    pub fn debug_render_tileset(&self, background_id: BackgroundId) -> RgbaImage {
+    pub fn debug_render_tileset<ImageT: ImageBackend>(
+        &self,
+        background_id: BackgroundId,
+    ) -> ImageT {
         let bg = &self.backgrounds[background_id as usize];
         let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
-        let mut image = RgbaImage::new(16 * 8, 16 * 8);
+        let mut image = ImageT::new(16 * 8, 16 * 8);
         for tile_idx in 0..256 {
             let tile_x: u32 = (tile_idx % 16) * 8;
             let tile_y: u32 = (tile_idx / 16) * 8;
@@ -148,22 +149,28 @@ impl Ppu {
                 let high = row.high_byte();
                 for col_idx in 0..8 {
                     let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
-                    image[(tile_x + (7 - col_idx), tile_y + row_idx as u32)] = if pixel > 0 {
-                        Rgba([255, 255, 255, 255])
-                    } else {
-                        Rgba([0, 0, 0, 255])
-                    };
+                    image.set_pixel(
+                        (tile_x + (7 - col_idx), tile_y + row_idx as u32),
+                        if pixel > 0 {
+                            [255, 255, 255, 255]
+                        } else {
+                            [0, 0, 0, 255]
+                        },
+                    );
                 }
             }
         }
         image
     }
 
-    pub fn debug_render_tilemap(&self, background_id: BackgroundId) -> RgbaImage {
+    pub fn debug_render_tilemap<ImageT: ImageBackend>(
+        &self,
+        background_id: BackgroundId,
+    ) -> ImageT {
         let bg = &self.backgrounds[background_id as usize];
         let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
         let tilemap_data = &self.vram.memory[bg.tilemap_addr..bg.tilemap_addr + 0x2000];
-        let mut image = RgbaImage::new(32 * 8, 32 * 8);
+        let mut image = ImageT::new(32 * 8, 32 * 8);
         for tile_y_idx in 0..32_u32 {
             for tile_x_idx in 0..32_u32 {
                 let entry = tilemap_data[(tile_y_idx as usize) * 32 + tile_x_idx as usize];
@@ -176,11 +183,14 @@ impl Ppu {
                     let high = row.high_byte();
                     for col_idx in 0..8 {
                         let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
-                        image[(tile_x + (7 - col_idx), tile_y + row_idx as u32)] = if pixel > 0 {
-                            Rgba([255, 255, 255, 255])
-                        } else {
-                            Rgba([0, 0, 0, 255])
-                        };
+                        image.set_pixel(
+                            (tile_x + (7 - col_idx), tile_y + row_idx as u32),
+                            if pixel > 0 {
+                                [255, 255, 255, 255]
+                            } else {
+                                [0, 0, 0, 255]
+                            },
+                        );
                     }
                 }
             }
@@ -358,4 +368,10 @@ impl Display for TileSize {
             TileSize::Size16x16 => write!(f, "16x16"),
         }
     }
+}
+
+/// Abstract interface for image::RgbaImage or egui::ColorImage.
+pub trait ImageBackend {
+    fn new(width: u32, height: u32) -> Self;
+    fn set_pixel(&mut self, index: (u32, u32), value: [u8; 4]);
 }
