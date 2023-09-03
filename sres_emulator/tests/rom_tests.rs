@@ -15,6 +15,7 @@ use sres_emulator::logging;
 use sres_emulator::memory::format_memory;
 use sres_emulator::memory::Wrap;
 use sres_emulator::ppu::BackgroundId;
+use sres_emulator::ppu::ImageBackend;
 use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
 use sres_emulator::System;
@@ -288,28 +289,32 @@ fn run_rom_test(test_name: &str) {
 
     let tileset_path = root_dir.join(format!("tests/rom_tests/{test_name}-bg1_tileset"));
     compare_to_golden(
-        &cpu.bus.ppu.debug_render_tileset(BackgroundId::BG0),
+        &cpu.bus
+            .ppu
+            .debug_render_tileset::<TestImageBackend>(BackgroundId::BG0),
         &tileset_path,
     );
 
     let tilemap_path = root_dir.join(format!("tests/rom_tests/{test_name}-bg1_tilemap"));
     compare_to_golden(
-        &cpu.bus.ppu.debug_render_tilemap(BackgroundId::BG0),
+        &cpu.bus
+            .ppu
+            .debug_render_tilemap::<TestImageBackend>(BackgroundId::BG0),
         &tilemap_path,
     );
 }
 
-fn compare_to_golden(image: &RgbaImage, path_prefix: &Path) {
+fn compare_to_golden(image: &TestImageBackend, path_prefix: &Path) {
     let golden_path = path_prefix.with_extension("png");
     if golden_path.exists() {
         let golden: RgbaImage = image::open(&golden_path).unwrap().into_rgba8();
-        if golden != *image {
+        if golden != image.inner {
             let actual_path = golden_path.with_extension("actual.png");
-            image.save(&actual_path).unwrap();
+            image.inner.save(&actual_path).unwrap();
             panic!("Image does not match golden. See {:?}", actual_path);
         }
     } else {
-        image.save(golden_path).unwrap();
+        image.inner.save(golden_path).unwrap();
     }
 }
 
@@ -354,4 +359,20 @@ pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result
     let decoder = XzDecoder::new(file);
     let trace_reader = io::BufReader::new(decoder);
     Ok(trace_reader.lines().map(|l| l?.parse()))
+}
+
+struct TestImageBackend {
+    inner: RgbaImage,
+}
+
+impl ImageBackend for TestImageBackend {
+    fn new(width: u32, height: u32) -> Self {
+        TestImageBackend {
+            inner: RgbaImage::new(width, height),
+        }
+    }
+
+    fn set_pixel(&mut self, index: (u32, u32), value: [u8; 4]) {
+        self.inner[(index.0, index.1)] = image::Rgba::from(value);
+    }
 }
