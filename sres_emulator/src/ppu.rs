@@ -1,3 +1,5 @@
+pub mod cgram;
+pub mod framebuffer;
 pub mod vram;
 
 use std::fmt::Display;
@@ -5,6 +7,8 @@ use std::fmt::Formatter;
 
 use intbits::Bits;
 
+use self::cgram::CgRam;
+use self::framebuffer::Framebuffer;
 use self::vram::Vram;
 use crate::memory::Address;
 use crate::uint::U16Ext;
@@ -14,6 +18,9 @@ use crate::util::ImageBackend;
 pub struct Ppu {
     pub vram: Vram,
     pub backgrounds: [Background; 4],
+
+    pub framebuffer: Framebuffer,
+    pub cgram: CgRam,
 }
 
 impl Ppu {
@@ -22,6 +29,8 @@ impl Ppu {
         Self {
             vram: Vram::new(),
             backgrounds: [Background::default(); 4],
+            framebuffer: Framebuffer::default(),
+            cgram: CgRam::new(),
         }
     }
 
@@ -29,6 +38,7 @@ impl Ppu {
         match addr.offset {
             0x2139 => self.vram.read_vmdatalread(),
             0x213A => self.vram.read_vmdatahread(),
+            0x213B => self.cgram.read_cgdataread(),
             _ => 0,
         }
     }
@@ -37,6 +47,7 @@ impl Ppu {
         match addr.offset {
             0x2139 => Some(self.vram.peek_vmdatalread()),
             0x213A => Some(self.vram.peek_vmdatahread()),
+            0x213B => Some(self.cgram.peek_cgdataread()),
             _ => None,
         }
     }
@@ -52,6 +63,8 @@ impl Ppu {
             0x2117 => self.vram.write_vmaddh(value),
             0x2118 => self.vram.write_vmdatal(value),
             0x2119 => self.vram.write_vmdatah(value),
+            0x2121 => self.cgram.write_cgadd(value),
+            0x2122 => self.cgram.write_cgdata(value),
             _ => (),
         }
     }
@@ -153,14 +166,8 @@ impl Ppu {
                 let high = row.high_byte();
                 for col_idx in 0..8 {
                     let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
-                    image.set_pixel(
-                        (tile_x + (7 - col_idx), tile_y + row_idx as u32),
-                        if pixel > 0 {
-                            [255, 255, 255, 255]
-                        } else {
-                            [0, 0, 0, 255]
-                        },
-                    );
+                    let color = self.cgram.memory[pixel as usize];
+                    image.set_pixel((tile_x + (7 - col_idx), tile_y + row_idx as u32), color.0);
                 }
             }
         }
@@ -187,14 +194,8 @@ impl Ppu {
                     let high = row.high_byte();
                     for col_idx in 0..8 {
                         let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
-                        image.set_pixel(
-                            (tile_x + (7 - col_idx), tile_y + row_idx as u32),
-                            if pixel > 0 {
-                                [255, 255, 255, 255]
-                            } else {
-                                [0, 0, 0, 255]
-                            },
-                        );
+                        let color = self.cgram.memory[pixel as usize];
+                        image.set_pixel((tile_x + (7 - col_idx), tile_y + row_idx as u32), color.0);
                     }
                 }
             }
