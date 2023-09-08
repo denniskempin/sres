@@ -208,17 +208,22 @@ pub fn test_ppu_timing() {
     run_rom_test("ppu_timing");
 }
 
+#[test]
+pub fn test_krom_hdma_redspace() {
+    run_rom_test("krom_hdma_redspace");
+}
+
 fn run_rom_test(test_name: &str) {
-    logging::test_init(false);
+    logging::test_init(true);
 
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let trace_path = root_dir.join(format!("tests/rom_tests/{test_name}-trace.log.xz"));
     let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
 
     let mut system = System::with_sfc(&rom_path).unwrap();
-    // CPUMSC reads 0x20 from $000000 at the first instruction. I cannot figure out why, it
+    // CPUMSC reads 0x93 from $000000 at the first instruction. I cannot figure out why, it
     // should be mapped to RAM.
-    system.cpu.bus.cycle_write_u8(0x000000.into(), 0x20);
+    system.cpu.bus.cycle_write_u8(0x000000.into(), 0x93);
 
     let cpu = &mut system.cpu;
     cpu.reset();
