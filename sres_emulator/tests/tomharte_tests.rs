@@ -276,6 +276,10 @@ impl Bus for TestBus {
     }
 
     fn reset(&mut self) {}
+
+    fn check_nmi_interrupt(&mut self) -> bool {
+        false
+    }
 }
 
 /// A single test case, parsed from the JSON format described in
