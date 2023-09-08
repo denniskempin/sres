@@ -42,6 +42,7 @@ pub enum BreakReason {
     CpuMemoryRead(Address),
     CpuMemoryWrite(Address),
     ExecutionError(String),
+    Custom(String),
 }
 
 impl Display for BreakReason {
@@ -56,7 +57,8 @@ impl Display for BreakReason {
             BreakReason::CpuMemoryWrite(addr) => {
                 write!(f, "CPU memory write at address {}", addr)
             }
-            BreakReason::ExecutionError(e) => e.fmt(f),
+            BreakReason::Custom(msg) => msg.fmt(f),
+            BreakReason::ExecutionError(msg) => msg.fmt(f),
         }
     }
 }
@@ -108,6 +110,12 @@ impl DebuggerRef {
         }
     }
 
+    pub fn trigger_custom(&mut self, msg: String) {
+        if self.enabled {
+            self.inner.deref().borrow_mut().trigger_custom(msg);
+        }
+    }
+
     pub fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
         if self.enabled {
             self.inner.deref().borrow_mut().on_cpu_memory_access(access);
@@ -124,13 +132,13 @@ impl Default for DebuggerRef {
 struct Debugger {
     pub breakpoints: Vec<Trigger>,
     pub break_reason: Option<BreakReason>,
-    pub last_pcs: RingBuffer<Address, 32>,
+    pub last_pcs: RingBuffer<Address, 20>,
 }
 
 impl Debugger {
     pub fn new() -> Self {
         Self {
-            breakpoints: vec![],
+            breakpoints: vec![Trigger::ProgramCounter(0x823D..0x823E)],
             break_reason: None,
             last_pcs: RingBuffer::default(),
         }
@@ -166,6 +174,12 @@ impl Debugger {
                 self.break_reason = Some(BreakReason::ExecutionError(msg.clone()));
             }
         }
+    }
+
+    /// Can be added to code during development to trigger the debugger.
+    #[allow(dead_code)]
+    pub fn trigger_custom(&mut self, msg: String) {
+        self.break_reason = Some(BreakReason::Custom(msg));
     }
 
     pub fn on_cpu_memory_access(&mut self, access: MemoryAccess) {

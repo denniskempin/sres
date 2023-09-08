@@ -4,6 +4,7 @@ mod operands;
 pub mod status;
 
 use intbits::Bits;
+use log::info;
 use log::log_enabled;
 use log::trace;
 use log::Level;
@@ -138,6 +139,25 @@ impl<BusT: Bus> Cpu<BusT> {
         self.debugger.before_instruction(self.pc);
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
+
+        if self.bus.check_nmi_interrupt() {
+            if !self.status.irq_disable {
+                self.interrupt(NativeVectorTable::Nmi);
+            }
+        }
+    }
+
+    fn interrupt(&mut self, handler: NativeVectorTable) {
+        self.debugger.trigger_custom("Iterrupt".to_string());
+        self.stack_push_u24(u32::from(self.pc));
+        self.stack_push_u8(u8::from(self.status));
+        self.status.irq_disable = true;
+        self.status.decimal = false;
+        let address = self
+            .bus
+            .cycle_read_u16(Address::new(0, handler as u16), Wrap::NoWrap);
+        info!("Interrupt ${:04X}", address);
+        self.pc = Address::new(0, address);
     }
 
     fn stack_push_u8(&mut self, value: u8) {

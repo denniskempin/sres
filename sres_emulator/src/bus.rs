@@ -21,6 +21,7 @@ pub trait Bus {
     fn cycle_read_u8(&mut self, addr: Address) -> u8;
     fn cycle_write_u8(&mut self, addr: Address, value: u8);
     fn reset(&mut self);
+    fn check_nmi_interrupt(&mut self) -> bool;
 
     #[inline]
     fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
@@ -88,6 +89,9 @@ pub struct SresBus {
     pub ppu: Ppu,
     pub apu: Apu,
     pub debugger: DebuggerRef,
+    pub nmi_enable: bool,
+    pub nmi_interrupt: bool,
+    pub nmi_signaled: bool,
 }
 
 impl SresBus {
@@ -101,6 +105,9 @@ impl SresBus {
             ppu: Ppu::new(),
             apu: Apu::new(),
             debugger,
+            nmi_enable: false,
+            nmi_interrupt: false,
+            nmi_signaled: false,
         }
     }
 
@@ -230,7 +237,8 @@ impl SresBus {
     /// |           11 = IRQ when V counter == VTIME and H counter == HTIME
     /// +--------- Vblank NMI enable
     fn write_nmitimen(&mut self, value: u8) {
-        warn!("NMITINEN = {:02X} Not implemented", value);
+        self.nmi_enable = value.bit(7);
+        warn!("NMITINEN = {:02X} Not fully implemented", value);
     }
 
     /// Register $4210: RDNMI - Read NMI Flag
@@ -262,6 +270,14 @@ impl SresBus {
 
     fn advance_master_clock(&mut self, cycles: u64) {
         self.ppu_timer.advance_master_clock(cycles);
+        if self.ppu_timer.nmi_flag {
+            if !self.nmi_signaled {
+                self.nmi_interrupt = true;
+                self.nmi_signaled = true;
+            }
+        } else {
+            self.nmi_signaled = false;
+        }
 
         if let Some((transfers, duration)) = self
             .dma_controller
@@ -313,6 +329,12 @@ impl Bus for SresBus {
     fn reset(&mut self) {
         self.ppu_timer = PpuTimer::default();
         self.advance_master_clock(186);
+    }
+
+    fn check_nmi_interrupt(&mut self) -> bool {
+        let value = self.nmi_interrupt;
+        self.nmi_interrupt = false;
+        value
     }
 }
 

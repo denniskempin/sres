@@ -24,6 +24,7 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
     });
     ui.label(format!("Cycle: {}", cpu.bus.ppu_timer.master_clock));
     ui.label(format!("PC: {:}", cpu.pc));
+    ui.label(format!("NMI: {:}", cpu.bus.nmi_interrupt));
 }
 
 pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
@@ -32,7 +33,7 @@ pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
     for meta in emulator.debugger.previous_instructions(&emulator.cpu) {
         disassembly_line(ui, meta, false);
     }
-    for (idx, meta) in emulator.cpu.peek_next_operations(30).enumerate() {
+    for (idx, meta) in emulator.cpu.peek_next_operations(20).enumerate() {
         disassembly_line(ui, meta, idx == 0);
     }
 }
@@ -97,6 +98,9 @@ pub fn debug_controls_widget(
             .clicked()
         {
             on_new_command(Some(DebugCommand::StepScanlines(1)));
+        }
+        if ui.add_enabled(paused, Button::new("To NMI")).clicked() {
+            on_new_command(Some(DebugCommand::RunToNmi));
         }
     });
 }
