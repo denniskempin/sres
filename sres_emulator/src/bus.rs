@@ -11,7 +11,6 @@ use crate::dma::DmaController;
 use crate::memory::Address;
 use crate::memory::Wrap;
 use crate::ppu::Ppu;
-use crate::timer::PpuTimer;
 use crate::uint::RegisterSize;
 use crate::uint::UInt;
 
@@ -83,7 +82,6 @@ enum MemoryBlock {
 pub struct SresBus {
     pub wram: Vec<u8>,
     pub rom: Vec<u8>,
-    pub ppu_timer: PpuTimer,
     pub clock_speed: u64,
     pub dma_controller: DmaController,
     pub ppu: Ppu,
@@ -99,7 +97,6 @@ impl SresBus {
         Self {
             wram: vec![0; 0x4000000],
             rom: vec![0; 0x4000000],
-            ppu_timer: PpuTimer::default(),
             clock_speed: 8,
             dma_controller: DmaController::new(debugger.clone()),
             ppu: Ppu::new(),
@@ -251,17 +248,17 @@ impl SresBus {
     /// +--------- Vblank flag
     fn read_rdnmi(&mut self) -> u8 {
         let value = self.peek_rdnmi();
-        if self.ppu_timer.nmi_flag {
+        if self.ppu.timer.nmi_flag {
             // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
-            if !(self.ppu_timer.v == 225 && self.ppu_timer.h_counter <= 2) {
-                self.ppu_timer.nmi_flag = false;
+            if !(self.ppu.timer.v == 225 && self.ppu.timer.h_counter <= 2) {
+                self.ppu.timer.nmi_flag = false;
             }
         }
         value
     }
 
     fn peek_rdnmi(&self) -> u8 {
-        if self.ppu_timer.nmi_flag {
+        if self.ppu.timer.nmi_flag {
             0b1111_0010
         } else {
             0b0111_0010
@@ -269,8 +266,8 @@ impl SresBus {
     }
 
     fn advance_master_clock(&mut self, cycles: u64) {
-        self.ppu_timer.advance_master_clock(cycles);
-        if self.ppu_timer.nmi_flag {
+        self.ppu.timer.advance_master_clock(cycles);
+        if self.ppu.timer.nmi_flag {
             if !self.nmi_signaled {
                 self.nmi_interrupt = true;
                 self.nmi_signaled = true;
@@ -281,9 +278,9 @@ impl SresBus {
 
         if let Some((transfers, duration)) = self
             .dma_controller
-            .pending_transfers(self.ppu_timer.master_clock, self.clock_speed)
+            .pending_transfers(self.ppu.timer.master_clock, self.clock_speed)
         {
-            self.ppu_timer.advance_master_clock(duration);
+            self.ppu.timer.advance_master_clock(duration);
             for (source, destination) in transfers {
                 let value = self.bus_read(source);
                 self.bus_write(destination, value);
@@ -301,7 +298,7 @@ impl Bus for SresBus {
     fn cycle_read_u8(&mut self, addr: Address) -> u8 {
         self.clock_speed = memory_access_speed(addr);
         trace!(target: "cycles", "cycle read {addr} ({} cycles)", self.clock_speed);
-        self.ppu_timer.advance_master_clock(self.clock_speed - 6);
+        self.ppu.timer.advance_master_clock(self.clock_speed - 6);
         let value = self.bus_read(addr);
         self.advance_master_clock(6);
         value
@@ -327,7 +324,7 @@ impl Bus for SresBus {
     }
 
     fn reset(&mut self) {
-        self.ppu_timer = PpuTimer::default();
+        self.ppu.reset();
         self.advance_master_clock(186);
     }
 

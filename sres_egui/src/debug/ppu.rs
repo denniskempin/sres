@@ -8,7 +8,6 @@ use egui::Vec2;
 use sres_emulator::ppu::Background;
 use sres_emulator::ppu::BackgroundId;
 use sres_emulator::ppu::Ppu;
-use sres_emulator::timer::PpuTimer;
 use sres_emulator::System;
 
 use crate::util::EguiImageBackend;
@@ -30,15 +29,15 @@ impl PpuDebugWindow {
         egui::Window::new("PPU")
             .open(&mut self.open)
             .show(ctx, |ui| {
-                ppu_status_widget(ui, &emulator.cpu.bus.ppu, &emulator.cpu.bus.ppu_timer);
+                ppu_status_widget(ui, &emulator.cpu.bus.ppu);
                 ui.separator();
                 self.background_widget.show(ui, &emulator.cpu.bus.ppu);
             });
     }
 }
 
-pub fn ppu_status_widget(ui: &mut Ui, _ppu: &Ppu, ppu_timer: &PpuTimer) {
-    ui.label(format!("V, H: ({}, {})", ppu_timer.v, ppu_timer.hdot()));
+pub fn ppu_status_widget(ui: &mut Ui, ppu: &Ppu) {
+    ui.label(format!("V, H: ({}, {})", ppu.timer.v, ppu.timer.hdot()));
 }
 
 struct PpuBackgroundWidget {

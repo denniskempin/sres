@@ -22,7 +22,7 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
         ui.label("Status:");
         ui.label(String::from(cpu.status));
     });
-    ui.label(format!("Cycle: {}", cpu.bus.ppu_timer.master_clock));
+    ui.label(format!("Cycle: {}", cpu.bus.ppu.timer.master_clock));
     ui.label(format!("PC: {:}", cpu.pc));
     ui.label(format!("NMI: {:}", cpu.bus.nmi_interrupt));
 }

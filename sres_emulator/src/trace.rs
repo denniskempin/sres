@@ -120,7 +120,7 @@ impl Trace {
 
     pub fn from_sres_cpu(cpu: &Cpu<SresBus>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
-        let ppu_timer = cpu.bus.ppu_timer;
+        let ppu_timer = cpu.bus.ppu.timer;
         Trace {
             pc: cpu.pc,
             instruction: instruction.operation.to_string(),
