@@ -14,8 +14,8 @@ use egui::Ui;
 use itertools::Itertools;
 use ppu::PpuDebugWindow;
 use sres_emulator::bus::Bus;
-use sres_emulator::memory::Address;
-use sres_emulator::memory::Wrap;
+use sres_emulator::util::memory::Address;
+use sres_emulator::util::memory::Wrap;
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
 

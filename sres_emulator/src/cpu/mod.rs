@@ -1,7 +1,7 @@
 mod instructions;
 mod opcode_table;
 mod operands;
-pub mod status;
+mod status;
 
 use intbits::Bits;
 use log::info;
@@ -12,14 +12,14 @@ use log::Level;
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 pub use self::opcode_table::InstructionMeta;
-use self::status::StatusFlags;
+pub use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::debugger::DebuggerRef;
-use crate::memory::Address;
-use crate::memory::Wrap;
 use crate::trace::Trace;
-use crate::uint::RegisterSize;
-use crate::uint::UInt;
+use crate::util::memory::Address;
+use crate::util::memory::Wrap;
+use crate::util::uint::RegisterSize;
+use crate::util::uint::UInt;
 
 #[derive(Default)]
 pub struct VariableLengthRegister {
@@ -140,10 +140,8 @@ impl<BusT: Bus> Cpu<BusT> {
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
 
-        if self.bus.check_nmi_interrupt() {
-            if !self.status.irq_disable {
-                self.interrupt(NativeVectorTable::Nmi);
-            }
+        if self.bus.check_nmi_interrupt() && !self.status.irq_disable {
+            self.interrupt(NativeVectorTable::Nmi);
         }
     }
 
@@ -234,8 +232,8 @@ mod tests {
     use crate::bus::SresBus;
     use crate::cpu::VariableLengthRegister;
     use crate::debugger::DebuggerRef;
-    use crate::memory::Address;
-    use crate::memory::Wrap;
+    use crate::util::memory::Address;
+    use crate::util::memory::Wrap;
     use crate::System;
 
     fn assemble(code: &str) -> Vec<u8> {

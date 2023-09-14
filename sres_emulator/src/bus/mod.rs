@@ -1,18 +1,20 @@
+mod dma;
+
 use std::path::Path;
 
 use anyhow::Result;
+use dma::DmaController;
 use log::trace;
 use log::warn;
 
 use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::debugger::DebuggerRef;
-use crate::dma::DmaController;
-use crate::memory::Address;
-use crate::memory::Wrap;
 use crate::ppu::Ppu;
-use crate::uint::RegisterSize;
-use crate::uint::UInt;
+use crate::util::memory::Address;
+use crate::util::memory::Wrap;
+use crate::util::uint::RegisterSize;
+use crate::util::uint::UInt;
 
 pub trait Bus {
     fn peek_u8(&self, addr: Address) -> Option<u8>;

@@ -10,9 +10,9 @@ use anyhow::Result;
 
 use crate::bus::Bus;
 use crate::bus::SresBus;
-use crate::cpu::status::StatusFlags;
 use crate::cpu::Cpu;
-use crate::memory::Address;
+use crate::cpu::StatusFlags;
+use crate::util::memory::Address;
 
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.

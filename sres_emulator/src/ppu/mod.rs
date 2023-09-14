@@ -1,6 +1,6 @@
-pub mod cgram;
-pub mod timer;
-pub mod vram;
+mod cgram;
+mod timer;
+mod vram;
 
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -8,20 +8,21 @@ use std::fmt::Formatter;
 use intbits::Bits;
 
 use self::cgram::CgRam;
+pub use self::timer::fvh_to_master_clock;
 use self::timer::PpuTimer;
 use self::vram::Vram;
-use crate::image::Image;
-use crate::image::RgbU15;
-use crate::memory::Address;
-use crate::uint::U16Ext;
-use crate::uint::U8Ext;
+use crate::util::image::Image;
+use crate::util::image::Rgb15;
+use crate::util::memory::Address;
+use crate::util::uint::U16Ext;
+use crate::util::uint::U8Ext;
 
 pub struct Ppu {
     pub timer: PpuTimer,
     pub vram: Vram,
     pub backgrounds: [Background; 4],
 
-    pub framebuffer: Vec<RgbU15>,
+    pub framebuffer: Vec<Rgb15>,
     pub cgram: CgRam,
     pub last_drawn_scanline: u64,
 }
@@ -33,7 +34,7 @@ impl Ppu {
             timer: PpuTimer::default(),
             vram: Vram::new(),
             backgrounds: [Background::default(); 4],
-            framebuffer: vec![RgbU15(0); 256 * 256],
+            framebuffer: vec![Rgb15(0); 256 * 256],
             cgram: CgRam::new(),
             last_drawn_scanline: 0,
         }

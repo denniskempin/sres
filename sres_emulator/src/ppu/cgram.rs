@@ -1,10 +1,9 @@
-use crate::uint::U16Ext;
-
-use crate::image::{RgbU15, Rgba};
+use crate::util::image::Rgb15;
+use crate::util::uint::U16Ext;
 
 pub struct CgRam {
     /// Contains the contents of CGRAM translated into RGBA values for more efficient rendering.
-    pub memory: Vec<RgbU15>,
+    pub memory: Vec<Rgb15>,
     /// Contains the currently selected CGRAM address set via the CGADD register.
     current_addr: u8,
     /// Represents the write latch. Contains the previous written value or None if the latch is
@@ -16,7 +15,7 @@ impl CgRam {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            memory: vec![RgbU15::default(); 0x200],
+            memory: vec![Rgb15::default(); 0x200],
             current_addr: 0,
             latch: None,
         }
@@ -54,7 +53,7 @@ impl CgRam {
             }
             Some(low_byte) => {
                 self.memory[self.current_addr as usize] =
-                    RgbU15(u16::from_le_bytes([low_byte, value]));
+                    Rgb15(u16::from_le_bytes([low_byte, value]));
                 self.latch = None;
                 self.current_addr = self.current_addr.wrapping_add(1);
             }
@@ -107,14 +106,14 @@ mod tests {
         cgram.write_cgadd(0x42);
         cgram.write_cgdata(0xE0);
         cgram.write_cgdata(0x03);
-        assert_eq!(cgram.memory[0x43], RgbU15(0xE003));
+        assert_eq!(cgram.memory[0x43], Rgb15(0xE003));
     }
 
     #[test]
     fn test_read_cgdataread() {
         let mut cgram = CgRam::new();
         cgram.write_cgadd(0x42);
-        cgram.memory[0x43] = RgbU15(0xE003);
+        cgram.memory[0x43] = Rgb15(0xE003);
         assert_eq!(cgram.read_cgdataread(), 0xE0);
         assert_eq!(cgram.read_cgdataread(), 0x03);
     }

@@ -1,6 +1,6 @@
 use log::debug;
 
-use crate::memory::Address;
+use crate::util::memory::Address;
 
 pub struct Apu {
     channel_data: [u8; 4],

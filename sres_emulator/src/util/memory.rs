@@ -3,9 +3,9 @@ use std::fmt::Formatter;
 use std::io::BufWriter;
 use std::io::Write;
 
-use crate::uint::U16Ext;
-use crate::uint::U32Ext;
-use crate::uint::UIntTruncate;
+use crate::util::uint::U16Ext;
+use crate::util::uint::U32Ext;
+use crate::util::uint::UIntTruncate;
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub enum Wrap {

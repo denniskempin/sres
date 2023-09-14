@@ -6,7 +6,7 @@ use argh::FromArgs;
 use egui::vec2;
 use sres_egui::EmulatorApp;
 use sres_egui::Rom;
-use sres_emulator::logging;
+use sres_emulator::util::logging;
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_subscriber::prelude::*;
 
