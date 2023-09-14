@@ -10,7 +10,7 @@ use sres_emulator::ppu::BackgroundId;
 use sres_emulator::ppu::Ppu;
 use sres_emulator::System;
 
-use crate::util::EguiImageBackend;
+use crate::util::EguiImageImpl;
 
 pub struct PpuDebugWindow {
     pub open: bool,
@@ -65,11 +65,11 @@ impl PpuBackgroundWidget {
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
         self.tilemap_texture.set(
-            ppu.debug_render_tilemap::<EguiImageBackend>(self.selected_bg),
+            ppu.debug_render_tilemap::<EguiImageImpl>(self.selected_bg),
             TextureOptions::default(),
         );
         self.tileset_texture.set(
-            ppu.debug_render_tileset::<EguiImageBackend>(self.selected_bg),
+            ppu.debug_render_tileset::<EguiImageImpl>(self.selected_bg),
             TextureOptions::default(),
         );
     }

@@ -11,13 +11,14 @@ use pretty_assertions::assert_eq;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::image::Image;
+use sres_emulator::image::Rgba;
 use sres_emulator::logging;
 use sres_emulator::memory::format_memory;
 use sres_emulator::memory::Wrap;
 use sres_emulator::ppu::timer::fvh_to_master_clock;
 use sres_emulator::ppu::BackgroundId;
 use sres_emulator::trace::Trace;
-use sres_emulator::util::ImageBackend;
 use sres_emulator::System;
 
 #[test]
@@ -297,7 +298,7 @@ fn run_rom_test(test_name: &str) {
     compare_to_golden(
         &cpu.bus
             .ppu
-            .debug_render_tileset::<TestImageBackend>(BackgroundId::BG0),
+            .debug_render_tileset::<TestImageImpl>(BackgroundId::BG0),
         &tileset_path,
     );
 
@@ -305,12 +306,12 @@ fn run_rom_test(test_name: &str) {
     compare_to_golden(
         &cpu.bus
             .ppu
-            .debug_render_tilemap::<TestImageBackend>(BackgroundId::BG0),
+            .debug_render_tilemap::<TestImageImpl>(BackgroundId::BG0),
         &tilemap_path,
     );
 }
 
-fn compare_to_golden(image: &TestImageBackend, path_prefix: &Path) {
+fn compare_to_golden(image: &TestImageImpl, path_prefix: &Path) {
     let golden_path = path_prefix.with_extension("png");
     if golden_path.exists() {
         let golden: RgbaImage = image::open(&golden_path).unwrap().into_rgba8();
@@ -367,18 +368,18 @@ pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result
     Ok(trace_reader.lines().map(|l| l?.parse()))
 }
 
-struct TestImageBackend {
+struct TestImageImpl {
     inner: RgbaImage,
 }
 
-impl ImageBackend for TestImageBackend {
+impl Image for TestImageImpl {
     fn new(width: u32, height: u32) -> Self {
-        TestImageBackend {
+        TestImageImpl {
             inner: RgbaImage::new(width, height),
         }
     }
 
-    fn set_pixel(&mut self, index: (u32, u32), value: [u8; 4]) {
-        self.inner[(index.0, index.1)] = image::Rgba::from(value);
+    fn set_pixel(&mut self, index: (u32, u32), value: Rgba) {
+        self.inner[(index.0, index.1)] = image::Rgba::from(value.0);
     }
 }

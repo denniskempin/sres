@@ -1,5 +1,4 @@
 pub mod cgram;
-pub mod framebuffer;
 pub mod timer;
 pub mod vram;
 
@@ -9,21 +8,22 @@ use std::fmt::Formatter;
 use intbits::Bits;
 
 use self::cgram::CgRam;
-use self::framebuffer::Framebuffer;
 use self::timer::PpuTimer;
 use self::vram::Vram;
+use crate::image::Image;
+use crate::image::RgbU15;
 use crate::memory::Address;
 use crate::uint::U16Ext;
 use crate::uint::U8Ext;
-use crate::util::ImageBackend;
 
 pub struct Ppu {
     pub timer: PpuTimer,
     pub vram: Vram,
     pub backgrounds: [Background; 4],
 
-    pub framebuffer: Framebuffer,
+    pub framebuffer: Vec<RgbU15>,
     pub cgram: CgRam,
+    pub last_drawn_scanline: u64,
 }
 
 impl Ppu {
@@ -33,8 +33,9 @@ impl Ppu {
             timer: PpuTimer::default(),
             vram: Vram::new(),
             backgrounds: [Background::default(); 4],
-            framebuffer: Framebuffer::default(),
+            framebuffer: vec![RgbU15(0); 256 * 256],
             cgram: CgRam::new(),
+            last_drawn_scanline: 0,
         }
     }
 
@@ -75,10 +76,50 @@ impl Ppu {
 
     pub fn advance_master_clock(&mut self, cycles: u64) {
         self.timer.advance_master_clock(cycles);
+        self.draw_scanline(self.timer.v);
     }
 
     pub fn reset(&mut self) {
+        self.last_drawn_scanline = 0;
         self.timer = PpuTimer::default();
+    }
+
+    pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {
+        let mut image = ImageT::new(256, 256);
+        for (idx, pixel) in self.framebuffer.iter().enumerate() {
+            image.set_pixel((idx as u32 % 256, idx as u32 / 256), (*pixel).into());
+        }
+        image
+    }
+
+    fn draw_scanline(&mut self, scanline: u64) {
+        if scanline > 160 {
+            return;
+        }
+
+        let bg = &self.backgrounds[0];
+        let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
+        let tilemap_data = &self.vram.memory[bg.tilemap_addr..bg.tilemap_addr + 0x2000];
+
+        let framebuffer_idx = scanline as usize * 256;
+
+        let coarse_y = scanline / 8;
+        let fine_y = scanline % 8;
+        for coarse_x in 0..32 {
+            let tilemap_entry = tilemap_data[(coarse_y as usize) * 32 + coarse_x as usize];
+            let tile_idx = tilemap_entry.bits(0..=9) as u32;
+            let tile_addr = (tile_idx * 8) as usize;
+            let tile_row_addr = tile_addr + (fine_y as usize);
+
+            let row = tileset_data[tile_row_addr];
+            let low = row.low_byte();
+            let high = row.high_byte();
+            for fine_x in 0..8 {
+                let pixel = low.bit(7 - fine_x) as u8 + ((high.bit(7 - fine_x) as u8) << 1);
+                let color = self.cgram.memory[pixel as usize];
+                self.framebuffer[framebuffer_idx + coarse_x as usize * 8 + fine_x as usize] = color;
+            }
+        }
     }
 
     /// Register 2105: BGMODE
@@ -162,10 +203,7 @@ impl Ppu {
 
     // Debug APIs
 
-    pub fn debug_render_tileset<ImageT: ImageBackend>(
-        &self,
-        background_id: BackgroundId,
-    ) -> ImageT {
+    pub fn debug_render_tileset<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
         let bg = &self.backgrounds[background_id as usize];
         let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
         let mut image = ImageT::new(16 * 8, 16 * 8);
@@ -179,17 +217,17 @@ impl Ppu {
                 for col_idx in 0..8 {
                     let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
                     let color = self.cgram.memory[pixel as usize];
-                    image.set_pixel((tile_x + (7 - col_idx), tile_y + row_idx as u32), color.0);
+                    image.set_pixel(
+                        (tile_x + (7 - col_idx), tile_y + row_idx as u32),
+                        color.into(),
+                    );
                 }
             }
         }
         image
     }
 
-    pub fn debug_render_tilemap<ImageT: ImageBackend>(
-        &self,
-        background_id: BackgroundId,
-    ) -> ImageT {
+    pub fn debug_render_tilemap<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
         let bg = &self.backgrounds[background_id as usize];
         let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
         let tilemap_data = &self.vram.memory[bg.tilemap_addr..bg.tilemap_addr + 0x2000];
@@ -207,7 +245,10 @@ impl Ppu {
                     for col_idx in 0..8 {
                         let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
                         let color = self.cgram.memory[pixel as usize];
-                        image.set_pixel((tile_x + (7 - col_idx), tile_y + row_idx as u32), color.0);
+                        image.set_pixel(
+                            (tile_x + (7 - col_idx), tile_y + row_idx as u32),
+                            color.into(),
+                        );
                     }
                 }
             }

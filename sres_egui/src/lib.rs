@@ -8,6 +8,7 @@ use std::path::Path;
 
 use eframe::CreationContext;
 use eframe::Frame;
+use egui::Color32;
 use egui::ColorImage;
 use egui::Context;
 use egui::DroppedFile;
@@ -19,10 +20,11 @@ use egui::Sense;
 use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
+use sres_emulator::image::Rgba;
 use sres_emulator::ppu::BackgroundId;
 use sres_emulator::System;
 use tracing::instrument;
-use util::EguiImageBackend;
+use util::EguiImageImpl;
 
 use self::debug::DebugUi;
 
@@ -137,7 +139,7 @@ impl EmulatorApp {
                 .cpu
                 .bus
                 .ppu
-                .debug_render_tilemap::<EguiImageBackend>(BackgroundId::BG0),
+                .get_rgba_framebuffer::<EguiImageImpl>(),
             TextureOptions::default(),
         );
 

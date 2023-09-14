@@ -266,7 +266,7 @@ impl SresBus {
     }
 
     fn advance_master_clock(&mut self, cycles: u64) {
-        self.ppu.timer.advance_master_clock(cycles);
+        self.ppu.advance_master_clock(cycles);
         if self.ppu.timer.nmi_flag {
             if !self.nmi_signaled {
                 self.nmi_interrupt = true;
@@ -280,7 +280,7 @@ impl SresBus {
             .dma_controller
             .pending_transfers(self.ppu.timer.master_clock, self.clock_speed)
         {
-            self.ppu.timer.advance_master_clock(duration);
+            self.ppu.advance_master_clock(duration);
             for (source, destination) in transfers {
                 let value = self.bus_read(source);
                 self.bus_write(destination, value);
@@ -298,7 +298,7 @@ impl Bus for SresBus {
     fn cycle_read_u8(&mut self, addr: Address) -> u8 {
         self.clock_speed = memory_access_speed(addr);
         trace!(target: "cycles", "cycle read {addr} ({} cycles)", self.clock_speed);
-        self.ppu.timer.advance_master_clock(self.clock_speed - 6);
+        self.ppu.advance_master_clock(self.clock_speed - 6);
         let value = self.bus_read(addr);
         self.advance_master_clock(6);
         value
