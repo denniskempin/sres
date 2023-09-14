@@ -1,5 +1,6 @@
 pub mod cgram;
 pub mod framebuffer;
+pub mod timer;
 pub mod vram;
 
 use std::fmt::Display;
@@ -9,6 +10,7 @@ use intbits::Bits;
 
 use self::cgram::CgRam;
 use self::framebuffer::Framebuffer;
+use self::timer::PpuTimer;
 use self::vram::Vram;
 use crate::memory::Address;
 use crate::uint::U16Ext;
@@ -16,6 +18,7 @@ use crate::uint::U8Ext;
 use crate::util::ImageBackend;
 
 pub struct Ppu {
+    pub timer: PpuTimer,
     pub vram: Vram,
     pub backgrounds: [Background; 4],
 
@@ -27,6 +30,7 @@ impl Ppu {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
+            timer: PpuTimer::default(),
             vram: Vram::new(),
             backgrounds: [Background::default(); 4],
             framebuffer: Framebuffer::default(),
@@ -67,6 +71,14 @@ impl Ppu {
             0x2122 => self.cgram.write_cgdata(value),
             _ => (),
         }
+    }
+
+    pub fn advance_master_clock(&mut self, cycles: u64) {
+        self.timer.advance_master_clock(cycles);
+    }
+
+    pub fn reset(&mut self) {
+        self.timer = PpuTimer::default();
     }
 
     /// Register 2105: BGMODE

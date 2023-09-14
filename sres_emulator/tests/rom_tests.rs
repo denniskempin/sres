@@ -14,8 +14,8 @@ use sres_emulator::cpu::Cpu;
 use sres_emulator::logging;
 use sres_emulator::memory::format_memory;
 use sres_emulator::memory::Wrap;
+use sres_emulator::ppu::timer::fvh_to_master_clock;
 use sres_emulator::ppu::BackgroundId;
-use sres_emulator::timer::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::ImageBackend;
 use sres_emulator::System;
@@ -71,8 +71,8 @@ pub fn test_nmi_sub_cycle_accuracy() {
         cpu.reset();
 
         // Advance PPU timer until (v, h) is reached
-        while cpu.bus.ppu_timer.v != *v || cpu.bus.ppu_timer.h_counter != *h {
-            cpu.bus.ppu_timer.advance_master_clock(2);
+        while cpu.bus.ppu.timer.v != *v || cpu.bus.ppu.timer.h_counter != *h {
+            cpu.bus.ppu.timer.advance_master_clock(2);
         }
 
         // Execute `bit $4210` instruction
@@ -83,7 +83,7 @@ pub fn test_nmi_sub_cycle_accuracy() {
         // If the NMI bit is set, the negative status bit will be true.
         assert_eq!(cpu.status.negative, *expected_nmi);
         // For the first 4 cycles NMI will remain high, so the internal nmi_flag will still be set.
-        assert_eq!(cpu.bus.ppu_timer.nmi_flag, *expected_internal_nmi);
+        assert_eq!(cpu.bus.ppu.timer.nmi_flag, *expected_internal_nmi);
     }
 }
 
@@ -272,7 +272,8 @@ fn run_rom_test(test_name: &str) {
             let expected_duration = expected_master_cycle.saturating_sub(previous_master_cycle);
             let actual_duration = cpu
                 .bus
-                .ppu_timer
+                .ppu
+                .timer
                 .master_clock
                 .saturating_sub(previous_master_cycle);
             if expected_duration != actual_duration {
@@ -288,7 +289,7 @@ fn run_rom_test(test_name: &str) {
             assert_eq!(actual_line.to_string(), expected_line.to_string())
         }
 
-        previous_master_cycle = cpu.bus.ppu_timer.master_clock;
+        previous_master_cycle = cpu.bus.ppu.timer.master_clock;
         cpu.step();
     }
 

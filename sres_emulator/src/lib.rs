@@ -7,7 +7,6 @@ pub mod dma;
 pub mod logging;
 pub mod memory;
 pub mod ppu;
-pub mod timer;
 pub mod trace;
 pub mod uint;
 pub mod util;
@@ -107,8 +106,8 @@ impl System {
     }
 
     pub fn execute_one_frame(&mut self) -> ExecutionResult {
-        let current_frame = self.cpu.bus.ppu_timer.f;
-        self.execute_until(|cpu| cpu.bus.ppu_timer.f > current_frame)
+        let current_frame = self.cpu.bus.ppu.timer.f;
+        self.execute_until(|cpu| cpu.bus.ppu.timer.f > current_frame)
     }
 
     pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {
