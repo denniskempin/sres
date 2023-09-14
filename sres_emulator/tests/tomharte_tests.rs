@@ -18,12 +18,12 @@ use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
 use sres_emulator::bus::Bus;
-use sres_emulator::cpu::status::StatusFlags;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::cpu::StatusFlags;
 use sres_emulator::debugger::DebuggerRef;
-use sres_emulator::logging;
-use sres_emulator::memory::Address;
 use sres_emulator::trace::Trace;
+use sres_emulator::util::logging;
+use sres_emulator::util::memory::Address;
 use xz2::read::XzDecoder;
 
 const SKIP_OPCODES: &[u8] = &[

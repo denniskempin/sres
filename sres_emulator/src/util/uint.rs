@@ -347,7 +347,7 @@ impl U8Ext for u8 {
 #[cfg(test)]
 #[allow(clippy::bool_assert_comparison)]
 mod tests {
-    use crate::uint::UInt;
+    use super::UInt;
 
     #[test]
     fn u8_bcd_add() {

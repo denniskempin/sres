@@ -6,9 +6,9 @@ use super::Cpu;
 use super::UInt;
 use super::STACK_BASE;
 use crate::bus::Bus;
-use crate::memory::Address;
-use crate::memory::Wrap;
-use crate::uint::U16Ext;
+use crate::util::memory::Address;
+use crate::util::memory::Wrap;
+use crate::util::uint::U16Ext;
 
 /// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]

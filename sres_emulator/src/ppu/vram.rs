@@ -1,7 +1,7 @@
 use log::debug;
 
-use crate::uint::U16Ext;
-use crate::uint::UInt;
+use crate::util::uint::U16Ext;
+use crate::util::uint::UInt;
 
 pub struct Vram {
     pub memory: Vec<u16>,

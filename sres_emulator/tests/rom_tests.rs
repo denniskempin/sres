@@ -11,14 +11,14 @@ use pretty_assertions::assert_eq;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
-use sres_emulator::image::Image;
-use sres_emulator::image::Rgba;
-use sres_emulator::logging;
-use sres_emulator::memory::format_memory;
-use sres_emulator::memory::Wrap;
-use sres_emulator::ppu::timer::fvh_to_master_clock;
+use sres_emulator::ppu::fvh_to_master_clock;
 use sres_emulator::ppu::BackgroundId;
 use sres_emulator::trace::Trace;
+use sres_emulator::util::image::Image;
+use sres_emulator::util::image::Rgba32;
+use sres_emulator::util::logging;
+use sres_emulator::util::memory::format_memory;
+use sres_emulator::util::memory::Wrap;
 use sres_emulator::System;
 
 #[test]
@@ -379,7 +379,7 @@ impl Image for TestImageImpl {
         }
     }
 
-    fn set_pixel(&mut self, index: (u32, u32), value: Rgba) {
+    fn set_pixel(&mut self, index: (u32, u32), value: Rgba32) {
         self.inner[(index.0, index.1)] = image::Rgba::from(value.0);
     }
 }

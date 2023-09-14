@@ -3,10 +3,11 @@ use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::Range;
 use std::rc::Rc;
+
 use super::cpu::InstructionMeta;
 use crate::bus::SresBus;
 use crate::cpu::Cpu;
-use crate::memory::Address;
+use crate::util::memory::Address;
 use crate::util::RingBuffer;
 
 pub enum MemoryAccess {

@@ -6,10 +6,10 @@ use log::warn;
 use packed_struct::prelude::*;
 
 use crate::debugger::DebuggerRef;
-use crate::memory::Address;
-use crate::memory::Wrap;
-use crate::uint::U16Ext;
-use crate::uint::U8Ext;
+use crate::util::memory::Address;
+use crate::util::memory::Wrap;
+use crate::util::uint::U16Ext;
+use crate::util::uint::U8Ext;
 
 pub struct DmaController {
     dma_channels: [DmaChannel; 8],

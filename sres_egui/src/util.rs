@@ -4,8 +4,8 @@ use std::collections::VecDeque;
 use egui::Color32;
 use egui::ColorImage;
 use egui::ImageData;
-use sres_emulator::image::Image;
-use sres_emulator::image::Rgba;
+use sres_emulator::util::image::Image;
+use sres_emulator::util::image::Rgba32;
 
 #[derive(Clone)]
 pub struct RingBuffer<T, const N: usize> {
@@ -48,7 +48,7 @@ impl Image for EguiImageImpl {
         }
     }
 
-    fn set_pixel(&mut self, index: (u32, u32), value: Rgba) {
+    fn set_pixel(&mut self, index: (u32, u32), value: Rgba32) {
         self.inner[(index.0 as usize, index.1 as usize)] =
             Color32::from_rgba_premultiplied(value.0[0], value.0[1], value.0[2], value.0[3]);
     }

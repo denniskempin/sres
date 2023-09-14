@@ -9,8 +9,8 @@ use crate::bus::Bus;
 use crate::cpu::operands::AccessMode;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
-use crate::memory::Address;
-use crate::memory::Wrap;
+use crate::util::memory::Address;
+use crate::util::memory::Wrap;
 
 /// Metadata about a decoded instruction. Used to generate disassembly.
 pub struct InstructionMeta {
