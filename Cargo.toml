@@ -7,3 +7,6 @@ members = [
 
 [profile.test]
 opt-level = 1
+
+[profile.dev]
+opt-level = 1

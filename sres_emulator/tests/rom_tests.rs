@@ -12,7 +12,6 @@ use sres_emulator::bus::Bus;
 use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::ppu::fvh_to_master_clock;
-use sres_emulator::ppu::BackgroundId;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::image::Image;
 use sres_emulator::util::image::Rgba32;
@@ -225,9 +224,7 @@ fn run_rom_test(test_name: &str) {
     // CPUMSC reads 0x93 from $000000 at the first instruction. I cannot figure out why, it
     // should be mapped to RAM.
     system.cpu.bus.cycle_write_u8(0x000000.into(), 0x93);
-
-    let cpu = &mut system.cpu;
-    cpu.reset();
+    system.cpu.reset();
 
     let mut previous_master_cycle = 0;
     for (i, expected_line) in trace_log_from_xz_file(&trace_path).unwrap().enumerate() {
@@ -239,7 +236,7 @@ fn run_rom_test(test_name: &str) {
             );
         }
 
-        let mut actual_line = Trace::from_sres_cpu(cpu);
+        let mut actual_line = Trace::from_sres_cpu(&system.cpu);
 
         // Fix some BSNES trace inconsistencies:
 
@@ -271,7 +268,8 @@ fn run_rom_test(test_name: &str) {
             let expected_master_cycle =
                 fvh_to_master_clock(expected_line.f, expected_line.v, expected_line.h);
             let expected_duration = expected_master_cycle.saturating_sub(previous_master_cycle);
-            let actual_duration = cpu
+            let actual_duration = system
+                .cpu
                 .bus
                 .ppu
                 .timer
@@ -290,24 +288,18 @@ fn run_rom_test(test_name: &str) {
             assert_eq!(actual_line.to_string(), expected_line.to_string())
         }
 
-        previous_master_cycle = cpu.bus.ppu.timer.master_clock;
-        cpu.step();
+        previous_master_cycle = system.cpu.bus.ppu.timer.master_clock;
+        system.cpu.step();
     }
 
-    let tileset_path = root_dir.join(format!("tests/rom_tests/{test_name}-bg1_tileset"));
-    compare_to_golden(
-        &cpu.bus
-            .ppu
-            .debug_render_tileset::<TestImageImpl>(BackgroundId::BG0),
-        &tileset_path,
-    );
+    // Finish the current frame and then draw one more to show the final results.
+    system.execute_one_frame();
+    system.execute_one_frame();
 
-    let tilemap_path = root_dir.join(format!("tests/rom_tests/{test_name}-bg1_tilemap"));
+    let framebuffer_path = root_dir.join(format!("tests/rom_tests/{test_name}-framebuffer"));
     compare_to_golden(
-        &cpu.bus
-            .ppu
-            .debug_render_tilemap::<TestImageImpl>(BackgroundId::BG0),
-        &tilemap_path,
+        &system.cpu.bus.ppu.get_rgba_framebuffer::<TestImageImpl>(),
+        &framebuffer_path,
     );
 }
 

@@ -104,17 +104,17 @@ mod tests {
     fn test_write_cgdata() {
         let mut cgram = CgRam::new();
         cgram.write_cgadd(0x42);
-        cgram.write_cgdata(0xE0);
         cgram.write_cgdata(0x03);
-        assert_eq!(cgram.memory[0x43], Rgb15(0xE003));
+        cgram.write_cgdata(0xE0);
+        assert_eq!(cgram.memory[0x42], Rgb15(0xE003));
     }
 
     #[test]
     fn test_read_cgdataread() {
         let mut cgram = CgRam::new();
+        cgram.memory[0x42] = Rgb15(0xE003);
         cgram.write_cgadd(0x42);
-        cgram.memory[0x43] = Rgb15(0xE003);
-        assert_eq!(cgram.read_cgdataread(), 0xE0);
         assert_eq!(cgram.read_cgdataread(), 0x03);
+        assert_eq!(cgram.read_cgdataread(), 0xE0);
     }
 }

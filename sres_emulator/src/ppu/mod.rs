@@ -34,7 +34,7 @@ impl Ppu {
             timer: PpuTimer::default(),
             vram: Vram::new(),
             backgrounds: [Background::default(); 4],
-            framebuffer: vec![Rgb15(0); 256 * 256],
+            framebuffer: vec![Rgb15(0); 256 * 224],
             cgram: CgRam::new(),
             last_drawn_scanline: 0,
         }
@@ -86,7 +86,7 @@ impl Ppu {
     }
 
     pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {
-        let mut image = ImageT::new(256, 256);
+        let mut image = ImageT::new(256, 224);
         for (idx, pixel) in self.framebuffer.iter().enumerate() {
             image.set_pixel((idx as u32 % 256, idx as u32 / 256), (*pixel).into());
         }
@@ -94,7 +94,7 @@ impl Ppu {
     }
 
     fn draw_scanline(&mut self, scanline: u64) {
-        if scanline > 160 {
+        if scanline >= 224 {
             return;
         }
 
