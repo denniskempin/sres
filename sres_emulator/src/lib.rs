@@ -4,6 +4,7 @@ pub mod cartridge;
 pub mod cpu;
 pub mod debugger;
 pub mod dma;
+pub mod image;
 pub mod logging;
 pub mod memory;
 pub mod ppu;

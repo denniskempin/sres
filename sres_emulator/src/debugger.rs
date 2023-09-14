@@ -3,9 +3,6 @@ use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::Range;
 use std::rc::Rc;
-
-use log::error;
-
 use super::cpu::InstructionMeta;
 use crate::bus::SresBus;
 use crate::cpu::Cpu;
@@ -138,7 +135,7 @@ struct Debugger {
 impl Debugger {
     pub fn new() -> Self {
         Self {
-            breakpoints: vec![Trigger::ProgramCounter(0x823D..0x823E)],
+            breakpoints: vec![],
             break_reason: None,
             last_pcs: RingBuffer::default(),
         }
@@ -168,7 +165,7 @@ impl Debugger {
     }
 
     pub fn on_error(&mut self, msg: String) {
-        error!("{}", msg);
+        //error!("{}", msg);
         for trigger in self.breakpoints.iter() {
             if let Trigger::ExecutionError = trigger {
                 self.break_reason = Some(BreakReason::ExecutionError(msg.clone()));

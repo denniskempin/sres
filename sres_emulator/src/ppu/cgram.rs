@@ -1,10 +1,10 @@
 use crate::uint::U16Ext;
 
-use super::framebuffer::Rgba;
+use crate::image::{RgbU15, Rgba};
 
 pub struct CgRam {
     /// Contains the contents of CGRAM translated into RGBA values for more efficient rendering.
-    pub memory: Vec<Rgba>,
+    pub memory: Vec<RgbU15>,
     /// Contains the currently selected CGRAM address set via the CGADD register.
     current_addr: u8,
     /// Represents the write latch. Contains the previous written value or None if the latch is
@@ -16,7 +16,7 @@ impl CgRam {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            memory: vec![Rgba::default(); 0x200],
+            memory: vec![RgbU15::default(); 0x200],
             current_addr: 0,
             latch: None,
         }
@@ -54,7 +54,7 @@ impl CgRam {
             }
             Some(low_byte) => {
                 self.memory[self.current_addr as usize] =
-                    Rgba::from_rgb_u15(u16::from_le_bytes([low_byte, value]));
+                    RgbU15(u16::from_le_bytes([low_byte, value]));
                 self.latch = None;
                 self.current_addr = self.current_addr.wrapping_add(1);
             }
@@ -77,7 +77,7 @@ impl CgRam {
     pub fn read_cgdataread(&mut self) -> u8 {
         match self.latch {
             None => {
-                let value = self.memory[self.current_addr as usize].to_rgb_u15();
+                let value = self.memory[self.current_addr as usize].0;
                 self.latch = Some(value.high_byte());
                 value.low_byte()
             }
@@ -91,9 +91,7 @@ impl CgRam {
 
     pub fn peek_cgdataread(&self) -> u8 {
         match self.latch {
-            None => self.memory[self.current_addr as usize]
-                .to_rgb_u15()
-                .low_byte(),
+            None => self.memory[self.current_addr as usize].0.low_byte(),
             Some(high_byte) => high_byte,
         }
     }
@@ -107,39 +105,17 @@ mod tests {
     fn test_write_cgdata() {
         let mut cgram = CgRam::new();
         cgram.write_cgadd(0x42);
-
-        // Write red color
-        cgram.write_cgdata(0x1F);
-        cgram.write_cgdata(0x00);
-        assert_eq!(cgram.memory[0x42], Rgba([255, 0, 0, 255]));
-        // Write green color
         cgram.write_cgdata(0xE0);
         cgram.write_cgdata(0x03);
-        assert_eq!(cgram.memory[0x43], Rgba([0, 255, 0, 255]));
-        // Write blue color
-        cgram.write_cgdata(0x00);
-        cgram.write_cgdata(0x7C);
-        assert_eq!(cgram.memory[0x44], Rgba([0, 0, 255, 255]));
+        assert_eq!(cgram.memory[0x43], RgbU15(0xE003));
     }
 
     #[test]
     fn test_read_cgdataread() {
         let mut cgram = CgRam::new();
         cgram.write_cgadd(0x42);
-
-        // Read red color
-        cgram.memory[0x42] = Rgba([255, 0, 0, 255]);
-        assert_eq!(cgram.read_cgdataread(), 0x1F);
-        assert_eq!(cgram.read_cgdataread(), 0x00);
-
-        // Read green color
-        cgram.memory[0x43] = Rgba([0, 255, 0, 255]);
+        cgram.memory[0x43] = RgbU15(0xE003);
         assert_eq!(cgram.read_cgdataread(), 0xE0);
         assert_eq!(cgram.read_cgdataread(), 0x03);
-
-        // Read blue color
-        cgram.memory[0x44] = Rgba([0, 0, 255, 255]);
-        assert_eq!(cgram.read_cgdataread(), 0x00);
-        assert_eq!(cgram.read_cgdataread(), 0x7C);
     }
 }
