@@ -23,18 +23,19 @@ pub fn start_app(canvas_id: &str) {
 
     let canvas_id_owned = canvas_id.to_owned();
     wasm_bindgen_futures::spawn_local(async move {
-        eframe::start_web(
-            &canvas_id_owned,
-            Default::default(),
-            Box::new(|cc| {
-                let storage = web_sys::window().unwrap().local_storage().unwrap().unwrap();
-                let initial_rom = storage.get_item("rom").unwrap();
-                let initial_rom = initial_rom
-                    .map(|raw| Rom::load_from_bytes("last_rom", &base64::decode(raw).unwrap()));
-                Box::new(EmulatorApp::new(cc, initial_rom))
-            }),
-        )
-        .await
-        .expect("failed to start eframe");
+        eframe::WebRunner::new()
+            .start(
+                &canvas_id_owned,
+                Default::default(),
+                Box::new(|cc| {
+                    let storage = web_sys::window().unwrap().local_storage().unwrap().unwrap();
+                    let initial_rom = storage.get_item("rom").unwrap();
+                    let initial_rom = initial_rom
+                        .map(|raw| Rom::load_from_bytes("last_rom", &base64::decode(raw).unwrap()));
+                    Box::new(EmulatorApp::new(cc, initial_rom))
+                }),
+            )
+            .await
+            .expect("failed to start eframe");
     });
 }

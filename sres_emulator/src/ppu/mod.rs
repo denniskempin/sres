@@ -77,7 +77,10 @@ impl Ppu {
 
     pub fn advance_master_clock(&mut self, cycles: u64) {
         self.timer.advance_master_clock(cycles);
-        self.draw_scanline(self.timer.v);
+        if self.timer.v != self.last_drawn_scanline {
+            self.draw_scanline(self.timer.v);
+            self.last_drawn_scanline = self.timer.v;
+        }
     }
 
     pub fn reset(&mut self) {
@@ -99,20 +102,18 @@ impl Ppu {
         }
 
         let bg = &self.backgrounds[0];
-        let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
-        let tilemap_data = &self.vram.memory[bg.tilemap_addr..bg.tilemap_addr + 0x2000];
-
         let framebuffer_idx = scanline as usize * 256;
 
         let coarse_y = scanline / 8;
         let fine_y = scanline % 8;
         for coarse_x in 0..32 {
-            let tilemap_entry = tilemap_data[(coarse_y as usize) * 32 + coarse_x as usize];
+            let tilemap_entry =
+                self.vram.memory[bg.tilemap_addr + (coarse_y as usize) * 32 + coarse_x as usize];
             let tile_idx = tilemap_entry.bits(0..=9) as u32;
             let tile_addr = (tile_idx * 8) as usize;
             let tile_row_addr = tile_addr + (fine_y as usize);
 
-            let row = tileset_data[tile_row_addr];
+            let row = self.vram.memory[bg.tileset_addr + tile_row_addr];
             let low = row.low_byte();
             let high = row.high_byte();
             for fine_x in 0..8 {

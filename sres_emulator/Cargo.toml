@@ -32,6 +32,6 @@ xz2 = "0.1.7"
 image = { version = "0.24", features = ["png"] }
 
 [[bench]]
-name = "cpu_benches"
+name = "rom_benches"
 harness = false
 
