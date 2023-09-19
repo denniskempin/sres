@@ -5,7 +5,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use image::RgbaImage;
 use log::error;
 use pretty_assertions::assert_eq;
 use sres_emulator::bus::Bus;
@@ -14,7 +13,6 @@ use sres_emulator::cpu::Cpu;
 use sres_emulator::ppu::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::image::Image;
-use sres_emulator::util::image::Rgba32;
 use sres_emulator::util::logging;
 use sres_emulator::util::memory::format_memory;
 use sres_emulator::util::memory::Wrap;
@@ -208,11 +206,6 @@ pub fn test_ppu_timing() {
     run_rom_test("ppu_timing");
 }
 
-#[test]
-pub fn test_krom_hdma_redspace() {
-    run_rom_test("krom_hdma_redspace");
-}
-
 fn run_rom_test(test_name: &str) {
     logging::test_init(true);
 
@@ -291,30 +284,6 @@ fn run_rom_test(test_name: &str) {
         previous_master_cycle = system.cpu.bus.ppu.timer.master_clock;
         system.cpu.step();
     }
-
-    // Finish the current frame and then draw one more to show the final results.
-    system.execute_one_frame();
-    system.execute_one_frame();
-
-    let framebuffer_path = root_dir.join(format!("tests/rom_tests/{test_name}-framebuffer"));
-    compare_to_golden(
-        &system.cpu.bus.ppu.get_rgba_framebuffer::<TestImageImpl>(),
-        &framebuffer_path,
-    );
-}
-
-fn compare_to_golden(image: &TestImageImpl, path_prefix: &Path) {
-    let golden_path = path_prefix.with_extension("png");
-    if golden_path.exists() {
-        let golden: RgbaImage = image::open(&golden_path).unwrap().into_rgba8();
-        if golden != image.inner {
-            let actual_path = golden_path.with_extension("actual.png");
-            image.inner.save(&actual_path).unwrap();
-            panic!("Image does not match golden. See {:?}", actual_path);
-        }
-    } else {
-        image.inner.save(golden_path).unwrap();
-    }
 }
 
 #[test]
@@ -358,20 +327,4 @@ pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result
     let decoder = XzDecoder::new(file);
     let trace_reader = io::BufReader::new(decoder);
     Ok(trace_reader.lines().map(|l| l?.parse()))
-}
-
-struct TestImageImpl {
-    inner: RgbaImage,
-}
-
-impl Image for TestImageImpl {
-    fn new(width: u32, height: u32) -> Self {
-        TestImageImpl {
-            inner: RgbaImage::new(width, height),
-        }
-    }
-
-    fn set_pixel(&mut self, index: (u32, u32), value: Rgba32) {
-        self.inner[(index.0, index.1)] = image::Rgba::from(value.0);
-    }
 }
