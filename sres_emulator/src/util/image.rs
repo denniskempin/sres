@@ -40,3 +40,20 @@ pub trait Image {
     fn new(width: u32, height: u32) -> Self;
     fn set_pixel(&mut self, index: (u32, u32), value: Rgba32);
 }
+
+pub struct ImageView<'a, ImageT: Image> {
+    image: &'a mut ImageT,
+    x: u32,
+    y: u32,
+}
+
+impl<'a, ImageT: Image> ImageView<'a, ImageT> {
+    pub fn new(image: &'a mut ImageT, x: u32, y: u32) -> Self {
+        Self { image, x, y }
+    }
+
+    pub fn set_pixel(&mut self, index: (u32, u32), value: Rgba32) {
+        self.image
+            .set_pixel((self.x + index.0, self.y + index.1), value);
+    }
+}
