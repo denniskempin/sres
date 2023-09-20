@@ -65,7 +65,7 @@ impl PpuBackgroundWidget {
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
         self.tilemap_texture.set(
-            ppu.debug_render_tilemap::<EguiImageImpl>(self.selected_bg),
+            ppu.debug_render_background::<EguiImageImpl>(self.selected_bg),
             TextureOptions::default(),
         );
         self.tileset_texture.set(
@@ -105,7 +105,10 @@ fn tabs_widget<T: ToString + PartialEq + Copy>(ui: &mut Ui, tabs: &[T], selected
 
 fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &TextureHandle) {
     ui.vertical(|ui| {
-        ui.label(format!("Tilemap (0x{:04X})", background.tilemap_addr));
+        ui.label(format!(
+            "Tilemap (0x{:04X}, {})",
+            background.tilemap_addr, background.tilemap_size
+        ));
         ui.image(tilemap_texture, Vec2::new(512.0, 512.0));
     });
 }

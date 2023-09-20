@@ -1,11 +1,52 @@
-use log::debug;
+use std::fmt::Display;
+use std::fmt::Formatter;
+
+use intbits::Bits;
 
 use crate::util::uint::U16Ext;
-use crate::util::uint::UInt;
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct VramAddr(u16);
+
+impl VramAddr {
+    pub fn set_low_byte(&mut self, value: u8) {
+        self.0.set_low_byte(value);
+    }
+
+    pub fn set_high_byte(&mut self, value: u8) {
+        self.0.set_high_byte(value.bits(0..=6) & 0x7F);
+    }
+
+    pub fn increment(&mut self) {
+        self.0 = self.0.wrapping_add(1) & 0x7FFF;
+    }
+
+    pub fn wrapping_add(&self, rhs: u16) -> Self {
+        Self(self.0.wrapping_add(rhs) & 0x7FFF)
+    }
+}
+
+impl From<u16> for VramAddr {
+    fn from(value: u16) -> Self {
+        Self(value & 0x7FFF)
+    }
+}
+
+impl From<VramAddr> for usize {
+    fn from(value: VramAddr) -> Self {
+        value.0 as usize
+    }
+}
+
+impl Display for VramAddr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "${:04X}", self.0)
+    }
+}
 
 pub struct Vram {
     pub memory: Vec<u16>,
-    pub current_addr: u16,
+    pub current_addr: VramAddr,
     pub read_latch: bool,
     pub increment_mode: bool,
 }
@@ -15,7 +56,7 @@ impl Vram {
     pub fn new() -> Self {
         Self {
             memory: vec![0; 0x20000],
-            current_addr: 0,
+            current_addr: VramAddr::from(0),
             read_latch: false,
             increment_mode: false,
         }
@@ -51,25 +92,23 @@ impl Vram {
 
     /// Register 2117: VMADDH - VRAM word address high
     pub fn write_vmaddh(&mut self, value: u8) {
-        self.current_addr.set_high_byte(value);
+        self.current_addr.set_high_byte(value.bits(0..=6));
         self.read_latch = true;
     }
 
     /// Register 2118: VMDATAL - VRAM data write low
     pub fn write_vmdatal(&mut self, value: u8) {
-        debug!("VRAM[{:04X}].low = {}", self.current_addr, value);
-        self.memory[self.current_addr as usize].set_low_byte(value);
+        self.memory[usize::from(self.current_addr)].set_low_byte(value);
         if !self.increment_mode {
-            self.current_addr = self.current_addr.wrapping_add(1);
+            self.current_addr.increment();
         }
     }
 
     /// Register 2119: VMDATAH - VRAM data write high
     pub fn write_vmdatah(&mut self, value: u8) {
-        debug!("VRAM[{:04X}].high = {}", self.current_addr, value);
-        self.memory[self.current_addr as usize].set_high_byte(value);
+        self.memory[usize::from(self.current_addr)].set_high_byte(value);
         if self.increment_mode {
-            self.current_addr = self.current_addr.wrapping_add(1);
+            self.current_addr.increment();
         }
     }
 
@@ -80,14 +119,14 @@ impl Vram {
             if self.read_latch {
                 self.read_latch = false;
             } else {
-                self.current_addr = self.current_addr.wrapping_add(1);
+                self.current_addr.increment();
             }
         }
         value
     }
 
     pub fn peek_vmdatalread(&self) -> u8 {
-        self.memory[self.current_addr as usize].low_byte()
+        self.memory[usize::from(self.current_addr)].low_byte()
     }
 
     /// Register 213A: VMDATAHREAD - VRAM data read high
@@ -97,13 +136,13 @@ impl Vram {
             if self.read_latch {
                 self.read_latch = false;
             } else {
-                self.current_addr = self.current_addr.wrapping_add(1);
+                self.current_addr.increment();
             }
         }
         value
     }
 
     pub fn peek_vmdatahread(&self) -> u8 {
-        self.memory[self.current_addr as usize].high_byte()
+        self.memory[usize::from(self.current_addr)].high_byte()
     }
 }

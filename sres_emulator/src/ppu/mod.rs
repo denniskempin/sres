@@ -6,12 +6,14 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use intbits::Bits;
+use log::error;
 
 use self::cgram::CgRam;
 pub use self::timer::fvh_to_master_clock;
 use self::timer::PpuTimer;
 use self::vram::Vram;
 use crate::util::image::Image;
+use crate::util::image::ImageView;
 use crate::util::image::Rgb15;
 use crate::util::memory::Address;
 use crate::util::uint::U16Ext;
@@ -176,7 +178,18 @@ impl Ppu {
     /// ++++-++--- Tilemap VRAM address (word address = AAAAAA << 10)
     fn write_bgnsc(&mut self, addr: Address, value: u8) {
         let bg_id = (addr.offset - 0x2107) as usize;
-        self.backgrounds[bg_id].tilemap_addr = (((value as usize) << 9) & 0xFFFF) >> 1;
+        self.backgrounds[bg_id].tilemap_addr = ((value.bits(2..=7) as usize) << 10) & 0x7FFF;
+        error!(
+            "write_bgnsc({:X}, {:08b}, {:04X})",
+            addr.offset, value, self.backgrounds[bg_id].tilemap_addr
+        );
+        self.backgrounds[bg_id].tilemap_size = match value.bits(0..=1) {
+            0 => TilemapSize::Size32x32,
+            1 => TilemapSize::Size64x32,
+            2 => TilemapSize::Size32x64,
+            3 => TilemapSize::Size64x64,
+            _ => unreachable!(),
+        }
     }
 
     /// Register 210B: BG12NBA - Tileset base address for BG1 and BG2
@@ -229,23 +242,73 @@ impl Ppu {
         image
     }
 
-    pub fn debug_render_tilemap<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
+    pub fn debug_render_background<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
         let bg = &self.backgrounds[background_id as usize];
+        match bg.tilemap_size {
+            TilemapSize::Size32x32 => {
+                let mut image = ImageT::new(32 * 8, 32 * 8);
+                self.debug_render_tilemap(background_id, 0, ImageView::new(&mut image, 0, 0));
+                image
+            }
+            TilemapSize::Size64x32 => {
+                let mut image = ImageT::new(64 * 8, 32 * 8);
+                self.debug_render_tilemap(background_id, 0, ImageView::new(&mut image, 0, 0));
+                self.debug_render_tilemap(background_id, 1, ImageView::new(&mut image, 32 * 8, 0));
+                image
+            }
+            TilemapSize::Size32x64 => {
+                let mut image = ImageT::new(32 * 8, 64 * 8);
+                self.debug_render_tilemap(background_id, 0, ImageView::new(&mut image, 0, 0));
+                self.debug_render_tilemap(background_id, 1, ImageView::new(&mut image, 0, 32 * 8));
+                image
+            }
+            TilemapSize::Size64x64 => {
+                let mut image = ImageT::new(64 * 8, 64 * 8);
+                self.debug_render_tilemap(background_id, 0, ImageView::new(&mut image, 0, 0));
+                self.debug_render_tilemap(background_id, 1, ImageView::new(&mut image, 32 * 8, 0));
+                self.debug_render_tilemap(background_id, 2, ImageView::new(&mut image, 0, 32 * 8));
+                self.debug_render_tilemap(
+                    background_id,
+                    3,
+                    ImageView::new(&mut image, 32 * 8, 32 * 8),
+                );
+                image
+            }
+        }
+    }
+
+    fn debug_render_tilemap<ImageT: Image>(
+        &self,
+        background_id: BackgroundId,
+        tilemap_idx: u32,
+        mut image: ImageView<ImageT>,
+    ) {
+        let bg = &self.backgrounds[background_id as usize];
+        let addr = bg.tilemap_addr + (tilemap_idx as usize) * 1024;
+        let tilemap_data = &self.vram.memory[addr..addr + 0x2000];
         let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
-        let tilemap_data = &self.vram.memory[bg.tilemap_addr..bg.tilemap_addr + 0x2000];
-        let mut image = ImageT::new(32 * 8, 32 * 8);
         for tile_y_idx in 0..32_u32 {
             for tile_x_idx in 0..32_u32 {
                 let entry = tilemap_data[(tile_y_idx as usize) * 32 + tile_x_idx as usize];
+                let flip_v = entry.bit(15);
+                let flip_h = entry.bit(14);
                 let tile_idx = entry.bits(0..=9) as u32;
                 let tile_addr = (tile_idx * 8) as usize;
                 let tile_x: u32 = tile_x_idx * 8;
                 let tile_y: u32 = tile_y_idx * 8;
-                for (row_idx, row) in tileset_data[tile_addr..(tile_addr + 8)].iter().enumerate() {
+                for (mut row_idx, row) in
+                    tileset_data[tile_addr..(tile_addr + 8)].iter().enumerate()
+                {
                     let low = row.low_byte();
                     let high = row.high_byte();
-                    for col_idx in 0..8 {
+                    if flip_v {
+                        row_idx = 7 - row_idx;
+                    }
+                    for mut col_idx in 0..8 {
                         let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
+                        if flip_h {
+                            col_idx = 7 - col_idx;
+                        }
                         let color = self.cgram.memory[pixel as usize];
                         image.set_pixel(
                             (tile_x + (7 - col_idx), tile_y + row_idx as u32),
@@ -255,7 +318,6 @@ impl Ppu {
                 }
             }
         }
-        image
     }
 }
 
@@ -265,6 +327,7 @@ pub struct Background {
     pub tile_size: TileSize,
     pub tilemap_addr: usize,
     pub tileset_addr: usize,
+    pub tilemap_size: TilemapSize,
 }
 
 #[derive(Default, Copy, Clone, Debug)]
@@ -301,6 +364,26 @@ impl Display for TileSize {
         match self {
             TileSize::Size8x8 => write!(f, "8x8"),
             TileSize::Size16x16 => write!(f, "16x16"),
+        }
+    }
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+pub enum TilemapSize {
+    #[default]
+    Size32x32,
+    Size64x32,
+    Size32x64,
+    Size64x64,
+}
+
+impl Display for TilemapSize {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TilemapSize::Size32x32 => write!(f, "32x32"),
+            TilemapSize::Size64x32 => write!(f, "64x32"),
+            TilemapSize::Size32x64 => write!(f, "32x64"),
+            TilemapSize::Size64x64 => write!(f, "64x64"),
         }
     }
 }
