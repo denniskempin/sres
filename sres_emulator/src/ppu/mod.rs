@@ -27,6 +27,9 @@ pub struct Ppu {
     pub framebuffer: Vec<Rgb15>,
     pub cgram: CgRam,
     pub last_drawn_scanline: u64,
+
+    pub bgofs_latch: u8,
+    pub bghofs_latch: u8,
 }
 
 impl Ppu {
@@ -39,6 +42,8 @@ impl Ppu {
             framebuffer: vec![Rgb15(0); 256 * 224],
             cgram: CgRam::new(),
             last_drawn_scanline: 0,
+            bgofs_latch: 0,
+            bghofs_latch: 0,
         }
     }
 
@@ -66,6 +71,8 @@ impl Ppu {
             0x2107..=0x210A => self.write_bgnsc(addr, value),
             0x210B => self.write_bg12nba(value),
             0x210C => self.write_bg34nba(value),
+            0x210D | 0x210F | 0x2111 | 0x2113 => self.write_bgnhofs(addr, value),
+            0x210E | 0x2110 | 0x2112 | 0x2114 => self.write_bgnvofs(addr, value),
             0x2115 => self.vram.write_vmain(value),
             0x2116 => self.vram.write_vmaddl(value),
             0x2117 => self.vram.write_vmaddh(value),
@@ -179,10 +186,6 @@ impl Ppu {
     fn write_bgnsc(&mut self, addr: Address, value: u8) {
         let bg_id = (addr.offset - 0x2107) as usize;
         self.backgrounds[bg_id].tilemap_addr = ((value.bits(2..=7) as usize) << 10) & 0x7FFF;
-        error!(
-            "write_bgnsc({:X}, {:08b}, {:04X})",
-            addr.offset, value, self.backgrounds[bg_id].tilemap_addr
-        );
         self.backgrounds[bg_id].tilemap_size = match value.bits(0..=1) {
             0 => TilemapSize::Size32x32,
             1 => TilemapSize::Size64x32,
@@ -214,6 +217,46 @@ impl Ppu {
     fn write_bg34nba(&mut self, value: u8) {
         self.backgrounds[2].tileset_addr = (value.low_nibble() as usize) << 12;
         self.backgrounds[3].tileset_addr = (value.high_nibble() as usize) << 12;
+    }
+
+    /// Register 210D, 210F, 2111, 2113: BGNHOFS - Background N horizontal scroll
+    /// 15  bit  8   7  bit  0
+    ///  ---- ----   ---- ----
+    ///  .... ..XX   XXXX XXXX
+    ///         ||   |||| ||||
+    ///         ++---++++-++++- BGn horizontal scroll
+    ///
+    /// On write: BGnHOFS = (value << 8) | (bgofs_latch & ~7) | (bghofs_latch & 7)
+    ///           bgofs_latch = value
+    ///           bghofs_latch = value
+    pub fn write_bgnhofs(&mut self, addr: Address, value: u8) {
+        let bg_id = ((addr.offset - 0x210D) / 2) as usize;
+        self.backgrounds[bg_id].h_offset = ((value as u16) << 8)
+            | ((self.bgofs_latch as u16) & !7)
+            | ((self.bghofs_latch as u16) & 7);
+        error!(
+            "BGNHOFS: {} = {:04X} (write {})",
+            bg_id, self.backgrounds[bg_id].h_offset, value
+        );
+        self.bgofs_latch = value;
+        self.bghofs_latch = value;
+    }
+
+    /// Register 210E, 2110, 2112, 2114: BGNVOFS - Background N vertical scroll
+    /// 15  bit  8   7  bit  0
+    ///  ---- ----   ---- ----
+    ///  .... ..YY   YYYY YYYY
+    ///         ||   |||| ||||
+    ///         ++---++++-++++- BGn vertical scroll
+    ///
+    /// On write: BGnVOFS = (value << 8) | bgofs_latch
+    ///           bgofs_latch = value
+    ///
+    /// Note: BG1VOFS uses the same address as M7VOFS
+    pub fn write_bgnvofs(&mut self, addr: Address, value: u8) {
+        let bg_id = ((addr.offset - 0x210E) / 2) as usize;
+        self.backgrounds[bg_id].v_offset = ((value as u16) << 8) | (self.bgofs_latch as u16);
+        self.bgofs_latch = value;
     }
 
     // Debug APIs
@@ -328,6 +371,8 @@ pub struct Background {
     pub tilemap_addr: usize,
     pub tileset_addr: usize,
     pub tilemap_size: TilemapSize,
+    pub h_offset: u16,
+    pub v_offset: u16,
 }
 
 #[derive(Default, Copy, Clone, Debug)]
