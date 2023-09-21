@@ -87,8 +87,12 @@ impl PpuBackgroundWidget {
             ],
             &mut self.selected_bg,
         );
+        let background = &ppu.backgrounds[self.selected_bg as usize];
+        ui.label(format!(
+            "Scroll: ({}, {})",
+            background.h_offset, background.v_offset
+        ));
         ui.horizontal(|ui| {
-            let background = &ppu.backgrounds[self.selected_bg as usize];
             tilemap_widget(ui, background, &self.tilemap_texture);
             tileset_widget(ui, background, &self.tileset_texture);
         });
