@@ -80,6 +80,7 @@ impl Ppu {
             0x2119 => self.vram.write_vmdatah(value),
             0x2121 => self.cgram.write_cgadd(value),
             0x2122 => self.cgram.write_cgdata(value),
+            0x212C => self.write_tm(value),
             _ => (),
         }
     }
@@ -110,15 +111,24 @@ impl Ppu {
             return;
         }
 
-        let bg = &self.backgrounds[0];
-        let coarse_y = scanline / 8;
-        let fine_y = scanline % 8;
+        for (background_id, bg) in self.backgrounds.iter().enumerate().rev() {
+            if bg.bit_depth == BitDepth::Disabled || !bg.enabled {
+                continue;
+            }
 
-        for coarse_x in 0..32 {
-            let tile = bg.get_tile(coarse_x, coarse_y, &self.vram);
-            for (fine_x, pixel) in tile.row(fine_y, &self.vram).pixels() {
-                let color = self.cgram[pixel];
-                self.framebuffer[(coarse_x * 8 + fine_x, coarse_y * 8 + fine_y)] = color;
+            let coarse_y = scanline / 8;
+            let fine_y = scanline % 8;
+
+            for coarse_x in 0..32 {
+                let tile_x = coarse_x + bg.h_offset / 8;
+                let tile_y = coarse_y + bg.v_offset / 8;
+                let tile = bg.get_tile(tile_x, tile_y, &self.vram);
+                for (fine_x, pixel) in tile.row(fine_y, &self.vram).pixels() {
+                    if pixel > 0 {
+                        let color = self.cgram[(background_id as u8 * 32) + pixel];
+                        self.framebuffer[(coarse_x * 8 + fine_x, coarse_y * 8 + fine_y)] = color;
+                    }
+                }
             }
         }
     }
@@ -249,6 +259,22 @@ impl Ppu {
         self.bgofs_latch = value;
     }
 
+    /// Register 212C: TM - Main screen layer enable
+    /// 7  bit  0
+    /// ---- ----
+    /// ...O 4321
+    ///    | ||||
+    ///    | |||+- Enable BG1 on main screen
+    ///    | ||+-- Enable BG2 on main screen
+    ///    | |+--- Enable BG3 on main screen
+    ///    | +---- Enable BG4 on main screen
+    ///    +------ Enable OBJ on main screen
+    pub fn write_tm(&mut self, value: u8) {
+        for i in 0..4 {
+            self.backgrounds[i].enabled = value.bit(i);
+        }
+    }
+
     // Debug APIs
 
     pub fn debug_render_tileset<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
@@ -260,7 +286,7 @@ impl Ppu {
             let tile = bg.get_tileset_tile(tile_idx);
             for (row_idx, row) in tile.rows(&self.vram) {
                 for (col_idx, pixel) in row.pixels() {
-                    let color = self.cgram[pixel];
+                    let color = self.cgram[(background_id as u8 * 32) + pixel];
                     image.set_pixel((tile_x + col_idx, tile_y + row_idx), color.into());
                 }
             }
@@ -276,7 +302,7 @@ impl Ppu {
                 let tile = bg.get_tile(coarse_x, coarse_y, &self.vram);
                 for (fine_y, row) in tile.rows(&self.vram) {
                     for (fine_x, pixel) in row.pixels() {
-                        let color = self.cgram[pixel];
+                        let color = self.cgram[(background_id as u8 * 32) + pixel];
                         image.set_pixel(
                             (coarse_x * 8 + fine_x, coarse_y * 8 + fine_y),
                             color.into(),
@@ -322,6 +348,7 @@ impl std::ops::IndexMut<(u32, u32)> for Framebuffer {
 
 #[derive(Default, Copy, Clone, Debug)]
 pub struct Background {
+    pub enabled: bool,
     pub bit_depth: BitDepth,
     pub tile_size: TileSize,
     pub tilemap_addr: VramAddr,
@@ -367,7 +394,7 @@ impl Background {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub enum BitDepth {
     #[default]
     Disabled,
@@ -447,6 +474,7 @@ impl Display for BackgroundId {
 
 pub struct Tile {
     tile_addr: VramAddr,
+    _palette: u8,
     flip_v: bool,
     flip_h: bool,
 }
@@ -456,6 +484,7 @@ impl Tile {
         let tile_idx = tilemap_entry.bits(0..=9);
         Self {
             tile_addr: tileset_addr + tile_idx * 8,
+            _palette: tilemap_entry.bits(10..=12) as u8,
             flip_v: tilemap_entry.bit(15),
             flip_h: tilemap_entry.bit(14),
         }
@@ -464,6 +493,7 @@ impl Tile {
     pub fn from_tileset_index(tileset_addr: VramAddr, index: u32) -> Self {
         Self {
             tile_addr: tileset_addr + index * 8,
+            _palette: 0,
             flip_v: false,
             flip_h: false,
         }

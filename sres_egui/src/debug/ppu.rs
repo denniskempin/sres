@@ -113,7 +113,7 @@ fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &Textur
             "Tilemap ({}, {})",
             background.tilemap_addr, background.tilemap_size
         ));
-        ui.image(tilemap_texture, Vec2::new(512.0, 512.0));
+        ui.image(tilemap_texture, Vec2::new(256.0, 256.0));
     });
 }
 
@@ -123,6 +123,6 @@ fn tileset_widget(ui: &mut Ui, background: &Background, tileset_texture: &Textur
             "Tileset ({}, {}, {})",
             background.tileset_addr, background.bit_depth, background.tile_size
         ));
-        ui.image(tileset_texture, Vec2::new(512.0, 512.0));
+        ui.image(tileset_texture, Vec2::new(256.0, 256.0));
     });
 }
