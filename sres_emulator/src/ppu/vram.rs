@@ -5,58 +5,6 @@ use intbits::Bits;
 
 use crate::util::uint::U16Ext;
 
-#[derive(Copy, Clone, Debug, Default)]
-pub struct VramAddr(u16);
-
-impl VramAddr {
-    pub fn set_low_byte(&mut self, value: u8) {
-        self.0.set_low_byte(value);
-    }
-
-    pub fn set_high_byte(&mut self, value: u8) {
-        self.0.set_high_byte(value.bits(0..=6) & 0x7F);
-    }
-
-    pub fn increment(&mut self) {
-        self.0 = self.0.wrapping_add(1) & 0x7FFF;
-    }
-}
-
-impl std::ops::Add<u16> for VramAddr {
-    type Output = Self;
-
-    fn add(self, rhs: u16) -> Self {
-        #[allow(clippy::suspicious_arithmetic_impl)]
-        Self(self.0.wrapping_add(rhs) & 0x7FFF)
-    }
-}
-
-impl std::ops::Add<u32> for VramAddr {
-    type Output = Self;
-
-    fn add(self, rhs: u32) -> Self {
-        self + rhs as u16
-    }
-}
-
-impl From<u16> for VramAddr {
-    fn from(value: u16) -> Self {
-        Self(value & 0x7FFF)
-    }
-}
-
-impl From<VramAddr> for usize {
-    fn from(value: VramAddr) -> Self {
-        value.0 as usize
-    }
-}
-
-impl Display for VramAddr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "${:04X}", self.0)
-    }
-}
-
 pub struct Vram {
     pub memory: Vec<u16>,
     pub current_addr: VramAddr,
@@ -168,8 +116,54 @@ impl std::ops::Index<VramAddr> for Vram {
     }
 }
 
-impl std::ops::IndexMut<VramAddr> for Vram {
-    fn index_mut(&mut self, index: VramAddr) -> &mut Self::Output {
-        &mut self.memory[usize::from(index)]
+#[derive(Copy, Clone, Debug, Default)]
+pub struct VramAddr(pub u16);
+
+impl VramAddr {
+    pub fn set_low_byte(&mut self, value: u8) {
+        self.0.set_low_byte(value);
+    }
+
+    pub fn set_high_byte(&mut self, value: u8) {
+        self.0.set_high_byte(value.bits(0..=6) & 0x7F);
+    }
+
+    pub fn increment(&mut self) {
+        self.0 = self.0.wrapping_add(1) & 0x7FFF;
+    }
+}
+
+impl std::ops::Add<u16> for VramAddr {
+    type Output = Self;
+
+    fn add(self, rhs: u16) -> Self {
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        Self(self.0.wrapping_add(rhs) & 0x7FFF)
+    }
+}
+
+impl std::ops::Add<u32> for VramAddr {
+    type Output = Self;
+
+    fn add(self, rhs: u32) -> Self {
+        self + rhs as u16
+    }
+}
+
+impl From<u16> for VramAddr {
+    fn from(value: u16) -> Self {
+        Self(value & 0x7FFF)
+    }
+}
+
+impl From<VramAddr> for usize {
+    fn from(value: VramAddr) -> Self {
+        value.0 as usize
+    }
+}
+
+impl Display for VramAddr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "${:04X}", self.0)
     }
 }
