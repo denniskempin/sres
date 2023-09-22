@@ -20,9 +20,22 @@ impl VramAddr {
     pub fn increment(&mut self) {
         self.0 = self.0.wrapping_add(1) & 0x7FFF;
     }
+}
 
-    pub fn wrapping_add(&self, rhs: u16) -> Self {
+impl std::ops::Add<u16> for VramAddr {
+    type Output = Self;
+
+    fn add(self, rhs: u16) -> Self {
+        #[allow(clippy::suspicious_arithmetic_impl)]
         Self(self.0.wrapping_add(rhs) & 0x7FFF)
+    }
+}
+
+impl std::ops::Add<u32> for VramAddr {
+    type Output = Self;
+
+    fn add(self, rhs: u32) -> Self {
+        self + rhs as u16
     }
 }
 
@@ -144,5 +157,19 @@ impl Vram {
 
     pub fn peek_vmdatahread(&self) -> u8 {
         self.memory[usize::from(self.current_addr)].high_byte()
+    }
+}
+
+impl std::ops::Index<VramAddr> for Vram {
+    type Output = u16;
+
+    fn index(&self, index: VramAddr) -> &Self::Output {
+        &self.memory[usize::from(index)]
+    }
+}
+
+impl std::ops::IndexMut<VramAddr> for Vram {
+    fn index_mut(&mut self, index: VramAddr) -> &mut Self::Output {
+        &mut self.memory[usize::from(index)]
     }
 }
