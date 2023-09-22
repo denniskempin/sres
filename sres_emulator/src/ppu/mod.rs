@@ -13,7 +13,6 @@ pub use self::timer::fvh_to_master_clock;
 use self::timer::PpuTimer;
 use self::vram::Vram;
 use crate::util::image::Image;
-use crate::util::image::ImageView;
 use crate::util::image::Rgb15;
 use crate::util::memory::Address;
 use crate::util::uint::U16Ext;
@@ -87,7 +86,7 @@ impl Ppu {
     pub fn advance_master_clock(&mut self, cycles: u64) {
         self.timer.advance_master_clock(cycles);
         if self.timer.v != self.last_drawn_scanline {
-            self.draw_scanline(self.timer.v);
+            self.draw_scanline(self.timer.v as u32);
             self.last_drawn_scanline = self.timer.v;
         }
     }
@@ -105,30 +104,21 @@ impl Ppu {
         image
     }
 
-    fn draw_scanline(&mut self, scanline: u64) {
+    fn draw_scanline(&mut self, scanline: u32) {
         if scanline >= 224 {
             return;
         }
 
         let bg = &self.backgrounds[0];
         let framebuffer_idx = scanline as usize * 256;
-
         let coarse_y = scanline / 8;
         let fine_y = scanline % 8;
-        for coarse_x in 0..32 {
-            let tilemap_entry =
-                self.vram.memory[bg.tilemap_addr + (coarse_y as usize) * 32 + coarse_x as usize];
-            let tile_idx = tilemap_entry.bits(0..=9) as u32;
-            let tile_addr = (tile_idx * 8) as usize;
-            let tile_row_addr = tile_addr + (fine_y as usize);
 
-            let row = self.vram.memory[bg.tileset_addr + tile_row_addr];
-            let low = row.low_byte();
-            let high = row.high_byte();
-            for fine_x in 0..8 {
-                let pixel = low.bit(7 - fine_x) as u8 + ((high.bit(7 - fine_x) as u8) << 1);
+        for coarse_x in 0..32 {
+            let tile = bg.get_tile(coarse_x, coarse_y, &self.vram);
+            for (fine_x, pixel) in tile.row(fine_y as u16, &self.vram).pixels().enumerate() {
                 let color = self.cgram.memory[pixel as usize];
-                self.framebuffer[framebuffer_idx + coarse_x as usize * 8 + fine_x as usize] = color;
+                self.framebuffer[framebuffer_idx + coarse_x as usize * 8 + fine_x] = color;
             }
         }
     }
@@ -185,7 +175,7 @@ impl Ppu {
     /// ++++-++--- Tilemap VRAM address (word address = AAAAAA << 10)
     fn write_bgnsc(&mut self, addr: Address, value: u8) {
         let bg_id = (addr.offset - 0x2107) as usize;
-        self.backgrounds[bg_id].tilemap_addr = ((value.bits(2..=7) as usize) << 10) & 0x7FFF;
+        self.backgrounds[bg_id].tilemap_addr = ((value.bits(2..=7) as u16) << 10) & 0x7FFF;
         self.backgrounds[bg_id].tilemap_size = match value.bits(0..=1) {
             0 => TilemapSize::Size32x32,
             1 => TilemapSize::Size64x32,
@@ -203,8 +193,8 @@ impl Ppu {
     /// |||| ++++- BG1 CHR word base address (word address = AAAA << 12)
     /// ++++------ BG2 CHR word base address (word address = BBBB << 12)
     fn write_bg12nba(&mut self, value: u8) {
-        self.backgrounds[0].tileset_addr = (value.low_nibble() as usize) << 12;
-        self.backgrounds[1].tileset_addr = (value.high_nibble() as usize) << 12;
+        self.backgrounds[0].tileset_addr = (value.low_nibble() as u16) << 12;
+        self.backgrounds[1].tileset_addr = (value.high_nibble() as u16) << 12;
     }
 
     /// Register 210C: BG34NBA - Tileset base address for BG3 and BG4
@@ -215,8 +205,8 @@ impl Ppu {
     /// |||| ++++- BG3 CHR word base address (word address = CCCC << 12)
     /// ++++------ BG4 CHR word base address (word address = DDDD << 12)
     fn write_bg34nba(&mut self, value: u8) {
-        self.backgrounds[2].tileset_addr = (value.low_nibble() as usize) << 12;
-        self.backgrounds[3].tileset_addr = (value.high_nibble() as usize) << 12;
+        self.backgrounds[2].tileset_addr = (value.low_nibble() as u16) << 12;
+        self.backgrounds[3].tileset_addr = (value.high_nibble() as u16) << 12;
     }
 
     /// Register 210D, 210F, 2111, 2113: BGNHOFS - Background N horizontal scroll
@@ -262,21 +252,17 @@ impl Ppu {
     // Debug APIs
 
     pub fn debug_render_tileset<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
-        let bg = &self.backgrounds[background_id as usize];
-        let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
         let mut image = ImageT::new(16 * 8, 16 * 8);
-        for tile_idx in 0..256 {
-            let tile_x: u32 = (tile_idx % 16) * 8;
-            let tile_y: u32 = (tile_idx / 16) * 8;
-            let tile_addr = (tile_idx * 8) as usize;
-            for (row_idx, row) in tileset_data[tile_addr..(tile_addr + 8)].iter().enumerate() {
-                let low = row.low_byte();
-                let high = row.high_byte();
-                for col_idx in 0..8 {
-                    let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
+        let bg = &self.backgrounds[background_id as usize];
+        for tile_idx in 0..256_u16 {
+            let tile_x: u32 = (tile_idx as u32 % 16) * 8;
+            let tile_y: u32 = (tile_idx as u32 / 16) * 8;
+            let tile = bg.get_tileset_tile(tile_idx);
+            for (row_idx, row) in tile.rows(&self.vram).enumerate() {
+                for (col_idx, pixel) in row.pixels().enumerate() {
                     let color = self.cgram.memory[pixel as usize];
                     image.set_pixel(
-                        (tile_x + (7 - col_idx), tile_y + row_idx as u32),
+                        (tile_x + col_idx as u32, tile_y + row_idx as u32),
                         color.into(),
                     );
                 }
@@ -287,80 +273,22 @@ impl Ppu {
 
     pub fn debug_render_background<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
         let bg = &self.backgrounds[background_id as usize];
-        match bg.tilemap_size {
-            TilemapSize::Size32x32 => {
-                let mut image = ImageT::new(32 * 8, 32 * 8);
-                self.debug_render_tilemap(background_id, 0, ImageView::new(&mut image, 0, 0));
-                image
-            }
-            TilemapSize::Size64x32 => {
-                let mut image = ImageT::new(64 * 8, 32 * 8);
-                self.debug_render_tilemap(background_id, 0, ImageView::new(&mut image, 0, 0));
-                self.debug_render_tilemap(background_id, 1, ImageView::new(&mut image, 32 * 8, 0));
-                image
-            }
-            TilemapSize::Size32x64 => {
-                let mut image = ImageT::new(32 * 8, 64 * 8);
-                self.debug_render_tilemap(background_id, 0, ImageView::new(&mut image, 0, 0));
-                self.debug_render_tilemap(background_id, 1, ImageView::new(&mut image, 0, 32 * 8));
-                image
-            }
-            TilemapSize::Size64x64 => {
-                let mut image = ImageT::new(64 * 8, 64 * 8);
-                self.debug_render_tilemap(background_id, 0, ImageView::new(&mut image, 0, 0));
-                self.debug_render_tilemap(background_id, 1, ImageView::new(&mut image, 32 * 8, 0));
-                self.debug_render_tilemap(background_id, 2, ImageView::new(&mut image, 0, 32 * 8));
-                self.debug_render_tilemap(
-                    background_id,
-                    3,
-                    ImageView::new(&mut image, 32 * 8, 32 * 8),
-                );
-                image
-            }
-        }
-    }
-
-    fn debug_render_tilemap<ImageT: Image>(
-        &self,
-        background_id: BackgroundId,
-        tilemap_idx: u32,
-        mut image: ImageView<ImageT>,
-    ) {
-        let bg = &self.backgrounds[background_id as usize];
-        let addr = bg.tilemap_addr + (tilemap_idx as usize) * 1024;
-        let tilemap_data = &self.vram.memory[addr..addr + 0x2000];
-        let tileset_data = &self.vram.memory[bg.tileset_addr..bg.tileset_addr + 0x2000];
-        for tile_y_idx in 0..32_u32 {
-            for tile_x_idx in 0..32_u32 {
-                let entry = tilemap_data[(tile_y_idx as usize) * 32 + tile_x_idx as usize];
-                let flip_v = entry.bit(15);
-                let flip_h = entry.bit(14);
-                let tile_idx = entry.bits(0..=9) as u32;
-                let tile_addr = (tile_idx * 8) as usize;
-                let tile_x: u32 = tile_x_idx * 8;
-                let tile_y: u32 = tile_y_idx * 8;
-                for (mut row_idx, row) in
-                    tileset_data[tile_addr..(tile_addr + 8)].iter().enumerate()
-                {
-                    let low = row.low_byte();
-                    let high = row.high_byte();
-                    if flip_v {
-                        row_idx = 7 - row_idx;
-                    }
-                    for mut col_idx in 0..8 {
-                        let pixel = low.bit(col_idx) as u8 + ((high.bit(col_idx) as u8) << 1);
-                        if flip_h {
-                            col_idx = 7 - col_idx;
-                        }
+        let mut image = ImageT::new(bg.coarse_width() * 8, bg.coarse_height() * 8);
+        for coarse_y in 0..bg.coarse_height() {
+            for coarse_x in 0..bg.coarse_width() {
+                let tile = bg.get_tile(coarse_x, coarse_y, &self.vram);
+                for (fine_y, row) in tile.rows(&self.vram).enumerate() {
+                    for (fine_x, pixel) in row.pixels().enumerate() {
                         let color = self.cgram.memory[pixel as usize];
                         image.set_pixel(
-                            (tile_x + (7 - col_idx), tile_y + row_idx as u32),
+                            (coarse_x * 8 + fine_x as u32, coarse_y * 8 + fine_y as u32),
                             color.into(),
                         );
                     }
                 }
             }
         }
+        image
     }
 }
 
@@ -368,11 +296,47 @@ impl Ppu {
 pub struct Background {
     pub bit_depth: BitDepth,
     pub tile_size: TileSize,
-    pub tilemap_addr: usize,
-    pub tileset_addr: usize,
+    pub tilemap_addr: u16,
+    pub tileset_addr: u16,
     pub tilemap_size: TilemapSize,
     pub h_offset: u16,
     pub v_offset: u16,
+}
+
+impl Background {
+    pub fn get_tile(&self, coarse_x: u32, coarse_y: u32, vram: &Vram) -> Tile {
+        let tilemap_idx = match self.tilemap_size {
+            TilemapSize::Size32x32 => 0,
+            TilemapSize::Size64x32 => coarse_x / 32,
+            TilemapSize::Size32x64 => coarse_y / 32,
+            TilemapSize::Size64x64 => coarse_x / 32 + (coarse_y / 32) * 2,
+        };
+        let tile_idx = tilemap_idx * 1024 + (coarse_y % 32) * 32 + (coarse_x % 32);
+        let tilemap_entry = vram.memory[self.tilemap_addr as usize + tile_idx as usize];
+        Tile::from_tilemap_entry(self.tileset_addr, tilemap_entry)
+    }
+
+    pub fn get_tileset_tile(&self, index: u16) -> Tile {
+        Tile::from_tileset_index(self.tileset_addr, index)
+    }
+
+    pub fn coarse_width(&self) -> u32 {
+        match self.tilemap_size {
+            TilemapSize::Size32x32 => 32,
+            TilemapSize::Size64x32 => 64,
+            TilemapSize::Size32x64 => 32,
+            TilemapSize::Size64x64 => 64,
+        }
+    }
+
+    pub fn coarse_height(&self) -> u32 {
+        match self.tilemap_size {
+            TilemapSize::Size32x32 => 32,
+            TilemapSize::Size64x32 => 32,
+            TilemapSize::Size32x64 => 64,
+            TilemapSize::Size64x64 => 64,
+        }
+    }
 }
 
 #[derive(Default, Copy, Clone, Debug)]
@@ -450,5 +414,67 @@ impl Display for BackgroundId {
             BackgroundId::BG2 => write!(f, "BG2"),
             BackgroundId::BG3 => write!(f, "BG3"),
         }
+    }
+}
+
+pub struct Tile {
+    tile_addr: u16,
+    flip_v: bool,
+    flip_h: bool,
+}
+
+impl Tile {
+    pub fn from_tilemap_entry(tileset_addr: u16, tilemap_entry: u16) -> Self {
+        let tile_idx = tilemap_entry.bits(0..=9);
+        Self {
+            tile_addr: tileset_addr + tile_idx * 8,
+            flip_v: tilemap_entry.bit(15),
+            flip_h: tilemap_entry.bit(14),
+        }
+    }
+
+    pub fn from_tileset_index(tileset_addr: u16, index: u16) -> Self {
+        Self {
+            tile_addr: tileset_addr + index * 8,
+            flip_v: false,
+            flip_h: false,
+        }
+    }
+
+    pub fn row(&self, row_idx: u16, vram: &Vram) -> TileRow {
+        let flipped_idx = if self.flip_v { 7 - row_idx } else { row_idx };
+        TileRow::new(
+            vram.memory[(self.tile_addr + flipped_idx) as usize],
+            self.flip_h,
+        )
+    }
+
+    pub fn rows<'a>(&'a self, vram: &'a Vram) -> impl Iterator<Item = TileRow> + 'a {
+        (0..8).map(move |row_idx| self.row(row_idx, vram))
+    }
+}
+
+pub struct TileRow {
+    low: u8,
+    high: u8,
+    flip: bool,
+}
+
+impl TileRow {
+    pub fn new(row_data: u16, flip: bool) -> Self {
+        Self {
+            low: row_data.low_byte(),
+            high: row_data.high_byte(),
+            flip,
+        }
+    }
+
+    pub fn pixel(&self, pixel_idx: usize) -> u8 {
+        let flipped_idx = if self.flip { pixel_idx } else { 7 - pixel_idx };
+        self.low.bit(flipped_idx) as u8 + ((self.high.bit(flipped_idx) as u8) << 1)
+    }
+
+    pub fn pixels<'a>(&'a self) -> impl Iterator<Item = u8> + 'a {
+        (0..8).map(|pixel_idx| self.pixel(pixel_idx))
     }
 }
