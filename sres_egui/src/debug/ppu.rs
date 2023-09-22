@@ -110,7 +110,7 @@ fn tabs_widget<T: ToString + PartialEq + Copy>(ui: &mut Ui, tabs: &[T], selected
 fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &TextureHandle) {
     ui.vertical(|ui| {
         ui.label(format!(
-            "Tilemap (0x{:04X}, {})",
+            "Tilemap ({}, {})",
             background.tilemap_addr, background.tilemap_size
         ));
         ui.image(tilemap_texture, Vec2::new(512.0, 512.0));
@@ -120,7 +120,7 @@ fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &Textur
 fn tileset_widget(ui: &mut Ui, background: &Background, tileset_texture: &TextureHandle) {
     ui.vertical(|ui| {
         ui.label(format!(
-            "Tileset (0x{:04X}, {}, {})",
+            "Tileset ({}, {}, {})",
             background.tileset_addr, background.bit_depth, background.tile_size
         ));
         ui.image(tileset_texture, Vec2::new(512.0, 512.0));

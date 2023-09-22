@@ -12,6 +12,7 @@ use self::cgram::CgRam;
 pub use self::timer::fvh_to_master_clock;
 use self::timer::PpuTimer;
 use self::vram::Vram;
+use self::vram::VramAddr;
 use crate::util::image::Image;
 use crate::util::image::Rgb15;
 use crate::util::memory::Address;
@@ -23,7 +24,7 @@ pub struct Ppu {
     pub vram: Vram,
     pub backgrounds: [Background; 4],
 
-    pub framebuffer: Vec<Rgb15>,
+    pub framebuffer: Framebuffer,
     pub cgram: CgRam,
     pub last_drawn_scanline: u64,
 
@@ -38,7 +39,7 @@ impl Ppu {
             timer: PpuTimer::default(),
             vram: Vram::new(),
             backgrounds: [Background::default(); 4],
-            framebuffer: vec![Rgb15(0); 256 * 224],
+            framebuffer: Framebuffer::default(),
             cgram: CgRam::new(),
             last_drawn_scanline: 0,
             bgofs_latch: 0,
@@ -98,8 +99,8 @@ impl Ppu {
 
     pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {
         let mut image = ImageT::new(256, 224);
-        for (idx, pixel) in self.framebuffer.iter().enumerate() {
-            image.set_pixel((idx as u32 % 256, idx as u32 / 256), (*pixel).into());
+        for (x, y, pixel) in self.framebuffer.iter() {
+            image.set_pixel((x, y), (*pixel).into());
         }
         image
     }
@@ -110,15 +111,14 @@ impl Ppu {
         }
 
         let bg = &self.backgrounds[0];
-        let framebuffer_idx = scanline as usize * 256;
         let coarse_y = scanline / 8;
         let fine_y = scanline % 8;
 
         for coarse_x in 0..32 {
             let tile = bg.get_tile(coarse_x, coarse_y, &self.vram);
-            for (fine_x, pixel) in tile.row(fine_y as u16, &self.vram).pixels().enumerate() {
-                let color = self.cgram.memory[pixel as usize];
-                self.framebuffer[framebuffer_idx + coarse_x as usize * 8 + fine_x] = color;
+            for (fine_x, pixel) in tile.row(fine_y, &self.vram).pixels() {
+                let color = self.cgram[pixel];
+                self.framebuffer[(coarse_x * 8 + fine_x, coarse_y * 8 + fine_y)] = color;
             }
         }
     }
@@ -175,7 +175,7 @@ impl Ppu {
     /// ++++-++--- Tilemap VRAM address (word address = AAAAAA << 10)
     fn write_bgnsc(&mut self, addr: Address, value: u8) {
         let bg_id = (addr.offset - 0x2107) as usize;
-        self.backgrounds[bg_id].tilemap_addr = ((value.bits(2..=7) as u16) << 10) & 0x7FFF;
+        self.backgrounds[bg_id].tilemap_addr = VramAddr((value.bits(2..=7) as u16) << 10);
         self.backgrounds[bg_id].tilemap_size = match value.bits(0..=1) {
             0 => TilemapSize::Size32x32,
             1 => TilemapSize::Size64x32,
@@ -193,8 +193,8 @@ impl Ppu {
     /// |||| ++++- BG1 CHR word base address (word address = AAAA << 12)
     /// ++++------ BG2 CHR word base address (word address = BBBB << 12)
     fn write_bg12nba(&mut self, value: u8) {
-        self.backgrounds[0].tileset_addr = (value.low_nibble() as u16) << 12;
-        self.backgrounds[1].tileset_addr = (value.high_nibble() as u16) << 12;
+        self.backgrounds[0].tileset_addr = VramAddr((value.low_nibble() as u16) << 12);
+        self.backgrounds[1].tileset_addr = VramAddr((value.high_nibble() as u16) << 12);
     }
 
     /// Register 210C: BG34NBA - Tileset base address for BG3 and BG4
@@ -205,8 +205,8 @@ impl Ppu {
     /// |||| ++++- BG3 CHR word base address (word address = CCCC << 12)
     /// ++++------ BG4 CHR word base address (word address = DDDD << 12)
     fn write_bg34nba(&mut self, value: u8) {
-        self.backgrounds[2].tileset_addr = (value.low_nibble() as u16) << 12;
-        self.backgrounds[3].tileset_addr = (value.high_nibble() as u16) << 12;
+        self.backgrounds[2].tileset_addr = VramAddr((value.low_nibble() as u16) << 12);
+        self.backgrounds[3].tileset_addr = VramAddr((value.high_nibble() as u16) << 12);
     }
 
     /// Register 210D, 210F, 2111, 2113: BGNHOFS - Background N horizontal scroll
@@ -221,9 +221,9 @@ impl Ppu {
     ///           bghofs_latch = value
     pub fn write_bgnhofs(&mut self, addr: Address, value: u8) {
         let bg_id = ((addr.offset - 0x210D) / 2) as usize;
-        self.backgrounds[bg_id].h_offset = ((value as u16) << 8)
-            | ((self.bgofs_latch as u16) & !7)
-            | ((self.bghofs_latch as u16) & 7);
+        self.backgrounds[bg_id].h_offset = ((value as u32) << 8)
+            | ((self.bgofs_latch as u32) & !7)
+            | ((self.bghofs_latch as u32) & 7);
         error!(
             "BGNHOFS: {} = {:04X} (write {})",
             bg_id, self.backgrounds[bg_id].h_offset, value
@@ -245,7 +245,7 @@ impl Ppu {
     /// Note: BG1VOFS uses the same address as M7VOFS
     pub fn write_bgnvofs(&mut self, addr: Address, value: u8) {
         let bg_id = ((addr.offset - 0x210E) / 2) as usize;
-        self.backgrounds[bg_id].v_offset = ((value as u16) << 8) | (self.bgofs_latch as u16);
+        self.backgrounds[bg_id].v_offset = ((value as u32) << 8) | (self.bgofs_latch as u32);
         self.bgofs_latch = value;
     }
 
@@ -254,17 +254,14 @@ impl Ppu {
     pub fn debug_render_tileset<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
         let mut image = ImageT::new(16 * 8, 16 * 8);
         let bg = &self.backgrounds[background_id as usize];
-        for tile_idx in 0..256_u16 {
-            let tile_x: u32 = (tile_idx as u32 % 16) * 8;
-            let tile_y: u32 = (tile_idx as u32 / 16) * 8;
+        for tile_idx in 0..256 {
+            let tile_x: u32 = (tile_idx % 16) * 8;
+            let tile_y: u32 = (tile_idx / 16) * 8;
             let tile = bg.get_tileset_tile(tile_idx);
-            for (row_idx, row) in tile.rows(&self.vram).enumerate() {
-                for (col_idx, pixel) in row.pixels().enumerate() {
-                    let color = self.cgram.memory[pixel as usize];
-                    image.set_pixel(
-                        (tile_x + col_idx as u32, tile_y + row_idx as u32),
-                        color.into(),
-                    );
+            for (row_idx, row) in tile.rows(&self.vram) {
+                for (col_idx, pixel) in row.pixels() {
+                    let color = self.cgram[pixel];
+                    image.set_pixel((tile_x + col_idx, tile_y + row_idx), color.into());
                 }
             }
         }
@@ -277,11 +274,11 @@ impl Ppu {
         for coarse_y in 0..bg.coarse_height() {
             for coarse_x in 0..bg.coarse_width() {
                 let tile = bg.get_tile(coarse_x, coarse_y, &self.vram);
-                for (fine_y, row) in tile.rows(&self.vram).enumerate() {
-                    for (fine_x, pixel) in row.pixels().enumerate() {
-                        let color = self.cgram.memory[pixel as usize];
+                for (fine_y, row) in tile.rows(&self.vram) {
+                    for (fine_x, pixel) in row.pixels() {
+                        let color = self.cgram[pixel];
                         image.set_pixel(
-                            (coarse_x * 8 + fine_x as u32, coarse_y * 8 + fine_y as u32),
+                            (coarse_x * 8 + fine_x, coarse_y * 8 + fine_y),
                             color.into(),
                         );
                     }
@@ -292,15 +289,46 @@ impl Ppu {
     }
 }
 
+pub struct Framebuffer(Vec<Rgb15>);
+
+impl Framebuffer {
+    pub fn iter(&self) -> impl Iterator<Item = (u32, u32, &Rgb15)> {
+        self.0
+            .iter()
+            .enumerate()
+            .map(|(idx, pixel)| (idx as u32 % 256, idx as u32 / 256, pixel))
+    }
+}
+
+impl Default for Framebuffer {
+    fn default() -> Self {
+        Self(vec![Rgb15(0); 256 * 224])
+    }
+}
+
+impl std::ops::Index<(u32, u32)> for Framebuffer {
+    type Output = Rgb15;
+
+    fn index(&self, index: (u32, u32)) -> &Self::Output {
+        &self.0[index.0 as usize + index.1 as usize * 256]
+    }
+}
+
+impl std::ops::IndexMut<(u32, u32)> for Framebuffer {
+    fn index_mut(&mut self, index: (u32, u32)) -> &mut Self::Output {
+        &mut self.0[index.0 as usize + index.1 as usize * 256]
+    }
+}
+
 #[derive(Default, Copy, Clone, Debug)]
 pub struct Background {
     pub bit_depth: BitDepth,
     pub tile_size: TileSize,
-    pub tilemap_addr: u16,
-    pub tileset_addr: u16,
+    pub tilemap_addr: VramAddr,
+    pub tileset_addr: VramAddr,
     pub tilemap_size: TilemapSize,
-    pub h_offset: u16,
-    pub v_offset: u16,
+    pub h_offset: u32,
+    pub v_offset: u32,
 }
 
 impl Background {
@@ -312,11 +340,11 @@ impl Background {
             TilemapSize::Size64x64 => coarse_x / 32 + (coarse_y / 32) * 2,
         };
         let tile_idx = tilemap_idx * 1024 + (coarse_y % 32) * 32 + (coarse_x % 32);
-        let tilemap_entry = vram.memory[self.tilemap_addr as usize + tile_idx as usize];
+        let tilemap_entry = vram[self.tilemap_addr + tile_idx];
         Tile::from_tilemap_entry(self.tileset_addr, tilemap_entry)
     }
 
-    pub fn get_tileset_tile(&self, index: u16) -> Tile {
+    pub fn get_tileset_tile(&self, index: u32) -> Tile {
         Tile::from_tileset_index(self.tileset_addr, index)
     }
 
@@ -418,13 +446,13 @@ impl Display for BackgroundId {
 }
 
 pub struct Tile {
-    tile_addr: u16,
+    tile_addr: VramAddr,
     flip_v: bool,
     flip_h: bool,
 }
 
 impl Tile {
-    pub fn from_tilemap_entry(tileset_addr: u16, tilemap_entry: u16) -> Self {
+    pub fn from_tilemap_entry(tileset_addr: VramAddr, tilemap_entry: u16) -> Self {
         let tile_idx = tilemap_entry.bits(0..=9);
         Self {
             tile_addr: tileset_addr + tile_idx * 8,
@@ -433,7 +461,7 @@ impl Tile {
         }
     }
 
-    pub fn from_tileset_index(tileset_addr: u16, index: u16) -> Self {
+    pub fn from_tileset_index(tileset_addr: VramAddr, index: u32) -> Self {
         Self {
             tile_addr: tileset_addr + index * 8,
             flip_v: false,
@@ -441,16 +469,13 @@ impl Tile {
         }
     }
 
-    pub fn row(&self, row_idx: u16, vram: &Vram) -> TileRow {
+    pub fn row(&self, row_idx: u32, vram: &Vram) -> TileRow {
         let flipped_idx = if self.flip_v { 7 - row_idx } else { row_idx };
-        TileRow::new(
-            vram.memory[(self.tile_addr + flipped_idx) as usize],
-            self.flip_h,
-        )
+        TileRow::new(vram[self.tile_addr + flipped_idx], self.flip_h)
     }
 
-    pub fn rows<'a>(&'a self, vram: &'a Vram) -> impl Iterator<Item = TileRow> + 'a {
-        (0..8).map(move |row_idx| self.row(row_idx, vram))
+    pub fn rows<'a>(&'a self, vram: &'a Vram) -> impl Iterator<Item = (u32, TileRow)> + 'a {
+        (0..8).map(move |row_idx| (row_idx, self.row(row_idx, vram)))
     }
 }
 
@@ -469,12 +494,12 @@ impl TileRow {
         }
     }
 
-    pub fn pixel(&self, pixel_idx: usize) -> u8 {
+    pub fn pixel(&self, pixel_idx: u32) -> u8 {
         let flipped_idx = if self.flip { pixel_idx } else { 7 - pixel_idx };
         self.low.bit(flipped_idx) as u8 + ((self.high.bit(flipped_idx) as u8) << 1)
     }
 
-    pub fn pixels<'a>(&'a self) -> impl Iterator<Item = u8> + 'a {
-        (0..8).map(|pixel_idx| self.pixel(pixel_idx))
+    pub fn pixels(&self) -> impl Iterator<Item = (u32, u8)> + '_ {
+        (0..8).map(|pixel_idx| (pixel_idx, self.pixel(pixel_idx)))
     }
 }

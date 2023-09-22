@@ -15,7 +15,7 @@ impl CgRam {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            memory: vec![Rgb15::default(); 0x200],
+            memory: vec![Rgb15::default(); 0x100],
             current_addr: 0,
             latch: None,
         }
@@ -93,6 +93,14 @@ impl CgRam {
             None => self.memory[self.current_addr as usize].0.low_byte(),
             Some(high_byte) => high_byte,
         }
+    }
+}
+
+impl std::ops::Index<u8> for CgRam {
+    type Output = Rgb15;
+
+    fn index(&self, index: u8) -> &Rgb15 {
+        &self.memory[index as usize]
     }
 }
 

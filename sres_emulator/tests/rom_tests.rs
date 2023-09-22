@@ -12,7 +12,6 @@ use sres_emulator::bus::SresBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::ppu::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
-use sres_emulator::util::image::Image;
 use sres_emulator::util::logging;
 use sres_emulator::util::memory::format_memory;
 use sres_emulator::util::memory::Wrap;
