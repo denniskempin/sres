@@ -22,6 +22,21 @@ pub fn test_krom_hello_world() {
     run_ppu_test("krom_hello_world", &[10]);
 }
 
+#[test]
+pub fn test_krom_bgmap_2bpp() {
+    run_ppu_test("krom_bgmap_2bpp", &[10]);
+}
+
+#[test]
+pub fn test_krom_bgmap_4bpp() {
+    run_ppu_test("krom_bgmap_4bpp", &[10]);
+}
+
+#[test]
+pub fn test_krom_interlace_rpg() {
+    run_ppu_test("krom_interlace_rpg", &[10]);
+}
+
 fn run_ppu_test(test_name: &str, snapshot_frames: &[u32]) {
     logging::test_init(true);
 

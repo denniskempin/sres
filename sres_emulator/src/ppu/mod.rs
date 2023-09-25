@@ -4,9 +4,11 @@ mod vram;
 
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::marker::PhantomData;
 
 use intbits::Bits;
 use log::error;
+use num_traits::ops::bytes;
 
 use self::cgram::CgRam;
 pub use self::timer::fvh_to_master_clock;
@@ -111,23 +113,41 @@ impl Ppu {
             return;
         }
 
-        for (background_id, bg) in self.backgrounds.iter().enumerate().rev() {
-            if bg.bit_depth == BitDepth::Disabled || !bg.enabled {
-                continue;
-            }
+        for background_id in (0..4).rev() {
+            let bg = self.backgrounds[background_id];
+            match bg.bit_depth {
+                BitDepth::Bpp2 => {
+                    self.draw_background_scanline::<Bpp2Decoder>(scanline, background_id)
+                }
+                BitDepth::Bpp4 => {
+                    self.draw_background_scanline::<Bpp4Decoder>(scanline, background_id)
+                }
+                _ => (),
+            };
+        }
+    }
 
-            let coarse_y = scanline / 8;
-            let fine_y = scanline % 8;
+    fn draw_background_scanline<TileDecoderT: TileDecoder>(
+        &mut self,
+        scanline: u32,
+        background_id: usize,
+    ) {
+        let bg = self.backgrounds[background_id];
+        if bg.bit_depth == BitDepth::Disabled || !bg.enabled {
+            return;
+        }
 
-            for coarse_x in 0..32 {
-                let tile_x = coarse_x + bg.h_offset / 8;
-                let tile_y = coarse_y + bg.v_offset / 8;
-                let tile = bg.get_tile(tile_x, tile_y, &self.vram);
-                for (fine_x, pixel) in tile.row(fine_y, &self.vram).pixels() {
-                    if pixel > 0 {
-                        let color = self.cgram[(background_id as u8 * 32) + pixel];
-                        self.framebuffer[(coarse_x * 8 + fine_x, coarse_y * 8 + fine_y)] = color;
-                    }
+        let coarse_y = scanline / 8;
+        let fine_y = scanline % 8;
+
+        for coarse_x in 0..32 {
+            let tile_x = coarse_x + bg.h_offset / 8;
+            let tile_y = coarse_y + bg.v_offset / 8;
+            let tile = bg.get_tile::<TileDecoderT>(tile_x, tile_y, &self.vram);
+            for (fine_x, pixel) in tile.row(fine_y, &self.vram).pixels() {
+                if pixel > 0 {
+                    let color = self.cgram[(background_id as u8 * 32) + pixel];
+                    self.framebuffer[(coarse_x * 8 + fine_x, coarse_y * 8 + fine_y)] = color;
                 }
             }
         }
@@ -280,10 +300,28 @@ impl Ppu {
     pub fn debug_render_tileset<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
         let mut image = ImageT::new(16 * 8, 16 * 8);
         let bg = &self.backgrounds[background_id as usize];
+        match bg.bit_depth {
+            BitDepth::Bpp2 => {
+                self.debug_render_tileset_impl::<Bpp2Decoder>(&mut image, background_id)
+            }
+            BitDepth::Bpp4 => {
+                self.debug_render_tileset_impl::<Bpp4Decoder>(&mut image, background_id)
+            }
+            _ => (),
+        };
+        image
+    }
+
+    fn debug_render_tileset_impl<TileDecoderT: TileDecoder>(
+        &self,
+        image: &mut impl Image,
+        background_id: BackgroundId,
+    ) {
+        let bg = &self.backgrounds[background_id as usize];
         for tile_idx in 0..256 {
             let tile_x: u32 = (tile_idx % 16) * 8;
             let tile_y: u32 = (tile_idx / 16) * 8;
-            let tile = bg.get_tileset_tile(tile_idx);
+            let tile = bg.get_tileset_tile::<TileDecoderT>(tile_idx);
             for (row_idx, row) in tile.rows(&self.vram) {
                 for (col_idx, pixel) in row.pixels() {
                     let color = self.cgram[(background_id as u8 * 32) + pixel];
@@ -291,15 +329,32 @@ impl Ppu {
                 }
             }
         }
-        image
     }
 
     pub fn debug_render_background<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
         let bg = &self.backgrounds[background_id as usize];
         let mut image = ImageT::new(bg.coarse_width() * 8, bg.coarse_height() * 8);
+        match bg.bit_depth {
+            BitDepth::Bpp2 => {
+                self.debug_render_background_impl::<Bpp2Decoder>(&mut image, background_id)
+            }
+            BitDepth::Bpp4 => {
+                self.debug_render_background_impl::<Bpp4Decoder>(&mut image, background_id)
+            }
+            _ => (),
+        };
+        image
+    }
+
+    fn debug_render_background_impl<TileDecoderT: TileDecoder>(
+        &self,
+        image: &mut impl Image,
+        background_id: BackgroundId,
+    ) {
+        let bg = &self.backgrounds[background_id as usize];
         for coarse_y in 0..bg.coarse_height() {
             for coarse_x in 0..bg.coarse_width() {
-                let tile = bg.get_tile(coarse_x, coarse_y, &self.vram);
+                let tile = bg.get_tile::<TileDecoderT>(coarse_x, coarse_y, &self.vram);
                 for (fine_y, row) in tile.rows(&self.vram) {
                     for (fine_x, pixel) in row.pixels() {
                         let color = self.cgram[(background_id as u8 * 32) + pixel];
@@ -311,7 +366,6 @@ impl Ppu {
                 }
             }
         }
-        image
     }
 }
 
@@ -359,7 +413,12 @@ pub struct Background {
 }
 
 impl Background {
-    pub fn get_tile(&self, coarse_x: u32, coarse_y: u32, vram: &Vram) -> Tile {
+    pub fn get_tile<TileDecoderT: TileDecoder>(
+        &self,
+        coarse_x: u32,
+        coarse_y: u32,
+        vram: &Vram,
+    ) -> Tile<TileDecoderT> {
         let tilemap_idx = match self.tilemap_size {
             TilemapSize::Size32x32 => 0,
             TilemapSize::Size64x32 => coarse_x / 32,
@@ -371,7 +430,7 @@ impl Background {
         Tile::from_tilemap_entry(self.tileset_addr, tilemap_entry)
     }
 
-    pub fn get_tileset_tile(&self, index: u32) -> Tile {
+    pub fn get_tileset_tile<TileDecoderT: TileDecoder>(&self, index: u32) -> Tile<TileDecoderT> {
         Tile::from_tileset_index(self.tileset_addr, index)
     }
 
@@ -472,64 +531,122 @@ impl Display for BackgroundId {
     }
 }
 
-pub struct Tile {
+pub struct Tile<TileDecoderT: TileDecoder> {
     tile_addr: VramAddr,
-    _palette: u8,
+    palette: u8,
     flip_v: bool,
     flip_h: bool,
+    _decoder: PhantomData<TileDecoderT>,
 }
 
-impl Tile {
+impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
     pub fn from_tilemap_entry(tileset_addr: VramAddr, tilemap_entry: u16) -> Self {
         let tile_idx = tilemap_entry.bits(0..=9);
         Self {
-            tile_addr: tileset_addr + tile_idx * 8,
-            _palette: tilemap_entry.bits(10..=12) as u8,
+            tile_addr: tileset_addr + tile_idx * TileDecoderT::WORDS_PER_ROW as u16 * 8,
+            palette: tilemap_entry.bits(10..=12) as u8,
             flip_v: tilemap_entry.bit(15),
             flip_h: tilemap_entry.bit(14),
+            _decoder: PhantomData,
         }
     }
 
-    pub fn from_tileset_index(tileset_addr: VramAddr, index: u32) -> Self {
+    pub fn from_tileset_index(tileset_addr: VramAddr, tile_idx: u32) -> Self {
         Self {
-            tile_addr: tileset_addr + index * 8,
-            _palette: 0,
+            tile_addr: tileset_addr + tile_idx * TileDecoderT::WORDS_PER_ROW * 8,
+            palette: 0,
             flip_v: false,
             flip_h: false,
+            _decoder: PhantomData,
         }
     }
 
-    pub fn row(&self, row_idx: u32, vram: &Vram) -> TileRow {
+    pub fn row(&self, row_idx: u32, vram: &Vram) -> TileRow<TileDecoderT> {
         let flipped_idx = if self.flip_v { 7 - row_idx } else { row_idx };
-        TileRow::new(vram[self.tile_addr + flipped_idx], self.flip_h)
+        TileRow::new(
+            TileDecoderT::new(self.tile_addr + flipped_idx, vram),
+            self.flip_h,
+        )
     }
 
-    pub fn rows<'a>(&'a self, vram: &'a Vram) -> impl Iterator<Item = (u32, TileRow)> + 'a {
+    pub fn rows<'a>(
+        &'a self,
+        vram: &'a Vram,
+    ) -> impl Iterator<Item = (u32, TileRow<TileDecoderT>)> + 'a {
         (0..8).map(move |row_idx| (row_idx, self.row(row_idx, vram)))
     }
 }
 
-pub struct TileRow {
-    low: u8,
-    high: u8,
+pub struct TileRow<TileDecoderT: TileDecoder> {
+    decoder: TileDecoderT,
     flip: bool,
 }
 
-impl TileRow {
-    pub fn new(row_data: u16, flip: bool) -> Self {
-        Self {
-            low: row_data.low_byte(),
-            high: row_data.high_byte(),
-            flip,
-        }
+impl<TileDecoderT: TileDecoder> TileRow<TileDecoderT> {
+    pub fn new(decoder: TileDecoderT, flip: bool) -> Self {
+        Self { decoder, flip }
     }
 
     pub fn pixel(&self, pixel_idx: u32) -> u8 {
         let flipped_idx = if self.flip { pixel_idx } else { 7 - pixel_idx };
-        self.low.bit(flipped_idx) as u8 + ((self.high.bit(flipped_idx) as u8) << 1)
+        self.decoder.pixel(flipped_idx)
     }
 
     pub fn pixels(&self) -> impl Iterator<Item = (u32, u8)> + '_ {
         (0..8).map(|pixel_idx| (pixel_idx, self.pixel(pixel_idx)))
+    }
+}
+
+pub trait TileDecoder {
+    const WORDS_PER_ROW: u32;
+
+    fn new(tile_addr: VramAddr, vram: &Vram) -> Self;
+    fn pixel(&self, pixel_idx: u32) -> u8;
+}
+
+pub struct Bpp2Decoder {
+    planes: [u8; 2],
+}
+
+impl TileDecoder for Bpp2Decoder {
+    const WORDS_PER_ROW: u32 = 1;
+
+    fn new(row_addr: VramAddr, vram: &Vram) -> Self {
+        let data = vram[row_addr];
+        Self {
+            planes: [data.low_byte(), data.high_byte()],
+        }
+    }
+
+    fn pixel(&self, pixel_idx: u32) -> u8 {
+        self.planes[0].bit(pixel_idx) as u8 + ((self.planes[1].bit(pixel_idx) as u8) << 1)
+    }
+}
+
+pub struct Bpp4Decoder {
+    planes: [u8; 4],
+}
+
+impl TileDecoder for Bpp4Decoder {
+    const WORDS_PER_ROW: u32 = 2;
+
+    fn new(row_addr: VramAddr, vram: &Vram) -> Self {
+        let low_word = vram[row_addr];
+        let high_word = vram[row_addr + 8_u16];
+        Self {
+            planes: [
+                low_word.low_byte(),
+                low_word.high_byte(),
+                high_word.low_byte(),
+                high_word.high_byte(),
+            ],
+        }
+    }
+
+    fn pixel(&self, pixel_idx: u32) -> u8 {
+        self.planes[0].bit(pixel_idx) as u8
+            + ((self.planes[1].bit(pixel_idx) as u8) << 1)
+            + ((self.planes[2].bit(pixel_idx) as u8) << 2)
+            + ((self.planes[3].bit(pixel_idx) as u8) << 3)
     }
 }
