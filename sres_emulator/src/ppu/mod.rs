@@ -8,7 +8,6 @@ use std::marker::PhantomData;
 
 use intbits::Bits;
 use log::error;
-use num_traits::ops::bytes;
 
 use self::cgram::CgRam;
 pub use self::timer::fvh_to_master_clock;
@@ -113,6 +112,10 @@ impl Ppu {
             return;
         }
 
+        let default_color = self.cgram[0];
+        for x in 0..256 {
+            self.framebuffer[(x, scanline)] = default_color;
+        }
         for background_id in (0..4).rev() {
             let bg = self.backgrounds[background_id];
             match bg.bit_depth {
@@ -146,8 +149,8 @@ impl Ppu {
             let tile = bg.get_tile::<TileDecoderT>(tile_x, tile_y, &self.vram);
             for (fine_x, pixel) in tile.row(fine_y, &self.vram).pixels() {
                 if pixel > 0 {
-                    let color = self.cgram[(background_id as u8 * 32) + pixel];
-                    self.framebuffer[(coarse_x * 8 + fine_x, coarse_y * 8 + fine_y)] = color;
+                    let color = self.cgram[bg.palette_addr + pixel];
+                    self.framebuffer[(coarse_x * 8 + fine_x, scanline)] = color;
                 }
             }
         }
@@ -182,6 +185,22 @@ impl Ppu {
         self.backgrounds[1].bit_depth = bit_depths.1;
         self.backgrounds[2].bit_depth = bit_depths.2;
         self.backgrounds[3].bit_depth = bit_depths.3;
+
+        let palette_addr = match bg_mode {
+            0 => (0, 32, 64, 96),
+            1 => (0, 32, 0, 0),
+            2 => (0, 32, 0, 0),
+            3 => (0, 0, 0, 0),
+            4 => (0, 0, 0, 0),
+            5 => (0, 0, 0, 0),
+            6 => (0, 0, 0, 0),
+            7 => (0, 0, 0, 0),
+            _ => unreachable!(),
+        };
+        self.backgrounds[0].palette_addr = palette_addr.0;
+        self.backgrounds[1].palette_addr = palette_addr.1;
+        self.backgrounds[2].palette_addr = palette_addr.2;
+        self.backgrounds[3].palette_addr = palette_addr.3;
 
         fn to_tile_size(value: bool) -> TileSize {
             if value {
@@ -299,14 +318,10 @@ impl Ppu {
 
     pub fn debug_render_tileset<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
         let mut image = ImageT::new(16 * 8, 16 * 8);
-        let bg = &self.backgrounds[background_id as usize];
-        match bg.bit_depth {
-            BitDepth::Bpp2 => {
-                self.debug_render_tileset_impl::<Bpp2Decoder>(&mut image, background_id)
-            }
-            BitDepth::Bpp4 => {
-                self.debug_render_tileset_impl::<Bpp4Decoder>(&mut image, background_id)
-            }
+        let background = &self.backgrounds[background_id as usize];
+        match background.bit_depth {
+            BitDepth::Bpp2 => self.debug_render_tileset_impl::<Bpp2Decoder>(&mut image, background),
+            BitDepth::Bpp4 => self.debug_render_tileset_impl::<Bpp4Decoder>(&mut image, background),
             _ => (),
         };
         image
@@ -315,16 +330,15 @@ impl Ppu {
     fn debug_render_tileset_impl<TileDecoderT: TileDecoder>(
         &self,
         image: &mut impl Image,
-        background_id: BackgroundId,
+        background: &Background,
     ) {
-        let bg = &self.backgrounds[background_id as usize];
         for tile_idx in 0..256 {
             let tile_x: u32 = (tile_idx % 16) * 8;
             let tile_y: u32 = (tile_idx / 16) * 8;
-            let tile = bg.get_tileset_tile::<TileDecoderT>(tile_idx);
+            let tile = background.get_tileset_tile::<TileDecoderT>(tile_idx);
             for (row_idx, row) in tile.rows(&self.vram) {
                 for (col_idx, pixel) in row.pixels() {
-                    let color = self.cgram[(background_id as u8 * 32) + pixel];
+                    let color = self.cgram[background.palette_addr + pixel];
                     image.set_pixel((tile_x + col_idx, tile_y + row_idx), color.into());
                 }
             }
@@ -332,14 +346,17 @@ impl Ppu {
     }
 
     pub fn debug_render_background<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
-        let bg = &self.backgrounds[background_id as usize];
-        let mut image = ImageT::new(bg.coarse_width() * 8, bg.coarse_height() * 8);
-        match bg.bit_depth {
+        let background = &self.backgrounds[background_id as usize];
+        let mut image = ImageT::new(
+            background.coarse_width() * 8,
+            background.coarse_height() * 8,
+        );
+        match background.bit_depth {
             BitDepth::Bpp2 => {
-                self.debug_render_background_impl::<Bpp2Decoder>(&mut image, background_id)
+                self.debug_render_background_impl::<Bpp2Decoder>(&mut image, background)
             }
             BitDepth::Bpp4 => {
-                self.debug_render_background_impl::<Bpp4Decoder>(&mut image, background_id)
+                self.debug_render_background_impl::<Bpp4Decoder>(&mut image, background)
             }
             _ => (),
         };
@@ -349,15 +366,14 @@ impl Ppu {
     fn debug_render_background_impl<TileDecoderT: TileDecoder>(
         &self,
         image: &mut impl Image,
-        background_id: BackgroundId,
+        background: &Background,
     ) {
-        let bg = &self.backgrounds[background_id as usize];
-        for coarse_y in 0..bg.coarse_height() {
-            for coarse_x in 0..bg.coarse_width() {
-                let tile = bg.get_tile::<TileDecoderT>(coarse_x, coarse_y, &self.vram);
+        for coarse_y in 0..background.coarse_height() {
+            for coarse_x in 0..background.coarse_width() {
+                let tile = background.get_tile::<TileDecoderT>(coarse_x, coarse_y, &self.vram);
                 for (fine_y, row) in tile.rows(&self.vram) {
                     for (fine_x, pixel) in row.pixels() {
-                        let color = self.cgram[(background_id as u8 * 32) + pixel];
+                        let color = self.cgram[background.palette_addr + pixel];
                         image.set_pixel(
                             (coarse_x * 8 + fine_x, coarse_y * 8 + fine_y),
                             color.into(),
@@ -404,6 +420,7 @@ impl std::ops::IndexMut<(u32, u32)> for Framebuffer {
 pub struct Background {
     pub enabled: bool,
     pub bit_depth: BitDepth,
+    pub palette_addr: u8,
     pub tile_size: TileSize,
     pub tilemap_addr: VramAddr,
     pub tileset_addr: VramAddr,
@@ -565,6 +582,7 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
         let flipped_idx = if self.flip_v { 7 - row_idx } else { row_idx };
         TileRow::new(
             TileDecoderT::new(self.tile_addr + flipped_idx, vram),
+            self.palette,
             self.flip_h,
         )
     }
@@ -579,17 +597,22 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
 
 pub struct TileRow<TileDecoderT: TileDecoder> {
     decoder: TileDecoderT,
+    palette: u8,
     flip: bool,
 }
 
 impl<TileDecoderT: TileDecoder> TileRow<TileDecoderT> {
-    pub fn new(decoder: TileDecoderT, flip: bool) -> Self {
-        Self { decoder, flip }
+    pub fn new(decoder: TileDecoderT, palette: u8, flip: bool) -> Self {
+        Self {
+            decoder,
+            palette,
+            flip,
+        }
     }
 
     pub fn pixel(&self, pixel_idx: u32) -> u8 {
         let flipped_idx = if self.flip { pixel_idx } else { 7 - pixel_idx };
-        self.decoder.pixel(flipped_idx)
+        self.decoder.pixel(flipped_idx) + self.palette * TileDecoderT::NUM_COLORS
     }
 
     pub fn pixels(&self) -> impl Iterator<Item = (u32, u8)> + '_ {
@@ -599,6 +622,7 @@ impl<TileDecoderT: TileDecoder> TileRow<TileDecoderT> {
 
 pub trait TileDecoder {
     const WORDS_PER_ROW: u32;
+    const NUM_COLORS: u8;
 
     fn new(tile_addr: VramAddr, vram: &Vram) -> Self;
     fn pixel(&self, pixel_idx: u32) -> u8;
@@ -610,6 +634,7 @@ pub struct Bpp2Decoder {
 
 impl TileDecoder for Bpp2Decoder {
     const WORDS_PER_ROW: u32 = 1;
+    const NUM_COLORS: u8 = 4;
 
     fn new(row_addr: VramAddr, vram: &Vram) -> Self {
         let data = vram[row_addr];
@@ -629,6 +654,7 @@ pub struct Bpp4Decoder {
 
 impl TileDecoder for Bpp4Decoder {
     const WORDS_PER_ROW: u32 = 2;
+    const NUM_COLORS: u8 = 16;
 
     fn new(row_addr: VramAddr, vram: &Vram) -> Self {
         let low_word = vram[row_addr];
