@@ -125,6 +125,9 @@ impl Ppu {
                 BitDepth::Bpp4 => {
                     self.draw_background_scanline::<Bpp4Decoder>(scanline, background_id)
                 }
+                BitDepth::Bpp8 => {
+                    self.draw_background_scanline::<Bpp8Decoder>(scanline, background_id)
+                }
                 _ => (),
             };
         }
@@ -322,6 +325,7 @@ impl Ppu {
         match background.bit_depth {
             BitDepth::Bpp2 => self.debug_render_tileset_impl::<Bpp2Decoder>(&mut image, background),
             BitDepth::Bpp4 => self.debug_render_tileset_impl::<Bpp4Decoder>(&mut image, background),
+            BitDepth::Bpp8 => self.debug_render_tileset_impl::<Bpp8Decoder>(&mut image, background),
             _ => (),
         };
         image
@@ -357,6 +361,9 @@ impl Ppu {
             }
             BitDepth::Bpp4 => {
                 self.debug_render_background_impl::<Bpp4Decoder>(&mut image, background)
+            }
+            BitDepth::Bpp8 => {
+                self.debug_render_background_impl::<Bpp8Decoder>(&mut image, background)
             }
             _ => (),
         };
@@ -674,5 +681,44 @@ impl TileDecoder for Bpp4Decoder {
             + ((self.planes[1].bit(pixel_idx) as u8) << 1)
             + ((self.planes[2].bit(pixel_idx) as u8) << 2)
             + ((self.planes[3].bit(pixel_idx) as u8) << 3)
+    }
+}
+
+pub struct Bpp8Decoder {
+    planes: [u8; 8],
+}
+
+impl TileDecoder for Bpp8Decoder {
+    const WORDS_PER_ROW: u32 = 4;
+    const NUM_COLORS: u8 = 255;
+
+    fn new(row_addr: VramAddr, vram: &Vram) -> Self {
+        let word0 = vram[row_addr];
+        let word1 = vram[row_addr + 8_u16];
+        let word2 = vram[row_addr + 16_u16];
+        let word3 = vram[row_addr + 24_u16];
+        Self {
+            planes: [
+                word0.low_byte(),
+                word0.high_byte(),
+                word1.low_byte(),
+                word1.high_byte(),
+                word2.low_byte(),
+                word2.high_byte(),
+                word3.low_byte(),
+                word3.high_byte(),
+            ],
+        }
+    }
+
+    fn pixel(&self, pixel_idx: u32) -> u8 {
+        self.planes[0].bit(pixel_idx) as u8
+            + ((self.planes[1].bit(pixel_idx) as u8) << 1)
+            + ((self.planes[2].bit(pixel_idx) as u8) << 2)
+            + ((self.planes[3].bit(pixel_idx) as u8) << 3)
+            + ((self.planes[4].bit(pixel_idx) as u8) << 4)
+            + ((self.planes[5].bit(pixel_idx) as u8) << 5)
+            + ((self.planes[6].bit(pixel_idx) as u8) << 6)
+            + ((self.planes[7].bit(pixel_idx) as u8) << 7)
     }
 }

@@ -33,7 +33,14 @@ pub fn test_krom_bgmap_4bpp() {
 }
 
 #[test]
+pub fn test_krom_bgmap_8bpp() {
+    run_ppu_test("krom_bgmap_8bpp", &[10]);
+}
+
+#[test]
 pub fn test_krom_interlace_rpg() {
+    // Note: Interlacing or high-res is not implemented and used by this test rom.
+    // However it's the only test rom I have available to test sprite rendering.
     run_ppu_test("krom_interlace_rpg", &[10]);
 }
 
