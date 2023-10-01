@@ -305,6 +305,46 @@ pub fn test_dma_vram() {
     );
 }
 
+#[test]
+pub fn test_dma_cgram() {
+    // This rom will generate a test sequence 0x00..0xFF in WRAM at 0x0000, then copies it into CGRAM via
+    // a DMA transfer and copies it back into WRAM at 0x0100.
+    let cpu = run_test_rom("dma_cgram");
+    let expected: Vec<u8> = (0x00..=0xFF).collect();
+
+    // Validate the test sequence at 0x0000
+    assert_eq!(
+        format_memory(&cpu.bus.wram[0x0000..=0x00FF]),
+        format_memory(&expected),
+    );
+
+    // Validate the test sequence after it's copied back into WRAM at 0x0100
+    assert_eq!(
+        format_memory(&cpu.bus.wram[0x0100..=0x01FF]),
+        format_memory(&expected),
+    );
+}
+
+#[test]
+pub fn test_dma_oam() {
+    // This rom will generate a test sequence 0x00..0xFF in WRAM at 0x0000, then copies it into OAM via
+    // a DMA transfer and copies it back into WRAM at 0x0100.
+    let cpu = run_test_rom("dma_oam");
+    let expected: Vec<u8> = (0x00..=0xFF).collect();
+
+    // Validate the test sequence at 0x0000
+    assert_eq!(
+        format_memory(&cpu.bus.wram[0x0000..=0x00FF]),
+        format_memory(&expected),
+    );
+
+    // Validate the test sequence after it's copied back into WRAM at 0x0100
+    assert_eq!(
+        format_memory(&cpu.bus.wram[0x0100..=0x01FF]),
+        format_memory(&expected),
+    );
+}
+
 fn run_test_rom(test_name: &str) -> Cpu<SresBus> {
     logging::test_init(false);
 

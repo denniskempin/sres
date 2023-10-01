@@ -1,4 +1,5 @@
 mod cgram;
+pub mod oam;
 mod timer;
 mod vram;
 
@@ -10,6 +11,7 @@ use intbits::Bits;
 use log::error;
 
 use self::cgram::CgRam;
+use self::oam::Oam;
 pub use self::timer::fvh_to_master_clock;
 use self::timer::PpuTimer;
 use self::vram::Vram;
@@ -27,6 +29,7 @@ pub struct Ppu {
 
     pub framebuffer: Framebuffer,
     pub cgram: CgRam,
+    pub oam: Oam,
     pub last_drawn_scanline: u64,
 
     pub bgofs_latch: u8,
@@ -42,6 +45,7 @@ impl Ppu {
             backgrounds: [Background::default(); 4],
             framebuffer: Framebuffer::default(),
             cgram: CgRam::new(),
+            oam: Oam::new(),
             last_drawn_scanline: 0,
             bgofs_latch: 0,
             bghofs_latch: 0,
@@ -50,6 +54,7 @@ impl Ppu {
 
     pub fn bus_read(&mut self, addr: Address) -> u8 {
         match addr.offset {
+            0x2138 => self.oam.read_oamdataread(),
             0x2139 => self.vram.read_vmdatalread(),
             0x213A => self.vram.read_vmdatahread(),
             0x213B => self.cgram.read_cgdataread(),
@@ -59,6 +64,7 @@ impl Ppu {
 
     pub fn bus_peek(&self, addr: Address) -> Option<u8> {
         match addr.offset {
+            0x2138 => Some(self.oam.peek_oamdataread()),
             0x2139 => Some(self.vram.peek_vmdatalread()),
             0x213A => Some(self.vram.peek_vmdatahread()),
             0x213B => Some(self.cgram.peek_cgdataread()),
@@ -68,6 +74,9 @@ impl Ppu {
 
     pub fn bus_write(&mut self, addr: Address, value: u8) {
         match addr.offset {
+            0x2102 => self.oam.write_oamaddl(value),
+            0x2103 => self.oam.write_oamaddh(value),
+            0x2104 => self.oam.write_oamdata(value),
             0x2105 => self.write_bgmode(value),
             0x2107..=0x210A => self.write_bgnsc(addr, value),
             0x210B => self.write_bg12nba(value),
