@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use intbits::Bits;
 
 pub struct Oam {
@@ -132,6 +134,7 @@ impl From<OamAddr> for usize {
 }
 
 pub struct Sprite {
+    pub id: u32,
     pub x: u32,
     pub y: u32,
     pub tile: u32,
@@ -145,6 +148,7 @@ pub struct Sprite {
 impl Sprite {
     fn new(id: u32, data: [u8; 4], attributes: u8) -> Self {
         Self {
+            id,
             x: if attributes.bit(0) {
                 data[0] as u32 - 256
             } else {
@@ -158,6 +162,24 @@ impl Sprite {
             vflip: data[3].bit(7),
             double_resolution: attributes.bit(id % 4 + 1),
         }
+    }
+}
+
+impl Display for Sprite {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Sprite {:02X}: Tile{:02X} at ({}, {}) Col{} Pri{} {}{}{}",
+            self.id,
+            self.tile,
+            self.x,
+            self.y,
+            self.palette,
+            self.priority,
+            if self.hflip { "HFlip" } else { "" },
+            if self.vflip { "VFlip" } else { "" },
+            if self.double_resolution { "2X" } else { "" }
+        )
     }
 }
 
@@ -188,19 +210,14 @@ mod tests {
     #[test]
     fn test_get_sprite() {
         let mut oam = Oam::new();
-        // Example sprite data for sprite 0
+        // Sprite data for sprite 0
         oam.memory[0x00..0x04].copy_from_slice(&[0x77, 0xFC, 0x00, 0x30]);
+        // Attribute data for sprite 0
         oam.memory[0x200] = 0x02;
 
-        // Verify interpreted sprite data
-        let sprite = oam.get_sprite(0);
-        assert_eq!(sprite.x, 0x77);
-        assert_eq!(sprite.y, 0xFC);
-        assert_eq!(sprite.tile, 0);
-        assert_eq!(sprite.palette, 0);
-        assert_eq!(sprite.priority, 3);
-        assert!(!sprite.hflip);
-        assert!(!sprite.vflip);
-        assert!(sprite.double_resolution);
+        assert_eq!(
+            oam.get_sprite(0).to_string(),
+            "Sprite 00: Tile00 at (119, 252) Col0 Pri3 2X"
+        )
     }
 }

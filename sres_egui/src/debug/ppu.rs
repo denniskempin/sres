@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::fmt::Formatter;
+
 use eframe::CreationContext;
 use egui::ColorImage;
 use egui::Context;
@@ -12,8 +15,25 @@ use sres_emulator::System;
 
 use crate::util::EguiImageImpl;
 
+#[derive(PartialEq, Copy, Clone)]
+
+enum PpuDebugTabs {
+    Background,
+    Sprites,
+}
+
+impl Display for PpuDebugTabs {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PpuDebugTabs::Background => write!(f, "Background"),
+            PpuDebugTabs::Sprites => write!(f, "Sprites"),
+        }
+    }
+}
+
 pub struct PpuDebugWindow {
     pub open: bool,
+    selected_tab: PpuDebugTabs,
     background_widget: PpuBackgroundWidget,
 }
 
@@ -21,6 +41,7 @@ impl PpuDebugWindow {
     pub fn new(cc: &CreationContext) -> Self {
         PpuDebugWindow {
             open: false,
+            selected_tab: PpuDebugTabs::Background,
             background_widget: PpuBackgroundWidget::new(cc),
         }
     }
@@ -30,8 +51,23 @@ impl PpuDebugWindow {
             .open(&mut self.open)
             .show(ctx, |ui| {
                 ppu_status_widget(ui, &emulator.cpu.bus.ppu);
+                tabs_widget(
+                    ui,
+                    &[PpuDebugTabs::Background, PpuDebugTabs::Sprites],
+                    &mut self.selected_tab,
+                );
                 ui.separator();
-                self.background_widget.show(ui, &emulator.cpu.bus.ppu);
+                match self.selected_tab {
+                    PpuDebugTabs::Background => {
+                        self.background_widget.show(ui, &emulator.cpu.bus.ppu);
+                    }
+                    PpuDebugTabs::Sprites => {
+                        ui.label("Sprites");
+                        for i in 0..16 {
+                            ui.label(emulator.cpu.bus.ppu.oam.get_sprite(i).to_string());
+                        }
+                    }
+                }
             });
     }
 }
