@@ -56,6 +56,8 @@ impl Oam {
     ///           If internal_oamadd >= $200, [internal_oamadd] = value
     ///           internal_oamadd = internal_oamadd + 1
     pub fn write_oamdata(&mut self, value: u8) {
+        println!("${:02X}: 0x{:02X}", self.current_addr.0, value);
+
         if !self.current_addr.0.bit(0) {
             self.latch = Some(value);
         }
@@ -92,6 +94,18 @@ impl Oam {
     pub fn peek_oamdataread(&self) -> u8 {
         self.memory[usize::from(self.current_addr)]
     }
+
+    pub fn get_sprite(&self, sprite_id: u32) -> Sprite {
+        let sprite_addr = sprite_id as usize * 4;
+        let attribute_addr = 0x200 + (sprite_id as usize) / 4;
+        Sprite::new(
+            sprite_id,
+            self.memory[sprite_addr..sprite_addr + 4]
+                .try_into()
+                .unwrap(),
+            self.memory[attribute_addr],
+        )
+    }
 }
 
 #[derive(Default, Clone, Copy, Debug)]
@@ -117,6 +131,36 @@ impl From<OamAddr> for usize {
     }
 }
 
+pub struct Sprite {
+    pub x: u32,
+    pub y: u32,
+    pub tile: u32,
+    pub palette: u32,
+    pub priority: u32,
+    pub hflip: bool,
+    pub vflip: bool,
+    pub double_resolution: bool,
+}
+
+impl Sprite {
+    fn new(id: u32, data: [u8; 4], attributes: u8) -> Self {
+        Self {
+            x: if attributes.bit(0) {
+                data[0] as u32 - 256
+            } else {
+                data[0] as u32
+            },
+            y: data[1] as u32,
+            tile: (data[2] as u32).with_bit(9, data[3].bit(0)),
+            palette: data[3].bits(1..=3) as u32,
+            priority: data[3].bits(4..=5) as u32,
+            hflip: data[3].bit(6),
+            vflip: data[3].bit(7),
+            double_resolution: attributes.bit(id % 4 + 1),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,5 +183,24 @@ mod tests {
         oam.write_oamaddl(0x42);
         assert_eq!(oam.read_oamdataread(), 0x03);
         assert_eq!(oam.read_oamdataread(), 0xE0);
+    }
+
+    #[test]
+    fn test_get_sprite() {
+        let mut oam = Oam::new();
+        // Example sprite data for sprite 0
+        oam.memory[0x00..0x04].copy_from_slice(&[0x77, 0xFC, 0x00, 0x30]);
+        oam.memory[0x200] = 0x02;
+
+        // Verify interpreted sprite data
+        let sprite = oam.get_sprite(0);
+        assert_eq!(sprite.x, 0x77);
+        assert_eq!(sprite.y, 0xFC);
+        assert_eq!(sprite.tile, 0);
+        assert_eq!(sprite.palette, 0);
+        assert_eq!(sprite.priority, 3);
+        assert!(!sprite.hflip);
+        assert!(!sprite.vflip);
+        assert!(sprite.double_resolution);
     }
 }
