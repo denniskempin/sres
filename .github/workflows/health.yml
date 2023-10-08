@@ -1,0 +1,21 @@
+name: Health Checks
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets
+      - name: Rustfmt
+        run: cargo fmt --workspace -- --check
