@@ -19,37 +19,44 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Check formatting and clippy
   health:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets
+
       - name: Rustfmt
         run: cargo fmt --all -- --check
 
+  # Run tests
   test:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-      - name: Install nextest
-        uses: taiki-e/install-action@cargo-nextest
+      - uses: taiki-e/install-action@cargo-nextest
+
       - name: Run Tests
         run: cargo nextest run --verbose --workspace
 
+  # Run tests with coverage
   coverage:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-      - name: Install nextest
-        uses: taiki-e/install-action@cargo-nextest
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-nextest
+      - uses: taiki-e/install-action@cargo-llvm-cov
+
       - name: Run Tests
         run: cargo llvm-cov nextest -p sres_emulator --codecov --output-path codecov.json
+
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
@@ -57,19 +64,18 @@ jobs:
           files: codecov.json
           fail_ci_if_error: true
 
+  # Build and deploy to GitHub Pages
   deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./sres_egui
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@wasm-pack
 
-      - name: Install wasm-pack
-        uses: taiki-e/install-action@wasm-pack
-
-      - name: Install yarn dependencies
+      - name: Install Yarn Dependencies
         run: yarn install
 
       - name: Build
