@@ -30,7 +30,7 @@ module.exports = {
     new WasmPackPlugin({
       crateDirectory: __dirname,
       outDir: target,
-      outName: "res",
+      outName: "sres",
     }),
   ],
 };

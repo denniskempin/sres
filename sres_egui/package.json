@@ -1,6 +1,6 @@
 {
     "author": "Dennis Kempin <dennis.kempin@gmail.com>",
-    "name": "res",
+    "name": "sres",
     "version": "0.1.0",
     "scripts": {
         "build": "rimraf dist && webpack --mode production --no-stats",
