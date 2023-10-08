@@ -2,6 +2,8 @@ use std::fmt::{Display, Formatter};
 
 use intbits::Bits;
 
+use super::vram::VramAddr;
+
 pub struct Oam {
     pub memory: Vec<u8>,
     /// Contains the currently selected OAM address set via the OAMADD register.
@@ -9,6 +11,12 @@ pub struct Oam {
     /// Represents the write latch. Contains the previous written value or None if the latch is
     /// not set.
     latch: Option<u8>,
+    /// Sprite sizes set by OBJSEL.
+    /// Each sprite can select one of these sizese in the OAM attributes.
+    sprite_sizes: (SpriteSize, SpriteSize),
+    /// Base address for both nametables used by sprites.
+    name0_addr: VramAddr,
+    name1_addr: VramAddr,
 }
 
 impl Oam {
@@ -18,6 +26,9 @@ impl Oam {
             memory: vec![0; 544],
             current_addr: OamAddr(0),
             latch: None,
+            sprite_sizes: (SpriteSize::Size8x8, SpriteSize::Size16x16),
+            name0_addr: VramAddr(0),
+            name1_addr: VramAddr(0),
         }
     }
 
@@ -44,6 +55,38 @@ impl Oam {
         self.current_addr.0.set_bit(9, value.bit(0));
     }
 
+    /// 7  bit  0
+    /// ---- ----
+    /// SSSN NbBB
+    /// |||| ||||
+    /// |||| |+++- Name base address (word address = bBB << 13)
+    /// |||+-+---- Name select (word offset = (NN+1) << 12)
+    /// +++------- Object size:
+    ///             0:  8x8  and 16x16
+    ///             1:  8x8  and 32x32
+    ///             2:  8x8  and 64x64
+    ///             3: 16x16 and 32x32
+    ///             4: 16x16 and 64x64
+    ///             5: 32x32 and 64x64
+    ///             6: 16x32 and 32x64
+    ///             7: 16x32 and 32x32
+    pub fn write_objsel(&mut self, value: u8) {
+        self.name0_addr = VramAddr((value.bits(0..=1) as u16) << 13);
+        self.name1_addr = self.name0_addr + ((value.bits(3..=4) as u16 + 1) << 12);
+        use SpriteSize::*;
+        self.sprite_sizes = match value.bits(5..=7) {
+            0 => (Size8x8, Size16x16),
+            1 => (Size8x8, Size32x32),
+            2 => (Size8x8, Size64x64),
+            3 => (Size16x16, Size32x32),
+            4 => (Size16x16, Size64x64),
+            5 => (Size32x32, Size64x64),
+            6 => (Size16x32, Size32x64),
+            7 => (Size16x32, Size32x32),
+            _ => unreachable!(),
+        };
+    }
+
     /// Register 2104: OAMDATA - OAM data write
     /// 7  bit  0
     /// ---- ----
@@ -58,8 +101,6 @@ impl Oam {
     ///           If internal_oamadd >= $200, [internal_oamadd] = value
     ///           internal_oamadd = internal_oamadd + 1
     pub fn write_oamdata(&mut self, value: u8) {
-        println!("${:02X}: 0x{:02X}", self.current_addr.0, value);
-
         if !self.current_addr.0.bit(0) {
             self.latch = Some(value);
         }
@@ -106,6 +147,7 @@ impl Oam {
                 .try_into()
                 .unwrap(),
             self.memory[attribute_addr],
+            self.sprite_sizes,
         )
     }
 }
@@ -142,14 +184,14 @@ pub struct Sprite {
     pub priority: u32,
     pub hflip: bool,
     pub vflip: bool,
-    pub double_resolution: bool,
+    pub size: SpriteSize,
 }
 
 impl Sprite {
-    fn new(id: u32, data: [u8; 4], attributes: u8) -> Self {
+    fn new(id: u32, data: [u8; 4], attributes: u8, sprite_sizes: (SpriteSize, SpriteSize)) -> Self {
         Self {
             id,
-            x: if attributes.bit(0) {
+            x: if attributes.bit(id % 4 * 2) {
                 data[0] as u32 - 256
             } else {
                 data[0] as u32
@@ -160,7 +202,11 @@ impl Sprite {
             priority: data[3].bits(4..=5) as u32,
             hflip: data[3].bit(6),
             vflip: data[3].bit(7),
-            double_resolution: attributes.bit(id % 4 + 1),
+            size: if attributes.bit((id % 4) * 2 + 1) {
+                sprite_sizes.1
+            } else {
+                sprite_sizes.0
+            },
         }
     }
 }
@@ -169,17 +215,42 @@ impl Display for Sprite {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Sprite {:02X}: Tile{:02X} at ({}, {}) Col{} Pri{} {}{}{}",
+            "Sprite {:02X}: Tile{:02X} {} at ({}, {}) Pal{} Pri{}{}{}",
             self.id,
             self.tile,
+            self.size,
             self.x,
             self.y,
             self.palette,
             self.priority,
-            if self.hflip { "HFlip" } else { "" },
-            if self.vflip { "VFlip" } else { "" },
-            if self.double_resolution { "2X" } else { "" }
+            if self.hflip { " HFlip" } else { "" },
+            if self.vflip { " VFlip" } else { "" },
         )
+    }
+}
+
+#[derive(Default, Clone, Copy, Debug)]
+pub enum SpriteSize {
+    #[default]
+    Size8x8,
+    Size16x16,
+    Size32x32,
+    Size64x64,
+    Size16x32,
+    Size32x64,
+}
+
+impl Display for SpriteSize {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use SpriteSize::*;
+        match self {
+            Size8x8 => write!(f, "8x8"),
+            Size16x16 => write!(f, "16x16"),
+            Size32x32 => write!(f, "32x32"),
+            Size64x64 => write!(f, "64x64"),
+            Size16x32 => write!(f, "16x32"),
+            Size32x64 => write!(f, "32x64"),
+        }
     }
 }
 
@@ -217,7 +288,7 @@ mod tests {
 
         assert_eq!(
             oam.get_sprite(0).to_string(),
-            "Sprite 00: Tile00 at (119, 252) Col0 Pri3 2X"
+            "Sprite 00: Tile00 16x16 at (119, 252) Pal0 Pri3"
         )
     }
 }

@@ -74,6 +74,7 @@ impl Ppu {
 
     pub fn bus_write(&mut self, addr: Address, value: u8) {
         match addr.offset {
+            0x2101 => self.oam.write_objsel(value),
             0x2102 => self.oam.write_oamaddl(value),
             0x2103 => self.oam.write_oamaddh(value),
             0x2104 => self.oam.write_oamdata(value),
