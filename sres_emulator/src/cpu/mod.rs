@@ -264,6 +264,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires xa installed"]
     pub fn test_simple_program() {
         const PROGRAM: &str = "
             lda #$12
