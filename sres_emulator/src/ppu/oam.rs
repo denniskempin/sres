@@ -16,8 +16,7 @@ pub struct Oam {
     /// Each sprite can select one of these sizese in the OAM attributes.
     sprite_sizes: (SpriteSize, SpriteSize),
     /// Base address for both nametables used by sprites.
-    name0_addr: VramAddr,
-    name1_addr: VramAddr,
+    nametables: (VramAddr, VramAddr),
 }
 
 impl Oam {
@@ -28,8 +27,7 @@ impl Oam {
             current_addr: OamAddr(0),
             latch: None,
             sprite_sizes: (SpriteSize::Size8x8, SpriteSize::Size16x16),
-            name0_addr: VramAddr(0),
-            name1_addr: VramAddr(0),
+            nametables: (VramAddr(0), VramAddr(0)),
         }
     }
 
@@ -72,8 +70,8 @@ impl Oam {
     ///             6: 16x32 and 32x64
     ///             7: 16x32 and 32x32
     pub fn write_objsel(&mut self, value: u8) {
-        self.name0_addr = VramAddr((value.bits(0..=1) as u16) << 13);
-        self.name1_addr = self.name0_addr + ((value.bits(3..=4) as u16 + 1) << 12);
+        self.nametables.0 = VramAddr((value.bits(0..=1) as u16) << 13);
+        self.nametables.1 = self.nametables.0 + ((value.bits(3..=4) as u16 + 1) << 12);
         use SpriteSize::*;
         self.sprite_sizes = match value.bits(5..=7) {
             0 => (Size8x8, Size16x16),
@@ -149,6 +147,7 @@ impl Oam {
                 .unwrap(),
             self.memory[attribute_addr],
             self.sprite_sizes,
+            self.nametables,
         )
     }
 }
@@ -181,7 +180,8 @@ pub struct Sprite {
     pub x: u32,
     pub y: u32,
     pub tile: u32,
-    pub palette: u32,
+    pub nametable: VramAddr,
+    pub palette: u8,
     pub priority: u32,
     pub hflip: bool,
     pub vflip: bool,
@@ -189,7 +189,13 @@ pub struct Sprite {
 }
 
 impl Sprite {
-    fn new(id: u32, data: [u8; 4], attributes: u8, sprite_sizes: (SpriteSize, SpriteSize)) -> Self {
+    fn new(
+        id: u32,
+        data: [u8; 4],
+        attributes: u8,
+        sprite_sizes: (SpriteSize, SpriteSize),
+        nametables: (VramAddr, VramAddr),
+    ) -> Self {
         Self {
             id,
             x: if attributes.bit(id % 4 * 2) {
@@ -198,8 +204,13 @@ impl Sprite {
                 data[0] as u32
             },
             y: data[1] as u32,
-            tile: (data[2] as u32).with_bit(9, data[3].bit(0)),
-            palette: data[3].bits(1..=3) as u32,
+            tile: data[2] as u32,
+            nametable: if data[3].bit(0) {
+                nametables.1
+            } else {
+                nametables.0
+            },
+            palette: data[3].bits(1..=3),
             priority: data[3].bits(4..=5) as u32,
             hflip: data[3].bit(6),
             vflip: data[3].bit(7),
@@ -210,16 +221,51 @@ impl Sprite {
             },
         }
     }
+
+    pub fn palette_addr(&self) -> u8 {
+        128 + self.palette * 16
+    }
+
+    pub fn coarse_width(&self) -> u32 {
+        match self.size {
+            SpriteSize::Size8x8 => 1,
+            SpriteSize::Size16x16 => 2,
+            SpriteSize::Size32x32 => 4,
+            SpriteSize::Size64x64 => 8,
+            SpriteSize::Size16x32 => 2,
+            SpriteSize::Size32x64 => 4,
+        }
+    }
+
+    pub fn coarse_height(&self) -> u32 {
+        match self.size {
+            SpriteSize::Size8x8 => 1,
+            SpriteSize::Size16x16 => 2,
+            SpriteSize::Size32x32 => 4,
+            SpriteSize::Size64x64 => 8,
+            SpriteSize::Size16x32 => 4,
+            SpriteSize::Size32x64 => 8,
+        }
+    }
+
+    pub fn width(&self) -> u32 {
+        self.coarse_width() * 8
+    }
+
+    pub fn height(&self) -> u32 {
+        self.coarse_height() * 8
+    }
 }
 
 impl Display for Sprite {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Sprite {:02X}: Tile{:02X} {} at ({}, {}) Pal{} Pri{}{}{}",
+            "Sprite {:02X}: Tile{:02X} {} from table {} at ({}, {}) Pal{} Pri{}{}{}",
             self.id,
             self.tile,
             self.size,
+            self.nametable,
             self.x,
             self.y,
             self.palette,
@@ -289,7 +335,7 @@ mod tests {
 
         assert_eq!(
             oam.get_sprite(0).to_string(),
-            "Sprite 00: Tile00 16x16 at (119, 252) Pal0 Pri3"
+            "Sprite 00: Tile00 16x16 from table $0000 at (119, 252) Pal0 Pri3"
         )
     }
 }
