@@ -10,7 +10,9 @@ use egui::Ui;
 use egui::Vec2;
 use sres_emulator::ppu::Background;
 use sres_emulator::ppu::BackgroundId;
+use sres_emulator::ppu::BitDepth;
 use sres_emulator::ppu::Ppu;
+use sres_emulator::ppu::VramAddr;
 use sres_emulator::System;
 
 use crate::util::EguiImageImpl;
@@ -20,6 +22,7 @@ use crate::util::EguiImageImpl;
 enum PpuDebugTabs {
     Background,
     Sprites,
+    Vram,
 }
 
 impl Display for PpuDebugTabs {
@@ -27,6 +30,7 @@ impl Display for PpuDebugTabs {
         match self {
             PpuDebugTabs::Background => write!(f, "Background"),
             PpuDebugTabs::Sprites => write!(f, "Sprites"),
+            PpuDebugTabs::Vram => write!(f, "Vram"),
         }
     }
 }
@@ -35,6 +39,7 @@ pub struct PpuDebugWindow {
     pub open: bool,
     selected_tab: PpuDebugTabs,
     background_widget: PpuBackgroundWidget,
+    vram_widget: PpuVramWidget,
 }
 
 impl PpuDebugWindow {
@@ -43,6 +48,7 @@ impl PpuDebugWindow {
             open: false,
             selected_tab: PpuDebugTabs::Background,
             background_widget: PpuBackgroundWidget::new(cc),
+            vram_widget: PpuVramWidget::new(cc),
         }
     }
 
@@ -53,7 +59,11 @@ impl PpuDebugWindow {
                 ppu_status_widget(ui, &emulator.cpu.bus.ppu);
                 tabs_widget(
                     ui,
-                    &[PpuDebugTabs::Background, PpuDebugTabs::Sprites],
+                    &[
+                        PpuDebugTabs::Background,
+                        PpuDebugTabs::Sprites,
+                        PpuDebugTabs::Vram,
+                    ],
                     &mut self.selected_tab,
                 );
                 ui.separator();
@@ -67,6 +77,7 @@ impl PpuDebugWindow {
                             ui.label(emulator.cpu.bus.ppu.oam.get_sprite(i).to_string());
                         }
                     }
+                    PpuDebugTabs::Vram => self.vram_widget.show(ui, &emulator.cpu.bus.ppu),
                 }
             });
     }
@@ -130,7 +141,6 @@ impl PpuBackgroundWidget {
         ));
         ui.horizontal(|ui| {
             tilemap_widget(ui, background, &self.tilemap_texture);
-            tileset_widget(ui, background, &self.tileset_texture);
         });
     }
 }
@@ -149,16 +159,101 @@ fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &Textur
             "Tilemap ({}, {})",
             background.tilemap_addr, background.tilemap_size
         ));
-        ui.image(tilemap_texture, Vec2::new(256.0, 256.0));
+        ui.image(tilemap_texture, Vec2::new(512.0, 512.0));
     });
 }
 
-fn tileset_widget(ui: &mut Ui, background: &Background, tileset_texture: &TextureHandle) {
-    ui.vertical(|ui| {
-        ui.label(format!(
-            "Tileset ({}, {}, {})",
-            background.tileset_addr, background.bit_depth, background.tile_size
-        ));
-        ui.image(tileset_texture, Vec2::new(256.0, 256.0));
-    });
+struct PpuVramWidget {
+    addr: VramAddr,
+    bit_depth: BitDepth,
+    palette_addr: u8,
+    vram_texture: TextureHandle,
+}
+
+impl PpuVramWidget {
+    pub fn new(cc: &CreationContext) -> Self {
+        PpuVramWidget {
+            addr: VramAddr(0),
+            bit_depth: BitDepth::Bpp2,
+            palette_addr: 0,
+            vram_texture: cc.egui_ctx.load_texture(
+                "Vram",
+                ColorImage::example(),
+                Default::default(),
+            ),
+        }
+    }
+
+    pub fn update_textures(&mut self, ppu: &Ppu) {
+        self.vram_texture.set(
+            ppu.debug_render_vram::<EguiImageImpl>(
+                self.addr,
+                32,
+                self.bit_depth,
+                self.palette_addr,
+            ),
+            TextureOptions::default(),
+        );
+    }
+
+    pub fn show(&mut self, ui: &mut Ui, ppu: &Ppu) {
+        self.update_textures(ppu);
+
+        ui.horizontal(|ui| {
+            for bgid in &[
+                BackgroundId::BG0,
+                BackgroundId::BG1,
+                BackgroundId::BG2,
+                BackgroundId::BG3,
+            ] {
+                if ui.button(bgid.to_string()).clicked() {
+                    let bg = ppu.backgrounds[*bgid as usize];
+                    self.bit_depth = bg.bit_depth;
+                    self.addr = bg.tileset_addr;
+                    self.palette_addr = bg.palette_addr;
+                }
+            }
+            if ui.button("Sprites0").clicked() {
+                self.bit_depth = BitDepth::Bpp4;
+                self.addr = ppu.oam.nametables.0;
+            }
+            if ui.button("Sprites1").clicked() {
+                self.bit_depth = BitDepth::Bpp4;
+                self.addr = ppu.oam.nametables.1;
+                self.palette_addr = 128;
+            }
+        });
+
+        ui.group(|ui| {
+            ui.horizontal(|ui| {
+                ui.label("Bit Depth: ".to_string());
+                tabs_widget(
+                    ui,
+                    &[BitDepth::Bpp2, BitDepth::Bpp4, BitDepth::Bpp8],
+                    &mut self.bit_depth,
+                );
+            });
+            ui.horizontal(|ui| {
+                ui.label("Addr: {}".to_string());
+                if ui.button("-").clicked() {
+                    self.addr = self.addr - 0x400_u16;
+                }
+                ui.label(format!("{}", self.addr));
+                if ui.button("+").clicked() {
+                    self.addr = self.addr + 0x400_u16;
+                }
+            });
+            ui.horizontal(|ui| {
+                ui.label("Palette: {}".to_string());
+                if ui.button("-").clicked() {
+                    self.palette_addr = self.palette_addr.wrapping_sub(0x10);
+                }
+                ui.label(format!("{:02X}", self.palette_addr));
+                if ui.button("+").clicked() {
+                    self.palette_addr = self.palette_addr.wrapping_add(0x10);
+                }
+            });
+            ui.image(&mut self.vram_texture, Vec2::new(512.0, 512.0));
+        });
+    }
 }

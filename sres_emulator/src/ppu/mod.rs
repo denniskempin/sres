@@ -14,7 +14,7 @@ use self::oam::Oam;
 pub use self::timer::fvh_to_master_clock;
 use self::timer::PpuTimer;
 use self::vram::Vram;
-use self::vram::VramAddr;
+pub use self::vram::VramAddr;
 use crate::util::image::Image;
 use crate::util::image::Rgb15;
 use crate::util::memory::Address;
@@ -349,6 +349,53 @@ impl Ppu {
                 for (col_idx, pixel) in row.pixels() {
                     let color = self.cgram[background.palette_addr + pixel];
                     image.set_pixel((tile_x + col_idx, tile_y + row_idx), color.into());
+                }
+            }
+        }
+    }
+
+    pub fn debug_render_vram<ImageT: Image>(
+        &self,
+        addr: VramAddr,
+        num_rows: u32,
+        bit_depth: BitDepth,
+        palette_addr: u8,
+    ) -> ImageT {
+        let mut image = ImageT::new(16 * 8, num_rows * 8);
+        match bit_depth {
+            BitDepth::Bpp2 => {
+                self.debug_render_vram_impl::<Bpp2Decoder>(&mut image, addr, num_rows, palette_addr)
+            }
+            BitDepth::Bpp4 => {
+                self.debug_render_vram_impl::<Bpp4Decoder>(&mut image, addr, num_rows, palette_addr)
+            }
+            BitDepth::Bpp8 => {
+                self.debug_render_vram_impl::<Bpp8Decoder>(&mut image, addr, num_rows, palette_addr)
+            }
+            _ => (),
+        };
+        image
+    }
+
+    fn debug_render_vram_impl<TileDecoderT: TileDecoder>(
+        &self,
+        image: &mut impl Image,
+        addr: VramAddr,
+        num_rows: u32,
+        palette_addr: u8,
+    ) {
+        for coarse_x in 0..16 {
+            for coarse_y in 0..num_rows {
+                let tile_idx = coarse_y * 16 + coarse_x;
+                let tile = Tile::<TileDecoderT>::from_tileset_index(addr, tile_idx);
+                for (row_idx, row) in tile.rows(&self.vram) {
+                    for (col_idx, pixel) in row.pixels() {
+                        let color = self.cgram[palette_addr + pixel];
+                        image.set_pixel(
+                            (coarse_x * 8 + col_idx, coarse_y * 8 + row_idx),
+                            color.into(),
+                        );
+                    }
                 }
             }
         }
