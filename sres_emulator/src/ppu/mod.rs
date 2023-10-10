@@ -8,7 +8,6 @@ use std::fmt::Formatter;
 use std::marker::PhantomData;
 
 use intbits::Bits;
-use log::error;
 
 use self::cgram::CgRam;
 use self::oam::Oam;
@@ -286,10 +285,6 @@ impl Ppu {
         self.backgrounds[bg_id].h_offset = ((value as u32) << 8)
             | ((self.bgofs_latch as u32) & !7)
             | ((self.bghofs_latch as u32) & 7);
-        error!(
-            "BGNHOFS: {} = {:04X} (write {})",
-            bg_id, self.backgrounds[bg_id].h_offset, value
-        );
         self.bgofs_latch = value;
         self.bghofs_latch = value;
     }
@@ -399,6 +394,27 @@ impl Ppu {
                 }
             }
         }
+    }
+
+    pub fn debug_render_sprite<ImageT: Image>(&self, sprite_id: u32) -> ImageT {
+        let sprite = self.oam.get_sprite(sprite_id);
+        let mut image = ImageT::new(sprite.width(), sprite.height());
+        for coarse_y in 0..(sprite.coarse_height()) {
+            for coarse_x in 0..(sprite.coarse_width()) {
+                let tile_idx = sprite.tile + coarse_x + coarse_y * 16;
+                let tile = Tile::<Bpp4Decoder>::from_tileset_index(sprite.nametable, tile_idx);
+                for (fine_y, row) in tile.rows(&self.vram) {
+                    for (fine_x, pixel) in row.pixels() {
+                        let color = self.cgram[sprite.palette_addr() + pixel];
+                        image.set_pixel(
+                            (coarse_x * 8 + fine_x, coarse_y * 8 + fine_y),
+                            color.into(),
+                        );
+                    }
+                }
+            }
+        }
+        image
     }
 }
 

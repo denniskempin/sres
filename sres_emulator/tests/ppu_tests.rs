@@ -42,9 +42,10 @@ pub fn test_krom_interlace_rpg() {
     // Note: Interlacing or high-res is not implemented and used by this test rom.
     // However it's the only test rom I have available to test sprite rendering.
     run_ppu_test("krom_interlace_rpg", &[10]);
+    run_sprite_test("krom_interlace_rpg", &[0]);
 }
 
-fn run_ppu_test(test_name: &str, snapshot_frames: &[u32]) {
+fn run_ppu_test(test_name: &str, snapshot_frames: &[u32]) -> System {
     logging::test_init(true);
 
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -62,6 +63,29 @@ fn run_ppu_test(test_name: &str, snapshot_frames: &[u32]) {
             &framebuffer_path,
         );
     }
+    system
+}
+
+fn run_sprite_test(test_name: &str, snapshot_sprites: &[u32]) -> System {
+    logging::test_init(true);
+
+    let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let rom_path = root_dir.join(format!("tests/ppu_tests/{test_name}.sfc"));
+
+    let mut system = System::with_sfc(&rom_path).unwrap();
+    system.cpu.reset();
+    for _ in 0..10 {
+        system.execute_one_frame();
+    }
+
+    for sprite_id in snapshot_sprites {
+        let sprite_path = root_dir.join(format!("tests/ppu_tests/{test_name}-sprite{sprite_id}"));
+        compare_to_golden(
+            &system.cpu.bus.ppu.debug_render_sprite(*sprite_id),
+            &sprite_path,
+        );
+    }
+    system
 }
 
 fn compare_to_golden(image: &TestImageImpl, path_prefix: &Path) {
