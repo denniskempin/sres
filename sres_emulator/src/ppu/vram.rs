@@ -150,6 +150,15 @@ impl std::ops::Add<u32> for VramAddr {
     }
 }
 
+impl std::ops::Sub<u16> for VramAddr {
+    type Output = Self;
+
+    fn sub(self, rhs: u16) -> Self {
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        Self(self.0.wrapping_sub(rhs) & 0x7FFF)
+    }
+}
+
 impl From<u16> for VramAddr {
     fn from(value: u16) -> Self {
         Self(value & 0x7FFF)

@@ -16,7 +16,7 @@ pub struct Oam {
     /// Each sprite can select one of these sizese in the OAM attributes.
     sprite_sizes: (SpriteSize, SpriteSize),
     /// Base address for both nametables used by sprites.
-    nametables: (VramAddr, VramAddr),
+    pub nametables: (VramAddr, VramAddr),
 }
 
 impl Oam {
