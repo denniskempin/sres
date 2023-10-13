@@ -39,6 +39,7 @@ pub struct PpuDebugWindow {
     pub open: bool,
     selected_tab: PpuDebugTabs,
     background_widget: PpuBackgroundWidget,
+    sprites_widget: PpuSpritesWidget,
     vram_widget: PpuVramWidget,
 }
 
@@ -48,6 +49,7 @@ impl PpuDebugWindow {
             open: false,
             selected_tab: PpuDebugTabs::Background,
             background_widget: PpuBackgroundWidget::new(cc),
+            sprites_widget: PpuSpritesWidget::new(cc),
             vram_widget: PpuVramWidget::new(cc),
         }
     }
@@ -71,12 +73,7 @@ impl PpuDebugWindow {
                     PpuDebugTabs::Background => {
                         self.background_widget.show(ui, &emulator.cpu.bus.ppu);
                     }
-                    PpuDebugTabs::Sprites => {
-                        ui.label("Sprites");
-                        for i in 0..16 {
-                            ui.label(emulator.cpu.bus.ppu.oam.get_sprite(i).to_string());
-                        }
-                    }
+                    PpuDebugTabs::Sprites => self.sprites_widget.show(ui, &emulator.cpu.bus.ppu),
                     PpuDebugTabs::Vram => self.vram_widget.show(ui, &emulator.cpu.bus.ppu),
                 }
             });
@@ -161,6 +158,55 @@ fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &Textur
         ));
         ui.image(tilemap_texture, Vec2::new(512.0, 512.0));
     });
+}
+
+struct PpuSpritesWidget {
+    sprite_id: u32,
+    sprite_texture: TextureHandle,
+}
+
+impl PpuSpritesWidget {
+    pub fn new(cc: &CreationContext) -> Self {
+        PpuSpritesWidget {
+            sprite_id: 0,
+            sprite_texture: cc.egui_ctx.load_texture(
+                "Sprite",
+                ColorImage::example(),
+                Default::default(),
+            ),
+        }
+    }
+
+    pub fn update_textures(&mut self, ppu: &Ppu) {
+        self.sprite_texture.set(
+            ppu.debug_render_sprite::<EguiImageImpl>(self.sprite_id),
+            TextureOptions::default(),
+        );
+    }
+
+    pub fn show(&mut self, ui: &mut Ui, ppu: &Ppu) {
+        self.update_textures(ppu);
+
+        ui.horizontal(|ui| {
+            ui.label("Sprite:".to_string());
+            if ui.button("-").clicked() && self.sprite_id > 0 {
+                self.sprite_id -= 1;
+            }
+            ui.label(format!("{}", self.sprite_id));
+            if ui.button("+").clicked() && self.sprite_id < 255 {
+                self.sprite_id += 1;
+            }
+        });
+
+        let sprite = ppu.oam.get_sprite(self.sprite_id);
+        ui.horizontal(|ui| {
+            ui.vertical(|ui| ui.label(format!("Position: ({}, {})", sprite.x, sprite.y)));
+            ui.image(
+                &mut self.sprite_texture,
+                Vec2::new(sprite.width() as f32 * 4.0, sprite.height() as f32 * 4.0),
+            );
+        });
+    }
 }
 
 struct PpuVramWidget {

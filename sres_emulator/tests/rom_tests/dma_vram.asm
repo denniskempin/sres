@@ -77,7 +77,7 @@ sta.w REG_A1B0
 ldx.w #$0100
 stx.w REG_A1T0L
 
-// Set transfer size: 0x0100
+// Set transfer size: 0x0080
 ldx.w #$0080
 stx.w REG_DAS0L
 
