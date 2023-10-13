@@ -2,6 +2,9 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use image::RgbaImage;
+use sres_emulator::ppu::BackgroundId;
+use sres_emulator::ppu::BitDepth;
+use sres_emulator::ppu::VramAddr;
 use sres_emulator::util::image::Image;
 use sres_emulator::util::image::Rgba32;
 use sres_emulator::util::logging;
@@ -38,11 +41,36 @@ pub fn test_krom_bgmap_8bpp() {
 }
 
 #[test]
-pub fn test_krom_interlace_rpg() {
+pub fn test_krom_interlace_rpg_debug_render() {
     // Note: Interlacing or high-res is not implemented and used by this test rom.
     // However it's the only test rom I have available to test sprite rendering.
-    run_ppu_test("krom_interlace_rpg", &[10]);
-    run_sprite_test("krom_interlace_rpg", &[0]);
+    logging::test_init(true);
+
+    let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let rom_path = root_dir.join("tests/ppu_tests/krom_interlace_rpg.sfc");
+
+    let mut system = System::with_sfc(&rom_path).unwrap();
+    system.cpu.reset();
+    for _ in 0..10 {
+        system.execute_one_frame();
+    }
+
+    let ppu = system.cpu.bus.ppu;
+
+    let sprite_path = root_dir.join("tests/ppu_tests/krom_interlace_rpg-sprite");
+    compare_to_golden(&ppu.debug_render_sprite(0), &sprite_path);
+
+    let background_path = root_dir.join("tests/ppu_tests/krom_interlace_rpg-bg0");
+    compare_to_golden(
+        &ppu.debug_render_background(BackgroundId::BG0),
+        &background_path,
+    );
+
+    let vram_path = root_dir.join("tests/ppu_tests/krom_interlace_rpg-vram");
+    compare_to_golden(
+        &ppu.debug_render_vram(VramAddr(0), 32, BitDepth::Bpp4, 0),
+        &vram_path,
+    );
 }
 
 fn run_ppu_test(test_name: &str, snapshot_frames: &[u32]) -> System {
