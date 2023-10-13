@@ -60,6 +60,7 @@ nop
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // DMA transfer from VRAM $0000 into WRAM $0100
+// This time, transfer in two batches of 0x80 bytes.
 
 // Set DMA mode: 0000 0001 = A <- B, Increment A, "+0 +1" pattern
 lda.b #$81
@@ -77,15 +78,17 @@ ldx.w #$0100
 stx.w REG_A1T0L
 
 // Set transfer size: 0x0100
-ldx.w #$0100
+ldx.w #$0080
 stx.w REG_DAS0L
 
 // Set B-bus target to $2039 = VMDATALREAD
 lda.b #$39
 sta.w REG_BBAD0
 
-// Enable DMA transfer
+// Execute two transfers 0f 0x80 bytes to transfer a total of 0x100.
 lda.b #$01
+sta.w REG_MDMAEN
+nop
 sta.w REG_MDMAEN
 nop
 
