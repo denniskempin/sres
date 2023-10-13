@@ -67,16 +67,15 @@ impl DmaController {
                     DmaTransferPattern::Undocumented_0_0_1_1 => vec![0, 0, 1, 1],
                 };
 
-                let mut bus_a_address = channel.bus_a_address;
                 for idx in 0..length {
                     let bus_b_address = channel
                         .bus_b_address
                         .add(bus_b_pattern[idx % bus_b_pattern.len()], Wrap::NoWrap);
 
                     if channel.parameters.direction {
-                        transfers.push((bus_b_address, bus_a_address));
+                        transfers.push((bus_b_address, channel.bus_a_address));
                     } else {
-                        transfers.push((bus_a_address, bus_b_address));
+                        transfers.push((channel.bus_a_address, bus_b_address));
                     }
 
                     let increment = if channel.parameters.fixed {
@@ -86,12 +85,14 @@ impl DmaController {
                     } else {
                         1
                     };
-                    bus_a_address = bus_a_address.add_signed(increment, Wrap::NoWrap);
+                    channel.bus_a_address =
+                        channel.bus_a_address.add_signed(increment, Wrap::NoWrap);
                 }
 
                 duration += 8 + 8 * length as u64;
             }
         }
+
         duration += clock_speed - duration % clock_speed;
 
         Some((transfers, duration))
