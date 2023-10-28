@@ -140,6 +140,28 @@ impl Ppu {
                 _ => (),
             };
         }
+
+        for layer in 0..4 {
+            self.draw_sprite_layer_scanline(scanline, layer);
+        }
+    }
+
+    fn draw_sprite_layer_scanline(&mut self, scanline: u32, priority: u32) {
+        let sprites = self.oam.get_sprites_on_scanline(scanline, priority);
+        for (sprite, row) in sprites {
+            let row_coarse = row / 8;
+            let row_fine = row % 8;
+            for coarse_x in 0..sprite.coarse_width() {
+                let tile_idx = sprite.tile + coarse_x + row_coarse * 16;
+                let tile = Tile::<Bpp4Decoder>::from_tileset_index(sprite.nametable, tile_idx);
+                for (fine_x, pixel) in tile.row(row_fine, &self.vram).pixels() {
+                    if pixel > 0 {
+                        let color = self.cgram[sprite.palette_addr() + pixel];
+                        self.framebuffer[(sprite.x + coarse_x * 8 + fine_x, scanline)] = color;
+                    }
+                }
+            }
+        }
     }
 
     fn draw_background_scanline<TileDecoderT: TileDecoder>(
