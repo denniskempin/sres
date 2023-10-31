@@ -2,6 +2,8 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use intbits::Bits;
+use serde::Deserialize;
+use serde::Serialize;
 
 use super::vram::VramAddr;
 
@@ -14,7 +16,7 @@ pub struct Oam {
     latch: Option<u8>,
     /// Sprite sizes set by OBJSEL.
     /// Each sprite can select one of these sizese in the OAM attributes.
-    sprite_sizes: (SpriteSize, SpriteSize),
+    pub sprite_sizes: (SpriteSize, SpriteSize),
     /// Base address for both nametables used by sprites.
     pub nametables: (VramAddr, VramAddr),
 }
@@ -299,7 +301,7 @@ impl Display for Sprite {
     }
 }
 
-#[derive(Default, Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum SpriteSize {
     #[default]
     Size8x8,

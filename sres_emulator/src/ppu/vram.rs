@@ -2,6 +2,8 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use intbits::Bits;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::util::uint::U16Ext;
 
@@ -116,7 +118,7 @@ impl std::ops::Index<VramAddr> for Vram {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, Serialize, Deserialize)]
 pub struct VramAddr(pub u16);
 
 impl VramAddr {

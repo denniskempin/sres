@@ -1,4 +1,5 @@
 use intbits::Bits;
+use serde::{Deserialize, Serialize};
 
 /// Conversion factor from u5 to u8
 const U5_TO_U8_CONVERSION: f32 = 8.225806;
@@ -8,7 +9,7 @@ const U5_TO_U8_CONVERSION: f32 = 8.225806;
 pub struct ColorIdx(pub u8);
 
 /// RGB format used by SNES, 5 bits per channel
-#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Rgb15(pub u16);
 
 /// 32-bit RGBA format used on modern machines for interop with egui and image-rs

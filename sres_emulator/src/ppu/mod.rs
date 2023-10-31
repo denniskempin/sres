@@ -8,6 +8,8 @@ use std::fmt::Formatter;
 use std::marker::PhantomData;
 
 use intbits::Bits;
+use serde::Deserialize;
+use serde::Serialize;
 
 use self::cgram::CgRam;
 use self::oam::Oam;
@@ -122,7 +124,7 @@ impl Ppu {
         image
     }
 
-    fn draw_scanline(&mut self, scanline: u32) {
+    pub fn draw_scanline(&mut self, scanline: u32) {
         if scanline >= 224 {
             return;
         }
@@ -536,7 +538,7 @@ impl std::ops::IndexMut<(u32, u32)> for Framebuffer {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Background {
     pub enabled: bool,
     pub bit_depth: BitDepth,
@@ -590,7 +592,7 @@ impl Background {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BitDepth {
     #[default]
     Disabled,
@@ -612,7 +614,7 @@ impl Display for BitDepth {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum TileSize {
     #[default]
     Size8x8,
@@ -628,7 +630,7 @@ impl Display for TileSize {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum TilemapSize {
     #[default]
     Size32x32,
@@ -648,7 +650,7 @@ impl Display for TilemapSize {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BackgroundId {
     #[default]
     BG0 = 0,
