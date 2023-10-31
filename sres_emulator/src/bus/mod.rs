@@ -269,13 +269,15 @@ impl SresBus {
 
     fn advance_master_clock(&mut self, cycles: u64) {
         self.ppu.advance_master_clock(cycles);
-        if self.ppu.timer.nmi_flag {
-            if !self.nmi_signaled {
-                self.nmi_interrupt = true;
-                self.nmi_signaled = true;
+        if self.nmi_enable {
+            if self.ppu.timer.nmi_flag {
+                if !self.nmi_signaled {
+                    self.nmi_interrupt = true;
+                    self.nmi_signaled = true;
+                }
+            } else {
+                self.nmi_signaled = false;
             }
-        } else {
-            self.nmi_signaled = false;
         }
 
         if let Some((transfers, duration)) = self

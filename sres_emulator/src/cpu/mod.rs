@@ -146,7 +146,6 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     fn interrupt(&mut self, handler: NativeVectorTable) {
-        self.debugger.trigger_custom("Iterrupt".to_string());
         self.stack_push_u24(u32::from(self.pc));
         self.stack_push_u8(u8::from(self.status));
         self.status.irq_disable = true;

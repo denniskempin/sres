@@ -22,6 +22,7 @@ use crate::util::uint::U16Ext;
 use crate::util::uint::U8Ext;
 
 pub struct Ppu {
+    pub disabled: bool,
     pub timer: PpuTimer,
     pub vram: Vram,
     pub backgrounds: [Background; 4],
@@ -39,6 +40,7 @@ impl Ppu {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
+            disabled: false,
             timer: PpuTimer::default(),
             vram: Vram::new(),
             backgrounds: [Background::default(); 4],
@@ -73,6 +75,7 @@ impl Ppu {
 
     pub fn bus_write(&mut self, addr: Address, value: u8) {
         match addr.offset {
+            0x2100 => self.write_inidisp(value),
             0x2101 => self.oam.write_objsel(value),
             0x2102 => self.oam.write_oamaddl(value),
             0x2103 => self.oam.write_oamaddh(value),
@@ -97,6 +100,9 @@ impl Ppu {
 
     pub fn advance_master_clock(&mut self, cycles: u64) {
         self.timer.advance_master_clock(cycles);
+        if self.disabled {
+            return;
+        }
         if self.timer.v != self.last_drawn_scanline {
             self.draw_scanline(self.timer.v as u32);
             self.last_drawn_scanline = self.timer.v;
@@ -188,6 +194,18 @@ impl Ppu {
                 }
             }
         }
+    }
+
+    /// Register 2100: INIDISP
+    /// 7  bit  0
+    /// ---- ----
+    /// F... BBBB
+    /// |    ||||
+    /// |    ++++- Screen brightness (linear steps from 0 = none to $F = full)
+    /// +--------- Force blanking
+    fn write_inidisp(&mut self, value: u8) {
+        log::info!("INIDISP = {:08b}", value);
+        self.disabled = value.bit(7);
     }
 
     /// Register 2105: BGMODE
