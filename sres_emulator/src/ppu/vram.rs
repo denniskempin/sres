@@ -12,6 +12,7 @@ pub struct Vram {
     pub current_addr: VramAddr,
     pub read_latch: bool,
     pub increment_mode: bool,
+    pub increment_amount: u16,
 }
 
 impl Vram {
@@ -22,6 +23,7 @@ impl Vram {
             current_addr: VramAddr::from(0),
             read_latch: false,
             increment_mode: false,
+            increment_amount: 1,
         }
     }
 
@@ -44,7 +46,21 @@ impl Vram {
     ///             0: Increment after writing $2118 or reading $2139
     ///             1: Increment after writing $2119 or reading $213A
     pub fn write_vmain(&mut self, value: u8) {
-        self.increment_mode = value.bit(7)
+        self.increment_mode = value.bit(7);
+        match value.bits(0..=1) {
+            0 => self.increment_amount = 1,
+            1 => self.increment_amount = 32,
+            2 => self.increment_amount = 128,
+            3 => self.increment_amount = 128,
+            _ => unreachable!(),
+        }
+        match value.bits(2..=3) {
+            0 => (),
+            1 => log::error!("Address remapping: 2bpp"),
+            2 => log::error!("Address remapping: 4bpp"),
+            3 => log::error!("Address remapping: 8bpp"),
+            _ => unreachable!(),
+        }
     }
 
     /// Register 2116: VMADDL - VRAM word address low
@@ -63,7 +79,7 @@ impl Vram {
     pub fn write_vmdatal(&mut self, value: u8) {
         self.memory[usize::from(self.current_addr)].set_low_byte(value);
         if !self.increment_mode {
-            self.current_addr.increment();
+            self.current_addr = self.current_addr + self.increment_amount;
         }
     }
 
@@ -71,7 +87,7 @@ impl Vram {
     pub fn write_vmdatah(&mut self, value: u8) {
         self.memory[usize::from(self.current_addr)].set_high_byte(value);
         if self.increment_mode {
-            self.current_addr.increment();
+            self.current_addr = self.current_addr + self.increment_amount;
         }
     }
 
@@ -82,7 +98,7 @@ impl Vram {
             if self.read_latch {
                 self.read_latch = false;
             } else {
-                self.current_addr.increment();
+                self.current_addr = self.current_addr + self.increment_amount;
             }
         }
         value
@@ -99,7 +115,7 @@ impl Vram {
             if self.read_latch {
                 self.read_latch = false;
             } else {
-                self.current_addr.increment();
+                self.current_addr = self.current_addr + self.increment_amount;
             }
         }
         value
@@ -128,10 +144,6 @@ impl VramAddr {
 
     pub fn set_high_byte(&mut self, value: u8) {
         self.0.set_high_byte(value.bits(0..=6) & 0x7F);
-    }
-
-    pub fn increment(&mut self) {
-        self.0 = self.0.wrapping_add(1) & 0x7FFF;
     }
 }
 
