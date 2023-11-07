@@ -53,8 +53,8 @@ pub trait Bus {
     #[inline]
     fn cycle_write_u16(&mut self, addr: Address, value: u16, wrap: Wrap) {
         let bytes = value.to_le_bytes();
-        self.cycle_write_u8(addr.add(1_u16, wrap), bytes[1]);
         self.cycle_write_u8(addr, bytes[0]);
+        self.cycle_write_u8(addr.add(1_u16, wrap), bytes[1]);
     }
 
     #[inline]
@@ -101,7 +101,7 @@ impl SresBus {
             rom: vec![0; 0x4000000],
             clock_speed: 8,
             dma_controller: DmaController::new(debugger.clone()),
-            ppu: Ppu::new(),
+            ppu: Ppu::new(debugger.clone()),
             apu: Apu::new(),
             debugger,
             nmi_enable: false,
