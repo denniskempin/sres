@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use image::RgbaImage;
 use serde::Deserialize;
 use serde::Serialize;
+use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::ppu::oam::SpriteSize;
 use sres_emulator::ppu::Background;
 use sres_emulator::ppu::BackgroundId;
@@ -213,7 +214,7 @@ impl PpuSnapshot {
     }
 
     pub fn restore(self) -> Ppu {
-        let mut ppu = Ppu::new();
+        let mut ppu = Ppu::new(DebuggerRef::default());
         ppu.vram.memory = self.vram;
         ppu.cgram.memory = self.cgram;
         ppu.backgrounds[0] = self.backgrounds[0];

@@ -17,6 +17,7 @@ pub use self::timer::fvh_to_master_clock;
 use self::timer::PpuTimer;
 use self::vram::Vram;
 pub use self::vram::VramAddr;
+use crate::debugger::DebuggerRef;
 use crate::util::image::Image;
 use crate::util::image::Rgb15;
 use crate::util::memory::Address;
@@ -36,11 +37,13 @@ pub struct Ppu {
 
     pub bgofs_latch: u8,
     pub bghofs_latch: u8,
+
+    pub debugger: DebuggerRef,
 }
 
 impl Ppu {
     #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub fn new(debugger: DebuggerRef) -> Self {
         Self {
             disabled: false,
             timer: PpuTimer::default(),
@@ -52,6 +55,7 @@ impl Ppu {
             last_drawn_scanline: 0,
             bgofs_latch: 0,
             bghofs_latch: 0,
+            debugger,
         }
     }
 
@@ -91,8 +95,18 @@ impl Ppu {
             0x2115 => self.vram.write_vmain(value),
             0x2116 => self.vram.write_vmaddl(value),
             0x2117 => self.vram.write_vmaddh(value),
-            0x2118 => self.vram.write_vmdatal(value),
-            0x2119 => self.vram.write_vmdatah(value),
+            0x2118 => {
+                if self.vram.current_addr.0 == 0 {
+                    self.debugger.trigger_custom("Write to VRAM=0".to_string());
+                }
+                self.vram.write_vmdatal(value)
+            }
+            0x2119 => {
+                if self.vram.current_addr.0 == 0 {
+                    self.debugger.trigger_custom("Write to VRAM=0".to_string());
+                }
+                self.vram.write_vmdatah(value)
+            }
             0x2121 => self.cgram.write_cgadd(value),
             0x2122 => self.cgram.write_cgdata(value),
             0x212C => self.write_tm(value),
@@ -133,7 +147,7 @@ impl Ppu {
         for x in 0..256 {
             self.framebuffer[(x, scanline)] = default_color;
         }
-        for background_id in (0..4).rev() {
+        for background_id in 0..4 {
             let bg = self.backgrounds[background_id];
             match bg.bit_depth {
                 BitDepth::Bpp2 => {
@@ -734,7 +748,12 @@ impl<TileDecoderT: TileDecoder> TileRow<TileDecoderT> {
 
     pub fn pixel(&self, pixel_idx: u32) -> u8 {
         let flipped_idx = if self.flip { pixel_idx } else { 7 - pixel_idx };
-        self.decoder.pixel(flipped_idx) + self.palette * TileDecoderT::NUM_COLORS
+        let raw_pixel = self.decoder.pixel(flipped_idx);
+        if raw_pixel == 0 {
+            0
+        } else {
+            raw_pixel + self.palette * TileDecoderT::NUM_COLORS
+        }
     }
 
     pub fn pixels(&self) -> impl Iterator<Item = (u32, u8)> + '_ {

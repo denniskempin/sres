@@ -319,7 +319,7 @@ impl Display for DmaChannel {
         };
         write!(
             f,
-            "{} ({})  {}  {} +[{}] ({:06X} bytes)",
+            "{} ({})  {}  {} +[{}] (0x{:X} bytes)",
             self.bus_a_address, increment, direction, self.bus_b_address, pattern, self.byte_count
         )
     }
