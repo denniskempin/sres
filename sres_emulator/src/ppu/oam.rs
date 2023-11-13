@@ -181,7 +181,7 @@ struct OamAddr(u16);
 
 impl OamAddr {
     pub fn increment(&mut self) {
-        self.0 = self.0.wrapping_add(1) & 0x1FF;
+        self.0 = self.0.wrapping_add(1) % 544;
     }
 }
 
@@ -189,7 +189,7 @@ impl std::ops::Add<u16> for OamAddr {
     type Output = Self;
 
     fn add(self, rhs: u16) -> Self::Output {
-        Self((self.0 + rhs) & 0x1FF)
+        Self((self.0 + rhs) % 544)
     }
 }
 
@@ -224,7 +224,7 @@ impl Sprite {
         Self {
             id,
             x: if attributes.bit(id % 4 * 2) {
-                data[0] as u32 - 256
+                (data[0] as u32).wrapping_sub(256)
             } else {
                 data[0] as u32
             },
