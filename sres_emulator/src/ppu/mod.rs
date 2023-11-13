@@ -285,6 +285,9 @@ impl Ppu {
         for (sprite, row) in sprites {
             let row_coarse = row / 8;
             let row_fine = row % 8;
+            if sprite.x >= 256 {
+                continue;
+            }
             for coarse_x in 0..sprite.coarse_width() {
                 let tile_idx = sprite.tile + coarse_x + row_coarse * 16;
                 let tile = Tile::<Bpp4Decoder>::from_tileset_index(sprite.nametable, tile_idx);

@@ -104,7 +104,7 @@ pub fn test_krom_interlace_rpg_debug_render() {
 #[test]
 #[ignore = "Only run on demand to generate snapshot"]
 fn smw_generate_snapshots() {
-    generate_snapshot("smw", "titlescreen", 300);
+    generate_snapshot("smw", "titlescreen", 500);
 }
 
 #[test]
