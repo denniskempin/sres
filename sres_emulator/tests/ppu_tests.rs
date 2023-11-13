@@ -8,6 +8,7 @@ use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::ppu::oam::SpriteSize;
 use sres_emulator::ppu::Background;
 use sres_emulator::ppu::BackgroundId;
+use sres_emulator::ppu::BgMode;
 use sres_emulator::ppu::BitDepth;
 use sres_emulator::ppu::Ppu;
 use sres_emulator::ppu::VramAddr;
@@ -186,6 +187,8 @@ impl Image for TestImageImpl {
 struct PpuSnapshot {
     vram: Vec<u16>,
     cgram: Vec<Rgb15>,
+    bgmode: BgMode,
+    bg3_priority: bool,
     backgrounds: [Background; 4],
     oam: Vec<u8>,
     sprite_sizes: (SpriteSize, SpriteSize),
@@ -197,6 +200,8 @@ impl PpuSnapshot {
         PpuSnapshot {
             vram: ppu.vram.memory.clone(),
             cgram: ppu.cgram.memory.clone(),
+            bgmode: ppu.bgmode,
+            bg3_priority: ppu.bg3_priority,
             backgrounds: [
                 ppu.backgrounds[0].clone(),
                 ppu.backgrounds[1].clone(),
@@ -217,6 +222,8 @@ impl PpuSnapshot {
         let mut ppu = Ppu::new(DebuggerRef::default());
         ppu.vram.memory = self.vram;
         ppu.cgram.memory = self.cgram;
+        ppu.bgmode = self.bgmode;
+        ppu.bg3_priority = self.bg3_priority;
         ppu.backgrounds[0] = self.backgrounds[0];
         ppu.backgrounds[1] = self.backgrounds[1];
         ppu.backgrounds[2] = self.backgrounds[2];

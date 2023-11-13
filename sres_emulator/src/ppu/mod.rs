@@ -28,6 +28,8 @@ pub struct Ppu {
     pub disabled: bool,
     pub timer: PpuTimer,
     pub vram: Vram,
+    pub bgmode: BgMode,
+    pub bg3_priority: bool,
     pub backgrounds: [Background; 4],
 
     pub framebuffer: Framebuffer,
@@ -48,6 +50,8 @@ impl Ppu {
             disabled: false,
             timer: PpuTimer::default(),
             vram: Vram::new(),
+            bgmode: BgMode::Mode0,
+            bg3_priority: false,
             backgrounds: [Background::default(); 4],
             framebuffer: Framebuffer::default(),
             cgram: CgRam::new(),
@@ -95,18 +99,8 @@ impl Ppu {
             0x2115 => self.vram.write_vmain(value),
             0x2116 => self.vram.write_vmaddl(value),
             0x2117 => self.vram.write_vmaddh(value),
-            0x2118 => {
-                if self.vram.current_addr.0 == 0 {
-                    self.debugger.trigger_custom("Write to VRAM=0".to_string());
-                }
-                self.vram.write_vmdatal(value)
-            }
-            0x2119 => {
-                if self.vram.current_addr.0 == 0 {
-                    self.debugger.trigger_custom("Write to VRAM=0".to_string());
-                }
-                self.vram.write_vmdatah(value)
-            }
+            0x2118 => self.vram.write_vmdatal(value),
+            0x2119 => self.vram.write_vmdatah(value),
             0x2121 => self.cgram.write_cgadd(value),
             0x2122 => self.cgram.write_cgdata(value),
             0x212C => self.write_tm(value),
@@ -147,25 +141,143 @@ impl Ppu {
         for x in 0..256 {
             self.framebuffer[(x, scanline)] = default_color;
         }
-        for background_id in 0..4 {
-            let bg = self.backgrounds[background_id];
-            match bg.bit_depth {
-                BitDepth::Bpp2 => {
-                    self.draw_background_scanline::<Bpp2Decoder>(scanline, background_id)
-                }
-                BitDepth::Bpp4 => {
-                    self.draw_background_scanline::<Bpp4Decoder>(scanline, background_id)
-                }
-                BitDepth::Bpp8 => {
-                    self.draw_background_scanline::<Bpp8Decoder>(scanline, background_id)
-                }
-                _ => (),
-            };
-        }
 
-        for layer in 0..4 {
-            self.draw_sprite_layer_scanline(scanline, layer);
+        match self.bgmode {
+            BgMode::Mode0 => {
+                self.draw_scanline_bgmode0(scanline);
+            }
+            BgMode::Mode1 => {
+                if self.bg3_priority {
+                    self.draw_scanline_bgmode1::<true>(scanline)
+                } else {
+                    self.draw_scanline_bgmode1::<false>(scanline)
+                }
+            }
+            BgMode::Mode2 => {
+                self.draw_scanline_bgmode2(scanline);
+            }
+            BgMode::Mode3 => {
+                self.draw_scanline_bgmode3(scanline);
+            }
+            BgMode::Mode4 => {
+                self.draw_scanline_bgmode4(scanline);
+            }
+            BgMode::Mode5 => {
+                self.draw_scanline_bgmode5(scanline);
+            }
+            BgMode::Mode6 => {
+                self.draw_scanline_bgmode6(scanline);
+            }
+            _ => panic!("Unsupported BG mode: {}", self.bgmode),
         }
+    }
+
+    pub fn draw_scanline_bgmode0(&mut self, scanline: u32) {
+        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 3);
+        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 2);
+        self.draw_sprite_layer_scanline(scanline, 0);
+
+        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 3);
+        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 2);
+        self.draw_sprite_layer_scanline(scanline, 1);
+
+        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 1);
+        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 2);
+
+        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 1);
+        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 3);
+    }
+
+    pub fn draw_scanline_bgmode1<const BG3_PRIORITY: bool>(&mut self, scanline: u32) {
+        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 2);
+        self.draw_sprite_layer_scanline(scanline, 0);
+
+        if !BG3_PRIORITY {
+            self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 2);
+        }
+        self.draw_sprite_layer_scanline(scanline, 1);
+
+        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 1);
+        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 2);
+
+        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 1);
+        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 3);
+
+        if BG3_PRIORITY {
+            self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 2);
+        }
+    }
+
+    pub fn draw_scanline_bgmode2(&mut self, scanline: u32) {
+        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 1);
+        self.draw_sprite_layer_scanline(scanline, 0);
+
+        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 1);
+
+        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 1);
+        self.draw_sprite_layer_scanline(scanline, 2);
+
+        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 3);
+    }
+
+    pub fn draw_scanline_bgmode3(&mut self, scanline: u32) {
+        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 1);
+        self.draw_sprite_layer_scanline(scanline, 0);
+
+        self.draw_background_scanline::<Bpp8Decoder, false>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 1);
+
+        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 1);
+        self.draw_sprite_layer_scanline(scanline, 2);
+
+        self.draw_background_scanline::<Bpp8Decoder, true>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 3);
+    }
+
+    pub fn draw_scanline_bgmode4(&mut self, scanline: u32) {
+        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 1);
+        self.draw_sprite_layer_scanline(scanline, 0);
+
+        self.draw_background_scanline::<Bpp8Decoder, false>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 1);
+
+        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 1);
+        self.draw_sprite_layer_scanline(scanline, 2);
+
+        self.draw_background_scanline::<Bpp8Decoder, true>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 3);
+    }
+
+    pub fn draw_scanline_bgmode5(&mut self, scanline: u32) {
+        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 1);
+        self.draw_sprite_layer_scanline(scanline, 0);
+
+        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 1);
+
+        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 1);
+        self.draw_sprite_layer_scanline(scanline, 2);
+
+        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 3);
+    }
+
+    pub fn draw_scanline_bgmode6(&mut self, scanline: u32) {
+        self.draw_sprite_layer_scanline(scanline, 0);
+
+        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 1);
+
+        self.draw_sprite_layer_scanline(scanline, 2);
+
+        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 0);
+        self.draw_sprite_layer_scanline(scanline, 3);
     }
 
     fn draw_sprite_layer_scanline(&mut self, scanline: u32, priority: u32) {
@@ -186,7 +298,7 @@ impl Ppu {
         }
     }
 
-    fn draw_background_scanline<TileDecoderT: TileDecoder>(
+    fn draw_background_scanline<TileDecoderT: TileDecoder, const PRIORITY: bool>(
         &mut self,
         scanline: u32,
         background_id: usize,
@@ -203,6 +315,9 @@ impl Ppu {
             let tile_x = coarse_x + bg.h_offset / 8;
             let tile_y = coarse_y + bg.v_offset / 8;
             let tile = bg.get_tile::<TileDecoderT>(tile_x, tile_y, &self.vram);
+            if tile.priority != PRIORITY {
+                continue;
+            }
             for (fine_x, pixel) in tile.row(fine_y, &self.vram).pixels() {
                 if pixel > 0 {
                     let color = self.cgram[bg.palette_addr + pixel];
@@ -236,34 +351,44 @@ impl Ppu {
     /// |+-------- BG3 character size (0 = 8x8, 1 = 16x16)
     /// +--------- BG4 character size (0 = 8x8, 1 = 16x16)
     fn write_bgmode(&mut self, value: u8) {
-        let bg_mode = value.bits(0..=2);
-        use BitDepth::*;
-        let bit_depths = match bg_mode {
-            0 => (Bpp2, Bpp2, Bpp2, Bpp2),
-            1 => (Bpp4, Bpp4, Bpp2, Disabled),
-            2 => (Bpp4, Bpp4, Opt, Disabled),
-            3 => (Bpp8, Bpp4, Disabled, Disabled),
-            4 => (Bpp8, Bpp2, Opt, Disabled),
-            5 => (Bpp4, Bpp2, Disabled, Disabled),
-            6 => (Bpp4, Disabled, Opt, Disabled),
-            7 => (Bpp8, Disabled, Disabled, Disabled),
+        self.bgmode = match value.bits(0..=2) {
+            0 => BgMode::Mode0,
+            1 => BgMode::Mode1,
+            2 => BgMode::Mode2,
+            3 => BgMode::Mode3,
+            4 => BgMode::Mode4,
+            5 => BgMode::Mode5,
+            6 => BgMode::Mode6,
+            7 => BgMode::Mode7,
             _ => unreachable!(),
+        };
+        self.bg3_priority = value.bit(3);
+
+        use BitDepth::*;
+        let bit_depths = match self.bgmode {
+            BgMode::Mode0 => (Bpp2, Bpp2, Bpp2, Bpp2),
+            BgMode::Mode1 => (Bpp4, Bpp4, Bpp2, Disabled),
+            BgMode::Mode2 => (Bpp4, Bpp4, Opt, Disabled),
+            BgMode::Mode3 => (Bpp8, Bpp4, Disabled, Disabled),
+            BgMode::Mode4 => (Bpp8, Bpp2, Opt, Disabled),
+            BgMode::Mode5 => (Bpp4, Bpp2, Disabled, Disabled),
+            BgMode::Mode6 => (Bpp4, Disabled, Opt, Disabled),
+            BgMode::Mode7 => (Bpp8, Disabled, Disabled, Disabled),
         };
         self.backgrounds[0].bit_depth = bit_depths.0;
         self.backgrounds[1].bit_depth = bit_depths.1;
         self.backgrounds[2].bit_depth = bit_depths.2;
         self.backgrounds[3].bit_depth = bit_depths.3;
 
-        let palette_addr = match bg_mode {
-            0 => (0, 32, 64, 96),
-            1 => (0, 32, 0, 0),
-            2 => (0, 32, 0, 0),
-            3 => (0, 0, 0, 0),
-            4 => (0, 0, 0, 0),
-            5 => (0, 0, 0, 0),
-            6 => (0, 0, 0, 0),
-            7 => (0, 0, 0, 0),
-            _ => unreachable!(),
+        let palette_addr = match self.bgmode {
+            BgMode::Mode0 => (0, 32, 64, 96),
+            BgMode::Mode1 => (0, 32, 0, 0),
+            BgMode::Mode2 => (0, 32, 0, 0),
+            BgMode::Mode3 => (0, 0, 0, 0),
+            BgMode::Mode4 => (0, 0, 0, 0),
+            BgMode::Mode5 => (0, 0, 0, 0),
+            BgMode::Mode6 => (0, 0, 0, 0),
+            BgMode::Mode7 => (0, 0, 0, 0),
         };
         self.backgrounds[0].palette_addr = palette_addr.0;
         self.backgrounds[1].palette_addr = palette_addr.1;
@@ -553,6 +678,34 @@ impl std::ops::IndexMut<(u32, u32)> for Framebuffer {
 }
 
 #[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum BgMode {
+    #[default]
+    Mode0,
+    Mode1,
+    Mode2,
+    Mode3,
+    Mode4,
+    Mode5,
+    Mode6,
+    Mode7,
+}
+
+impl Display for BgMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BgMode::Mode0 => write!(f, "Mode 0"),
+            BgMode::Mode1 => write!(f, "Mode 1"),
+            BgMode::Mode2 => write!(f, "Mode 2"),
+            BgMode::Mode3 => write!(f, "Mode 3"),
+            BgMode::Mode4 => write!(f, "Mode 4"),
+            BgMode::Mode5 => write!(f, "Mode 5"),
+            BgMode::Mode6 => write!(f, "Mode 6"),
+            BgMode::Mode7 => write!(f, "Mode 7"),
+        }
+    }
+}
+
+#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Background {
     pub enabled: bool,
     pub bit_depth: BitDepth,
@@ -687,6 +840,7 @@ impl Display for BackgroundId {
 pub struct Tile<TileDecoderT: TileDecoder> {
     tile_addr: VramAddr,
     palette: u8,
+    priority: bool,
     flip_v: bool,
     flip_h: bool,
     _decoder: PhantomData<TileDecoderT>,
@@ -698,6 +852,7 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
         Self {
             tile_addr: tileset_addr + tile_idx * TileDecoderT::WORDS_PER_ROW as u16 * 8,
             palette: tilemap_entry.bits(10..=12) as u8,
+            priority: tilemap_entry.bit(13),
             flip_v: tilemap_entry.bit(15),
             flip_h: tilemap_entry.bit(14),
             _decoder: PhantomData,
@@ -708,6 +863,7 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
         Self {
             tile_addr: tileset_addr + tile_idx * TileDecoderT::WORDS_PER_ROW * 8,
             palette: 0,
+            priority: false,
             flip_v: false,
             flip_h: false,
             _decoder: PhantomData,
