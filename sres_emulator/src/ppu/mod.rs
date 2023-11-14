@@ -104,6 +104,7 @@ impl Ppu {
             0x2121 => self.cgram.write_cgadd(value),
             0x2122 => self.cgram.write_cgdata(value),
             0x212C => self.write_tm(value),
+            0x212D => self.write_ts(value),
             _ => (),
         }
     }
@@ -288,9 +289,25 @@ impl Ppu {
             if sprite.x >= 256 {
                 continue;
             }
+
             for coarse_x in 0..sprite.coarse_width() {
-                let tile_idx = sprite.tile + coarse_x + row_coarse * 16;
-                let tile = Tile::<Bpp4Decoder>::from_tileset_index(sprite.nametable, tile_idx);
+                let tile_x = if sprite.hflip {
+                    sprite.coarse_width() - coarse_x - 1
+                } else {
+                    coarse_x
+                };
+                let tile_y = if sprite.vflip {
+                    sprite.coarse_height() - row_coarse - 1
+                } else {
+                    row_coarse
+                };
+                let tile_idx = sprite.tile + tile_x + tile_y * 16;
+                let tile = Tile::<Bpp4Decoder>::from_tileset_index(
+                    sprite.nametable,
+                    tile_idx,
+                    sprite.hflip,
+                    sprite.vflip,
+                );
                 for (fine_x, pixel) in tile.row(row_fine, &self.vram).pixels() {
                     if pixel > 0 {
                         let color = self.cgram[sprite.palette_addr() + pixel];
@@ -307,7 +324,7 @@ impl Ppu {
         background_id: usize,
     ) {
         let bg = self.backgrounds[background_id];
-        if bg.bit_depth == BitDepth::Disabled || !bg.enabled {
+        if bg.bit_depth == BitDepth::Disabled || !(bg.main_enabled || bg.subscreen_enabled) {
             return;
         }
 
@@ -502,7 +519,23 @@ impl Ppu {
     ///    +------ Enable OBJ on main screen
     pub fn write_tm(&mut self, value: u8) {
         for i in 0..4 {
-            self.backgrounds[i].enabled = value.bit(i);
+            self.backgrounds[i].main_enabled = value.bit(i);
+        }
+    }
+
+    /// Register 212D: TS - Subscreen layer enable
+    /// 7  bit  0
+    /// ---- ----
+    /// ...O 4321
+    ///    | ||||
+    ///    | |||+- Enable BG1 on subscreen
+    ///    | ||+-- Enable BG2 on subscreen
+    ///    | |+--- Enable BG3 on subscreen
+    ///    | +---- Enable BG4 on subscreen
+    ///    +------ Enable OBJ on subscreen
+    pub fn write_ts(&mut self, value: u8) {
+        for i in 0..4 {
+            self.backgrounds[i].subscreen_enabled = value.bit(i);
         }
     }
 
@@ -571,7 +604,7 @@ impl Ppu {
         for coarse_x in 0..16 {
             for coarse_y in 0..num_rows {
                 let tile_idx = coarse_y * 16 + coarse_x;
-                let tile = Tile::<TileDecoderT>::from_tileset_index(addr, tile_idx);
+                let tile = Tile::<TileDecoderT>::from_tileset_index(addr, tile_idx, false, false);
                 for (row_idx, row) in tile.rows(&self.vram) {
                     for (col_idx, pixel) in row.pixels() {
                         let color = self.cgram[palette_addr + pixel];
@@ -633,7 +666,12 @@ impl Ppu {
         for coarse_y in 0..(sprite.coarse_height()) {
             for coarse_x in 0..(sprite.coarse_width()) {
                 let tile_idx = sprite.tile + coarse_x + coarse_y * 16;
-                let tile = Tile::<Bpp4Decoder>::from_tileset_index(sprite.nametable, tile_idx);
+                let tile = Tile::<Bpp4Decoder>::from_tileset_index(
+                    sprite.nametable,
+                    tile_idx,
+                    false,
+                    false,
+                );
                 for (fine_y, row) in tile.rows(&self.vram) {
                     for (fine_x, pixel) in row.pixels() {
                         let color = self.cgram[sprite.palette_addr() + pixel];
@@ -710,7 +748,8 @@ impl Display for BgMode {
 
 #[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Background {
-    pub enabled: bool,
+    pub main_enabled: bool,
+    pub subscreen_enabled: bool,
     pub bit_depth: BitDepth,
     pub palette_addr: u8,
     pub tile_size: TileSize,
@@ -740,7 +779,7 @@ impl Background {
     }
 
     pub fn get_tileset_tile<TileDecoderT: TileDecoder>(&self, index: u32) -> Tile<TileDecoderT> {
-        Tile::from_tileset_index(self.tileset_addr, index)
+        Tile::from_tileset_index(self.tileset_addr, index, false, false)
     }
 
     pub fn coarse_width(&self) -> u32 {
@@ -862,13 +901,18 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
         }
     }
 
-    pub fn from_tileset_index(tileset_addr: VramAddr, tile_idx: u32) -> Self {
+    pub fn from_tileset_index(
+        tileset_addr: VramAddr,
+        tile_idx: u32,
+        flip_h: bool,
+        flip_v: bool,
+    ) -> Self {
         Self {
             tile_addr: tileset_addr + tile_idx * TileDecoderT::WORDS_PER_ROW * 8,
             palette: 0,
             priority: false,
-            flip_v: false,
-            flip_h: false,
+            flip_v,
+            flip_h,
             _decoder: PhantomData,
         }
     }
