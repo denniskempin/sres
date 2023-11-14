@@ -291,6 +291,9 @@ impl Ppu {
             }
 
             for coarse_x in 0..sprite.coarse_width() {
+                if sprite.x + coarse_x * 8 >= 256 {
+                    continue;
+                }
                 let tile_x = if sprite.hflip {
                     sprite.coarse_width() - coarse_x - 1
                 } else {
@@ -309,6 +312,9 @@ impl Ppu {
                     sprite.vflip,
                 );
                 for (fine_x, pixel) in tile.row(row_fine, &self.vram).pixels() {
+                    if sprite.x + coarse_x * 8 + fine_x >= 256 {
+                        continue;
+                    }
                     if pixel > 0 {
                         let color = self.cgram[sprite.palette_addr() + pixel];
                         self.framebuffer[(sprite.x + coarse_x * 8 + fine_x, scanline)] = color;
