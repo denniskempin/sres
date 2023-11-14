@@ -1,5 +1,6 @@
 use intbits::Bits;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Conversion factor from u5 to u8
 const U5_TO_U8_CONVERSION: f32 = 8.225806;
