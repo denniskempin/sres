@@ -730,9 +730,9 @@ impl Background {
     ) -> Tile<TileDecoderT> {
         let tilemap_idx = match self.tilemap_size {
             TilemapSize::Size32x32 => 0,
-            TilemapSize::Size64x32 => coarse_x / 32,
-            TilemapSize::Size32x64 => coarse_y / 32,
-            TilemapSize::Size64x64 => coarse_x / 32 + (coarse_y / 32) * 2,
+            TilemapSize::Size64x32 => (coarse_x / 32) % 2,
+            TilemapSize::Size32x64 => (coarse_y / 32) % 2,
+            TilemapSize::Size64x64 => (coarse_x / 32) % 2 + ((coarse_y / 32) % 2) * 2,
         };
         let tile_idx = tilemap_idx * 1024 + (coarse_y % 32) * 32 + (coarse_x % 32);
         let tilemap_entry = vram[self.tilemap_addr + tile_idx];
