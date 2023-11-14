@@ -105,11 +105,17 @@ pub fn test_krom_interlace_rpg_debug_render() {
 #[ignore = "Only run on demand to generate snapshot"]
 fn smw_generate_snapshots() {
     generate_snapshot("smw", "titlescreen", 500);
+    generate_snapshot("smw", "titlescreen_scrolled", 700);
 }
 
 #[test]
 fn test_smw_titlescreen() {
     run_snapshot_framebuffer_test("smw", "titlescreen");
+}
+
+#[test]
+fn test_smw_titlescreen_scrolled() {
+    run_snapshot_framebuffer_test("smw", "titlescreen_scrolled");
 }
 
 /// Renders the framebuffer of the previously generated PPU snapshot and compares against previously
