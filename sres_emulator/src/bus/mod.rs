@@ -1,4 +1,5 @@
 mod dma;
+mod multiplication;
 
 use std::path::Path;
 
@@ -7,6 +8,7 @@ use dma::DmaController;
 use log::trace;
 use log::warn;
 
+use self::multiplication::MultiplicationUnit;
 use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::debugger::DebuggerRef;
@@ -88,6 +90,7 @@ pub struct SresBus {
     pub dma_controller: DmaController,
     pub ppu: Ppu,
     pub apu: Apu,
+    pub multiplication: MultiplicationUnit,
     pub debugger: DebuggerRef,
     pub nmi_enable: bool,
     pub nmi_interrupt: bool,
@@ -103,6 +106,7 @@ impl SresBus {
             dma_controller: DmaController::new(debugger.clone()),
             ppu: Ppu::new(debugger.clone()),
             apu: Apu::new(),
+            multiplication: MultiplicationUnit::new(),
             debugger,
             nmi_enable: false,
             nmi_interrupt: false,
@@ -149,6 +153,7 @@ impl SresBus {
                 0x2140..=0x217F => self.apu.bus_peek(addr),
                 0x4210 => Some(self.peek_rdnmi()),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
+                0x4214..=0x4217 => self.multiplication.bus_peek(addr),
                 _ => None,
             },
             MemoryBlock::Unmapped => None,
@@ -166,6 +171,7 @@ impl SresBus {
                 0x2140..=0x217F => self.apu.bus_read(addr),
                 0x4210 => self.read_rdnmi(),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
+                0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 _ => {
                     self.debugger
                         .on_error(format!("Invalid read from register {}", addr));
@@ -193,9 +199,10 @@ impl SresBus {
                 0x2140..=0x217F => self.apu.bus_write(addr, value),
                 0x4200 => self.write_nmitimen(value),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
+                0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
                 _ => {
                     self.debugger
-                        .on_error(format!("Invalid write to register {}", addr));
+                        .on_error(format!("Invalid write to register {} = {}", addr, value));
                 }
             },
             MemoryBlock::Unmapped => {
