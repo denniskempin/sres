@@ -103,13 +103,13 @@ impl System {
         self.execute_until(|cpu| cpu.halt)
     }
 
-    pub fn execute_one_frame(&mut self) -> ExecutionResult {
-        let current_frame = self.cpu.bus.ppu.timer.f;
-        self.execute_until(|cpu| cpu.bus.ppu.timer.f > current_frame)
+    pub fn execute_frames(&mut self, count: u64) -> ExecutionResult {
+        let target_frame = self.cpu.bus.ppu.timer.f + count;
+        self.execute_until(|cpu| cpu.bus.ppu.timer.f >= target_frame)
     }
 
     pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {
         // TODO: Implement frame skip/doubling if not running at 60fps
-        self.execute_one_frame()
+        self.execute_frames(1)
     }
 }

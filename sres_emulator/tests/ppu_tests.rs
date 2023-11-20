@@ -56,11 +56,12 @@ pub fn test_krom_interlace_rpg() {
 }
 
 /// Renders the framebuffer at `frame` and compares against previously stored golden image.
-fn run_framebuffer_test(test_name: &str, frame: u32) -> System {
+fn run_framebuffer_test(test_name: &str, frame: u64) -> System {
     logging::test_init(true);
 
     let rom_path = test_dir().join(format!("{test_name}.sfc"));
-    let system = emulate_rom_until_frame(&rom_path, frame);
+    let mut system = System::with_sfc(&rom_path).unwrap();
+    system.execute_frames(frame);
     let framebuffer_path = test_dir().join(format!("{test_name}-framebuffer"));
     compare_to_golden(
         &system.cpu.bus.ppu.get_rgba_framebuffer::<TestImageImpl>(),
@@ -78,8 +79,8 @@ pub fn test_krom_interlace_rpg_debug_render() {
     logging::test_init(true);
 
     let rom_path = test_dir().join("krom_interlace_rpg.sfc");
-    let system = emulate_rom_until_frame(&rom_path, 10);
-
+    let mut system = System::with_sfc(&rom_path).unwrap();
+    system.execute_frames(10);
     let ppu = system.cpu.bus.ppu;
 
     // Debug render sprite 0
@@ -102,59 +103,45 @@ pub fn test_krom_interlace_rpg_debug_render() {
 }
 
 #[test]
-#[ignore = "Only run on demand to generate snapshot"]
-fn smw_generate_snapshots() {
-    generate_snapshot("smw", "titlescreen", 500);
-    generate_snapshot("smw", "titlescreen_scrolled", 700);
-}
-
-#[test]
 fn test_smw_titlescreen() {
-    run_snapshot_framebuffer_test("smw", "titlescreen");
+    run_snapshot_framebuffer_test("smw", "titlescreen", 500);
 }
 
 #[test]
 fn test_smw_titlescreen_scrolled() {
-    run_snapshot_framebuffer_test("smw", "titlescreen_scrolled");
+    run_snapshot_framebuffer_test("smw", "titlescreen_scrolled", 700);
 }
 
-/// Renders the framebuffer of the previously generated PPU snapshot and compares against previously
-/// stored golden image.
-fn run_snapshot_framebuffer_test(test_name: &str, frame_name: &str) {
-    let snapshot_path = test_dir().join(format!("{test_name}-{frame_name}.snapshot"));
+/// Loads the PPU memory / state from a snapshot file and compares the framebuffer rendering to
+/// a previously stored golden image.
+/// The snapshot is generated from the specified rom file if it does not exist.
+fn run_snapshot_framebuffer_test(rom_name: &str, test_name: &str, frame: u64) {
+    logging::test_init(true);
+
+    let snapshot_path = test_dir().join(format!("{rom_name}-{test_name}.snapshot"));
+
+    // Generate snapshot by executing rom
+    if !snapshot_path.exists() {
+        let rom_path = test_dir().join(format!("{rom_name}.sfc"));
+        let mut system = System::with_sfc(&rom_path).unwrap();
+        system.execute_frames(frame);
+        PpuSnapshot::snapshot(&system.cpu.bus.ppu).write_to_file(&snapshot_path);
+    }
+
     let mut ppu = PpuSnapshot::read_from_file(&snapshot_path).restore();
     for scanline in 0..256 {
         ppu.draw_scanline(scanline);
     }
-    let framebuffer_path = test_dir().join(format!("{test_name}-{frame_name}"));
+
+    let framebuffer_path = test_dir().join(format!("{rom_name}-{test_name}"));
     compare_to_golden(
         &ppu.get_rgba_framebuffer::<TestImageImpl>(),
         &framebuffer_path,
     );
 }
 
-/// Runs the test rom until the given frame and stores a snapshot to be tested with
-/// run_snapshot_framebuffer_test.
-fn generate_snapshot(test_name: &str, frame_name: &str, frame: u32) {
-    logging::test_init(true);
-
-    let rom_path = test_dir().join(format!("{test_name}.sfc"));
-    let system = emulate_rom_until_frame(&rom_path, frame);
-    let snapshot_path = test_dir().join(format!("{test_name}-{frame_name}.snapshot"));
-    PpuSnapshot::snapshot(&system.cpu.bus.ppu).write_to_file(&snapshot_path);
-}
-
 fn test_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/ppu_tests")
-}
-
-fn emulate_rom_until_frame(rom_file: &Path, frame: u32) -> System {
-    let mut system = System::with_sfc(&rom_file).unwrap();
-    system.cpu.reset();
-    for _ in 0..frame {
-        system.execute_one_frame();
-    }
-    system
 }
 
 fn compare_to_golden(image: &TestImageImpl, path_prefix: &Path) {

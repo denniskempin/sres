@@ -12,7 +12,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("krom_frame_time", |b| {
         b.iter_batched_ref(
             || System::with_sfc(&rom_path).unwrap(),
-            |system: &mut System| system.execute_one_frame(),
+            |system: &mut System| system.execute_frames(1),
             BatchSize::LargeInput,
         )
     });
