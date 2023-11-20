@@ -114,7 +114,7 @@ impl DebugUi {
                 } else {
                     None
                 };
-                emulator.execute_one_frame()
+                emulator.execute_frames(1)
             }
             DebugCommand::StepScanlines(n) => {
                 self.command = if n > 1 {
