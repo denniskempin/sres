@@ -16,6 +16,7 @@ use crate::ppu::Ppu;
 use crate::util::memory::Address;
 use crate::util::memory::Wrap;
 use crate::util::uint::RegisterSize;
+use crate::util::uint::U16Ext;
 use crate::util::uint::UInt;
 
 pub trait Bus {
@@ -95,6 +96,8 @@ pub struct SresBus {
     pub nmi_enable: bool,
     pub nmi_interrupt: bool,
     pub nmi_signaled: bool,
+    pub joy1: u16,
+    pub joy2: u16,
 }
 
 impl SresBus {
@@ -111,6 +114,8 @@ impl SresBus {
             nmi_enable: false,
             nmi_interrupt: false,
             nmi_signaled: false,
+            joy1: 0,
+            joy2: 0,
         }
     }
 
@@ -154,6 +159,8 @@ impl SresBus {
                 0x4210 => Some(self.peek_rdnmi()),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
+                0x4218 => Some(self.joy1.low_byte()),
+                0x4219 => Some(self.joy1.high_byte()),
                 _ => None,
             },
             MemoryBlock::Unmapped => None,
@@ -172,6 +179,8 @@ impl SresBus {
                 0x4210 => self.read_rdnmi(),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
                 0x4214..=0x4217 => self.multiplication.bus_read(addr),
+                0x4218 => self.joy1.low_byte(),
+                0x4219 => self.joy1.high_byte(),
                 _ => {
                     self.debugger
                         .on_error(format!("Invalid read from register {}", addr));

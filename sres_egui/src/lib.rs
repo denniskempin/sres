@@ -14,11 +14,13 @@ use egui::DroppedFile;
 use egui::FontId;
 use egui::Image;
 use egui::InputState;
+use egui::Key;
 use egui::Layout;
 use egui::Sense;
 use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
+use sres_emulator::controller::StandardController;
 use sres_emulator::System;
 use tracing::instrument;
 use util::EguiImageImpl;
@@ -97,7 +99,22 @@ impl EmulatorApp {
         }
     }
 
-    fn update_keys(&mut self, _input: &InputState) {}
+    fn update_keys(&mut self, input: &InputState) {
+        let joy1 = StandardController {
+            right: input.key_down(Key::ArrowRight),
+            left: input.key_down(Key::ArrowLeft),
+            up: input.key_down(Key::ArrowUp),
+            down: input.key_down(Key::ArrowDown),
+            b: input.key_down(Key::Z),
+            a: input.key_down(Key::X),
+            y: input.key_down(Key::A),
+            x: input.key_down(Key::S),
+            start: input.key_down(Key::Enter),
+            select: input.key_down(Key::Backspace),
+            ..Default::default()
+        };
+        self.emulator.cpu.bus.joy1 = joy1.to_u16();
+    }
 
     fn menu_bar(&mut self, ui: &mut Ui) {
         ui.columns(2, |columns| {
