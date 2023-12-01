@@ -144,6 +144,7 @@ impl DmaController {
                     0x4 => self.write_a1bn(channel, value),
                     0x5 => self.write_dasnl(channel, value),
                     0x6 => self.write_dasnh(channel, value),
+                    0x7 => log::warn!("HDMA not implemented."),
                     _ => {
                         self.debugger.on_error(format!("Invalid write to {}", addr));
                     }
