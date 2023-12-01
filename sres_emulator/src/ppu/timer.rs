@@ -1,3 +1,6 @@
+use crate::util::memory::Address;
+use crate::util::uint::U16Ext;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PpuTimer {
     pub master_clock: u64,
@@ -6,6 +9,11 @@ pub struct PpuTimer {
     pub f: u64,
     pub dram_refresh_position: u64,
     pub nmi_flag: bool,
+
+    pub timer_flag: bool,
+    pub h_timer_target: u16,
+    pub v_timer_target: u16,
+    pub timer_mode: HVTimerMode,
 }
 
 impl PpuTimer {
@@ -17,8 +25,31 @@ impl PpuTimer {
             v,
             h_counter: h,
             f,
-            dram_refresh_position: 538,
-            nmi_flag: false,
+            ..Default::default()
+        }
+    }
+
+    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+        match addr.offset {
+            0x4211 => self.peek_timeup(),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn bus_read(&mut self, addr: Address) -> u8 {
+        match addr.offset {
+            0x4211 => self.read_timeup(),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn bus_write(&mut self, addr: Address, value: u8) {
+        match addr.offset {
+            0x4207 => self.write_htimel(value),
+            0x4208 => self.write_htimeh(value),
+            0x4209 => self.write_vtimel(value),
+            0x420A => self.write_vtimeh(value),
+            _ => unreachable!(),
         }
     }
 
@@ -26,6 +57,61 @@ impl PpuTimer {
         for _ in 0..master_cycles {
             self.tick_master_clock();
         }
+    }
+
+    /// TIMEUP - Timer flag ($4211 read)
+    /// 7  bit  0
+    /// ---- ----
+    /// Txxx xxxx
+    /// |||| ||||
+    /// |+++-++++- (Open bus)
+    /// +--------- Timer flag
+    ///
+    /// On power-on: TIMEUP = TIMEUP & $7F
+    /// On reset:    TIMEUP = TIMEUP & $7F
+    /// On read:     TIMEUP = TIMEUP & $7F
+    pub fn peek_timeup(&self) -> Option<u8> {
+        Some(0)
+    }
+
+    pub fn read_timeup(&mut self) -> u8 {
+        self.peek_timeup().unwrap()
+    }
+
+    /// HTIMEL, HTIMEH - H timer target ($4207, $4208 write)
+    ///   HTIMEH      HTIMEL
+    ///   $4208       $4207
+    /// 7  bit  0   7  bit  0
+    /// ---- ----   ---- ----
+    /// .... ...H   LLLL LLLL
+    ///         |   |||| ||||
+    ///         +---++++-++++- H counter target for timer IRQ
+    ///
+    /// On power-on: HTIME = $1FF
+    fn write_htimel(&mut self, value: u8) {
+        self.h_timer_target.set_low_byte(value);
+    }
+
+    fn write_htimeh(&mut self, value: u8) {
+        self.h_timer_target.set_high_byte(value);
+    }
+
+    /// VTIMEL, VTIMEH - V timer target ($4209, $420A write)
+    ///   VTIMEH      VTIMEL
+    ///   $420A       $4209
+    /// 7  bit  0   7  bit  0
+    /// ---- ----   ---- ----
+    /// .... ...H   LLLL LLLL
+    ///         |   |||| ||||
+    ///         +---++++-++++- V counter target for timer IRQ
+    ///
+    /// On power-on: VTIME = $1FF
+    fn write_vtimel(&mut self, value: u8) {
+        self.v_timer_target.set_low_byte(value);
+    }
+
+    fn write_vtimeh(&mut self, value: u8) {
+        self.v_timer_target.set_high_byte(value);
     }
 
     fn tick_master_clock(&mut self) {
@@ -51,7 +137,6 @@ impl PpuTimer {
             self.v += 1;
             if self.v == 225 {
                 self.nmi_flag = true;
-                //println!("nmi = true");
             }
             self.dram_refresh_position = 538 - (self.master_clock & 7);
         }
@@ -60,7 +145,6 @@ impl PpuTimer {
             self.v -= 262;
             self.f += 1;
             self.nmi_flag = false;
-            //println!("nmi = false");
         }
     }
 
@@ -88,8 +172,20 @@ impl Default for PpuTimer {
             f: 0,
             dram_refresh_position: 538,
             nmi_flag: false,
+            timer_flag: false,
+            h_timer_target: 0x1FF,
+            v_timer_target: 0x1FF,
+            timer_mode: HVTimerMode::Off,
         }
     }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HVTimerMode {
+    Off,
+    TriggerH,
+    TriggerV,
+    TriggerHV,
 }
 
 pub fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {

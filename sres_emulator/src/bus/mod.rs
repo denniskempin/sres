@@ -5,13 +5,14 @@ use std::path::Path;
 
 use anyhow::Result;
 use dma::DmaController;
+use intbits::Bits;
 use log::trace;
-use log::warn;
 
 use self::multiplication::MultiplicationUnit;
 use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::debugger::DebuggerRef;
+use crate::ppu::HVTimerMode;
 use crate::ppu::Ppu;
 use crate::util::memory::Address;
 use crate::util::memory::Wrap;
@@ -158,9 +159,12 @@ impl SresBus {
                 0x2140..=0x217F => self.apu.bus_peek(addr),
                 0x4210 => Some(self.peek_rdnmi()),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
+                0x4211 => self.ppu.timer.bus_peek(addr),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
                 0x4218 => Some(self.joy1.low_byte()),
                 0x4219 => Some(self.joy1.high_byte()),
+                0x421A => Some(self.joy2.low_byte()),
+                0x421B => Some(self.joy2.high_byte()),
                 _ => None,
             },
             MemoryBlock::Unmapped => None,
@@ -176,11 +180,18 @@ impl SresBus {
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_read(addr),
                 0x2140..=0x217F => self.apu.bus_read(addr),
+                0x4016..=0x4017 => {
+                    log::warn!("Serial Joypad not implemented");
+                    0
+                }
                 0x4210 => self.read_rdnmi(),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
+                0x4211 => self.ppu.timer.bus_read(addr),
                 0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4218 => self.joy1.low_byte(),
                 0x4219 => self.joy1.high_byte(),
+                0x421A => self.joy2.low_byte(),
+                0x421B => self.joy2.high_byte(),
                 _ => {
                     self.debugger
                         .on_error(format!("Invalid read from register {}", addr));
@@ -209,6 +220,7 @@ impl SresBus {
                 0x4200 => self.write_nmitimen(value),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
+                0x4207..=0x420A => self.ppu.timer.bus_write(addr, value),
                 _ => {
                     self.debugger
                         .on_error(format!("Invalid write to register {} = {}", addr, value));
@@ -253,7 +265,13 @@ impl SresBus {
     /// +--------- Vblank NMI enable
     fn write_nmitimen(&mut self, value: u8) {
         self.nmi_enable = value.bit(7);
-        warn!("NMITINEN = {:02X} Not fully implemented", value);
+        self.ppu.timer.timer_mode = match value.bits(4..=5) {
+            0b00 => HVTimerMode::Off,
+            0b01 => HVTimerMode::TriggerH,
+            0b10 => HVTimerMode::TriggerV,
+            0b11 => HVTimerMode::TriggerHV,
+            _ => unreachable!(),
+        };
     }
 
     /// Register $4210: RDNMI - Read NMI Flag
