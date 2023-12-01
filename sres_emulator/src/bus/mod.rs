@@ -95,6 +95,7 @@ pub struct SresBus {
     pub multiplication: MultiplicationUnit,
     pub debugger: DebuggerRef,
     pub nmi_enable: bool,
+    pub nmi_flag: bool,
     pub nmi_interrupt: bool,
     pub nmi_signaled: bool,
     pub joy1: u16,
@@ -114,6 +115,7 @@ impl SresBus {
             debugger,
             nmi_enable: false,
             nmi_interrupt: false,
+            nmi_flag: false,
             nmi_signaled: false,
             joy1: 0,
             joy2: 0,
@@ -284,17 +286,17 @@ impl SresBus {
     /// +--------- Vblank flag
     fn read_rdnmi(&mut self) -> u8 {
         let value = self.peek_rdnmi();
-        if self.ppu.timer.nmi_flag {
+        if self.nmi_flag {
             // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
             if !(self.ppu.timer.v == 225 && self.ppu.timer.h_counter <= 2) {
-                self.ppu.timer.nmi_flag = false;
+                self.nmi_flag = false;
             }
         }
         value
     }
 
     fn peek_rdnmi(&self) -> u8 {
-        if self.ppu.timer.nmi_flag {
+        if self.nmi_flag {
             0b1111_0010
         } else {
             0b0111_0010
@@ -303,15 +305,16 @@ impl SresBus {
 
     fn advance_master_clock(&mut self, cycles: u64) {
         self.ppu.advance_master_clock(cycles);
-        if self.nmi_enable {
-            if self.ppu.timer.nmi_flag {
-                if !self.nmi_signaled {
-                    self.nmi_interrupt = true;
-                    self.nmi_signaled = true;
-                }
-            } else {
-                self.nmi_signaled = false;
+
+        if self.ppu.timer.vblank_detector.consume_rise() {
+            if self.nmi_enable {
+                self.nmi_interrupt = true;
             }
+            self.nmi_flag = true;
+        }
+
+        if self.ppu.timer.vblank_detector.consume_fall() {
+            self.nmi_flag = false;
         }
 
         if let Some((transfers, duration)) = self

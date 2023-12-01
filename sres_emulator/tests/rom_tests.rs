@@ -56,15 +56,10 @@ pub fn test_nmi_sub_cycle_accuracy() {
     for (v, h, expected_nmi, expected_internal_nmi) in TEST_CASES {
         // Create CPU with `bit $4210` program in memory
         let mut system = System::new();
-        system
-            .cpu
-            .bus
-            .cycle_write_u16(0x00.into(), 0x2C, Wrap::NoWrap);
-        system
-            .cpu
-            .bus
-            .cycle_write_u16(0x01.into(), 0x4210, Wrap::NoWrap);
         let cpu = &mut system.cpu;
+        let bus = &mut cpu.bus;
+        bus.cycle_write_u16(0x00.into(), 0x2C, Wrap::NoWrap);
+        bus.cycle_write_u16(0x01.into(), 0x4210, Wrap::NoWrap);
         cpu.reset();
 
         // Advance PPU timer until (v, h) is reached
@@ -80,7 +75,7 @@ pub fn test_nmi_sub_cycle_accuracy() {
         // If the NMI bit is set, the negative status bit will be true.
         assert_eq!(cpu.status.negative, *expected_nmi);
         // For the first 4 cycles NMI will remain high, so the internal nmi_flag will still be set.
-        assert_eq!(cpu.bus.ppu.timer.nmi_flag, *expected_internal_nmi);
+        assert_eq!(cpu.bus.nmi_flag, *expected_internal_nmi);
     }
 }
 
@@ -281,7 +276,7 @@ fn run_rom_test(test_name: &str) {
         }
 
         previous_master_cycle = system.cpu.bus.ppu.timer.master_clock;
-        system.cpu.step();
+        system.execute_one_instruction();
     }
 }
 

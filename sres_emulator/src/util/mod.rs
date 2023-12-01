@@ -36,3 +36,49 @@ impl<T, const N: usize> Default for RingBuffer<T, N> {
         }
     }
 }
+
+/// A simple edge detector that can be used to detect rising and falling edges of a signal.
+/// Used to simplify detection of start/end of vblank, timers, etc.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct EdgeDetector {
+    pub value: bool,
+    pub rise_triggered: bool,
+    pub fall_triggered: bool,
+}
+
+impl EdgeDetector {
+    pub fn new() -> Self {
+        Self {
+            value: false,
+            rise_triggered: false,
+            fall_triggered: false,
+        }
+    }
+
+    pub fn update_signal(&mut self, value: bool) {
+        if value && !self.value {
+            self.rise_triggered = true;
+        }
+        if !value && self.value {
+            self.fall_triggered = true;
+        }
+        self.value = value;
+    }
+
+    pub fn consume_rise(&mut self) -> bool {
+        let rise_triggered = self.rise_triggered;
+        self.rise_triggered = false;
+        rise_triggered
+    }
+    pub fn consume_fall(&mut self) -> bool {
+        let fall_triggered = self.fall_triggered;
+        self.fall_triggered = false;
+        fall_triggered
+    }
+}
+
+impl Default for EdgeDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
