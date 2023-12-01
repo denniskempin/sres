@@ -15,6 +15,10 @@ use bus::SresBus;
 use cpu::Cpu;
 use debugger::BreakReason;
 use debugger::DebuggerRef;
+use log::log_enabled;
+use log::Level;
+
+use crate::trace::Trace;
 
 pub enum ExecutionResult {
     Normal,
@@ -88,6 +92,9 @@ impl System {
                 return ExecutionResult::Halt;
             }
 
+            if log_enabled!(target: "cpu_state", Level::Trace) {
+                log::trace!(target: "cpu_state", "{}", Trace::from_sres_cpu(&self.cpu));
+            }
             self.cpu.step();
 
             if let Some(break_reason) = self.debugger.take_break_reason() {
@@ -98,6 +105,10 @@ impl System {
                 return ExecutionResult::Normal;
             }
         }
+    }
+
+    pub fn execute_one_instruction(&mut self) -> ExecutionResult {
+        self.execute_until(|_| true)
     }
 
     pub fn execute_until_halt(&mut self) -> ExecutionResult {

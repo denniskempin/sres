@@ -5,9 +5,6 @@ mod status;
 
 use intbits::Bits;
 use log::info;
-use log::log_enabled;
-use log::trace;
-use log::Level;
 
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
@@ -15,7 +12,6 @@ pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::debugger::DebuggerRef;
-use crate::trace::Trace;
 use crate::util::memory::Address;
 use crate::util::memory::Wrap;
 use crate::util::uint::RegisterSize;
@@ -133,9 +129,6 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
-        if log_enabled!(target: "cpu_state", Level::Trace) {
-            trace!(target: "cpu_state", "{}", Trace::from_cpu(self));
-        }
         self.debugger.before_instruction(self.pc);
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);

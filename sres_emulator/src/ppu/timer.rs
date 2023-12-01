@@ -1,5 +1,6 @@
 use crate::util::memory::Address;
 use crate::util::uint::U16Ext;
+use crate::util::EdgeDetector;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PpuTimer {
@@ -8,7 +9,7 @@ pub struct PpuTimer {
     pub h_counter: u64,
     pub f: u64,
     pub dram_refresh_position: u64,
-    pub nmi_flag: bool,
+    pub vblank_detector: EdgeDetector,
 
     pub timer_flag: bool,
     pub h_timer_target: u16,
@@ -135,17 +136,15 @@ impl PpuTimer {
         if self.h_counter >= h_duration {
             self.h_counter -= h_duration;
             self.v += 1;
-            if self.v == 225 {
-                self.nmi_flag = true;
-            }
             self.dram_refresh_position = 538 - (self.master_clock & 7);
         }
 
         if self.v >= 262 {
             self.v -= 262;
             self.f += 1;
-            self.nmi_flag = false;
         }
+
+        self.vblank_detector.update_signal(self.v >= 225);
     }
 
     pub fn hdot(&self) -> u64 {
@@ -171,7 +170,7 @@ impl Default for PpuTimer {
             h_counter: 0,
             f: 0,
             dram_refresh_position: 538,
-            nmi_flag: false,
+            vblank_detector: EdgeDetector::new(),
             timer_flag: false,
             h_timer_target: 0x1FF,
             v_timer_target: 0x1FF,
