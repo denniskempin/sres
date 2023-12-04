@@ -27,6 +27,7 @@ pub trait Bus {
     fn cycle_write_u8(&mut self, addr: Address, value: u8);
     fn reset(&mut self);
     fn check_nmi_interrupt(&mut self) -> bool;
+    fn consume_timer_interrupt(&mut self) -> bool;
 
     #[inline]
     fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
@@ -373,6 +374,10 @@ impl Bus for SresBus {
         let value = self.nmi_interrupt;
         self.nmi_interrupt = false;
         value
+    }
+
+    fn consume_timer_interrupt(&mut self) -> bool {
+        self.ppu.timer.consume_timer_interrupt()
     }
 }
 

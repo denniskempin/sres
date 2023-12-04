@@ -133,8 +133,13 @@ impl<BusT: Bus> Cpu<BusT> {
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
 
-        if self.bus.check_nmi_interrupt() && !self.status.irq_disable {
-            self.interrupt(NativeVectorTable::Nmi);
+        if !self.status.irq_disable {
+            if self.bus.check_nmi_interrupt() {
+                self.interrupt(NativeVectorTable::Nmi);
+            }
+            if self.bus.consume_timer_interrupt() {
+                self.interrupt(NativeVectorTable::Irq);
+            }
         }
     }
 

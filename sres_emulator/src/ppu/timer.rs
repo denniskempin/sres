@@ -10,8 +10,10 @@ pub struct PpuTimer {
     pub f: u64,
     pub dram_refresh_position: u64,
     pub vblank_detector: EdgeDetector,
+    pub hv_timer_detector: EdgeDetector,
 
     pub timer_flag: bool,
+    pub timer_interrupt: bool,
     pub h_timer_target: u16,
     pub v_timer_target: u16,
     pub timer_mode: HVTimerMode,
@@ -58,6 +60,12 @@ impl PpuTimer {
         for _ in 0..master_cycles {
             self.tick_master_clock();
         }
+    }
+
+    pub fn consume_timer_interrupt(&mut self) -> bool {
+        let timer_interrupt = self.timer_interrupt;
+        self.timer_interrupt = false;
+        timer_interrupt
     }
 
     /// TIMEUP - Timer flag ($4211 read)
@@ -126,6 +134,10 @@ impl PpuTimer {
             self.master_clock += 40;
         }
 
+        // Check timer early as well, in case the H target is at the end of the scanline and we
+        // may jump over it when jumping to the next scanline.
+        self.update_timer_detector();
+
         // Line 240 of each odd frame is 4 cycles shorter.
         // See: https://snes.nesdev.org/wiki/Timing#Short_and_Long_Scanlines
         let h_duration = if self.v == 240 && self.f % 2 == 1 {
@@ -145,6 +157,27 @@ impl PpuTimer {
         }
 
         self.vblank_detector.update_signal(self.v >= 225);
+        self.update_timer_detector();
+    }
+
+    fn update_timer_detector(&mut self) {
+        if self.timer_mode == HVTimerMode::Off {
+            return;
+        }
+        let h_hit = self.h_counter >= self.h_timer_target as u64;
+        let v_hit = self.v >= self.v_timer_target as u64;
+
+        self.hv_timer_detector.update_signal(match self.timer_mode {
+            HVTimerMode::TriggerH => h_hit,
+            HVTimerMode::TriggerV => v_hit,
+            HVTimerMode::TriggerHV => h_hit && v_hit,
+            HVTimerMode::Off => unreachable!(),
+        });
+
+        if self.hv_timer_detector.consume_rise() {
+            self.timer_flag = true;
+            self.timer_interrupt = true;
+        }
     }
 
     pub fn hdot(&self) -> u64 {
@@ -171,7 +204,9 @@ impl Default for PpuTimer {
             f: 0,
             dram_refresh_position: 538,
             vblank_detector: EdgeDetector::new(),
+            hv_timer_detector: EdgeDetector::new(),
             timer_flag: false,
+            timer_interrupt: false,
             h_timer_target: 0x1FF,
             v_timer_target: 0x1FF,
             timer_mode: HVTimerMode::Off,
