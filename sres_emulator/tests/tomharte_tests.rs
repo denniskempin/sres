@@ -280,6 +280,10 @@ impl Bus for TestBus {
     fn check_nmi_interrupt(&mut self) -> bool {
         false
     }
+
+    fn consume_timer_interrupt(&mut self) -> bool {
+        false
+    }
 }
 
 /// A single test case, parsed from the JSON format described in
