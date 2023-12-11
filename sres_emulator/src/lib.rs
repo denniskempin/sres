@@ -8,12 +8,15 @@ pub mod ppu;
 pub mod trace;
 pub mod util;
 
+use std::cell::RefMut;
+use std::ops::Deref;
 use std::path::Path;
 
 use anyhow::Result;
 use bus::SresBus;
 use cpu::Cpu;
 use debugger::BreakReason;
+use debugger::Debugger;
 use debugger::DebuggerRef;
 use log::log_enabled;
 use log::Level;
@@ -28,7 +31,7 @@ pub enum ExecutionResult {
 
 pub struct System {
     pub cpu: Cpu<SresBus>,
-    pub debugger: DebuggerRef,
+    debugger: DebuggerRef,
 }
 
 impl System {
@@ -39,6 +42,10 @@ impl System {
             cpu: Cpu::new(SresBus::new(debugger.clone()), debugger.clone()),
             debugger,
         }
+    }
+
+    pub fn debugger(&self) -> RefMut<'_, Debugger> {
+        self.debugger.inner.deref().borrow_mut()
     }
 
     pub fn with_sfc_bytes(sfc_data: &[u8]) -> Result<Self> {
@@ -97,7 +104,7 @@ impl System {
             }
             self.cpu.step();
 
-            if let Some(break_reason) = self.debugger.take_break_reason() {
+            if let Some(break_reason) = self.debugger().take_break_reason() {
                 return ExecutionResult::Break(break_reason);
             }
 

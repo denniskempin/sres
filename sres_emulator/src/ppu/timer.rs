@@ -1,5 +1,8 @@
+use std::fmt::Display;
+
 use crate::util::memory::Address;
 use crate::util::uint::U16Ext;
+use crate::util::uint::UInt;
 use crate::util::EdgeDetector;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -35,6 +38,7 @@ impl PpuTimer {
     pub fn bus_peek(&self, addr: Address) -> Option<u8> {
         match addr.offset {
             0x4211 => self.peek_timeup(),
+            0x4212 => self.peek_hvbjoy(),
             _ => unreachable!(),
         }
     }
@@ -42,6 +46,7 @@ impl PpuTimer {
     pub fn bus_read(&mut self, addr: Address) -> u8 {
         match addr.offset {
             0x4211 => self.read_timeup(),
+            0x4212 => self.read_hvbjoy(),
             _ => unreachable!(),
         }
     }
@@ -79,12 +84,38 @@ impl PpuTimer {
     /// On power-on: TIMEUP = TIMEUP & $7F
     /// On reset:    TIMEUP = TIMEUP & $7F
     /// On read:     TIMEUP = TIMEUP & $7F
-    pub fn peek_timeup(&self) -> Option<u8> {
-        Some(0)
+    fn peek_timeup(&self) -> Option<u8> {
+        Some(if self.timer_flag { 0x80 } else { 0 })
     }
 
-    pub fn read_timeup(&mut self) -> u8 {
-        self.peek_timeup().unwrap()
+    fn read_timeup(&mut self) -> u8 {
+        let value = self.peek_timeup().unwrap();
+        self.timer_flag = false;
+        value
+    }
+
+    /// HVBJOY - H/V blank and joypad status ($4212 read)
+    /// 7  bit  0
+    /// ---- ----
+    /// VHxx xxxJ
+    /// |||| ||||
+    /// |||| |||+- Joypad auto-read in-progress flag
+    /// ||++-+++-- (Open bus)
+    /// |+-------- Hblank flag
+    /// +--------- Vblank flag
+    fn peek_hvbjoy(&self) -> Option<u8> {
+        let mut value: u8 = 0;
+        if self.v > 225 {
+            value.set_bit(7, true);
+        }
+        if self.hdot() > 274 {
+            value.set_bit(6, true);
+        }
+        Some(value)
+    }
+
+    fn read_hvbjoy(&mut self) -> u8 {
+        self.peek_hvbjoy().unwrap()
     }
 
     /// HTIMEL, HTIMEH - H timer target ($4207, $4208 write)
@@ -164,7 +195,7 @@ impl PpuTimer {
         if self.timer_mode == HVTimerMode::Off {
             return;
         }
-        let h_hit = self.h_counter >= self.h_timer_target as u64;
+        let h_hit = self.hdot() >= self.h_timer_target as u64;
         let v_hit = self.v >= self.v_timer_target as u64;
 
         self.hv_timer_detector.update_signal(match self.timer_mode {
@@ -220,6 +251,17 @@ pub enum HVTimerMode {
     TriggerH,
     TriggerV,
     TriggerHV,
+}
+
+impl Display for HVTimerMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            HVTimerMode::Off => write!(f, "Off"),
+            HVTimerMode::TriggerH => write!(f, "TriggerH"),
+            HVTimerMode::TriggerV => write!(f, "TriggerV"),
+            HVTimerMode::TriggerHV => write!(f, "TriggerHV"),
+        }
+    }
 }
 
 pub fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
@@ -332,7 +374,7 @@ mod tests {
     ];
 
     #[test]
-    fn test_ppu_timer() {
+    fn test_hv_increments() {
         let mut timer = PpuTimer::default();
         timer.advance_master_clock(186);
         for (v, h) in V_H_REFERENCE_LOG {
@@ -340,5 +382,65 @@ mod tests {
             assert_eq!(timer.hdot(), *h);
             timer.advance_master_clock(14);
         }
+    }
+
+    #[test]
+    fn test_h_timer() {
+        let mut timer = PpuTimer::default();
+        // Enable timer on H=64
+        timer.bus_write(0x4207.into(), 0x40);
+        timer.bus_write(0x4208.into(), 0x00);
+        timer.timer_mode = HVTimerMode::TriggerH;
+
+        // H=63: All flags should be false
+        timer.advance_master_clock(255);
+        assert_eq!(timer.hdot(), 63);
+        assert_eq!(timer.bus_read(0x4211.into()), 0x00);
+        assert!(!timer.consume_timer_interrupt());
+
+        // H=64: Timer should trigger
+        timer.advance_master_clock(1);
+        assert_eq!(timer.hdot(), 64);
+        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
+        assert!(timer.consume_timer_interrupt());
+
+        // Still H=64: Flags should remain false because they have been consumed
+        timer.advance_master_clock(1);
+        assert_eq!(timer.hdot(), 64);
+        assert_eq!(timer.bus_read(0x4211.into()), 0x00);
+        assert!(!timer.consume_timer_interrupt());
+
+        // Next scanline H=64: Timer should trigger again
+        timer.advance_master_clock(1324);
+        assert_eq!(timer.hdot(), 64);
+        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
+        assert!(timer.consume_timer_interrupt());
+    }
+
+    #[test]
+    fn test_v_timer() {
+        let mut timer = PpuTimer::default();
+        // Enable timer on V=2
+        timer.bus_write(0x4209.into(), 0x02);
+        timer.bus_write(0x420A.into(), 0x00);
+        timer.timer_mode = HVTimerMode::TriggerV;
+
+        // V=1: All flags should be false
+        timer.advance_master_clock(1324);
+        assert_eq!(timer.v, 1);
+        assert_eq!(timer.bus_read(0x4211.into()), 0x00);
+        assert!(!timer.consume_timer_interrupt());
+
+        // V=2: Timer should trigger
+        timer.advance_master_clock(1324);
+        assert_eq!(timer.v, 2);
+        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
+        assert!(timer.consume_timer_interrupt());
+
+        // Still V=2: Flags should remain false because they have been consumed
+        timer.advance_master_clock(100);
+        assert_eq!(timer.v, 2);
+        assert_eq!(timer.bus_read(0x4211.into()), 0x00);
+        assert!(!timer.consume_timer_interrupt());
     }
 }

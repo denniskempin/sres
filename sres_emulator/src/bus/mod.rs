@@ -160,9 +160,9 @@ impl SresBus {
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_peek(addr),
                 0x2140..=0x217F => self.apu.bus_peek(addr),
-                0x4210 => Some(self.peek_rdnmi()),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
-                0x4211 => self.ppu.timer.bus_peek(addr),
+                0x4210 => Some(self.peek_rdnmi()),
+                0x4211..=0x4212 => self.ppu.timer.bus_peek(addr),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
                 0x4218 => Some(self.joy1.low_byte()),
                 0x4219 => Some(self.joy1.high_byte()),
@@ -183,14 +183,14 @@ impl SresBus {
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_read(addr),
                 0x2140..=0x217F => self.apu.bus_read(addr),
+                0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
+                0x4210 => self.read_rdnmi(),
+                0x4211..=0x4212 => self.ppu.timer.bus_read(addr),
+                0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4016..=0x4017 => {
                     log::warn!("Serial Joypad not implemented");
                     0
                 }
-                0x4210 => self.read_rdnmi(),
-                0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
-                0x4211 => self.ppu.timer.bus_read(addr),
-                0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4218 => self.joy1.low_byte(),
                 0x4219 => self.joy1.high_byte(),
                 0x421A => self.joy2.low_byte(),
@@ -275,6 +275,9 @@ impl SresBus {
             0b11 => HVTimerMode::TriggerHV,
             _ => unreachable!(),
         };
+        if self.ppu.timer.timer_mode != HVTimerMode::Off {
+            log::error!("TimerMode: {}", self.ppu.timer.timer_mode);
+        }
     }
 
     /// Register $4210: RDNMI - Read NMI Flag

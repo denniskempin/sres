@@ -1,9 +1,11 @@
 mod cpu;
 mod ppu;
 
+use std::cell::RefMut;
 use std::fmt::Debug;
 
 use eframe::CreationContext;
+use egui::Button;
 use egui::Context;
 use egui::FontId;
 use egui::Label;
@@ -14,6 +16,9 @@ use egui::Ui;
 use itertools::Itertools;
 use ppu::PpuDebugWindow;
 use sres_emulator::bus::Bus;
+use sres_emulator::cpu::NativeVectorTable;
+use sres_emulator::debugger::Debugger;
+use sres_emulator::debugger::Trigger;
 use sres_emulator::util::memory::Address;
 use sres_emulator::util::memory::Wrap;
 use sres_emulator::ExecutionResult;
@@ -166,6 +171,7 @@ impl DebugUi {
 
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
         cpu::debug_controls_widget(ui, self.command, |command| self.command = command);
+        breakpoints_widget(ui, emulator.debugger());
         ui.separator();
         cpu::cpu_state_widget(ui, emulator);
         ui.separator();
@@ -213,4 +219,20 @@ impl Alert {
         self.text = text.to_string();
         self.is_open = true;
     }
+}
+
+pub fn breakpoints_widget(ui: &mut Ui, mut debugger: RefMut<'_, Debugger>) {
+    ui.horizontal_wrapped(|ui| {
+        ui.label("Break on: ");
+        let nmi_trigger = Trigger::Interrupt(NativeVectorTable::Nmi);
+        let nmi_enabled = debugger.has_breakpoint(&nmi_trigger);
+        if ui.add(Button::new("NMI").frame(nmi_enabled)).clicked() {
+            debugger.toggle_breakpoint(nmi_trigger);
+        }
+        let irq_trigger = Trigger::Interrupt(NativeVectorTable::Irq);
+        let irq_enabled = debugger.has_breakpoint(&irq_trigger);
+        if ui.add(Button::new("IRQ").frame(irq_enabled)).clicked() {
+            debugger.toggle_breakpoint(irq_trigger);
+        }
+    });
 }
