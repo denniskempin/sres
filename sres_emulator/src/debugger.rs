@@ -7,6 +7,7 @@ use std::rc::Rc;
 use super::cpu::InstructionMeta;
 use crate::bus::SresBus;
 use crate::cpu::Cpu;
+use crate::cpu::NativeVectorTable;
 use crate::util::memory::Address;
 use crate::util::RingBuffer;
 
@@ -25,12 +26,13 @@ impl MemoryAccess {
 }
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Trigger {
     ProgramCounter(Range<u32>),
     CpuMemoryRead(Range<u32>),
     CpuMemoryWrite(Range<u32>),
     ExecutionError,
+    Interrupt(NativeVectorTable),
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -40,6 +42,7 @@ pub enum BreakReason {
     CpuMemoryRead(Address),
     CpuMemoryWrite(Address),
     ExecutionError(String),
+    Interrupt(NativeVectorTable),
     Custom(String),
 }
 
@@ -57,6 +60,7 @@ impl Display for BreakReason {
             }
             BreakReason::Custom(msg) => msg.fmt(f),
             BreakReason::ExecutionError(msg) => msg.fmt(f),
+            BreakReason::Interrupt(handler) => write!(f, "{} Interrupt", handler),
         }
     }
 }
@@ -69,7 +73,7 @@ impl Display for BreakReason {
 #[derive(Clone)]
 pub struct DebuggerRef {
     pub enabled: bool,
-    inner: Rc<RefCell<Debugger>>,
+    pub inner: Rc<RefCell<Debugger>>,
 }
 
 impl DebuggerRef {
@@ -80,28 +84,16 @@ impl DebuggerRef {
         }
     }
 
-    pub fn previous_instructions(&self, cpu: &Cpu<SresBus>) -> Vec<InstructionMeta> {
-        if self.enabled {
-            self.inner.borrow().previous_instructions(cpu)
-        } else {
-            vec![]
-        }
-    }
-
     pub fn before_instruction(&mut self, pc: Address) {
         if self.enabled {
             self.inner.deref().borrow_mut().before_instruction(pc);
         }
     }
-
-    pub fn take_break_reason(&mut self) -> Option<BreakReason> {
+    pub fn on_interrupt(&mut self, handler: NativeVectorTable) {
         if self.enabled {
-            self.inner.deref().borrow_mut().take_break_reason()
-        } else {
-            None
+            self.inner.deref().borrow_mut().on_interrupt(handler);
         }
     }
-
     pub fn on_error(&mut self, msg: String) {
         if self.enabled {
             self.inner.deref().borrow_mut().on_error(msg);
@@ -127,20 +119,14 @@ impl Default for DebuggerRef {
     }
 }
 
-struct Debugger {
-    pub breakpoints: Vec<Trigger>,
-    pub break_reason: Option<BreakReason>,
-    pub last_pcs: RingBuffer<Address, 20>,
+pub struct Debugger {
+    breakpoints: Vec<Trigger>,
+    break_reason: Option<BreakReason>,
+    last_pcs: RingBuffer<Address, 20>,
 }
 
 impl Debugger {
-    pub fn new() -> Self {
-        Self {
-            breakpoints: vec![],
-            break_reason: None,
-            last_pcs: RingBuffer::default(),
-        }
-    }
+    /// Frontend facing API
 
     pub fn previous_instructions(&self, cpu: &Cpu<SresBus>) -> Vec<InstructionMeta> {
         self.last_pcs
@@ -150,7 +136,42 @@ impl Debugger {
             .collect()
     }
 
-    pub fn before_instruction(&mut self, pc: Address) {
+    pub fn take_break_reason(&mut self) -> Option<BreakReason> {
+        self.break_reason.take()
+    }
+
+    pub fn has_breakpoint(&self, trigger: &Trigger) -> bool {
+        self.breakpoints.iter().any(|t| t == trigger)
+    }
+
+    pub fn add_breakpoint(&mut self, trigger: Trigger) {
+        if !self.has_breakpoint(&trigger) {
+            self.breakpoints.push(trigger);
+        }
+    }
+
+    pub fn remove_breakpoint(&mut self, trigger: &Trigger) {
+        self.breakpoints.retain(|t| t != trigger)
+    }
+
+    pub fn toggle_breakpoint(&mut self, trigger: Trigger) {
+        if self.has_breakpoint(&trigger) {
+            self.remove_breakpoint(&trigger)
+        } else {
+            self.add_breakpoint(trigger)
+        }
+    }
+
+    /// Internal API
+    fn new() -> Self {
+        Self {
+            breakpoints: vec![],
+            break_reason: None,
+            last_pcs: RingBuffer::default(),
+        }
+    }
+
+    fn before_instruction(&mut self, pc: Address) {
         self.last_pcs.push(pc);
         for trigger in self.breakpoints.iter() {
             if let Trigger::ProgramCounter(range) = trigger {
@@ -161,11 +182,16 @@ impl Debugger {
         }
     }
 
-    pub fn take_break_reason(&mut self) -> Option<BreakReason> {
-        self.break_reason.take()
+    fn on_interrupt(&mut self, interrupt: NativeVectorTable) {
+        for trigger in &self.breakpoints {
+            if let Trigger::Interrupt(handler) = trigger {
+                if *handler == interrupt {
+                    self.break_reason = Some(BreakReason::Interrupt(interrupt));
+                }
+            }
+        }
     }
-
-    pub fn on_error(&mut self, msg: String) {
+    fn on_error(&mut self, msg: String) {
         //error!("{}", msg);
         for trigger in self.breakpoints.iter() {
             if let Trigger::ExecutionError = trigger {
@@ -176,11 +202,11 @@ impl Debugger {
 
     /// Can be added to code during development to trigger the debugger.
     #[allow(dead_code)]
-    pub fn trigger_custom(&mut self, msg: String) {
+    fn trigger_custom(&mut self, msg: String) {
         self.break_reason = Some(BreakReason::Custom(msg));
     }
 
-    pub fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
+    fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
         for trigger in self.breakpoints.iter() {
             match trigger {
                 Trigger::CpuMemoryRead(range) => {

@@ -3,8 +3,9 @@ mod opcode_table;
 mod operands;
 mod status;
 
+use std::fmt::Display;
+
 use intbits::Bits;
-use log::info;
 
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
@@ -39,11 +40,23 @@ impl VariableLengthRegister {
     }
 }
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum NativeVectorTable {
     Cop = 0xFFE4,
     Break = 0xFFE6,
     Nmi = 0xFFEA,
-    Irq = 0xFFFE,
+    Irq = 0xFFEE,
+}
+
+impl Display for NativeVectorTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NativeVectorTable::Cop => write!(f, "Cop"),
+            NativeVectorTable::Break => write!(f, "Break"),
+            NativeVectorTable::Nmi => write!(f, "Nmi"),
+            NativeVectorTable::Irq => write!(f, "Irq"),
+        }
+    }
 }
 
 pub enum EmuVectorTable {
@@ -133,17 +146,16 @@ impl<BusT: Bus> Cpu<BusT> {
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
 
-        if !self.status.irq_disable {
-            if self.bus.check_nmi_interrupt() {
-                self.interrupt(NativeVectorTable::Nmi);
-            }
-            if self.bus.consume_timer_interrupt() {
-                self.interrupt(NativeVectorTable::Irq);
-            }
+        if self.bus.check_nmi_interrupt() {
+            self.interrupt(NativeVectorTable::Nmi);
+        }
+        if !self.status.irq_disable && self.bus.consume_timer_interrupt() {
+            self.interrupt(NativeVectorTable::Irq);
         }
     }
 
     fn interrupt(&mut self, handler: NativeVectorTable) {
+        self.debugger.on_interrupt(handler);
         self.stack_push_u24(u32::from(self.pc));
         self.stack_push_u8(u8::from(self.status));
         self.status.irq_disable = true;
@@ -151,7 +163,6 @@ impl<BusT: Bus> Cpu<BusT> {
         let address = self
             .bus
             .cycle_read_u16(Address::new(0, handler as u16), Wrap::NoWrap);
-        info!("Interrupt ${:04X}", address);
         self.pc = Address::new(0, address);
     }
 
