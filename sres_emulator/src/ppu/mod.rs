@@ -327,7 +327,7 @@ impl Ppu {
 
     fn draw_background_scanline<TileDecoderT: TileDecoder, const PRIORITY: bool>(
         &mut self,
-        scanline: u32,
+        screen_y: u32,
         background_id: usize,
     ) {
         let bg = self.backgrounds[background_id];
@@ -335,21 +335,18 @@ impl Ppu {
             return;
         }
 
-        let coarse_y = scanline / 8;
-        let fine_y = scanline % 8;
+        let y = screen_y + bg.v_offset;
+        for screen_x in 0..256 {
+            let x = screen_x + bg.h_offset;
 
-        for coarse_x in 0..32 {
-            let tile_x = coarse_x + bg.h_offset / 8;
-            let tile_y = coarse_y + bg.v_offset / 8;
-            let tile = bg.get_tile::<TileDecoderT>(tile_x, tile_y, &self.vram);
+            let tile = bg.get_tile::<TileDecoderT>(x / 8, y / 8, &self.vram);
             if tile.priority != PRIORITY {
                 continue;
             }
-            for (fine_x, pixel) in tile.row(fine_y, &self.vram).pixels() {
-                if pixel > 0 {
-                    let color = self.cgram[bg.palette_addr + pixel];
-                    self.framebuffer[(coarse_x * 8 + fine_x, scanline)] = color;
-                }
+            let pixel = tile.row(y % 8, &self.vram).pixel(x % 8);
+            if pixel > 0 {
+                let color = self.cgram[bg.palette_addr + pixel];
+                self.framebuffer[(screen_x, screen_y)] = color;
             }
         }
     }
