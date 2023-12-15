@@ -555,36 +555,6 @@ impl Ppu {
 
     // Debug APIs
 
-    pub fn debug_render_tileset<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
-        let mut image = ImageT::new(16 * 8, 16 * 8);
-        let background = &self.backgrounds[background_id as usize];
-        match background.bit_depth {
-            BitDepth::Bpp2 => self.debug_render_tileset_impl::<Bpp2Decoder>(&mut image, background),
-            BitDepth::Bpp4 => self.debug_render_tileset_impl::<Bpp4Decoder>(&mut image, background),
-            BitDepth::Bpp8 => self.debug_render_tileset_impl::<Bpp8Decoder>(&mut image, background),
-            _ => (),
-        };
-        image
-    }
-
-    fn debug_render_tileset_impl<TileDecoderT: TileDecoder>(
-        &self,
-        image: &mut impl Image,
-        background: &Background,
-    ) {
-        for tile_idx in 0..256 {
-            let tile_x: u32 = (tile_idx % 16) * 8;
-            let tile_y: u32 = (tile_idx / 16) * 8;
-            let tile = background.get_tileset_tile::<TileDecoderT>(tile_idx);
-            for (row_idx, row) in tile.rows(&self.vram) {
-                for (col_idx, pixel) in row.pixels() {
-                    let color = self.cgram[background.palette_addr + pixel];
-                    image.set_pixel((tile_x + col_idx, tile_y + row_idx), color.into());
-                }
-            }
-        }
-    }
-
     pub fn debug_render_vram<ImageT: Image>(
         &self,
         addr: VramAddr,

@@ -87,7 +87,6 @@ pub fn ppu_status_widget(ui: &mut Ui, ppu: &Ppu) {
 struct PpuBackgroundWidget {
     selected_bg: BackgroundId,
     tilemap_texture: TextureHandle,
-    tileset_texture: TextureHandle,
 }
 
 impl PpuBackgroundWidget {
@@ -99,21 +98,12 @@ impl PpuBackgroundWidget {
                 ColorImage::example(),
                 Default::default(),
             ),
-            tileset_texture: cc.egui_ctx.load_texture(
-                "Tileset",
-                ColorImage::example(),
-                Default::default(),
-            ),
         }
     }
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
         self.tilemap_texture.set(
             ppu.debug_render_background::<EguiImageImpl>(self.selected_bg),
-            TextureOptions::default(),
-        );
-        self.tileset_texture.set(
-            ppu.debug_render_tileset::<EguiImageImpl>(self.selected_bg),
             TextureOptions::default(),
         );
     }
