@@ -134,156 +134,165 @@ impl Ppu {
         image
     }
 
-    pub fn draw_scanline(&mut self, scanline: u32) {
-        if scanline >= 224 {
+    pub fn draw_scanline(&mut self, screen_y: u32) {
+        if screen_y >= 224 {
             return;
         }
 
         let default_color = self.cgram[0];
-        for x in 0..256 {
-            self.framebuffer[(x, scanline)] = default_color;
-        }
+        let mut scanline = [default_color; 256];
+        self.draw_scanline_layer(screen_y, &mut scanline);
 
+        for x in 0..256 {
+            self.framebuffer[(x, screen_y)] = scanline[x as usize];
+        }
+    }
+
+    pub fn draw_scanline_layer(&self, screen_y: u32, scanline: &mut [Rgb15]) {
         match self.bgmode {
             BgMode::Mode0 => {
-                self.draw_scanline_bgmode0(scanline);
+                self.draw_scanline_bgmode0(screen_y, scanline);
             }
             BgMode::Mode1 => {
                 if self.bg3_priority {
-                    self.draw_scanline_bgmode1::<true>(scanline)
+                    self.draw_scanline_bgmode1::<true>(screen_y, scanline)
                 } else {
-                    self.draw_scanline_bgmode1::<false>(scanline)
+                    self.draw_scanline_bgmode1::<false>(screen_y, scanline)
                 }
             }
             BgMode::Mode2 => {
-                self.draw_scanline_bgmode2(scanline);
+                self.draw_scanline_bgmode2(screen_y, scanline);
             }
             BgMode::Mode3 => {
-                self.draw_scanline_bgmode3(scanline);
+                self.draw_scanline_bgmode3(screen_y, scanline);
             }
             BgMode::Mode4 => {
-                self.draw_scanline_bgmode4(scanline);
+                self.draw_scanline_bgmode4(screen_y, scanline);
             }
             BgMode::Mode5 => {
-                self.draw_scanline_bgmode5(scanline);
+                self.draw_scanline_bgmode5(screen_y, scanline);
             }
             BgMode::Mode6 => {
-                self.draw_scanline_bgmode6(scanline);
+                self.draw_scanline_bgmode6(screen_y, scanline);
             }
             _ => panic!("Unsupported BG mode: {}", self.bgmode),
         }
     }
 
-    pub fn draw_scanline_bgmode0(&mut self, scanline: u32) {
-        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 3);
-        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 2);
-        self.draw_sprite_layer_scanline(scanline, 0);
+    pub fn draw_scanline_bgmode0(&self, screen_y: u32, scanline: &mut [Rgb15]) {
+        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 3, scanline);
+        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 2, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
 
-        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 3);
-        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 2);
-        self.draw_sprite_layer_scanline(scanline, 1);
+        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 3, scanline);
+        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 2, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
 
-        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 1);
-        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 2);
+        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 1, scanline);
+        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
 
-        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 1);
-        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 3);
+        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 1, scanline);
+        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
     }
 
-    pub fn draw_scanline_bgmode1<const BG3_PRIORITY: bool>(&mut self, scanline: u32) {
-        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 2);
-        self.draw_sprite_layer_scanline(scanline, 0);
+    pub fn draw_scanline_bgmode1<const BG3_PRIORITY: bool>(
+        &self,
+        screen_y: u32,
+        scanline: &mut [Rgb15],
+    ) {
+        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 2, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
 
         if !BG3_PRIORITY {
-            self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 2);
+            self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 2, scanline);
         }
-        self.draw_sprite_layer_scanline(scanline, 1);
+        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 1);
-        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 2);
+        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 1, scanline);
+        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 1);
-        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 3);
+        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 1, scanline);
+        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
 
         if BG3_PRIORITY {
-            self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 2);
+            self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 2, scanline);
         }
     }
 
-    pub fn draw_scanline_bgmode2(&mut self, scanline: u32) {
-        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 1);
-        self.draw_sprite_layer_scanline(scanline, 0);
+    pub fn draw_scanline_bgmode2(&self, screen_y: u32, scanline: &mut [Rgb15]) {
+        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 1, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 1);
+        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 1);
-        self.draw_sprite_layer_scanline(scanline, 2);
+        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 1, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 3);
+        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
     }
 
-    pub fn draw_scanline_bgmode3(&mut self, scanline: u32) {
-        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 1);
-        self.draw_sprite_layer_scanline(scanline, 0);
+    pub fn draw_scanline_bgmode3(&self, screen_y: u32, scanline: &mut [Rgb15]) {
+        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 1, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
 
-        self.draw_background_scanline::<Bpp8Decoder, false>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 1);
+        self.draw_background_scanline::<Bpp8Decoder, false>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 1);
-        self.draw_sprite_layer_scanline(scanline, 2);
+        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 1, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
 
-        self.draw_background_scanline::<Bpp8Decoder, true>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 3);
+        self.draw_background_scanline::<Bpp8Decoder, true>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
     }
 
-    pub fn draw_scanline_bgmode4(&mut self, scanline: u32) {
-        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 1);
-        self.draw_sprite_layer_scanline(scanline, 0);
+    pub fn draw_scanline_bgmode4(&self, screen_y: u32, scanline: &mut [Rgb15]) {
+        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 1, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
 
-        self.draw_background_scanline::<Bpp8Decoder, false>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 1);
+        self.draw_background_scanline::<Bpp8Decoder, false>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
 
-        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 1);
-        self.draw_sprite_layer_scanline(scanline, 2);
+        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 1, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
 
-        self.draw_background_scanline::<Bpp8Decoder, true>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 3);
+        self.draw_background_scanline::<Bpp8Decoder, true>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
     }
 
-    pub fn draw_scanline_bgmode5(&mut self, scanline: u32) {
-        self.draw_background_scanline::<Bpp2Decoder, false>(scanline, 1);
-        self.draw_sprite_layer_scanline(scanline, 0);
+    pub fn draw_scanline_bgmode5(&self, screen_y: u32, scanline: &mut [Rgb15]) {
+        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 1, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 1);
+        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
 
-        self.draw_background_scanline::<Bpp2Decoder, true>(scanline, 1);
-        self.draw_sprite_layer_scanline(scanline, 2);
+        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 1, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 3);
+        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
     }
 
-    pub fn draw_scanline_bgmode6(&mut self, scanline: u32) {
-        self.draw_sprite_layer_scanline(scanline, 0);
+    pub fn draw_scanline_bgmode6(&self, screen_y: u32, scanline: &mut [Rgb15]) {
+        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, false>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 1);
+        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
 
-        self.draw_sprite_layer_scanline(scanline, 2);
+        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, true>(scanline, 0);
-        self.draw_sprite_layer_scanline(scanline, 3);
+        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 0, scanline);
+        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
     }
 
-    fn draw_sprite_layer_scanline(&mut self, scanline: u32, priority: u32) {
-        let sprites = self.oam.get_sprites_on_scanline(scanline, priority);
+    fn draw_sprite_layer_scanline(&self, screen_y: u32, priority: u32, scanline: &mut [Rgb15]) {
+        let sprites = self.oam.get_sprites_on_scanline(screen_y, priority);
         for (sprite, row) in sprites {
             let row_coarse = row / 8;
             let row_fine = row % 8;
@@ -318,7 +327,7 @@ impl Ppu {
                     }
                     if pixel > 0 {
                         let color = self.cgram[sprite.palette_addr() + pixel];
-                        self.framebuffer[(sprite.x + coarse_x * 8 + fine_x, scanline)] = color;
+                        scanline[(sprite.x + coarse_x * 8 + fine_x) as usize] = color;
                     }
                 }
             }
@@ -326,9 +335,10 @@ impl Ppu {
     }
 
     fn draw_background_scanline<TileDecoderT: TileDecoder, const PRIORITY: bool>(
-        &mut self,
+        &self,
         screen_y: u32,
         background_id: usize,
+        scanline: &mut [Rgb15],
     ) {
         let bg = self.backgrounds[background_id];
         if bg.bit_depth == BitDepth::Disabled || !(bg.main_enabled || bg.subscreen_enabled) {
@@ -346,7 +356,7 @@ impl Ppu {
             let pixel = tile.row(y % 8, &self.vram).pixel(x % 8);
             if pixel > 0 {
                 let color = self.cgram[bg.palette_addr + pixel];
-                self.framebuffer[(screen_x, screen_y)] = color;
+                scanline[screen_x as usize] = color;
             }
         }
     }
@@ -699,6 +709,10 @@ impl Framebuffer {
             .iter()
             .enumerate()
             .map(|(idx, pixel)| (idx as u32 % 256, idx as u32 / 256, pixel))
+    }
+
+    pub fn row_mut(&mut self, y: u32) -> &mut [Rgb15] {
+        &mut self.0[(y as usize * 256)..((y as usize + 1) * 256)]
     }
 }
 
