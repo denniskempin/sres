@@ -49,6 +49,11 @@ pub fn test_krom_bgmap_8bpp() {
 }
 
 #[test]
+pub fn test_krom_blend_hicolor_3840() {
+    run_framebuffer_test("krom_blend_hicolor_3840", 10);
+}
+
+#[test]
 pub fn test_krom_interlace_rpg() {
     // Note: Interlacing or high-res is not implemented and used by this test rom.
     // However it's the only test rom I have available to test sprite rendering.
