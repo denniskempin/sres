@@ -143,7 +143,7 @@ impl Oam {
         let mut sprites = Vec::new();
         for sprite_id in 0..128 {
             let sprite = self.get_sprite(sprite_id);
-            if sprite.priority != priority {
+            if sprite.priority != priority as u8 {
                 continue;
             }
 
@@ -160,7 +160,24 @@ impl Oam {
         }
         sprites
     }
+    pub fn get_all_sprites_on_scanline(&self, scanline: u32) -> Vec<(Sprite, u32)> {
+        let mut sprites = Vec::new();
+        for sprite_id in 0..128 {
+            let sprite = self.get_sprite(sprite_id);
 
+            let y = sprite.y;
+            let overdraw_scanline = scanline + 256;
+            if (y..(y + sprite.height())).contains(&scanline) {
+                sprites.push((sprite, scanline - y));
+            } else if (y..(y + sprite.height())).contains(&overdraw_scanline) {
+                sprites.push((sprite, overdraw_scanline - y));
+            }
+            if sprites.len() > 32 {
+                break;
+            }
+        }
+        sprites
+    }
     pub fn get_sprite(&self, sprite_id: u32) -> Sprite {
         let sprite_addr = sprite_id as usize * 4;
         let attribute_addr = 0x200 + (sprite_id as usize) / 4;
@@ -207,7 +224,7 @@ pub struct Sprite {
     pub tile: u32,
     pub nametable: VramAddr,
     pub palette: u8,
-    pub priority: u32,
+    pub priority: u8,
     pub hflip: bool,
     pub vflip: bool,
     pub size: SpriteSize,
@@ -236,7 +253,7 @@ impl Sprite {
                 nametables.0
             },
             palette: data[3].bits(1..=3),
-            priority: data[3].bits(4..=5) as u32,
+            priority: data[3].bits(4..=5),
             hflip: data[3].bit(6),
             vflip: data[3].bit(7),
             size: if attributes.bit((id % 4) * 2 + 1) {

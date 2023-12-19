@@ -95,7 +95,7 @@ pub fn test_krom_interlace_rpg_debug_render() {
     // Debug render BG0
     let background_path = test_dir().join("krom_interlace_rpg-bg0");
     compare_to_golden(
-        &ppu.debug_render_background(BackgroundId::BG0),
+        &ppu.debug_render_background(BackgroundId::BG1),
         &background_path,
     );
 

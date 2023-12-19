@@ -44,6 +44,12 @@ pub struct Ppu {
     pub debugger: DebuggerRef,
 }
 
+#[derive(Copy, Clone, PartialEq)]
+enum Layer {
+    Background(BackgroundId, bool),
+    Object(u8),
+}
+
 impl Ppu {
     #[allow(clippy::new_without_default)]
     pub fn new(debugger: DebuggerRef) -> Self {
@@ -139,160 +145,141 @@ impl Ppu {
             return;
         }
 
-        let default_color = self.cgram[0];
-        let mut scanline = [default_color; 256];
-        self.draw_scanline_layer(screen_y, &mut scanline);
+        let mut bg_data: [[(u8, bool); 256]; 4] = [
+            [(0, false); 256],
+            [(0, false); 256],
+            [(0, false); 256],
+            [(0, false); 256],
+        ];
+        let layers = self.decode_bgmode(screen_y, &mut bg_data);
 
+        let mut obj_data: [(u8, u8); 256] = [(0, 0); 256];
+        self.decode_obj(screen_y, &mut obj_data);
+
+        let mut scanline = [self.cgram[0]; 256];
+        for layer in layers.iter().rev() {
+            match layer {
+                Layer::Background(id, layer_priority) => {
+                    let bg = self.backgrounds[*id as usize];
+                    if bg.bit_depth == BitDepth::Disabled
+                        || !(bg.main_enabled || bg.subscreen_enabled)
+                    {
+                        continue;
+                    }
+                    for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
+                        if layer_priority != priority {
+                            continue;
+                        }
+                        if *pixel > 0 {
+                            scanline[x as usize] = self.cgram[bg.palette_addr + pixel];
+                        }
+                    }
+                }
+                Layer::Object(layer_priority) => {
+                    for (x, (pixel, priority)) in obj_data.iter().enumerate() {
+                        if layer_priority != priority {
+                            continue;
+                        }
+                        if *pixel > 0 {
+                            scanline[x as usize] = self.cgram[*pixel];
+                        }
+                    }
+                }
+            }
+        }
         for x in 0..256 {
             self.framebuffer[(x, screen_y)] = scanline[x as usize];
         }
     }
 
-    pub fn draw_scanline_layer(&self, screen_y: u32, scanline: &mut [Rgb15]) {
+    /// Decodes background data and determines layer priorities
+    ///
+    /// Follows the following table from snes.nesdev.org:
+    ///
+    /// Mode| BG bit depth  |Offsets |     Priorities (front -> back)
+    ///     |BG1 BG2 BG3 BG4|per tile|
+    ///  0  | 2   2   2   2 |   No   |   S3 H1 H2 S2 L1 L2 S1 H3 H4 S0 L3 L4
+    ///  1  | 4   4   2     |   No   |   S3 H1 H2 S2 L1 L2 S1 H3    S0 L3
+    ///     |               |        |H3 S3 H1 H2 S2 L1 L2 S1       S0 L3
+    ///  2  | 4   4         |  Yes   |   S3 H1    S2 H2    S1 L1    S0 L2
+    ///  3  | 8   4         |   No   |   S3 H1    S2 H2    S1 L1    S0 L2
+    ///  4  | 8   2         |  Yes   |   S3 H1    S2 H2    S1 L1    S0 L2
+    ///  5  | 4   2         |   No   |   S3 H1    S2 H2    S1 L1    S0 L2
+    ///  6  | 4             |  Yes   |   S3 H1    S2       S1 L1    S0
+    ///  7  | 8             |   No   |   S3       S2       S1 L1    S0
+    /// 7EXT| 8   7         |   No   |   S3       S2 H2    S1 L1    S0 L2
+    fn decode_bgmode(&self, screen_y: u32, bg_data: &mut [[(u8, bool); 256]; 4]) -> &[Layer] {
+        use BackgroundId::*;
+        use Layer::*;
+
+        const S0: Layer = Object(0);
+        const S1: Layer = Object(1);
+        const S2: Layer = Object(2);
+        const S3: Layer = Object(3);
+        const L1: Layer = Background(BG1, false);
+        const L2: Layer = Background(BG2, false);
+        const L3: Layer = Background(BG3, false);
+        const L4: Layer = Background(BG4, false);
+        const H1: Layer = Background(BG1, true);
+        const H2: Layer = Background(BG2, true);
+        const H3: Layer = Background(BG3, true);
+        const H4: Layer = Background(BG4, true);
+
         match self.bgmode {
             BgMode::Mode0 => {
-                self.draw_scanline_bgmode0(screen_y, scanline);
+                self.decode_bg::<Bpp2Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
+                self.decode_bg::<Bpp2Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
+                self.decode_bg::<Bpp2Decoder>(screen_y, BG3, &mut (*bg_data)[2]);
+                self.decode_bg::<Bpp2Decoder>(screen_y, BG4, &mut (*bg_data)[3]);
+                &[S3, H1, H2, S2, L1, L2, S1, H3, H4, S0, L3, L4]
             }
             BgMode::Mode1 => {
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
+                self.decode_bg::<Bpp2Decoder>(screen_y, BG3, &mut (*bg_data)[2]);
                 if self.bg3_priority {
-                    self.draw_scanline_bgmode1::<true>(screen_y, scanline)
+                    &[H3, S3, H1, H2, S2, L1, L2, S1, S0, L3]
                 } else {
-                    self.draw_scanline_bgmode1::<false>(screen_y, scanline)
+                    &[S3, H1, H2, S2, L1, L2, S1, H3, S0, L3]
                 }
             }
-            BgMode::Mode2 => {
-                self.draw_scanline_bgmode2(screen_y, scanline);
-            }
             BgMode::Mode3 => {
-                self.draw_scanline_bgmode3(screen_y, scanline);
-            }
-            BgMode::Mode4 => {
-                self.draw_scanline_bgmode4(screen_y, scanline);
+                self.decode_bg::<Bpp8Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
+                &[S3, H1, S2, H2, S1, L1, S0, L2]
             }
             BgMode::Mode5 => {
-                self.draw_scanline_bgmode5(screen_y, scanline);
-            }
-            BgMode::Mode6 => {
-                self.draw_scanline_bgmode6(screen_y, scanline);
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
+                self.decode_bg::<Bpp2Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
+                &[S3, H1, S2, H2, S1, L1, S0, L2]
             }
             _ => panic!("Unsupported BG mode: {}", self.bgmode),
         }
     }
 
-    pub fn draw_scanline_bgmode0(&self, screen_y: u32, scanline: &mut [Rgb15]) {
-        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 3, scanline);
-        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 2, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
-
-        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 3, scanline);
-        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 2, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
-
-        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 1, scanline);
-        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
-
-        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 1, scanline);
-        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
-    }
-
-    pub fn draw_scanline_bgmode1<const BG3_PRIORITY: bool>(
+    fn decode_bg<TileDecoderT: TileDecoder>(
         &self,
         screen_y: u32,
-        scanline: &mut [Rgb15],
+        background_id: BackgroundId,
+        data: &mut [(u8, bool); 256],
     ) {
-        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 2, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
-
-        if !BG3_PRIORITY {
-            self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 2, scanline);
+        let bg = self.backgrounds[background_id as usize];
+        if bg.bit_depth == BitDepth::Disabled || !(bg.main_enabled || bg.subscreen_enabled) {
+            return;
         }
-        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
 
-        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 1, scanline);
-        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
+        let y = screen_y + bg.v_offset;
+        for screen_x in 0..256 {
+            let x = screen_x + bg.h_offset;
 
-        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 1, scanline);
-        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
-
-        if BG3_PRIORITY {
-            self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 2, scanline);
+            let tile = bg.get_tile::<TileDecoderT>(x / 8, y / 8, &self.vram);
+            let pixel = tile.row(y % 8, &self.vram).pixel(x % 8);
+            data[screen_x as usize] = (pixel, tile.priority);
         }
     }
 
-    pub fn draw_scanline_bgmode2(&self, screen_y: u32, scanline: &mut [Rgb15]) {
-        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 1, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
-
-        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
-
-        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 1, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
-
-        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
-    }
-
-    pub fn draw_scanline_bgmode3(&self, screen_y: u32, scanline: &mut [Rgb15]) {
-        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 1, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
-
-        self.draw_background_scanline::<Bpp8Decoder, false>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
-
-        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 1, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
-
-        self.draw_background_scanline::<Bpp8Decoder, true>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
-    }
-
-    pub fn draw_scanline_bgmode4(&self, screen_y: u32, scanline: &mut [Rgb15]) {
-        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 1, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
-
-        self.draw_background_scanline::<Bpp8Decoder, false>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
-
-        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 1, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
-
-        self.draw_background_scanline::<Bpp8Decoder, true>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
-    }
-
-    pub fn draw_scanline_bgmode5(&self, screen_y: u32, scanline: &mut [Rgb15]) {
-        self.draw_background_scanline::<Bpp2Decoder, false>(screen_y, 1, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
-
-        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
-
-        self.draw_background_scanline::<Bpp2Decoder, true>(screen_y, 1, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
-
-        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
-    }
-
-    pub fn draw_scanline_bgmode6(&self, screen_y: u32, scanline: &mut [Rgb15]) {
-        self.draw_sprite_layer_scanline(screen_y, 0, scanline);
-
-        self.draw_background_scanline::<Bpp4Decoder, false>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 1, scanline);
-
-        self.draw_sprite_layer_scanline(screen_y, 2, scanline);
-
-        self.draw_background_scanline::<Bpp4Decoder, true>(screen_y, 0, scanline);
-        self.draw_sprite_layer_scanline(screen_y, 3, scanline);
-    }
-
-    fn draw_sprite_layer_scanline(&self, screen_y: u32, priority: u32, scanline: &mut [Rgb15]) {
-        let sprites = self.oam.get_sprites_on_scanline(screen_y, priority);
+    fn decode_obj(&self, screen_y: u32, obj_data: &mut [(u8, u8); 256]) {
+        let sprites = self.oam.get_all_sprites_on_scanline(screen_y);
         for (sprite, row) in sprites {
             let row_coarse = row / 8;
             let row_fine = row % 8;
@@ -326,41 +313,13 @@ impl Ppu {
                         continue;
                     }
                     if pixel > 0 {
-                        let color = self.cgram[sprite.palette_addr() + pixel];
-                        scanline[(sprite.x + coarse_x * 8 + fine_x) as usize] = color;
+                        obj_data[(sprite.x + coarse_x * 8 + fine_x) as usize] =
+                            (sprite.palette_addr() + pixel, sprite.priority);
                     }
                 }
             }
         }
     }
-
-    fn draw_background_scanline<TileDecoderT: TileDecoder, const PRIORITY: bool>(
-        &self,
-        screen_y: u32,
-        background_id: usize,
-        scanline: &mut [Rgb15],
-    ) {
-        let bg = self.backgrounds[background_id];
-        if bg.bit_depth == BitDepth::Disabled || !(bg.main_enabled || bg.subscreen_enabled) {
-            return;
-        }
-
-        let y = screen_y + bg.v_offset;
-        for screen_x in 0..256 {
-            let x = screen_x + bg.h_offset;
-
-            let tile = bg.get_tile::<TileDecoderT>(x / 8, y / 8, &self.vram);
-            if tile.priority != PRIORITY {
-                continue;
-            }
-            let pixel = tile.row(y % 8, &self.vram).pixel(x % 8);
-            if pixel > 0 {
-                let color = self.cgram[bg.palette_addr + pixel];
-                scanline[screen_x as usize] = color;
-            }
-        }
-    }
-
     /// Register 2100: INIDISP
     /// 7  bit  0
     /// ---- ----
@@ -850,19 +809,19 @@ impl Display for TilemapSize {
 #[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum BackgroundId {
     #[default]
-    BG0 = 0,
-    BG1 = 1,
-    BG2 = 2,
-    BG3 = 3,
+    BG1 = 0,
+    BG2 = 1,
+    BG3 = 2,
+    BG4 = 3,
 }
 
 impl Display for BackgroundId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            BackgroundId::BG0 => write!(f, "BG0"),
             BackgroundId::BG1 => write!(f, "BG1"),
             BackgroundId::BG2 => write!(f, "BG2"),
             BackgroundId::BG3 => write!(f, "BG3"),
+            BackgroundId::BG4 => write!(f, "BG4"),
         }
     }
 }
