@@ -92,7 +92,7 @@ struct PpuBackgroundWidget {
 impl PpuBackgroundWidget {
     pub fn new(cc: &CreationContext) -> Self {
         PpuBackgroundWidget {
-            selected_bg: BackgroundId::BG0,
+            selected_bg: BackgroundId::BG1,
             tilemap_texture: cc.egui_ctx.load_texture(
                 "Tilemap",
                 ColorImage::example(),
@@ -114,10 +114,10 @@ impl PpuBackgroundWidget {
         tabs_widget(
             ui,
             &[
-                BackgroundId::BG0,
                 BackgroundId::BG1,
                 BackgroundId::BG2,
                 BackgroundId::BG3,
+                BackgroundId::BG4,
             ],
             &mut self.selected_bg,
         );
@@ -237,10 +237,10 @@ impl PpuVramWidget {
 
         ui.horizontal(|ui| {
             for bgid in &[
-                BackgroundId::BG0,
                 BackgroundId::BG1,
                 BackgroundId::BG2,
                 BackgroundId::BG3,
+                BackgroundId::BG4,
             ] {
                 if ui.button(bgid.to_string()).clicked() {
                     let bg = ppu.backgrounds[*bgid as usize];
