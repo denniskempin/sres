@@ -18,7 +18,6 @@ use ppu::PpuDebugWindow;
 use sres_emulator::bus::Bus;
 use sres_emulator::cpu::NativeVectorTable;
 use sres_emulator::debugger::Debugger;
-use sres_emulator::debugger::PerfCounter;
 use sres_emulator::debugger::Trigger;
 use sres_emulator::util::memory::Address;
 use sres_emulator::util::memory::Wrap;
@@ -174,8 +173,6 @@ impl DebugUi {
         cpu::debug_controls_widget(ui, self.command, |command| self.command = command);
         breakpoints_widget(ui, emulator.debugger());
         ui.separator();
-        perf_widget(ui, emulator.debugger());
-        ui.separator();
         cpu::cpu_state_widget(ui, emulator);
         ui.separator();
         cpu::disassembly_widget(ui, emulator);
@@ -236,23 +233,6 @@ pub fn breakpoints_widget(ui: &mut Ui, mut debugger: RefMut<'_, Debugger>) {
         let irq_enabled = debugger.has_breakpoint(&irq_trigger);
         if ui.add(Button::new("IRQ").frame(irq_enabled)).clicked() {
             debugger.toggle_breakpoint(irq_trigger);
-        }
-    });
-}
-
-pub fn perf_widget(ui: &mut Ui, debugger: RefMut<'_, Debugger>) {
-    ui.vertical(|ui| {
-        ui.label(format!(
-            "Frame time: {:.2}",
-            debugger.get_avg_frame_time_ms()
-        ));
-        use PerfCounter::*;
-        for label in &[Ppu, Timers, Dma, Cpu] {
-            ui.label(format!(
-                "{}: {:.2}",
-                label,
-                debugger.get_avg_perf_counter_ms(*label)
-            ));
         }
     });
 }
