@@ -142,6 +142,7 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
+        puffin::profile_function!();
         self.debugger.before_instruction(self.pc);
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);

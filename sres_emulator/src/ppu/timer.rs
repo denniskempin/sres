@@ -62,6 +62,8 @@ impl PpuTimer {
     }
 
     pub fn advance_master_clock(&mut self, master_cycles: u64) {
+        puffin::profile_scope!("timers");
+
         for _ in 0..master_cycles {
             self.tick_master_clock();
         }

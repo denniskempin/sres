@@ -146,7 +146,7 @@ fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &Textur
             "Tilemap ({}, {})",
             background.tilemap_addr, background.tilemap_size
         ));
-        ui.image(tilemap_texture, Vec2::new(512.0, 512.0));
+        ui.image((tilemap_texture.id(), Vec2::new(512.0, 512.0)));
     });
 }
 
@@ -191,10 +191,10 @@ impl PpuSpritesWidget {
         let sprite = ppu.oam.get_sprite(self.sprite_id);
         ui.horizontal(|ui| {
             ui.vertical(|ui| ui.label(format!("Position: ({}, {})", sprite.x, sprite.y)));
-            ui.image(
-                &mut self.sprite_texture,
+            ui.image((
+                self.sprite_texture.id(),
                 Vec2::new(sprite.width() as f32 * 4.0, sprite.height() as f32 * 4.0),
-            );
+            ));
         });
     }
 }
@@ -289,7 +289,7 @@ impl PpuVramWidget {
                     self.palette_addr = self.palette_addr.wrapping_add(0x10);
                 }
             });
-            ui.image(&mut self.vram_texture, Vec2::new(512.0, 512.0));
+            ui.image((self.vram_texture.id(), Vec2::new(512.0, 512.0)));
         });
     }
 }

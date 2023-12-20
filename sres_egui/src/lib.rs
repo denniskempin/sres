@@ -160,18 +160,19 @@ impl EmulatorApp {
         let desired_size = ui.available_size();
         let (whole_rect, _) =
             ui.allocate_exact_size(desired_size, Sense::focusable_noninteractive());
-
-        let image = Image::new(
-            &self.framebuffer_texture,
+        Image::new((
+            self.framebuffer_texture.id(),
             self.framebuffer_texture.size_vec2(),
-        );
-        image.paint_at(ui, whole_rect);
+        ))
+        .paint_at(ui, whole_rect);
     }
 }
 
 impl eframe::App for EmulatorApp {
     #[instrument(skip_all)]
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        puffin::GlobalProfiler::lock().new_frame();
+
         // Load new program if a file is dropped on the app
         ctx.input(|input| {
             if !input.raw.dropped_files.is_empty() {
@@ -193,8 +194,10 @@ impl eframe::App for EmulatorApp {
             ctx.input(|input| (input.stable_dt as f64, input.unstable_dt as f64));
 
         if !self.emulator.is_debugger_enabled() {
+            puffin::set_scopes_on(false);
             self.emulator.execute_for_duration(stable_dt);
         } else {
+            puffin::set_scopes_on(self.debug_ui.show_profiler);
             self.debug_ui.run_emulator(&mut self.emulator, unstable_dt);
 
             egui::SidePanel::right("right_debug_panel")
