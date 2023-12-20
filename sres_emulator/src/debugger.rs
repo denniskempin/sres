@@ -3,14 +3,12 @@ use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::Range;
 use std::rc::Rc;
-use std::time::Duration;
 
 use super::cpu::InstructionMeta;
 use crate::bus::SresBus;
 use crate::cpu::Cpu;
 use crate::cpu::NativeVectorTable;
 use crate::util::memory::Address;
-use crate::util::time::Instant;
 use crate::util::RingBuffer;
 
 pub enum MemoryAccess {
@@ -86,45 +84,16 @@ impl DebuggerRef {
         }
     }
 
-    pub fn end_frame(&mut self, frame_time: Duration) {
-        if self.enabled {
-            self.inner.deref().borrow_mut().end_frame(frame_time);
-        }
-    }
-
-    pub fn add_perf_counter(&mut self, counter: PerfCounter, duration: Duration) {
-        if self.enabled {
-            self.inner
-                .deref()
-                .borrow_mut()
-                .add_perf_counter(counter, duration);
-        }
-    }
-
-    pub fn scoped_perf_counter(&mut self, counter: PerfCounter) -> Option<ScopedPerfCounter> {
-        if self.enabled {
-            Some(ScopedPerfCounter {
-                debugger: self.clone(),
-                counter,
-                start: Instant::now(),
-            })
-        } else {
-            None
-        }
-    }
-
     pub fn before_instruction(&mut self, pc: Address) {
         if self.enabled {
             self.inner.deref().borrow_mut().before_instruction(pc);
         }
     }
-
     pub fn on_interrupt(&mut self, handler: NativeVectorTable) {
         if self.enabled {
             self.inner.deref().borrow_mut().on_interrupt(handler);
         }
     }
-
     pub fn on_error(&mut self, msg: String) {
         if self.enabled {
             self.inner.deref().borrow_mut().on_error(msg);
@@ -154,10 +123,6 @@ pub struct Debugger {
     breakpoints: Vec<Trigger>,
     break_reason: Option<BreakReason>,
     last_pcs: RingBuffer<Address, 20>,
-
-    perf_counters: PerfCounters,
-    perf_counters_history: RingBuffer<PerfCounters, 30>,
-    frame_time_history: RingBuffer<Duration, 30>,
 }
 
 impl Debugger {
@@ -197,42 +162,13 @@ impl Debugger {
         }
     }
 
-    pub fn get_avg_frame_time_ms(&self) -> f32 {
-        let mut total = Duration::from_secs(0);
-        for frame_time in self.frame_time_history.iter() {
-            total += *frame_time;
-        }
-        total.as_micros() as f32 / self.frame_time_history.len() as f32 / 1000.0
-    }
-
-    pub fn get_avg_perf_counter_ms(&self, counter: PerfCounter) -> f32 {
-        let mut total = Duration::from_secs(0);
-        for perf_counters in self.perf_counters_history.iter() {
-            total += perf_counters.get(counter);
-        }
-        total.as_micros() as f32 / self.frame_time_history.len() as f32 / 1000.0
-    }
-
     /// Internal API
     fn new() -> Self {
         Self {
             breakpoints: vec![],
             break_reason: None,
             last_pcs: RingBuffer::default(),
-            perf_counters: PerfCounters::default(),
-            perf_counters_history: RingBuffer::default(),
-            frame_time_history: RingBuffer::default(),
         }
-    }
-
-    fn end_frame(&mut self, frame_time: Duration) {
-        self.perf_counters_history.push(self.perf_counters);
-        self.frame_time_history.push(frame_time);
-        self.perf_counters = PerfCounters::default();
-    }
-
-    fn add_perf_counter(&mut self, component: PerfCounter, duration: Duration) {
-        self.perf_counters.add(component, duration);
     }
 
     fn before_instruction(&mut self, pc: Address) {
@@ -289,61 +225,6 @@ impl Debugger {
                 }
                 _ => (),
             }
-        }
-    }
-}
-pub struct ScopedPerfCounter {
-    debugger: DebuggerRef,
-    counter: PerfCounter,
-    start: Instant,
-}
-
-impl Drop for ScopedPerfCounter {
-    fn drop(&mut self) {
-        self.debugger
-            .inner
-            .deref()
-            .borrow_mut()
-            .add_perf_counter(self.counter, self.start.elapsed());
-    }
-}
-
-#[derive(Clone, Copy)]
-pub enum PerfCounter {
-    Ppu = 0,
-    Timers = 1,
-    Cpu = 2,
-    Dma = 3,
-}
-
-impl Display for PerfCounter {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PerfCounter::Ppu => write!(f, "PPU"),
-            PerfCounter::Timers => write!(f, "Timers"),
-            PerfCounter::Cpu => write!(f, "CPU"),
-            PerfCounter::Dma => write!(f, "DMA"),
-        }
-    }
-}
-
-#[derive(Default, Clone, Copy)]
-pub struct PerfCounters {
-    pub counters: [Duration; 4],
-}
-
-impl PerfCounters {
-    pub fn get(&self, counter: PerfCounter) -> Duration {
-        self.counters[counter as usize]
-    }
-
-    pub fn add(&mut self, counter: PerfCounter, duration: Duration) {
-        self.counters[counter as usize] += duration;
-    }
-
-    pub fn add_all(&mut self, other: &Self) {
-        for (counter, duration) in other.counters.iter().enumerate() {
-            self.counters[counter] += *duration;
         }
     }
 }

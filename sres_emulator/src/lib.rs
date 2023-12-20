@@ -20,7 +20,6 @@ use debugger::Debugger;
 use debugger::DebuggerRef;
 use log::log_enabled;
 use log::Level;
-use util::time::Instant;
 
 use crate::trace::Trace;
 
@@ -95,7 +94,6 @@ impl System {
     where
         F: Fn(&Cpu<SresBus>) -> bool,
     {
-        let start = Instant::now();
         loop {
             if self.cpu.halt {
                 return ExecutionResult::Halt;
@@ -111,7 +109,6 @@ impl System {
             }
 
             if should_break(&self.cpu) {
-                self.debugger.end_frame(start.elapsed());
                 return ExecutionResult::Normal;
             }
         }
