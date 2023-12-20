@@ -1,6 +1,6 @@
 mod cgram;
 pub mod oam;
-mod timer;
+pub mod timer;
 mod vram;
 
 use std::fmt::Display;
