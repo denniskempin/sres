@@ -1,6 +1,7 @@
 pub mod image;
 pub mod logging;
 pub mod memory;
+pub mod time;
 pub mod uint;
 
 use std::collections::vec_deque::Iter;
@@ -26,6 +27,10 @@ impl<T, const N: usize> RingBuffer<T, N> {
 
     pub fn iter(&self) -> Iter<'_, T> {
         self.stack.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.stack.len()
     }
 }
 
