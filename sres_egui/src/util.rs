@@ -1,5 +1,6 @@
 use std::collections::vec_deque::Iter;
 use std::collections::VecDeque;
+use std::sync::Arc;
 
 use egui::Color32;
 use egui::ColorImage;
@@ -56,6 +57,6 @@ impl Image for EguiImageImpl {
 
 impl From<EguiImageImpl> for ImageData {
     fn from(value: EguiImageImpl) -> Self {
-        ImageData::Color(value.inner)
+        ImageData::Color(Arc::new(value.inner))
     }
 }

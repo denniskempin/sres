@@ -93,6 +93,7 @@ pub struct DebugUi {
     alert: Alert,
     ppu_debug: PpuDebugWindow,
     memory_viewer: MemoryViewer,
+    pub show_profiler: bool,
 }
 
 impl DebugUi {
@@ -102,6 +103,7 @@ impl DebugUi {
             alert: Alert::default(),
             ppu_debug: PpuDebugWindow::new(cc),
             memory_viewer: MemoryViewer::new("CPU Bus"),
+            show_profiler: false,
         }
     }
 
@@ -167,6 +169,9 @@ impl DebugUi {
         self.ppu_debug.show(ctx, emulator);
         self.memory_viewer
             .show(ctx, |addr| emulator.cpu.bus.peek_u8(addr));
+        if self.show_profiler && !puffin_egui::profiler_window(ctx) {
+            self.show_profiler = false;
+        }
     }
 
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
@@ -186,6 +191,9 @@ impl DebugUi {
             ui.button("APU").clicked();
             if ui.button("Memory").clicked() {
                 self.memory_viewer.is_open = !self.memory_viewer.is_open;
+            }
+            if ui.button("Profiler").clicked() {
+                self.show_profiler = !self.show_profiler;
             }
         });
     }

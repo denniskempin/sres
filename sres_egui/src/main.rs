@@ -3,7 +3,6 @@
 use std::path::PathBuf;
 
 use argh::FromArgs;
-use egui::vec2;
 use sres_egui::EmulatorApp;
 use sres_egui::Rom;
 use sres_emulator::util::logging;
@@ -34,8 +33,6 @@ fn main() {
     };
 
     let native_options = eframe::NativeOptions {
-        drag_and_drop_support: true,
-        initial_window_size: Some(vec2(1600.0, 1000.0)),
         ..Default::default()
     };
 

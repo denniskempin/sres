@@ -141,7 +141,8 @@ impl Ppu {
     }
 
     pub fn draw_scanline(&mut self, screen_y: u32) {
-        let _counter = self.debugger.scoped_perf_counter(PerfCounter::Ppu);
+        puffin::profile_scope!("scanline");
+
         if screen_y >= 224 {
             return;
         }
@@ -172,7 +173,7 @@ impl Ppu {
                             continue;
                         }
                         if *pixel > 0 {
-                            scanline[x as usize] = self.cgram[bg.palette_addr + pixel];
+                            scanline[x] = self.cgram[bg.palette_addr + pixel];
                         }
                     }
                 }
@@ -182,7 +183,7 @@ impl Ppu {
                             continue;
                         }
                         if *pixel > 0 {
-                            scanline[x as usize] = self.cgram[*pixel];
+                            scanline[x] = self.cgram[*pixel];
                         }
                     }
                 }

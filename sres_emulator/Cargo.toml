@@ -21,6 +21,7 @@ env_logger = "0.10"
 log = "0.4"
 colored = "2"
 serde = "*"
+puffin = "0.18"
 
 [dev-dependencies]
 tempfile = "3.5"
