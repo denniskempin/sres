@@ -2597,6 +2597,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "wasm-bindgen",
  "xz2",
 ]
 

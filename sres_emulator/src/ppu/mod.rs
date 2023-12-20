@@ -19,6 +19,7 @@ use self::timer::PpuTimer;
 use self::vram::Vram;
 pub use self::vram::VramAddr;
 use crate::debugger::DebuggerRef;
+use crate::debugger::PerfCounter;
 use crate::util::image::Image;
 use crate::util::image::Rgb15;
 use crate::util::memory::Address;
@@ -117,7 +118,10 @@ impl Ppu {
     }
 
     pub fn advance_master_clock(&mut self, cycles: u64) {
-        self.timer.advance_master_clock(cycles);
+        {
+            let _counter = self.debugger.scoped_perf_counter(PerfCounter::Timers);
+            self.timer.advance_master_clock(cycles);
+        }
         if self.disabled {
             return;
         }
@@ -141,6 +145,7 @@ impl Ppu {
     }
 
     pub fn draw_scanline(&mut self, screen_y: u32) {
+        let _counter = self.debugger.scoped_perf_counter(PerfCounter::Ppu);
         if screen_y >= 224 {
             return;
         }
@@ -171,7 +176,7 @@ impl Ppu {
                             continue;
                         }
                         if *pixel > 0 {
-                            scanline[x as usize] = self.cgram[bg.palette_addr + pixel];
+                            scanline[x] = self.cgram[bg.palette_addr + pixel];
                         }
                     }
                 }
@@ -181,7 +186,7 @@ impl Ppu {
                             continue;
                         }
                         if *pixel > 0 {
-                            scanline[x as usize] = self.cgram[*pixel];
+                            scanline[x] = self.cgram[*pixel];
                         }
                     }
                 }
