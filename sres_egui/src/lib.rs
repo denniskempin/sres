@@ -5,6 +5,7 @@ mod wasm;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
+use std::time::Duration;
 
 use eframe::CreationContext;
 use eframe::Frame;
@@ -24,6 +25,8 @@ use sres_emulator::controller::StandardController;
 use sres_emulator::System;
 use tracing::instrument;
 use util::EguiImageImpl;
+use util::Instant;
+use util::RingBuffer;
 
 use self::debug::DebugUi;
 
@@ -53,6 +56,7 @@ pub struct EmulatorApp {
     loaded_rom: Option<Rom>,
     framebuffer_texture: TextureHandle,
     debug_ui: DebugUi,
+    past_frame_times: RingBuffer<Duration, 60>,
 }
 
 impl EmulatorApp {
@@ -68,6 +72,7 @@ impl EmulatorApp {
                 Default::default(),
             ),
             debug_ui: DebugUi::new(cc),
+            past_frame_times: RingBuffer::default(),
         };
 
         if let Some(rom) = rom {
@@ -136,6 +141,14 @@ impl EmulatorApp {
                 ui.label("(Or drop an .sfc file to load it)");
             });
             columns[1].with_layout(Layout::right_to_left(egui::Align::Min), |ui| {
+                let avg_duration = self
+                    .past_frame_times
+                    .iter()
+                    .map(|d| d.as_secs_f64())
+                    .sum::<f64>()
+                    / self.past_frame_times.len() as f64;
+                ui.label(format!("{:.2}ms", avg_duration * 1000.0));
+
                 if ui.button("Debug").clicked() {
                     if self.emulator.is_debugger_enabled() {
                         self.emulator.disable_debugger()
@@ -172,6 +185,7 @@ impl eframe::App for EmulatorApp {
     #[instrument(skip_all)]
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         puffin::GlobalProfiler::lock().new_frame();
+        let start = Instant::now();
 
         // Load new program if a file is dropped on the app
         ctx.input(|input| {
@@ -220,6 +234,8 @@ impl eframe::App for EmulatorApp {
         if self.emulator.is_debugger_enabled() {
             self.debug_ui.modals(ctx, &mut self.emulator);
         }
+
+        self.past_frame_times.push(start.elapsed());
 
         // Always repaint to keep rendering at 60Hz.
         ctx.request_repaint()

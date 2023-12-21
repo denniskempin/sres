@@ -3,7 +3,9 @@ mod ppu;
 
 use std::cell::RefMut;
 use std::fmt::Debug;
+use std::time::Duration;
 
+use crate::util::Instant;
 use eframe::CreationContext;
 use egui::Button;
 use egui::Context;
@@ -21,6 +23,7 @@ use sres_emulator::debugger::Debugger;
 use sres_emulator::debugger::Trigger;
 use sres_emulator::util::memory::Address;
 use sres_emulator::util::memory::Wrap;
+use sres_emulator::util::RingBuffer;
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
 
@@ -93,6 +96,7 @@ pub struct DebugUi {
     alert: Alert,
     ppu_debug: PpuDebugWindow,
     memory_viewer: MemoryViewer,
+    past_emulation_times: RingBuffer<Duration, 60>,
     pub show_profiler: bool,
 }
 
@@ -104,6 +108,7 @@ impl DebugUi {
             ppu_debug: PpuDebugWindow::new(cc),
             memory_viewer: MemoryViewer::new("CPU Bus"),
             show_profiler: false,
+            past_emulation_times: RingBuffer::default(),
         }
     }
 
@@ -111,10 +116,17 @@ impl DebugUi {
         &mut self,
         emulator: &mut System,
         command: DebugCommand,
-        delta_t: f64,
+        _delta_t: f64,
     ) -> ExecutionResult {
         match command {
-            DebugCommand::Run => emulator.execute_for_duration(delta_t),
+            DebugCommand::Run => {
+                let start = Instant::now();
+                let result = emulator.execute_frames(1);
+                if let ExecutionResult::Normal = result {
+                    self.past_emulation_times.push(start.elapsed());
+                }
+                result
+            }
             DebugCommand::StepFrames(n) => {
                 self.command = if n > 1 {
                     Some(DebugCommand::StepFrames(n - 1))
@@ -175,6 +187,8 @@ impl DebugUi {
     }
 
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
+        self.perf_widget(ui);
+        ui.separator();
         cpu::debug_controls_widget(ui, self.command, |command| self.command = command);
         breakpoints_widget(ui, emulator.debugger());
         ui.separator();
@@ -196,6 +210,16 @@ impl DebugUi {
                 self.show_profiler = !self.show_profiler;
             }
         });
+    }
+
+    fn perf_widget(&self, ui: &mut Ui) {
+        let avg_duration = self
+            .past_emulation_times
+            .iter()
+            .map(|d| d.as_secs_f64())
+            .sum::<f64>()
+            / self.past_emulation_times.len() as f64;
+        ui.label(format!("Emulation: {:.2}ms", avg_duration * 1000.0));
     }
 }
 
