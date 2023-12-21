@@ -19,6 +19,10 @@ pub struct Oam {
     pub sprite_sizes: (SpriteSize, SpriteSize),
     /// Base address for both nametables used by sprites.
     pub nametables: (VramAddr, VramAddr),
+
+    pub main_enabled: bool,
+    pub sub_enabled: bool,
+    pub color_math_enabled: bool,
 }
 
 impl Oam {
@@ -30,6 +34,9 @@ impl Oam {
             latch: None,
             sprite_sizes: (SpriteSize::Size8x8, SpriteSize::Size16x16),
             nametables: (VramAddr(0), VramAddr(0)),
+            main_enabled: false,
+            sub_enabled: false,
+            color_math_enabled: false,
         }
     }
 
