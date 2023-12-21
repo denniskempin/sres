@@ -61,12 +61,14 @@ impl PpuTimer {
         }
     }
 
-    pub fn advance_master_clock(&mut self, master_cycles: u64) {
-        puffin::profile_scope!("timers");
-
-        for _ in 0..master_cycles {
-            self.tick_master_clock();
+    pub fn advance_master_clock(&mut self, mut master_cycles: u64) {
+        // Do not advance clock too far at once so we do not miss events along the way.
+        // Scientifically determined to be the highest value that keeps passing tests...
+        while master_cycles > 64 {
+            master_cycles -= 64;
+            self.tick_master_clock(64);
         }
+        self.tick_master_clock(master_cycles);
     }
 
     pub fn consume_timer_interrupt(&mut self) -> bool {
@@ -156,13 +158,15 @@ impl PpuTimer {
         self.v_timer_target.set_high_byte(value);
     }
 
-    fn tick_master_clock(&mut self) {
-        self.master_clock += 1;
-        self.h_counter += 1;
+    fn tick_master_clock(&mut self, master_cycles: u64) {
+        self.master_clock += master_cycles;
+        self.h_counter += master_cycles;
 
-        // 536 master cycles after the start of a scanline, the CPU will pause for 40 cycles.
+        // ~536 master cycles after the start of a scanline, the CPU will pause for 40 cycles.
         // See: https://wiki.superfamicom.org/timing#clocks-and-refresh-10
-        if self.h_counter == self.dram_refresh_position {
+        if ((self.h_counter - master_cycles)..=(self.h_counter))
+            .contains(&self.dram_refresh_position)
+        {
             self.h_counter += 40;
             self.master_clock += 40;
         }
@@ -179,9 +183,10 @@ impl PpuTimer {
             1364
         };
         if self.h_counter >= h_duration {
+            self.hv_timer_detector.update_signal(false);
             self.h_counter -= h_duration;
             self.v += 1;
-            self.dram_refresh_position = 538 - (self.master_clock & 7);
+            self.dram_refresh_position = 538 - ((self.master_clock - self.h_counter) & 7);
         }
 
         if self.v >= 262 {
