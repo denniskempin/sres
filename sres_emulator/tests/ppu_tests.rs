@@ -10,6 +10,7 @@ use sres_emulator::ppu::Background;
 use sres_emulator::ppu::BackgroundId;
 use sres_emulator::ppu::BgMode;
 use sres_emulator::ppu::BitDepth;
+use sres_emulator::ppu::ColorMathOperation;
 use sres_emulator::ppu::Ppu;
 use sres_emulator::ppu::VramAddr;
 use sres_emulator::util::image::Image;
@@ -189,8 +190,14 @@ struct PpuSnapshot {
     bg3_priority: bool,
     backgrounds: [Background; 4],
     oam: Vec<u8>,
+    oam_main_enabled: bool,
+    oam_sub_enabled: bool,
+    oam_color_math_enabled: bool,
     sprite_sizes: (SpriteSize, SpriteSize),
     nametables: (VramAddr, VramAddr),
+    color_math_backdrop_enabled: bool,
+    color_math_operation: ColorMathOperation,
+    color_math_half: bool,
 }
 
 impl PpuSnapshot {
@@ -207,8 +214,14 @@ impl PpuSnapshot {
                 ppu.backgrounds[3],
             ],
             oam: ppu.oam.memory.clone(),
+            oam_main_enabled: ppu.oam.main_enabled,
+            oam_sub_enabled: ppu.oam.sub_enabled,
+            oam_color_math_enabled: ppu.oam.color_math_enabled,
             sprite_sizes: ppu.oam.sprite_sizes,
             nametables: ppu.oam.nametables,
+            color_math_backdrop_enabled: ppu.color_math_backdrop_enabled,
+            color_math_operation: ppu.color_math_operation,
+            color_math_half: ppu.color_math_half,
         }
     }
 
@@ -229,6 +242,12 @@ impl PpuSnapshot {
         ppu.oam.memory = self.oam;
         ppu.oam.sprite_sizes = self.sprite_sizes;
         ppu.oam.nametables = self.nametables;
+        ppu.oam.main_enabled = self.oam_main_enabled;
+        ppu.oam.sub_enabled = self.oam_sub_enabled;
+        ppu.oam.color_math_enabled = self.oam_color_math_enabled;
+        ppu.color_math_backdrop_enabled = self.color_math_backdrop_enabled;
+        ppu.color_math_operation = self.color_math_operation;
+        ppu.color_math_half = self.color_math_half;
         ppu
     }
 

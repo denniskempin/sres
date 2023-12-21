@@ -41,6 +41,10 @@ pub struct Ppu {
     pub bgofs_latch: u8,
     pub bghofs_latch: u8,
 
+    pub color_math_backdrop_enabled: bool,
+    pub color_math_operation: ColorMathOperation,
+    pub color_math_half: bool,
+
     pub debugger: DebuggerRef,
 }
 
@@ -66,6 +70,9 @@ impl Ppu {
             last_drawn_scanline: 0,
             bgofs_latch: 0,
             bghofs_latch: 0,
+            color_math_backdrop_enabled: false,
+            color_math_operation: ColorMathOperation::Add,
+            color_math_half: false,
             debugger,
         }
     }
@@ -112,6 +119,7 @@ impl Ppu {
             0x2122 => self.cgram.write_cgdata(value),
             0x212C => self.write_tm(value),
             0x212D => self.write_ts(value),
+            0x2131 => self.write_cdadsub(value),
             _ => (),
         }
     }
@@ -158,14 +166,13 @@ impl Ppu {
         let mut obj_data: [(u8, u8); 256] = [(0, 0); 256];
         self.decode_obj(screen_y, &mut obj_data);
 
-        let mut scanline = [self.cgram[0]; 256];
+        // Render sub screen first, it'll be used for blending while rendering the main screen.
+        let mut raw_sub = [self.cgram[0]; 256];
         for layer in layers.iter().rev() {
             match layer {
                 Layer::Background(id, layer_priority) => {
                     let bg = self.backgrounds[*id as usize];
-                    if bg.bit_depth == BitDepth::Disabled
-                        || !(bg.main_enabled || bg.subscreen_enabled)
-                    {
+                    if bg.bit_depth == BitDepth::Disabled || !bg.subscreen_enabled {
                         continue;
                     }
                     for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
@@ -173,17 +180,101 @@ impl Ppu {
                             continue;
                         }
                         if *pixel > 0 {
-                            scanline[x] = self.cgram[bg.palette_addr + pixel];
+                            raw_sub[x] = self.cgram[bg.palette_addr + pixel];
                         }
                     }
                 }
                 Layer::Object(layer_priority) => {
+                    if !self.oam.sub_enabled {
+                        continue;
+                    }
                     for (x, (pixel, priority)) in obj_data.iter().enumerate() {
                         if layer_priority != priority {
                             continue;
                         }
                         if *pixel > 0 {
-                            scanline[x] = self.cgram[*pixel];
+                            raw_sub[x] = self.cgram[*pixel];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Pre-invert subscreen so we don't have to branch for each pixel
+        let sub = match self.color_math_operation {
+            ColorMathOperation::Add => raw_sub.map(|pixel| {
+                (
+                    pixel.r_u5() as i16,
+                    pixel.g_u5() as i16,
+                    pixel.b_u5() as i16,
+                )
+            }),
+            ColorMathOperation::Subtract => raw_sub.map(|pixel| {
+                (
+                    -(pixel.r_u5() as i16),
+                    -(pixel.g_u5() as i16),
+                    -(pixel.b_u5() as i16),
+                )
+            }),
+        };
+        let div_factor = if self.color_math_half { 2 } else { 1 };
+
+        // Render main screen
+        let mut scanline = if self.color_math_backdrop_enabled {
+            sub.map(|pixel| (self.cgram[0] + pixel) / div_factor)
+        } else {
+            [self.cgram[0]; 256]
+        };
+
+        for layer in layers.iter().rev() {
+            match layer {
+                Layer::Background(id, layer_priority) => {
+                    let bg = self.backgrounds[*id as usize];
+                    if bg.bit_depth == BitDepth::Disabled || !bg.main_enabled {
+                        continue;
+                    }
+                    if bg.color_math_enabled {
+                        for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
+                            if layer_priority != priority {
+                                continue;
+                            }
+                            if *pixel > 0 {
+                                scanline[x] =
+                                    (self.cgram[bg.palette_addr + pixel] + sub[x]) / div_factor;
+                            }
+                        }
+                    } else {
+                        for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
+                            if layer_priority != priority {
+                                continue;
+                            }
+                            if *pixel > 0 {
+                                scanline[x] = self.cgram[bg.palette_addr + pixel];
+                            }
+                        }
+                    }
+                }
+                Layer::Object(layer_priority) => {
+                    if !self.oam.main_enabled {
+                        continue;
+                    }
+                    if self.oam.color_math_enabled {
+                        for (x, (pixel, priority)) in obj_data.iter().enumerate() {
+                            if layer_priority != priority {
+                                continue;
+                            }
+                            if *pixel > 0 {
+                                scanline[x] = (self.cgram[*pixel] + sub[x]) / div_factor;
+                            }
+                        }
+                    } else {
+                        for (x, (pixel, priority)) in obj_data.iter().enumerate() {
+                            if layer_priority != priority {
+                                continue;
+                            }
+                            if *pixel > 0 {
+                                scanline[x] = self.cgram[*pixel];
+                            }
                         }
                     }
                 }
@@ -244,6 +335,11 @@ impl Ppu {
                 } else {
                     &[S3, H1, H2, S2, L1, L2, S1, H3, S0, L3]
                 }
+            }
+            BgMode::Mode2 => {
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
+                &[S3, H1, S2, H2, S1, L1, S0, L2]
             }
             BgMode::Mode3 => {
                 self.decode_bg::<Bpp8Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
@@ -322,6 +418,7 @@ impl Ppu {
             }
         }
     }
+
     /// Register 2100: INIDISP
     /// 7  bit  0
     /// ---- ----
@@ -496,6 +593,7 @@ impl Ppu {
         for i in 0..4 {
             self.backgrounds[i].main_enabled = value.bit(i);
         }
+        self.oam.main_enabled = value.bit(4);
     }
 
     /// Register 212D: TS - Subscreen layer enable
@@ -512,6 +610,34 @@ impl Ppu {
         for i in 0..4 {
             self.backgrounds[i].subscreen_enabled = value.bit(i);
         }
+        self.oam.sub_enabled = value.bit(4);
+    }
+
+    /// Register 2131: CGADSUB - Color math control
+    /// 7  bit  0
+    /// ---- ----
+    /// MHBO 4321
+    /// |||| ||||
+    /// |||| |||+- BG1 color math enable
+    /// |||| ||+-- BG2 color math enable
+    /// |||| |+--- BG3 color math enable
+    /// |||| +---- BG4 color math enable
+    /// |||+------ OBJ color math enable (palettes 4-7 only)
+    /// ||+------- Backdrop color math enable
+    /// |+-------- Half color math
+    /// +--------- Operator type (0 = add, 1 = subtract)
+    pub fn write_cdadsub(&mut self, value: u8) {
+        for i in 0..4 {
+            self.backgrounds[i].color_math_enabled = value.bit(i);
+        }
+        self.oam.color_math_enabled = value.bit(4);
+        self.color_math_backdrop_enabled = value.bit(5);
+        self.color_math_half = value.bit(6);
+        self.color_math_operation = match value.bit(7) {
+            false => ColorMathOperation::Add,
+            true => ColorMathOperation::Subtract,
+        };
+        println!("Color math: {:08b}", value);
     }
 
     // Debug APIs
@@ -694,11 +820,17 @@ impl Display for BgMode {
         }
     }
 }
+#[derive(Serialize, Deserialize, Copy, Clone)]
+pub enum ColorMathOperation {
+    Add,
+    Subtract,
+}
 
 #[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Background {
     pub main_enabled: bool,
     pub subscreen_enabled: bool,
+    pub color_math_enabled: bool,
     pub bit_depth: BitDepth,
     pub palette_addr: u8,
     pub tile_size: TileSize,
