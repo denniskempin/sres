@@ -637,7 +637,6 @@ impl Ppu {
             false => ColorMathOperation::Add,
             true => ColorMathOperation::Subtract,
         };
-        println!("Color math: {:08b}", value);
     }
 
     // Debug APIs

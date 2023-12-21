@@ -275,9 +275,6 @@ impl SresBus {
             0b11 => HVTimerMode::TriggerHV,
             _ => unreachable!(),
         };
-        if self.ppu.timer.timer_mode != HVTimerMode::Off {
-            log::error!("TimerMode: {}", self.ppu.timer.timer_mode);
-        }
     }
 
     /// Register $4210: RDNMI - Read NMI Flag
