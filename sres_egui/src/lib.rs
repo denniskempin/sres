@@ -98,8 +98,8 @@ impl EmulatorApp {
                 }
             }
         } else if let Some(bytes) = &drop.bytes {
-            #[cfg(target_arch = "wasm32")]
-            crate::wasm::save_rom_in_local_storage(bytes);
+            //#[cfg(target_arch = "wasm32")]
+            //crate::wasm::save_rom_in_local_storage(bytes);
             self.load_rom(Rom::load_from_bytes(&drop.name, bytes));
         }
     }

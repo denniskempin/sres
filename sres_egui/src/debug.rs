@@ -5,7 +5,6 @@ use std::cell::RefMut;
 use std::fmt::Debug;
 use std::time::Duration;
 
-use crate::util::Instant;
 use eframe::CreationContext;
 use egui::Button;
 use egui::Context;
@@ -26,6 +25,8 @@ use sres_emulator::util::memory::Wrap;
 use sres_emulator::util::RingBuffer;
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
+
+use crate::util::Instant;
 
 struct MemoryViewer {
     title: String,

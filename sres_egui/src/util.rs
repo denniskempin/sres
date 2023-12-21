@@ -9,14 +9,13 @@ use std::ops::SubAssign;
 use std::sync::Arc;
 use std::time::Duration;
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-
 use egui::Color32;
 use egui::ColorImage;
 use egui::ImageData;
 use sres_emulator::util::image::Image;
 use sres_emulator::util::image::Rgba32;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 
 #[derive(Clone)]
 pub struct RingBuffer<T, const N: usize> {
