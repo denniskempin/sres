@@ -2,6 +2,7 @@ mod debug;
 pub mod util;
 mod wasm;
 
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
@@ -57,6 +58,10 @@ pub struct EmulatorApp {
     framebuffer_texture: TextureHandle,
     debug_ui: DebugUi,
     past_frame_times: RingBuffer<Duration, 60>,
+
+    input_recording_active: bool,
+    input_recording_last: u16,
+    input_recording: HashMap<u64, u16>,
 }
 
 impl EmulatorApp {
@@ -73,6 +78,9 @@ impl EmulatorApp {
             ),
             debug_ui: DebugUi::new(cc),
             past_frame_times: RingBuffer::default(),
+            input_recording: HashMap::new(),
+            input_recording_last: 0,
+            input_recording_active: false,
         };
 
         if let Some(rom) = rom {
@@ -118,6 +126,13 @@ impl EmulatorApp {
             select: input.key_down(Key::Backspace),
             ..Default::default()
         };
+        if self.input_recording_active {
+            if joy1.to_u16() != self.input_recording_last {
+                self.input_recording_last = joy1.to_u16();
+                self.input_recording
+                    .insert(self.emulator.cpu.bus.ppu.timer.f, joy1.to_u16());
+            }
+        }
         self.emulator.cpu.bus.joy1 = joy1.to_u16();
     }
 
@@ -154,6 +169,19 @@ impl EmulatorApp {
                         self.emulator.disable_debugger()
                     } else {
                         self.emulator.enable_debugger()
+                    }
+                }
+                if self.input_recording_active {
+                    if ui.button("Save Recording").clicked() {
+                        self.input_recording_active = false;
+                        let mut file = std::fs::File::create("input_recording.json").unwrap();
+                        serde_json::to_writer(&mut file, &self.input_recording).unwrap();
+                        self.input_recording.clear();
+                    }
+                } else {
+                    if ui.button("Record Input").clicked() {
+                        self.input_recording_active = true;
+                        self.input_recording.clear();
                     }
                 }
             });

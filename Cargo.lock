@@ -2673,6 +2673,8 @@ dependencies = [
  "itertools",
  "puffin",
  "puffin_egui",
+ "serde",
+ "serde_json",
  "sres_emulator",
  "tracing",
  "tracing-chrome",
