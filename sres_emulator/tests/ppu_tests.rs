@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 
+use image::Rgb;
 use image::RgbaImage;
 use serde::Deserialize;
 use serde::Serialize;
@@ -198,6 +199,7 @@ struct PpuSnapshot {
     color_math_backdrop_enabled: bool,
     color_math_operation: ColorMathOperation,
     color_math_half: bool,
+    fixed_color: Rgb15,
 }
 
 impl PpuSnapshot {
@@ -222,6 +224,7 @@ impl PpuSnapshot {
             color_math_backdrop_enabled: ppu.color_math_backdrop_enabled,
             color_math_operation: ppu.color_math_operation,
             color_math_half: ppu.color_math_half,
+            fixed_color: ppu.fixed_color,
         }
     }
 
@@ -248,6 +251,7 @@ impl PpuSnapshot {
         ppu.color_math_backdrop_enabled = self.color_math_backdrop_enabled;
         ppu.color_math_operation = self.color_math_operation;
         ppu.color_math_half = self.color_math_half;
+        ppu.fixed_color = self.fixed_color;
         ppu
     }
 
