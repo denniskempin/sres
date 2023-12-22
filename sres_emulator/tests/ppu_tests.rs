@@ -148,7 +148,7 @@ fn run_snapshot_framebuffer_test(snapshot_name: &str) {
 
     compare_to_golden(
         &ppu.get_rgba_framebuffer::<TestImageImpl>(),
-        &test_dir().join(format!("{snapshot_name}")),
+        &test_dir().join(snapshot_name),
     );
 }
 
