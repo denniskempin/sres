@@ -44,6 +44,7 @@ pub struct Ppu {
     pub color_math_backdrop_enabled: bool,
     pub color_math_operation: ColorMathOperation,
     pub color_math_half: bool,
+    pub fixed_color: Rgb15,
 
     pub debugger: DebuggerRef,
 }
@@ -73,6 +74,7 @@ impl Ppu {
             color_math_backdrop_enabled: false,
             color_math_operation: ColorMathOperation::Add,
             color_math_half: false,
+            fixed_color: Rgb15::default(),
             debugger,
         }
     }
@@ -120,6 +122,7 @@ impl Ppu {
             0x212C => self.write_tm(value),
             0x212D => self.write_ts(value),
             0x2131 => self.write_cdadsub(value),
+            0x2132 => self.write_coldata(value),
             _ => (),
         }
     }
@@ -167,7 +170,7 @@ impl Ppu {
         self.decode_obj(screen_y, &mut obj_data);
 
         // Render sub screen first, it'll be used for blending while rendering the main screen.
-        let mut raw_sub = [self.cgram[0]; 256];
+        let mut raw_sub = [self.fixed_color; 256];
         for layer in layers.iter().rev() {
             match layer {
                 Layer::Background(id, layer_priority) => {
@@ -202,18 +205,14 @@ impl Ppu {
 
         // Pre-invert subscreen so we don't have to branch for each pixel
         let sub = match self.color_math_operation {
-            ColorMathOperation::Add => raw_sub.map(|pixel| {
-                (
-                    pixel.r_u5() as i16,
-                    pixel.g_u5() as i16,
-                    pixel.b_u5() as i16,
-                )
-            }),
+            ColorMathOperation::Add => {
+                raw_sub.map(|pixel| (pixel.r() as i16, pixel.g() as i16, pixel.b() as i16))
+            }
             ColorMathOperation::Subtract => raw_sub.map(|pixel| {
                 (
-                    -(pixel.r_u5() as i16),
-                    -(pixel.g_u5() as i16),
-                    -(pixel.b_u5() as i16),
+                    -(pixel.r() as i16),
+                    -(pixel.g() as i16),
+                    -(pixel.b() as i16),
                 )
             }),
         };
@@ -264,7 +263,7 @@ impl Ppu {
                                 continue;
                             }
                             if *pixel > 0 {
-                                scanline[x] = (self.cgram[*pixel] + sub[x]) / div_factor;
+                                scanline[x] = self.cgram[*pixel];
                             }
                         }
                     } else {
@@ -637,6 +636,28 @@ impl Ppu {
             false => ColorMathOperation::Add,
             true => ColorMathOperation::Subtract,
         };
+    }
+
+    /// Register 2132: COLDATA - Fixed color for color math
+    /// 7  bit  0
+    /// ---- ----
+    /// BGRC CCCC
+    /// |||| ||||
+    /// |||+-++++- Color value
+    /// ||+------- Write color value to blue channel
+    /// |+-------- Write color value to green channel
+    /// +--------- Write color value to red channel
+    pub fn write_coldata(&mut self, value: u8) {
+        let color_value = value.bits(0..=4);
+        if value.bit(7) {
+            self.fixed_color.set_b(color_value);
+        }
+        if value.bit(6) {
+            self.fixed_color.set_g(color_value);
+        }
+        if value.bit(5) {
+            self.fixed_color.set_r(color_value);
+        }
     }
 
     // Debug APIs
