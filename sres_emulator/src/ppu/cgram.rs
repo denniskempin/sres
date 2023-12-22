@@ -1,4 +1,4 @@
-use crate::util::image::Rgb15;
+use crate::util::image::{Image, Rgb15};
 use crate::util::uint::U16Ext;
 
 pub struct CgRam {
@@ -93,6 +93,21 @@ impl CgRam {
             None => self.memory[self.current_addr as usize].0.low_byte(),
             Some(high_byte) => high_byte,
         }
+    }
+
+    pub fn debug_render_palette<ImageT: Image>(&self) -> ImageT {
+        let mut image = ImageT::new(128, 128);
+        for y in 0..16_u32 {
+            for x in 0..16_u32 {
+                let color = self.memory[(y * 16 + x) as usize];
+                for fine_y in 0..8_u32 {
+                    for fine_x in 0..8_u32 {
+                        image.set_pixel((x * 8 + fine_x, y * 8 + fine_y), color.into());
+                    }
+                }
+            }
+        }
+        image
     }
 }
 

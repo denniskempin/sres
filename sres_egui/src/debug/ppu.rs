@@ -23,6 +23,7 @@ enum PpuDebugTabs {
     Background,
     Sprites,
     Vram,
+    Palette,
 }
 
 impl Display for PpuDebugTabs {
@@ -31,6 +32,7 @@ impl Display for PpuDebugTabs {
             PpuDebugTabs::Background => write!(f, "Background"),
             PpuDebugTabs::Sprites => write!(f, "Sprites"),
             PpuDebugTabs::Vram => write!(f, "Vram"),
+            PpuDebugTabs::Palette => write!(f, "Palette"),
         }
     }
 }
@@ -41,6 +43,7 @@ pub struct PpuDebugWindow {
     background_widget: PpuBackgroundWidget,
     sprites_widget: PpuSpritesWidget,
     vram_widget: PpuVramWidget,
+    palette_widget: PpuPaletteWidget,
 }
 
 impl PpuDebugWindow {
@@ -51,6 +54,7 @@ impl PpuDebugWindow {
             background_widget: PpuBackgroundWidget::new(cc),
             sprites_widget: PpuSpritesWidget::new(cc),
             vram_widget: PpuVramWidget::new(cc),
+            palette_widget: PpuPaletteWidget::new(cc),
         }
     }
 
@@ -65,6 +69,7 @@ impl PpuDebugWindow {
                         PpuDebugTabs::Background,
                         PpuDebugTabs::Sprites,
                         PpuDebugTabs::Vram,
+                        PpuDebugTabs::Palette,
                     ],
                     &mut self.selected_tab,
                 );
@@ -75,6 +80,7 @@ impl PpuDebugWindow {
                     }
                     PpuDebugTabs::Sprites => self.sprites_widget.show(ui, &emulator.cpu.bus.ppu),
                     PpuDebugTabs::Vram => self.vram_widget.show(ui, &emulator.cpu.bus.ppu),
+                    PpuDebugTabs::Palette => self.palette_widget.show(ui, &emulator.cpu.bus.ppu),
                 }
             });
     }
@@ -291,5 +297,34 @@ impl PpuVramWidget {
             });
             ui.image((self.vram_texture.id(), Vec2::new(512.0, 512.0)));
         });
+    }
+}
+
+struct PpuPaletteWidget {
+    palette_texture: TextureHandle,
+}
+
+impl PpuPaletteWidget {
+    pub fn new(cc: &CreationContext) -> Self {
+        PpuPaletteWidget {
+            palette_texture: cc.egui_ctx.load_texture(
+                "Palette",
+                ColorImage::example(),
+                Default::default(),
+            ),
+        }
+    }
+
+    pub fn update_textures(&mut self, ppu: &Ppu) {
+        self.palette_texture.set(
+            ppu.cgram.debug_render_palette::<EguiImageImpl>(),
+            TextureOptions::default(),
+        );
+    }
+
+    pub fn show(&mut self, ui: &mut Ui, ppu: &Ppu) {
+        self.update_textures(ppu);
+
+        ui.image((self.palette_texture.id(), Vec2::new(256.0, 256.0)));
     }
 }
