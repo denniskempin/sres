@@ -17,15 +17,27 @@ pub struct ColorIdx(pub u8);
 pub struct Rgb15(pub u16);
 
 impl Rgb15 {
-    pub fn r_u5(&self) -> u8 {
+    pub fn set_r(&mut self, value: u8) {
+        self.0 = self.0.with_bits(0..=4, value as u16);
+    }
+
+    pub fn set_g(&mut self, value: u8) {
+        self.0 = self.0.with_bits(5..=9, value as u16);
+    }
+
+    pub fn set_b(&mut self, value: u8) {
+        self.0 = self.0.with_bits(10..=14, value as u16);
+    }
+
+    pub fn r(&self) -> u8 {
         self.0.bits(0..=4) as u8
     }
 
-    pub fn g_u5(&self) -> u8 {
+    pub fn g(&self) -> u8 {
         self.0.bits(5..=9) as u8
     }
 
-    pub fn b_u5(&self) -> u8 {
+    pub fn b(&self) -> u8 {
         self.0.bits(10..=14) as u8
     }
 }
