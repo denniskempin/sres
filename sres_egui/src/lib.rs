@@ -126,12 +126,10 @@ impl EmulatorApp {
             select: input.key_down(Key::Backspace),
             ..Default::default()
         };
-        if self.input_recording_active {
-            if joy1.to_u16() != self.input_recording_last {
-                self.input_recording_last = joy1.to_u16();
-                self.input_recording
-                    .insert(self.emulator.cpu.bus.ppu.timer.f, joy1.to_u16());
-            }
+        if self.input_recording_active && joy1.to_u16() != self.input_recording_last {
+            self.input_recording_last = joy1.to_u16();
+            self.input_recording
+                .insert(self.emulator.cpu.bus.ppu.timer.f, joy1.to_u16());
         }
         self.emulator.cpu.bus.joy1 = joy1.to_u16();
     }
@@ -178,11 +176,9 @@ impl EmulatorApp {
                         serde_json::to_writer(&mut file, &self.input_recording).unwrap();
                         self.input_recording.clear();
                     }
-                } else {
-                    if ui.button("Record Input").clicked() {
-                        self.input_recording_active = true;
-                        self.input_recording.clear();
-                    }
+                } else if ui.button("Record Input").clicked() {
+                    self.input_recording_active = true;
+                    self.input_recording.clear();
                 }
             });
         });

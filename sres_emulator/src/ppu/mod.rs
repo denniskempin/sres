@@ -257,23 +257,12 @@ impl Ppu {
                     if !self.oam.main_enabled {
                         continue;
                     }
-                    if self.oam.color_math_enabled {
-                        for (x, (pixel, priority)) in obj_data.iter().enumerate() {
-                            if layer_priority != priority {
-                                continue;
-                            }
-                            if *pixel > 0 {
-                                scanline[x] = self.cgram[*pixel];
-                            }
+                    for (x, (pixel, priority)) in obj_data.iter().enumerate() {
+                        if layer_priority != priority {
+                            continue;
                         }
-                    } else {
-                        for (x, (pixel, priority)) in obj_data.iter().enumerate() {
-                            if layer_priority != priority {
-                                continue;
-                            }
-                            if *pixel > 0 {
-                                scanline[x] = self.cgram[*pixel];
-                            }
+                        if *pixel > 0 {
+                            scanline[x] = self.cgram[*pixel];
                         }
                     }
                 }
