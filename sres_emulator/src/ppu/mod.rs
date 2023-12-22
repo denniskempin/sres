@@ -473,13 +473,7 @@ impl Ppu {
 
         let palette_addr = match self.bgmode {
             BgMode::Mode0 => (0, 32, 64, 96),
-            BgMode::Mode1 => (0, 32, 0, 0),
-            BgMode::Mode2 => (0, 32, 0, 0),
-            BgMode::Mode3 => (0, 0, 0, 0),
-            BgMode::Mode4 => (0, 0, 0, 0),
-            BgMode::Mode5 => (0, 0, 0, 0),
-            BgMode::Mode6 => (0, 0, 0, 0),
-            BgMode::Mode7 => (0, 0, 0, 0),
+            _ => (0, 0, 0, 0),
         };
         self.backgrounds[0].palette_addr = palette_addr.0;
         self.backgrounds[1].palette_addr = palette_addr.1;
