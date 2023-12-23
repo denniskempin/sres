@@ -4,8 +4,7 @@ use std::path::PathBuf;
 
 use argh::FromArgs;
 use sres_egui::EmulatorApp;
-use sres_egui::Rom;
-use sres_emulator::util::logging;
+use sres_emulator::{cartridge::Cartridge, util::logging};
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_subscriber::prelude::*;
 
@@ -36,15 +35,15 @@ fn main() {
         ..Default::default()
     };
 
-    let rom = args.rom.map(|path| {
+    let cartridge = args.rom.map(|path| {
         let path = PathBuf::from(path);
-        Rom::load_from_file(&path)
+        Cartridge::with_sfc_file(&path).unwrap()
     });
 
     eframe::run_native(
         "Super Rust Entertainment System",
         native_options,
-        Box::new(|cc| Box::new(EmulatorApp::new(cc, rom))),
+        Box::new(|cc| Box::new(EmulatorApp::new(cc, cartridge))),
     )
     .unwrap();
 }

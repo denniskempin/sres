@@ -1,9 +1,6 @@
 mod dma;
 mod multiplication;
 
-use std::path::Path;
-
-use anyhow::Result;
 use dma::DmaController;
 use intbits::Bits;
 use log::trace;
@@ -82,12 +79,14 @@ pub trait Bus {
 enum MemoryBlock {
     Ram(usize),
     Rom(usize),
+    Sram(usize),
     Register,
     Unmapped,
 }
 
 pub struct SresBus {
     pub wram: Vec<u8>,
+    pub sram: Vec<u8>,
     pub rom: Vec<u8>,
     pub clock_speed: u64,
     pub dma_controller: DmaController,
@@ -104,10 +103,16 @@ pub struct SresBus {
 }
 
 impl SresBus {
-    pub fn new(debugger: DebuggerRef) -> Self {
+    pub fn new(cartridge: &Cartridge, debugger: DebuggerRef) -> Self {
+        let mut rom = vec![0; 0x4000000];
+        for (i, byte) in cartridge.rom.iter().enumerate() {
+            rom[i] = *byte;
+        }
+
         Self {
             wram: vec![0; 0x4000000],
-            rom: vec![0; 0x4000000],
+            sram: cartridge.sram.clone(),
+            rom,
             clock_speed: 8,
             dma_controller: DmaController::new(debugger.clone()),
             ppu: Ppu::new(debugger.clone()),
@@ -123,40 +128,11 @@ impl SresBus {
         }
     }
 
-    pub fn with_sfc(rom_path: &Path, debugger: DebuggerRef) -> Result<Self> {
-        let mut bus = Self::new(debugger);
-        // Load cartridge data into memory
-        let mut cartridge = Cartridge::new();
-        cartridge.load_sfc(rom_path)?;
-        for (i, byte) in cartridge.rom.iter().enumerate() {
-            bus.rom[i] = *byte;
-        }
-        Ok(bus)
-    }
-
-    pub fn with_sfc_data(rom: &[u8], debugger: DebuggerRef) -> Result<Self> {
-        let mut bus = Self::new(debugger);
-        // Load cartridge data into memory
-        let mut cartridge = Cartridge::new();
-        cartridge.load_sfc_data(rom)?;
-        for (i, byte) in cartridge.rom.iter().enumerate() {
-            bus.rom[i] = *byte;
-        }
-        Ok(bus)
-    }
-
-    pub fn with_program(program: &[u8], debugger: DebuggerRef) -> Self {
-        let mut bus = Self::new(debugger);
-        for (i, byte) in program.iter().enumerate() {
-            bus.wram[i] = *byte;
-        }
-        bus
-    }
-
     pub fn bus_peek(&self, addr: Address) -> Option<u8> {
         match self.map_memory(addr) {
             MemoryBlock::Ram(offset) => Some(self.wram[offset]),
             MemoryBlock::Rom(offset) => Some(self.rom[offset]),
+            MemoryBlock::Sram(offset) => Some(self.sram[offset]),
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_peek(addr),
                 0x2140..=0x217F => self.apu.bus_peek(addr),
@@ -180,6 +156,7 @@ impl SresBus {
         match self.map_memory(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset],
             MemoryBlock::Rom(offset) => self.rom[offset],
+            MemoryBlock::Sram(offset) => self.sram[offset],
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_read(addr),
                 0x2140..=0x217F => self.apu.bus_read(addr),
@@ -217,6 +194,7 @@ impl SresBus {
         match self.map_memory(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
             MemoryBlock::Rom(offset) => self.rom[offset] = value,
+            MemoryBlock::Sram(offset) => self.sram[offset] = value,
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_write(addr, value),
                 0x2140..=0x217F => self.apu.bus_write(addr, value),
@@ -244,9 +222,12 @@ impl SresBus {
                     MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize - 0x8000))
                 }
             },
-            0x40..=0x7D => MemoryBlock::Rom(
+            0x40..=0x6F => MemoryBlock::Rom(
                 0x200000 + (addr.bank as usize - 0x40) * 0x10000 + addr.offset as usize,
             ),
+            0x70..=0x7D => {
+                MemoryBlock::Sram((addr.bank as usize - 0x70) * 0x10000 + addr.offset as usize)
+            }
             0x7E..=0x7F => {
                 MemoryBlock::Ram((addr.bank as usize - 0x7E) * 0x10000 + addr.offset as usize)
             }
