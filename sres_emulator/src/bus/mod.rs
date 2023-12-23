@@ -303,7 +303,6 @@ impl SresBus {
             .dma_controller
             .pending_transfers(self.ppu.timer.master_clock, self.clock_speed)
         {
-            puffin::profile_scope!("DMA");
             self.ppu.advance_master_clock(duration);
             for (source, destination) in transfers {
                 let value = self.bus_read(source);
