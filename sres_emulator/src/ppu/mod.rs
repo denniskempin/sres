@@ -46,6 +46,7 @@ pub struct Ppu {
     pub color_math_half: bool,
     pub fixed_color: Rgb15,
 
+    pub headless: bool,
     pub debugger: DebuggerRef,
 }
 
@@ -75,6 +76,7 @@ impl Ppu {
             color_math_operation: ColorMathOperation::Add,
             color_math_half: false,
             fixed_color: Rgb15::default(),
+            headless: false,
             debugger,
         }
     }
@@ -133,7 +135,9 @@ impl Ppu {
             return;
         }
         if self.timer.v != self.last_drawn_scanline {
-            self.draw_scanline(self.timer.v as u32);
+            if !self.headless {
+                self.draw_scanline(self.timer.v as u32);
+            }
             self.last_drawn_scanline = self.timer.v;
         }
     }
@@ -152,8 +156,6 @@ impl Ppu {
     }
 
     pub fn draw_scanline(&mut self, screen_y: u32) {
-        puffin::profile_scope!("scanline");
-
         if screen_y >= 224 {
             return;
         }

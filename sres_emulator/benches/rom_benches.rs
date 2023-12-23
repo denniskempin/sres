@@ -16,9 +16,22 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| system.execute_frames(1));
     });
 
+    c.bench_function("krom_adc_frame_time_headless", |b| {
+        let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&adc_rom_path).unwrap());
+        system.cpu.bus.ppu.headless = true;
+        b.iter(|| system.execute_frames(1));
+    });
+
     c.bench_function("krom_blend_frame_time", |b| {
         let mut system =
             System::with_cartridge(&Cartridge::with_sfc_file(&blend_rom_path).unwrap());
+        b.iter(|| system.execute_frames(1));
+    });
+
+    c.bench_function("krom_blend_frame_time_headless", |b| {
+        let mut system =
+            System::with_cartridge(&Cartridge::with_sfc_file(&blend_rom_path).unwrap());
+        system.cpu.bus.ppu.headless = true;
         b.iter(|| system.execute_frames(1));
     });
 }
