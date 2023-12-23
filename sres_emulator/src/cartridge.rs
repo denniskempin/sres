@@ -7,35 +7,63 @@ use anyhow::Result;
 use intbits::Bits;
 use packed_struct::prelude::*;
 
+#[derive(Clone)]
 pub struct Cartridge {
     pub mapping_mode: MappingMode,
     pub rom: Vec<u8>,
+    pub sram: Vec<u8>,
 }
 
 impl Cartridge {
-    pub fn new() -> Self {
-        Self {
-            mapping_mode: MappingMode::LoRom,
-            rom: Vec::new(),
-        }
-    }
-
-    pub fn load_sfc_data(&mut self, data: &[u8]) -> Result<()> {
+    pub fn with_sfc_data(data: &[u8], srm_data: Option<&[u8]>) -> Result<Cartridge> {
         let header = SnesHeader::find_header_in_rom(data)?;
-        self.mapping_mode = header.mapping_mode;
-        self.rom = data.to_vec();
-        Ok(())
+        let sram = match srm_data {
+            Some(srm_data) => {
+                if srm_data.len() != header.sram_size {
+                    bail!(
+                        "Warning: SRAM size mismatch. Expected {} bytes, got {} bytes",
+                        header.sram_size,
+                        srm_data.len()
+                    );
+                }
+                srm_data.to_vec()
+            }
+            None => vec![0; header.sram_size],
+        };
+        Ok(Cartridge {
+            mapping_mode: header.mapping_mode,
+            rom: data.to_vec(),
+            sram,
+        })
     }
 
-    pub fn load_sfc(&mut self, path: &Path) -> Result<()> {
-        let data = std::fs::read(path)?;
-        self.load_sfc_data(&data)
+    pub fn with_sfc_file(path: &Path) -> Result<Cartridge> {
+        let srm_path = path.with_extension("srm");
+        let srm_data: Option<Vec<u8>> = if srm_path.exists() {
+            Some(std::fs::read(srm_path)?)
+        } else {
+            None
+        };
+        let sfc_data = std::fs::read(path)?;
+        Self::with_sfc_data(&sfc_data, srm_data.as_deref())
+    }
+
+    pub fn with_program(program: &[u8]) -> Cartridge {
+        Cartridge {
+            mapping_mode: MappingMode::LoRom,
+            rom: program.to_vec(),
+            sram: Vec::new(),
+        }
     }
 }
 
 impl Default for Cartridge {
     fn default() -> Self {
-        Self::new()
+        Self {
+            mapping_mode: MappingMode::LoRom,
+            rom: Vec::new(),
+            sram: Vec::new(),
+        }
     }
 }
 

@@ -9,6 +9,7 @@ use log::error;
 use pretty_assertions::assert_eq;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::SresBus;
+use sres_emulator::cartridge::Cartridge;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::ppu::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
@@ -207,7 +208,7 @@ fn run_rom_test(test_name: &str) {
     let trace_path = root_dir.join(format!("tests/rom_tests/{test_name}-trace.log.xz"));
     let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
 
-    let mut system = System::with_sfc(&rom_path).unwrap();
+    let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     // CPUMSC reads 0x93 from $000000 at the first instruction. I cannot figure out why, it
     // should be mapped to RAM.
     system.cpu.bus.cycle_write_u8(0x000000.into(), 0x93);
@@ -346,7 +347,7 @@ fn run_test_rom(test_name: &str) -> Cpu<SresBus> {
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
 
-    let mut system = System::with_sfc(&rom_path).unwrap();
+    let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.cpu.reset();
 
     while !system.cpu.halt {

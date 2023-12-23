@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use image::RgbaImage;
 use serde::Deserialize;
 use serde::Serialize;
+use sres_emulator::cartridge::Cartridge;
 use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::ppu::oam::SpriteSize;
 use sres_emulator::ppu::Background;
@@ -67,7 +68,7 @@ fn run_framebuffer_test(test_name: &str, frame: u64) -> System {
     logging::test_init(true);
 
     let rom_path = test_dir().join(format!("{test_name}.sfc"));
-    let mut system = System::with_sfc(&rom_path).unwrap();
+    let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.execute_frames(frame);
     let framebuffer_path = test_dir().join(format!("{test_name}-framebuffer"));
     compare_to_golden(
@@ -86,7 +87,7 @@ pub fn test_krom_interlace_rpg_debug_render() {
     logging::test_init(true);
 
     let rom_path = test_dir().join("krom_interlace_rpg.sfc");
-    let mut system = System::with_sfc(&rom_path).unwrap();
+    let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.execute_frames(10);
     let ppu = system.cpu.bus.ppu;
 
@@ -162,7 +163,7 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
     };
 
     let rom_path = test_dir().join(format!("{rom_name}.sfc"));
-    let mut system = System::with_sfc(&rom_path).unwrap();
+    let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
 
     let last_frame = snapshots.iter().map(|(_, frame)| frame).max().unwrap();
     for frame in 0..=*last_frame {

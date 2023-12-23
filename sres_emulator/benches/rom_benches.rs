@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::Criterion;
+use sres_emulator::cartridge::Cartridge;
 use sres_emulator::System;
 
 fn criterion_benchmark(c: &mut Criterion) {
@@ -11,12 +12,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     let blend_rom_path = root_dir.join("tests/ppu_tests/krom_blend_hicolor_3840.sfc");
 
     c.bench_function("krom_adc_frame_time", |b| {
-        let mut system = System::with_sfc(&adc_rom_path).unwrap();
+        let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&adc_rom_path).unwrap());
         b.iter(|| system.execute_frames(1));
     });
 
     c.bench_function("krom_blend_frame_time", |b| {
-        let mut system = System::with_sfc(&blend_rom_path).unwrap();
+        let mut system =
+            System::with_cartridge(&Cartridge::with_sfc_file(&blend_rom_path).unwrap());
         b.iter(|| system.execute_frames(1));
     });
 }

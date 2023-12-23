@@ -10,10 +10,9 @@ pub mod util;
 
 use std::cell::RefMut;
 use std::ops::Deref;
-use std::path::Path;
 
-use anyhow::Result;
 use bus::SresBus;
+use cartridge::Cartridge;
 use cpu::Cpu;
 use debugger::BreakReason;
 use debugger::Debugger;
@@ -37,37 +36,19 @@ pub struct System {
 impl System {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let debugger = DebuggerRef::new();
-        Self {
-            cpu: Cpu::new(SresBus::new(debugger.clone()), debugger.clone()),
-            debugger,
-        }
+        Self::with_cartridge(&Cartridge::default())
     }
 
     pub fn debugger(&self) -> RefMut<'_, Debugger> {
         self.debugger.inner.deref().borrow_mut()
     }
 
-    pub fn with_sfc_bytes(sfc_data: &[u8]) -> Result<Self> {
+    pub fn with_cartridge(cartridge: &Cartridge) -> Self {
         let debugger = DebuggerRef::new();
-        Ok(Self {
-            cpu: Cpu::new(
-                SresBus::with_sfc_data(sfc_data, debugger.clone())?,
-                debugger.clone(),
-            ),
+        Self {
+            cpu: Cpu::new(SresBus::new(cartridge, debugger.clone()), debugger.clone()),
             debugger,
-        })
-    }
-
-    pub fn with_sfc(sfc_path: &Path) -> Result<Self> {
-        let debugger = DebuggerRef::new();
-        Ok(Self {
-            cpu: Cpu::new(
-                SresBus::with_sfc(sfc_path, debugger.clone())?,
-                debugger.clone(),
-            ),
-            debugger,
-        })
+        }
     }
 
     pub fn is_debugger_enabled(&self) -> bool {

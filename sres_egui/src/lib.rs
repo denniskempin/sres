@@ -4,8 +4,6 @@ mod wasm;
 
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::fs;
-use std::path::Path;
 use std::time::Duration;
 
 use eframe::CreationContext;
@@ -22,6 +20,7 @@ use egui::Sense;
 use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
+use sres_emulator::cartridge::Cartridge;
 use sres_emulator::controller::StandardController;
 use sres_emulator::System;
 use tracing::instrument;
@@ -34,27 +33,9 @@ use self::debug::DebugUi;
 const PROGRAMS: &[(&str, &[u8])] = &[];
 
 const GAMES: &[(&str, &[u8])] = &[];
-
-pub struct Rom {
-    sfc_data: Vec<u8>,
-}
-
-impl Rom {
-    pub fn load_from_file(path: &Path) -> Rom {
-        let sfc_data = fs::read(path).unwrap();
-        Rom { sfc_data }
-    }
-
-    pub fn load_from_bytes(_name: &str, sfc_data: &[u8]) -> Rom {
-        Rom {
-            sfc_data: sfc_data.to_owned(),
-        }
-    }
-}
-
 pub struct EmulatorApp {
     emulator: System,
-    loaded_rom: Option<Rom>,
+    loaded_cartridge: Option<Cartridge>,
     framebuffer_texture: TextureHandle,
     debug_ui: DebugUi,
     past_frame_times: RingBuffer<Duration, 60>,
@@ -66,11 +47,11 @@ pub struct EmulatorApp {
 
 impl EmulatorApp {
     /// Called once before the first frame.
-    pub fn new(cc: &CreationContext<'_>, rom: Option<Rom>) -> Self {
+    pub fn new(cc: &CreationContext<'_>, cartridge: Option<Cartridge>) -> Self {
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
         let mut app = EmulatorApp {
             emulator: System::new(),
-            loaded_rom: None,
+            loaded_cartridge: None,
             framebuffer_texture: cc.egui_ctx.load_texture(
                 "Framebuffer",
                 ColorImage::example(),
@@ -83,23 +64,23 @@ impl EmulatorApp {
             input_recording_active: false,
         };
 
-        if let Some(rom) = rom {
-            app.load_rom(rom);
+        if let Some(rom) = cartridge {
+            app.load_cartridge(rom);
         }
         app
     }
 
-    fn load_rom(&mut self, rom: Rom) {
-        self.emulator = System::with_sfc_bytes(&rom.sfc_data).unwrap();
+    fn load_cartridge(&mut self, cartridge: Cartridge) {
+        self.emulator = System::with_cartridge(&cartridge);
         self.emulator.enable_debugger();
-        self.loaded_rom = Some(rom);
+        self.loaded_cartridge = Some(cartridge);
     }
 
     fn load_dropped_file(&mut self, drop: &DroppedFile) {
         if let Some(path) = &drop.path {
             match path.extension().and_then(OsStr::to_str) {
                 Some("sfc") => {
-                    self.load_rom(Rom::load_from_file(path));
+                    self.load_cartridge(Cartridge::with_sfc_file(path).unwrap());
                 }
                 _ => {
                     panic!("Unknown file type");
@@ -108,7 +89,7 @@ impl EmulatorApp {
         } else if let Some(bytes) = &drop.bytes {
             //#[cfg(target_arch = "wasm32")]
             //crate::wasm::save_rom_in_local_storage(bytes);
-            self.load_rom(Rom::load_from_bytes(&drop.name, bytes));
+            self.load_cartridge(Cartridge::with_sfc_data(bytes, None).unwrap());
         }
     }
 
@@ -140,14 +121,14 @@ impl EmulatorApp {
                 ui.menu_button("Programs", |ui| {
                     for program in PROGRAMS {
                         if ui.button(program.0).clicked() {
-                            self.load_rom(Rom::load_from_bytes(program.0, program.1));
+                            self.load_cartridge(Cartridge::with_sfc_data(program.1, None).unwrap());
                         }
                     }
                 });
                 ui.menu_button("Games", |ui| {
                     for program in GAMES {
                         if ui.button(program.0).clicked() {
-                            self.load_rom(Rom::load_from_bytes(program.0, program.1));
+                            self.load_cartridge(Cartridge::with_sfc_data(program.1, None).unwrap());
                         }
                     }
                 });
@@ -221,7 +202,7 @@ impl eframe::App for EmulatorApp {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             self.menu_bar(ui);
         });
-        if self.loaded_rom.is_none() {
+        if self.loaded_cartridge.is_none() {
             return;
         }
         ctx.input(|input| {

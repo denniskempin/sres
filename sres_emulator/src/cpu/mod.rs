@@ -239,6 +239,7 @@ mod tests {
     use super::Cpu;
     use crate::bus::Bus;
     use crate::bus::SresBus;
+    use crate::cartridge::Cartridge;
     use crate::cpu::VariableLengthRegister;
     use crate::debugger::DebuggerRef;
     use crate::util::memory::Address;
@@ -266,10 +267,12 @@ mod tests {
         let assembled = assemble(code);
         let debugger = DebuggerRef::new();
         // TODO: Use a test bus instead of SresBus/System
-        Cpu::new(
-            SresBus::with_program(&assembled, debugger.clone()),
+        let mut cpu = Cpu::new(
+            SresBus::new(&Cartridge::with_program(&assembled), debugger.clone()),
             debugger,
-        )
+        );
+        cpu.pc = Address::new(0, 0x8000);
+        cpu
     }
 
     #[test]
