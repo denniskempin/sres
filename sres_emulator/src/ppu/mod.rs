@@ -23,6 +23,7 @@ use crate::util::image::Image;
 use crate::util::image::Rgb15;
 use crate::util::memory::Address;
 use crate::util::uint::U16Ext;
+use crate::util::uint::U32Ext;
 use crate::util::uint::U8Ext;
 
 pub struct Ppu {
@@ -45,6 +46,10 @@ pub struct Ppu {
     pub color_math_operation: ColorMathOperation,
     pub color_math_half: bool,
     pub fixed_color: Rgb15,
+
+    pub mode7_latch: u8,
+    pub m7a_mul: i16,
+    pub m7b_mul: i8,
 
     pub headless: bool,
     pub debugger: DebuggerRef,
@@ -75,6 +80,9 @@ impl Ppu {
             color_math_backdrop_enabled: false,
             color_math_operation: ColorMathOperation::Add,
             color_math_half: false,
+            mode7_latch: 0,
+            m7a_mul: 0,
+            m7b_mul: 0,
             fixed_color: Rgb15::default(),
             headless: false,
             debugger,
@@ -87,7 +95,11 @@ impl Ppu {
             0x2139 => self.vram.read_vmdatalread(),
             0x213A => self.vram.read_vmdatahread(),
             0x213B => self.cgram.read_cgdataread(),
-            _ => 0,
+            0x2134..=0x2136 => self.read_mpy(addr),
+            _ => {
+                log::warn!("PPU: Unhandled read from {:04X}", addr.offset);
+                0
+            }
         }
     }
 
@@ -97,6 +109,7 @@ impl Ppu {
             0x2139 => Some(self.vram.peek_vmdatalread()),
             0x213A => Some(self.vram.peek_vmdatahread()),
             0x213B => Some(self.cgram.peek_cgdataread()),
+            0x2134..=0x2136 => Some(self.read_mpy(addr)),
             _ => None,
         }
     }
@@ -125,7 +138,13 @@ impl Ppu {
             0x212D => self.write_ts(value),
             0x2131 => self.write_cdadsub(value),
             0x2132 => self.write_coldata(value),
-            _ => (),
+            0x211B => self.write_m7a(value),
+            0x211C => self.write_m7b(value),
+            _ => log::warn!(
+                "PPU: Unhandled write to {:04X} = {:02X}",
+                addr.offset,
+                value
+            ),
         }
     }
 
@@ -642,6 +661,54 @@ impl Ppu {
         }
         if value.bit(5) {
             self.fixed_color.set_r(color_value);
+        }
+    }
+
+    /// Register 211B: M7A - Mode 7 Matrix A
+    /// 15  bit  8   7  bit  0
+    ///  ---- ----   ---- ----
+    ///  DDDD DDDD   dddd dddd
+    ///  |||| ||||   |||| ||||
+    ///  ++++-++++---++++-++++- Mode 7 matrix A (8.8 fixed point)
+    ///  ++++-++++---++++-++++- 16-bit multiplication factor (signed)
+    ///
+    /// On write: M7A = (value << 8) | mode7_latch
+    ///           mode7_latch = value
+    pub fn write_m7a(&mut self, value: u8) {
+        self.m7a_mul = (((value as u16) << 8) | self.mode7_latch as u16) as i16;
+        self.mode7_latch = value;
+    }
+
+    /// Register 211C: M7A - Mode 7 Matrix B
+    /// 15  bit  8   7  bit  0
+    ///  ---- ----   ---- ----
+    ///  DDDD DDDD   dddd dddd
+    ///  |||| ||||   |||| ||||
+    ///  ++++-++++---++++-++++- Mode 7 matrix B (8.8 fixed point)
+    ///              ++++-++++- 8-bit multiplication factor (signed)
+    ///
+    /// On write: M7B = (value << 8) | mode7_latch
+    ///           mode7_latch = value
+    pub fn write_m7b(&mut self, value: u8) {
+        self.m7b_mul = value as i8;
+        self.mode7_latch = value;
+    }
+
+    /// Register 2134-6: MPYL/M/H - 24 Bit Multipliction result
+    ///   MPYH        MPYM        MPYL
+    ///   $2136       $2135       $2134
+    /// 7  bit  0   7  bit  0   7  bit  0
+    /// ---- ----   ---- ----   ---- ----
+    /// HHHH HHHH   MMMM MMMM   LLLL LLLL
+    /// |||| ||||   |||| ||||   |||| ||||
+    /// ++++-++++---++++-++++---++++-++++- 24-bit multiplication result (signed)
+    pub fn read_mpy(&self, addr: Address) -> u8 {
+        let mpy = (self.m7a_mul as i32 * self.m7b_mul as i32) as u32;
+        match addr.offset {
+            0x2134 => mpy.low_word().low_byte(),
+            0x2135 => mpy.low_word().high_byte(),
+            0x2136 => mpy.high_word().low_byte(),
+            _ => unreachable!(),
         }
     }
 
