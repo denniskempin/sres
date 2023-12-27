@@ -5,10 +5,10 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use eframe::wasm_bindgen;
 use eframe::wasm_bindgen::prelude::*;
+use sres_emulator::cartridge::Cartridge;
 use web_sys;
 
 use crate::EmulatorApp;
-use sres_emulator::cartridge::Cartridge;
 
 #[wasm_bindgen]
 pub fn start_app(canvas_id: &str) {

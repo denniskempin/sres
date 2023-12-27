@@ -51,6 +51,12 @@ pub struct Ppu {
     pub m7a_mul: i16,
     pub m7b_mul: i8,
 
+    pub counter_latch: bool,
+    pub h_counter: u16,
+    pub h_counter_latch: bool,
+    pub v_counter: u16,
+    pub v_counter_latch: bool,
+
     pub headless: bool,
     pub debugger: DebuggerRef,
 }
@@ -83,6 +89,11 @@ impl Ppu {
             mode7_latch: 0,
             m7a_mul: 0,
             m7b_mul: 0,
+            counter_latch: false,
+            h_counter: 0,
+            h_counter_latch: false,
+            v_counter: 0,
+            v_counter_latch: false,
             fixed_color: Rgb15::default(),
             headless: false,
             debugger,
@@ -96,6 +107,11 @@ impl Ppu {
             0x213A => self.vram.read_vmdatahread(),
             0x213B => self.cgram.read_cgdataread(),
             0x2134..=0x2136 => self.read_mpy(addr),
+            0x2137 => self.read_shvl(),
+            0x213C => self.read_ophct(),
+            0x213D => self.read_opvct(),
+            0x213E => self.peek_stat77(),
+            0x213F => self.read_stat78(),
             _ => {
                 log::warn!("PPU: Unhandled read from {:04X}", addr.offset);
                 0
@@ -110,6 +126,11 @@ impl Ppu {
             0x213A => Some(self.vram.peek_vmdatahread()),
             0x213B => Some(self.cgram.peek_cgdataread()),
             0x2134..=0x2136 => Some(self.read_mpy(addr)),
+            0x2137 => Some(self.peek_shvl()),
+            0x213C => Some(self.peek_ophct()),
+            0x213D => Some(self.peek_opvct()),
+            0x213E => Some(self.peek_stat77()),
+            0x213F => Some(self.peek_stat78()),
             _ => None,
         }
     }
@@ -712,6 +733,125 @@ impl Ppu {
         }
     }
 
+    /// Register 2137: SHVL - Software latch for H/V counters
+    /// 7  bit  0
+    /// ---- ----
+    /// xxxx xxxx
+    /// |||| ||||
+    /// ++++-++++- Open bus
+    ///
+    /// On read: counter_latch = 1
+    pub fn read_shvl(&mut self) -> u8 {
+        if !self.counter_latch {
+            self.h_counter = self.timer.hdot() as u16;
+            self.v_counter = self.timer.v as u16;
+        }
+        self.counter_latch = true;
+        0
+    }
+
+    pub fn peek_shvl(&self) -> u8 {
+        0
+    }
+
+    /// Register 213C: OPHCT - Output horizontal counter
+    /// 15  bit  8   7  bit  0
+    ///  ---- ----   ---- ----
+    ///  xxxx xxxH   HHHH HHHH
+    ///  |||| ||||   |||| ||||
+    ///  |||| |||+---++++-++++- Horizontal counter value
+    ///  ++++-+++-------------- PPU2 open bus
+    ///
+    /// On read: If ophct_byte == 0, value = OPHCT.low
+    ///          If ophct_byte == 1, value = OPHCT.high
+    ///          ophct_byte = ~ophct_byte
+    pub fn read_ophct(&mut self) -> u8 {
+        if self.h_counter_latch {
+            self.h_counter_latch = false;
+            self.h_counter.high_byte()
+        } else {
+            self.h_counter_latch = true;
+            self.h_counter.low_byte()
+        }
+    }
+
+    pub fn peek_ophct(&self) -> u8 {
+        if self.h_counter_latch {
+            self.h_counter.high_byte()
+        } else {
+            self.h_counter.low_byte()
+        }
+    }
+
+    /// Register 213D: OPVCT - Output vertical counter
+    /// 15  bit  8   7  bit  0
+    ///  ---- ----   ---- ----
+    ///  xxxx xxxH   HHHH HHHH
+    ///  |||| ||||   |||| ||||
+    ///  |||| |||+---++++-++++- Vertical counter value
+    ///  ++++-+++-------------- PPU2 open bus
+    ///
+    /// On read: If opvct_byte == 0, value = OPVCT.low
+    ///          If opvct_byte == 1, value = OPVCT.high
+    ///          opvct_byte = ~opvct_byte
+    pub fn read_opvct(&mut self) -> u8 {
+        if self.v_counter_latch {
+            self.v_counter_latch = false;
+            self.v_counter.high_byte()
+        } else {
+            self.v_counter_latch = true;
+            self.v_counter.low_byte()
+        }
+    }
+
+    pub fn peek_opvct(&self) -> u8 {
+        if self.v_counter_latch {
+            self.v_counter.high_byte()
+        } else {
+            self.v_counter.low_byte()
+        }
+    }
+
+    /// Register 213E: STAT77 - PPU1 status and version number
+    /// 7  bit  0
+    /// ---- ----
+    /// TRMx VVVV
+    /// |||| ||||
+    /// |||| ++++- PPU1 version
+    /// |||+------ PPU1 open bus
+    /// ||+------- Master/slave mode (PPU1 pin 25)
+    /// |+-------- Range over flag (sprite tile overflow)
+    /// +--------- Time over flag (sprite overflow)
+    pub fn peek_stat77(&self) -> u8 {
+        log::warn!("STAT77 not implemented");
+        0
+    }
+
+    /// Register 213F: STAT78 - PPU2 status and version number
+    /// 7  bit  0
+    /// ---- ----
+    /// FLxM VVVV
+    /// |||| ||||
+    /// |||| ++++- PPU2 version
+    /// |||+------ 0: 262 or 525i lines = 60Hz, 1: 312 or 625i lines = 50Hz (PPU2 pin 30)
+    /// ||+------- PPU2 open bus
+    /// |+-------- Counter latch value
+    /// +--------- Interlace field
+    ///
+    /// On read: counter_latch = 0
+    ///          ophct_byte = 0
+    ///          opvct_byte = 0
+    pub fn read_stat78(&mut self) -> u8 {
+        self.counter_latch = false;
+        self.h_counter_latch = false;
+        self.v_counter_latch = false;
+        self.peek_stat78()
+    }
+
+    pub fn peek_stat78(&self) -> u8 {
+        log::warn!("STAT78 not implemented");
+        0
+    }
     // Debug APIs
 
     pub fn debug_render_vram<ImageT: Image>(
