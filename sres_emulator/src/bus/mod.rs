@@ -77,6 +77,7 @@ pub trait Bus {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum MemoryBlock {
     Ram(usize),
     Rom(usize),
@@ -435,7 +436,7 @@ fn hirom_memory_map(addr: Address) -> MemoryBlock {
             0x2000..=0x5FFF => MemoryBlock::Register,
             0x6000..=0x7FFF => MemoryBlock::Unmapped,
             0x8000..=0xFFFF => {
-                MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize))
+                MemoryBlock::Rom(addr.bank as usize * 0x10000 + (addr.offset as usize))
             }
         },
         0x30..=0x3F => match addr.offset {
@@ -445,7 +446,7 @@ fn hirom_memory_map(addr: Address) -> MemoryBlock {
                 (addr.bank as usize - 0x30) * 0x2000 + addr.offset as usize - 0x6000,
             ),
             0x8000..=0xFFFF => {
-                MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize))
+                MemoryBlock::Rom(addr.bank as usize * 0x10000 + (addr.offset as usize))
             }
         },
         0x40..=0x7D => MemoryBlock::Unmapped,
@@ -457,7 +458,7 @@ fn hirom_memory_map(addr: Address) -> MemoryBlock {
             0x2000..=0x5FFF => MemoryBlock::Register,
             0x6000..=0x7FFF => MemoryBlock::Unmapped,
             0x8000..=0xFFFF => {
-                MemoryBlock::Rom((addr.bank as usize - 0x80) * 0x8000 + (addr.offset as usize))
+                MemoryBlock::Rom((addr.bank as usize - 0x80) * 0x10000 + (addr.offset as usize))
             }
         },
         0xC0..=0xFF => {
@@ -472,7 +473,7 @@ mod tests {
 
     use image::{Rgba, RgbaImage};
 
-    use crate::util::memory::Address;
+    use super::*;
 
     fn test_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/bus")
@@ -509,16 +510,16 @@ mod tests {
     const BLACK: [u8; 4] = [0x00, 0x00, 0x00, 0xFF];
     const GREY: [u8; 4] = [0x44, 0x44, 0x44, 0xFF];
 
-    fn test_memory_map(memory_map: fn(Address) -> super::MemoryBlock, path_prefix: &Path) {
+    fn test_memory_map(memory_map: fn(Address) -> MemoryBlock, path_prefix: &Path) {
         let mut image = RgbaImage::new(0xFF, 0xFF);
         for bank in 0..0xFF {
             for offset in 0..0xFF {
                 let color = match memory_map(Address::new(bank, offset * 0x100)) {
-                    super::MemoryBlock::Ram(idx) => gradient(BLUE, idx, 0x20000),
-                    super::MemoryBlock::Rom(idx) => gradient(GREEN, idx, 0x3E8000),
-                    super::MemoryBlock::Sram(idx) => gradient(RED, idx, 0x78000),
-                    super::MemoryBlock::Register => Rgba(GREY),
-                    super::MemoryBlock::Unmapped => Rgba(BLACK),
+                    MemoryBlock::Ram(idx) => gradient(BLUE, idx, 0x20000),
+                    MemoryBlock::Rom(idx) => gradient(GREEN, idx, 0x3E8000),
+                    MemoryBlock::Sram(idx) => gradient(RED, idx, 0x78000),
+                    MemoryBlock::Register => Rgba(GREY),
+                    MemoryBlock::Unmapped => Rgba(BLACK),
                 };
                 image.put_pixel(bank as u32, offset as u32, color);
             }
@@ -527,18 +528,42 @@ mod tests {
     }
 
     #[test]
-    pub fn test_lorom_memory_map() {
-        test_memory_map(
-            super::lorom_memory_map,
-            &test_dir().join("lorom_memory_map"),
-        );
+    pub fn test_lorom_memory_map_image() {
+        test_memory_map(lorom_memory_map, &test_dir().join("lorom_memory_map"));
     }
 
     #[test]
-    pub fn test_hirom_memory_map() {
-        test_memory_map(
-            super::hirom_memory_map,
-            &test_dir().join("hirom_memory_map"),
+    pub fn test_hirom_memory_map_image() {
+        test_memory_map(hirom_memory_map, &test_dir().join("hirom_memory_map"));
+    }
+
+    #[test]
+    pub fn test_hirom_rom_ranges() {
+        // Check main ROM location
+        assert_eq!(hirom_memory_map(0xC00000.into()), MemoryBlock::Rom(0x00));
+        assert_eq!(
+            hirom_memory_map(0xFFFFFF.into()),
+            MemoryBlock::Rom(0x3FFFFF)
+        );
+
+        // Check ROM mirror at bank 0x80-0xBF
+        assert_eq!(
+            hirom_memory_map(0x808000.into()),
+            MemoryBlock::Rom(0x008000)
+        );
+        assert_eq!(
+            hirom_memory_map(0xBFFFFF.into()),
+            MemoryBlock::Rom(0x3FFFFF)
+        );
+
+        // Check ROM mirror at bank 0x00-0x3F
+        assert_eq!(
+            hirom_memory_map(0x008000.into()),
+            MemoryBlock::Rom(0x008000)
+        );
+        assert_eq!(
+            hirom_memory_map(0x3FFFFF.into()),
+            MemoryBlock::Rom(0x3FFFFF)
         );
     }
 }
