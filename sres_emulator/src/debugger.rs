@@ -95,6 +95,7 @@ impl DebuggerRef {
         }
     }
     pub fn on_error(&mut self, msg: String) {
+        log::error!("{}", msg);
         if self.enabled {
             self.inner.deref().borrow_mut().on_error(msg);
         }

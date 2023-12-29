@@ -30,6 +30,7 @@ impl Cartridge {
             }
             None => vec![0; header.sram_size],
         };
+
         Ok(Cartridge {
             mapping_mode: header.mapping_mode,
             rom: data.to_vec(),
@@ -67,7 +68,7 @@ impl Default for Cartridge {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MappingMode {
     LoRom,
     HiRom,
