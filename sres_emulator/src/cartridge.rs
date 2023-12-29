@@ -113,6 +113,9 @@ impl SnesHeader {
             MappingMode::LoRom => 0x7FC0,
             MappingMode::HiRom => 0xFFC0,
         };
+        if location + 0x20 > rom.len() {
+            bail!("Header location out of bounds")
+        }
         let header = Self::parse_header(&rom[location..(location + 0x20)]);
         if let Ok(header) = header {
             if header.name.trim_matches('\0').trim().is_empty() {
