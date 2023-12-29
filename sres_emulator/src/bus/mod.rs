@@ -8,6 +8,7 @@ use log::trace;
 use self::multiplication::MultiplicationUnit;
 use crate::apu::Apu;
 use crate::cartridge::Cartridge;
+use crate::cartridge::MappingMode;
 use crate::debugger::DebuggerRef;
 use crate::ppu::HVTimerMode;
 use crate::ppu::Ppu;
@@ -100,6 +101,7 @@ pub struct SresBus {
     pub nmi_signaled: bool,
     pub joy1: u16,
     pub joy2: u16,
+    pub mapping_mode: MappingMode,
 }
 
 impl SresBus {
@@ -125,11 +127,12 @@ impl SresBus {
             nmi_signaled: false,
             joy1: 0,
             joy2: 0,
+            mapping_mode: cartridge.mapping_mode,
         }
     }
 
     pub fn bus_peek(&self, addr: Address) -> Option<u8> {
-        match self.map_memory(addr) {
+        match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => Some(self.wram[offset]),
             MemoryBlock::Rom(offset) => Some(self.rom[offset]),
             MemoryBlock::Sram(offset) => Some(self.sram[offset]),
@@ -153,7 +156,7 @@ impl SresBus {
     pub fn bus_read(&mut self, addr: Address) -> u8 {
         self.debugger
             .on_cpu_memory_access(crate::debugger::MemoryAccess::Read(addr));
-        match self.map_memory(addr) {
+        match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset],
             MemoryBlock::Rom(offset) => self.rom[offset],
             MemoryBlock::Sram(offset) => self.sram[offset],
@@ -174,13 +177,13 @@ impl SresBus {
                 0x421B => self.joy2.high_byte(),
                 _ => {
                     self.debugger
-                        .on_error(format!("Invalid read from register {}", addr));
+                        .on_error(format!("Read from unimplemented register {}", addr));
                     0
                 }
             },
             MemoryBlock::Unmapped => {
                 self.debugger
-                    .on_error(format!("Invalid read from {}", addr));
+                    .on_error(format!("Read from unmapped memory region {}", addr));
                 0
             }
         }
@@ -191,7 +194,7 @@ impl SresBus {
         self.debugger
             .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, value));
 
-        match self.map_memory(addr) {
+        match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
             MemoryBlock::Rom(offset) => self.rom[offset] = value,
             MemoryBlock::Sram(offset) => self.sram[offset] = value,
@@ -203,35 +206,25 @@ impl SresBus {
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
                 0x4207..=0x420A => self.ppu.timer.bus_write(addr, value),
                 _ => {
-                    self.debugger
-                        .on_error(format!("Invalid write to register {} = {}", addr, value));
+                    self.debugger.on_error(format!(
+                        "Write to unimplemented register {} = {}",
+                        addr, value
+                    ));
                 }
             },
             MemoryBlock::Unmapped => {
-                self.debugger.on_error(format!("Invalid write to {}", addr));
+                self.debugger
+                    .on_error(format!("Write to unmapped region {}", addr));
             }
         }
     }
 
-    fn map_memory(&self, addr: Address) -> MemoryBlock {
-        match addr.bank {
-            0x00..=0x3F => match addr.offset {
-                0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
-                0x2000..=0x7FFF => MemoryBlock::Register,
-                0x8000..=0xFFFF => {
-                    MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize - 0x8000))
-                }
-            },
-            0x40..=0x6F => MemoryBlock::Rom(
-                0x200000 + (addr.bank as usize - 0x40) * 0x10000 + addr.offset as usize,
-            ),
-            0x70..=0x7D => {
-                MemoryBlock::Sram((addr.bank as usize - 0x70) * 0x10000 + addr.offset as usize)
-            }
-            0x7E..=0x7F => {
-                MemoryBlock::Ram((addr.bank as usize - 0x7E) * 0x10000 + addr.offset as usize)
-            }
-            _ => MemoryBlock::Unmapped,
+    #[inline]
+    fn memory_map(&self, addr: Address) -> MemoryBlock {
+        // TODO: Unnecessary branch on each cpu cycle
+        match self.mapping_mode {
+            MappingMode::LoRom => lorom_memory_map(addr),
+            MappingMode::HiRom => hirom_memory_map(addr),
         }
     }
 
@@ -388,5 +381,164 @@ fn memory_access_speed(addr: Address) -> u64 {
             }
         }
         0xC0..=0xFF => SLOW, // TODO fastrom support
+    }
+}
+
+#[inline]
+fn lorom_memory_map(addr: Address) -> MemoryBlock {
+    match addr.bank {
+        0x00..=0x3F => match addr.offset {
+            0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
+            0x2000..=0x7FFF => MemoryBlock::Register,
+            0x8000..=0xFFFF => {
+                MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize - 0x8000))
+            }
+        },
+        0x40..=0x6F => match addr.offset {
+            0x0000..=0x7FFF => MemoryBlock::Unmapped,
+            0x8000..=0xFFFF => {
+                MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize - 0x8000))
+            }
+        },
+        0x70..=0x7D => match addr.offset {
+            0x0000..=0x7FFF => {
+                MemoryBlock::Sram((addr.bank as usize - 0x70) * 0x8000 + addr.offset as usize)
+            }
+            0x8000..=0xFFFF => {
+                MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize - 0x8000))
+            }
+        },
+        0x7E..=0x7F => {
+            MemoryBlock::Ram((addr.bank as usize - 0x7E) * 0x10000 + addr.offset as usize)
+        }
+        0x80..=0xBF => match addr.offset {
+            0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
+            0x2000..=0x7FFF => MemoryBlock::Register,
+            0x8000..=0xFFFF => MemoryBlock::Rom(
+                (addr.bank as usize - 0x80) * 0x8000 + (addr.offset as usize - 0x8000),
+            ),
+        },
+        0xC0..=0xFF => match addr.offset {
+            0x0000..=0x7FFF => MemoryBlock::Unmapped,
+            0x8000..=0xFFFF => MemoryBlock::Rom(
+                (addr.bank as usize - 0x80) * 0x8000 + (addr.offset as usize - 0x8000),
+            ),
+        },
+    }
+}
+
+#[inline]
+fn hirom_memory_map(addr: Address) -> MemoryBlock {
+    match addr.bank {
+        0x00..=0x2F => match addr.offset {
+            0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
+            0x2000..=0x5FFF => MemoryBlock::Register,
+            0x6000..=0x7FFF => MemoryBlock::Unmapped,
+            0x8000..=0xFFFF => {
+                MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize))
+            }
+        },
+        0x30..=0x3F => match addr.offset {
+            0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
+            0x2000..=0x5FFF => MemoryBlock::Register,
+            0x6000..=0x7FFF => MemoryBlock::Sram(
+                (addr.bank as usize - 0x30) * 0x2000 + addr.offset as usize - 0x6000,
+            ),
+            0x8000..=0xFFFF => {
+                MemoryBlock::Rom(addr.bank as usize * 0x8000 + (addr.offset as usize))
+            }
+        },
+        0x40..=0x7D => MemoryBlock::Unmapped,
+        0x7E..=0x7F => {
+            MemoryBlock::Ram((addr.bank as usize - 0x7E) * 0x10000 + addr.offset as usize)
+        }
+        0x80..=0xBF => match addr.offset {
+            0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
+            0x2000..=0x5FFF => MemoryBlock::Register,
+            0x6000..=0x7FFF => MemoryBlock::Unmapped,
+            0x8000..=0xFFFF => {
+                MemoryBlock::Rom((addr.bank as usize - 0x80) * 0x8000 + (addr.offset as usize))
+            }
+        },
+        0xC0..=0xFF => {
+            MemoryBlock::Rom((addr.bank as usize - 0xC0) * 0x10000 + (addr.offset as usize))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::{Path, PathBuf};
+
+    use image::{Rgba, RgbaImage};
+
+    use crate::util::memory::Address;
+
+    fn test_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/bus")
+    }
+
+    fn compare_to_golden(image: &RgbaImage, path_prefix: &Path) {
+        let golden_path = path_prefix.with_extension("png");
+        if golden_path.exists() {
+            let golden: RgbaImage = image::open(&golden_path).unwrap().into_rgba8();
+            if golden != *image {
+                let actual_path = golden_path.with_extension("actual.png");
+                image.save(&actual_path).unwrap();
+                panic!("Image does not match golden. See {:?}", actual_path);
+            }
+        } else {
+            image.save(golden_path).unwrap();
+        }
+    }
+
+    pub fn gradient(color: [u8; 4], value: usize, max_value: usize) -> Rgba<u8> {
+        let value = value.min(max_value);
+        let factor = (value as f32 / max_value as f32) * 0.8 + 0.2;
+        Rgba([
+            (color[0] as f32 * factor) as u8,
+            (color[1] as f32 * factor) as u8,
+            (color[2] as f32 * factor) as u8,
+            color[3],
+        ])
+    }
+
+    const RED: [u8; 4] = [0xFF, 0x00, 0x00, 0xFF];
+    const GREEN: [u8; 4] = [0x00, 0xFF, 0x00, 0xFF];
+    const BLUE: [u8; 4] = [0x00, 0x00, 0xFF, 0xFF];
+    const BLACK: [u8; 4] = [0x00, 0x00, 0x00, 0xFF];
+    const GREY: [u8; 4] = [0x44, 0x44, 0x44, 0xFF];
+
+    fn test_memory_map(memory_map: fn(Address) -> super::MemoryBlock, path_prefix: &Path) {
+        let mut image = RgbaImage::new(0xFF, 0xFF);
+        for bank in 0..0xFF {
+            for offset in 0..0xFF {
+                let color = match memory_map(Address::new(bank, offset * 0x100)) {
+                    super::MemoryBlock::Ram(idx) => gradient(BLUE, idx, 0x20000),
+                    super::MemoryBlock::Rom(idx) => gradient(GREEN, idx, 0x3E8000),
+                    super::MemoryBlock::Sram(idx) => gradient(RED, idx, 0x78000),
+                    super::MemoryBlock::Register => Rgba(GREY),
+                    super::MemoryBlock::Unmapped => Rgba(BLACK),
+                };
+                image.put_pixel(bank as u32, offset as u32, color);
+            }
+        }
+        compare_to_golden(&image, path_prefix);
+    }
+
+    #[test]
+    pub fn test_lorom_memory_map() {
+        test_memory_map(
+            super::lorom_memory_map,
+            &test_dir().join("lorom_memory_map"),
+        );
+    }
+
+    #[test]
+    pub fn test_hirom_memory_map() {
+        test_memory_map(
+            super::hirom_memory_map,
+            &test_dir().join("hirom_memory_map"),
+        );
     }
 }
