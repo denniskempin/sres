@@ -86,20 +86,26 @@ pub struct SnesHeader {
 impl SnesHeader {
     pub fn find_header_in_rom(rom: &[u8]) -> Result<Self> {
         let lorom_header = Self::try_header(rom, MappingMode::LoRom);
-        if lorom_header.is_ok() {
-            return lorom_header;
-        }
-
         let hirom_header = Self::try_header(rom, MappingMode::HiRom);
-        if hirom_header.is_ok() {
-            return hirom_header;
-        }
 
-        bail!(
-            "Failed to find header. Tried LoRom ({:?}) and HiRom ({:?})",
-            lorom_header,
-            hirom_header
-        )
+        match (lorom_header, hirom_header) {
+            (Ok(lorom_header), Err(_)) => return Ok(lorom_header),
+            (Err(_), Ok(hirom_header)) => return Ok(hirom_header),
+            (Ok(lorom_header), Ok(hirom_header)) => {
+                bail!(
+                    "Failed to pick header. Both look ok.\n LoRom: {:?}\n HiRom: {:?}",
+                    lorom_header,
+                    hirom_header
+                )
+            }
+            (Err(lorom_err), Err(hirom_err)) => {
+                bail!(
+                    "Failed to find header.\n LoRom: {:?}\n HiRom: {:?}",
+                    lorom_err,
+                    hirom_err
+                )
+            }
+        }
     }
 
     pub fn try_header(rom: &[u8], mapping_mode: MappingMode) -> Result<Self> {
@@ -109,6 +115,9 @@ impl SnesHeader {
         };
         let header = Self::parse_header(&rom[location..(location + 0x20)]);
         if let Ok(header) = header {
+            if header.name.trim_matches('\0').trim().is_empty() {
+                bail!("Header in ${location:06X} has empty name")
+            }
             if header.mapping_mode != mapping_mode {
                 bail!("Header in ${location:06X} does not match mapping mode {mapping_mode:?}")
             }
