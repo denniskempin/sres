@@ -24,6 +24,7 @@ use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::logging;
 use sres_emulator::util::memory::Address;
+use sres_emulator::util::memory::SparseMemory;
 use xz2::read::XzDecoder;
 
 const SKIP_OPCODES: &[u8] = &[
@@ -111,11 +112,11 @@ pub fn test_opcodes_fx() {
     run_tomharte_test("fx");
 }
 
-/// Executes the test cases provided by tomharte_tests/{test_name}.json.xz
+/// Executes the test cases provided by tomharte_cpu/{test_name}.json.xz
 fn run_tomharte_test(test_name: &str) {
     logging::test_init(false);
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let json_path = root_dir.join(format!("tests/tomharte_tests/{test_name}.json.xz"));
+    let json_path = root_dir.join(format!("tests/tomharte_cpu/{test_name}.json.xz"));
     let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
 
     for test_case in TestCase::from_xz_file(&json_path) {
@@ -220,37 +221,12 @@ impl TestCpuState {
     }
 }
 
-/// Implements a sparse memory HashMap with a readable display format.
-#[derive(Default, PartialEq)]
-struct SparseMemory {
-    pub memory: HashMap<u32, u8>,
-}
-
-impl SparseMemory {
-    pub fn get(&self, addr: Address) -> Option<u8> {
-        self.memory.get(&u32::from(addr)).copied()
-    }
-
-    pub fn set(&mut self, addr: Address, value: u8) {
-        self.memory.insert(u32::from(addr), value);
-    }
-}
-
-impl Display for SparseMemory {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for (addr, value) in self.memory.iter().sorted() {
-            writeln!(f, "${:06X}: {:02X}", addr, value)?;
-        }
-        Ok(())
-    }
-}
-
 /// A test implementation of the `Bus`.
 ///
 /// Stores memore sparsely and records all bus cycles for comparison to the test data.
 #[derive(Default)]
 struct TestBus {
-    pub memory: SparseMemory,
+    pub memory: SparseMemory<Address>,
     pub cycles: Vec<Cycle>,
 }
 

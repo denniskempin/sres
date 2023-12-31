@@ -1,7 +1,11 @@
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::hash::Hash;
 use std::io::BufWriter;
 use std::io::Write;
+
+use itertools::Itertools;
 
 use crate::util::uint::U16Ext;
 use crate::util::uint::U32Ext;
@@ -14,7 +18,7 @@ pub enum Wrap {
     NoWrap,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Copy)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Copy, Hash, PartialOrd, Ord)]
 pub struct Address {
     pub bank: u8,
     pub offset: u16,
@@ -100,6 +104,31 @@ impl From<u32> for Address {
 impl Display for Address {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "${:02X}{:04X}", self.bank, self.offset)
+    }
+}
+
+/// Implements a sparse memory HashMap with a readable display format.
+#[derive(Default, PartialEq)]
+pub struct SparseMemory<AddressT: Eq + Hash + Display + Ord> {
+    pub memory: HashMap<AddressT, u8>,
+}
+
+impl<AddressT: Eq + Hash + Display + Ord> SparseMemory<AddressT> {
+    pub fn get(&self, addr: AddressT) -> Option<u8> {
+        self.memory.get(&addr).copied()
+    }
+
+    pub fn set(&mut self, addr: AddressT, value: u8) {
+        self.memory.insert(addr, value);
+    }
+}
+
+impl<AddressT: Eq + Hash + Display + Ord> Display for SparseMemory<AddressT> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for (addr, value) in self.memory.iter().sorted() {
+            writeln!(f, "{}: {:02X}", addr, value)?;
+        }
+        Ok(())
     }
 }
 
