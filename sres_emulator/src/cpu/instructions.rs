@@ -12,7 +12,7 @@ use super::NativeVectorTable;
 use crate::bus::Bus;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 use crate::util::uint::UInt;
 
@@ -169,7 +169,7 @@ pub fn rti(cpu: &mut Cpu<impl Bus>) {
     cpu.bus.cycle_io();
     cpu.status = StatusFlags::from(cpu.stack_pop_u8());
     cpu.update_register_sizes();
-    cpu.pc = Address::from(cpu.stack_pop_u24()).sub(1_u8, Wrap::WrapBank);
+    cpu.pc = AddressU24::from(cpu.stack_pop_u24()).sub(1_u8, Wrap::WrapBank);
 }
 
 pub fn rtl(cpu: &mut Cpu<impl Bus>) {
@@ -273,14 +273,16 @@ pub fn brk(cpu: &mut Cpu<impl Bus>) {
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
     cpu.status.decimal = false;
-    let address = Address::new(
+    let address = AddressU24::new(
         0,
         if cpu.emulation_mode {
-            cpu.bus
-                .cycle_read_u16(Address::new(0, EmuVectorTable::Break as u16), Wrap::NoWrap)
+            cpu.bus.cycle_read_u16(
+                AddressU24::new(0, EmuVectorTable::Break as u16),
+                Wrap::NoWrap,
+            )
         } else {
             cpu.bus.cycle_read_u16(
-                Address::new(0, NativeVectorTable::Break as u16),
+                AddressU24::new(0, NativeVectorTable::Break as u16),
                 Wrap::NoWrap,
             )
         },
@@ -295,10 +297,12 @@ pub fn cop(cpu: &mut Cpu<impl Bus>, _: &Operand) {
     cpu.status.decimal = false;
     let address = if cpu.emulation_mode {
         cpu.bus
-            .cycle_read_u16(Address::new(0, EmuVectorTable::Cop as u16), Wrap::NoWrap)
+            .cycle_read_u16(AddressU24::new(0, EmuVectorTable::Cop as u16), Wrap::NoWrap)
     } else {
-        cpu.bus
-            .cycle_read_u16(Address::new(0, NativeVectorTable::Cop as u16), Wrap::NoWrap)
+        cpu.bus.cycle_read_u16(
+            AddressU24::new(0, NativeVectorTable::Cop as u16),
+            Wrap::NoWrap,
+        )
     };
     cpu.pc = (address as u32).into();
 }
@@ -665,9 +669,9 @@ pub fn mvn(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
         let value = cpu
             .bus
-            .cycle_read_u8(Address::new(source_bank, cpu.x.value));
+            .cycle_read_u8(AddressU24::new(source_bank, cpu.x.value));
         cpu.bus
-            .cycle_write_u8(Address::new(destination_bank, cpu.y.value), value);
+            .cycle_write_u8(AddressU24::new(destination_bank, cpu.y.value), value);
         cpu.bus.cycle_io();
         cpu.bus.cycle_io();
 
@@ -688,9 +692,9 @@ pub fn mvp(cpu: &mut Cpu<impl Bus>, operand: &Operand) {
 
         let value = cpu
             .bus
-            .cycle_read_u8(Address::new(source_bank, cpu.x.value));
+            .cycle_read_u8(AddressU24::new(source_bank, cpu.x.value));
         cpu.bus
-            .cycle_write_u8(Address::new(destination_bank, cpu.y.value), value);
+            .cycle_write_u8(AddressU24::new(destination_bank, cpu.y.value), value);
         cpu.bus.cycle_io();
         cpu.bus.cycle_io();
 

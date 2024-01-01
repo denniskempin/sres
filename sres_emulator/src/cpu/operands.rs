@@ -6,7 +6,7 @@ use super::Cpu;
 use super::UInt;
 use super::STACK_BASE;
 use crate::bus::Bus;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 use crate::util::uint::U16Ext;
 
@@ -62,7 +62,7 @@ pub enum Operand {
     Accumulator,
     ImmediateU8(u8),
     ImmediateU16(u16),
-    Address(u32, AddressMode, Address),
+    Address(u32, AddressMode, AddressU24),
     MoveAddressPair(u8, u8),
 }
 
@@ -71,7 +71,11 @@ impl Operand {
     ///
     /// Returns the operand and address of the next instruction.
     #[inline]
-    pub fn decode(cpu: &mut Cpu<impl Bus>, mode: AddressMode, rwm: AccessMode) -> (Self, Address) {
+    pub fn decode(
+        cpu: &mut Cpu<impl Bus>,
+        mode: AddressMode,
+        rwm: AccessMode,
+    ) -> (Self, AddressU24) {
         let pc = cpu.pc;
         Self::decode_impl(&mut ReadWrapper(cpu), pc, mode, rwm)
     }
@@ -82,10 +86,10 @@ impl Operand {
     #[inline]
     pub fn peek(
         cpu: &Cpu<impl Bus>,
-        instruction_addr: Address,
+        instruction_addr: AddressU24,
         mode: AddressMode,
         rwm: AccessMode,
-    ) -> (Self, Address) {
+    ) -> (Self, AddressU24) {
         Self::decode_impl(&mut PeekWrapper(cpu), instruction_addr, mode, rwm)
     }
 
@@ -97,10 +101,10 @@ impl Operand {
     #[inline]
     fn decode_impl<'a, BusT: Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
         bus: &'a mut WrapperT,
-        instruction_addr: Address,
+        instruction_addr: AddressU24,
         mode: AddressMode,
         rwm: AccessMode,
-    ) -> (Self, Address) {
+    ) -> (Self, AddressU24) {
         // The size of the operand part of the instruction depends on the address mode.
         let operand_size: u8 = match mode {
             AddressMode::Implied => 0,
@@ -179,19 +183,19 @@ impl Operand {
             ),
             // Operand is in memory, calculate the effective address
             _ => {
-                let operand_addr: Address = match mode {
-                    AddressMode::AbsoluteData => Address {
+                let operand_addr: AddressU24 = match mode {
+                    AddressMode::AbsoluteData => AddressU24 {
                         bank: bus.cpu().db,
                         offset: operand_data as u16,
                     },
-                    AddressMode::AbsoluteJump => Address {
+                    AddressMode::AbsoluteJump => AddressU24 {
                         bank: bus.cpu().pc.bank,
                         offset: operand_data as u16,
                     },
-                    AddressMode::AbsoluteLong => Address::from(operand_data),
+                    AddressMode::AbsoluteLong => AddressU24::from(operand_data),
 
                     AddressMode::AbsoluteYIndexed => {
-                        let (addr, page_cross) = Address {
+                        let (addr, page_cross) = AddressU24 {
                             bank: bus.cpu().db,
                             offset: operand_data as u16,
                         }
@@ -205,7 +209,7 @@ impl Operand {
                         addr
                     }
                     AddressMode::AbsoluteXIndexed => {
-                        let (addr, page_cross) = Address {
+                        let (addr, page_cross) = AddressU24 {
                             bank: bus.cpu().db,
                             offset: operand_data as u16,
                         }
@@ -219,21 +223,21 @@ impl Operand {
                         addr
                     }
                     AddressMode::AbsoluteXIndexedLong => {
-                        Address::from(operand_data).add(bus.cpu().x.value, Wrap::NoWrap)
+                        AddressU24::from(operand_data).add(bus.cpu().x.value, Wrap::NoWrap)
                     }
-                    AddressMode::AbsoluteIndirectJump => Address::new(
+                    AddressMode::AbsoluteIndirectJump => AddressU24::new(
                         bus.cpu().pc.bank,
                         bus.cycle_read_u16(operand_data.into(), Wrap::NoWrap),
                     ),
                     AddressMode::AbsoluteIndirectLong => {
-                        Address::from(bus.cycle_read_u24(operand_data.into(), Wrap::WrapBank))
+                        AddressU24::from(bus.cycle_read_u24(operand_data.into(), Wrap::WrapBank))
                     }
                     AddressMode::AbsoluteXIndexedIndirectJump => {
                         bus.cycle_io();
-                        Address::new(
+                        AddressU24::new(
                             bus.cpu().pc.bank,
                             bus.cycle_read_u16(
-                                Address::new(bus.cpu().pc.bank, operand_data as u16)
+                                AddressU24::new(bus.cpu().pc.bank, operand_data as u16)
                                     .add(bus.cpu().x.value, Wrap::WrapBank),
                                 Wrap::WrapBank,
                             ),
@@ -269,14 +273,15 @@ impl Operand {
                     }
                     AddressMode::StackRelative => {
                         bus.cycle_io();
-                        Address::new(0, bus.cpu().s + STACK_BASE).add(operand_data, Wrap::WrapBank)
+                        AddressU24::new(0, bus.cpu().s + STACK_BASE)
+                            .add(operand_data, Wrap::WrapBank)
                     }
                     AddressMode::StackRelativeIndirectYIndexed => {
                         bus.cycle_io();
-                        let value = Address {
+                        let value = AddressU24 {
                             bank: bus.cpu().db,
                             offset: bus.cycle_read_u16(
-                                Address::new(0, bus.cpu().s).add(operand_data, Wrap::WrapBank),
+                                AddressU24::new(0, bus.cpu().s).add(operand_data, Wrap::WrapBank),
                                 Wrap::WrapBank,
                             ),
                         }
@@ -288,14 +293,14 @@ impl Operand {
                         if bus.cpu().d.low_byte() != 0 {
                             bus.cycle_io();
                         }
-                        Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank)
+                        AddressU24::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank)
                     }
                     AddressMode::DirectPageXIndexed => {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
                         bus.cycle_io();
-                        Address::new(0, bus.cpu().d)
+                        AddressU24::new(0, bus.cpu().d)
                             .add(operand_data, Wrap::WrapBank)
                             .add(bus.cpu().x.value, Wrap::WrapBank)
                     }
@@ -304,7 +309,7 @@ impl Operand {
                             bus.cycle_io();
                         }
                         bus.cycle_io();
-                        Address::new(0, bus.cpu().d)
+                        AddressU24::new(0, bus.cpu().d)
                             .add(operand_data, Wrap::WrapBank)
                             .add(bus.cpu().y.value, Wrap::WrapBank)
                     }
@@ -312,10 +317,10 @@ impl Operand {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
-                        Address {
+                        AddressU24 {
                             bank: bus.cpu().db,
                             offset: bus.cycle_read_u16(
-                                Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
+                                AddressU24::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
                                 Wrap::NoWrap,
                             ),
                         }
@@ -326,10 +331,10 @@ impl Operand {
                             bus.cycle_io();
                         }
 
-                        Address {
+                        AddressU24 {
                             bank: bus.cpu().db,
                             offset: bus.cycle_read_u16(
-                                Address::new(0, bus.cpu().d)
+                                AddressU24::new(0, bus.cpu().d)
                                     .add(operand_data, Wrap::WrapBank)
                                     .add(bus.cpu().x.value, Wrap::WrapBank),
                                 Wrap::WrapBank,
@@ -340,10 +345,10 @@ impl Operand {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
-                        let addr = Address {
+                        let addr = AddressU24 {
                             bank: bus.cpu().db,
                             offset: bus.cycle_read_u16(
-                                Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
+                                AddressU24::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
                                 Wrap::WrapBank,
                             ),
                         };
@@ -361,8 +366,8 @@ impl Operand {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
-                        Address::from(bus.cycle_read_u24(
-                            Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
+                        AddressU24::from(bus.cycle_read_u24(
+                            AddressU24::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
                             Wrap::WrapBank,
                         ))
                         .add(bus.cpu().y.value, Wrap::NoWrap)
@@ -371,8 +376,8 @@ impl Operand {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
-                        Address::from(bus.cycle_read_u24(
-                            Address::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
+                        AddressU24::from(bus.cycle_read_u24(
+                            AddressU24::new(0, bus.cpu().d).add(operand_data, Wrap::WrapBank),
                             Wrap::NoWrap,
                         ))
                     }
@@ -396,7 +401,7 @@ impl Operand {
 
     /// Returns the effective [Address] of the operand lies in memory. None otherwise.
     #[inline]
-    pub fn effective_addr(&self) -> Option<Address> {
+    pub fn effective_addr(&self) -> Option<AddressU24> {
         match self {
             Self::Implied
             | Self::Accumulator
@@ -502,16 +507,16 @@ where
     fn cpu(&self) -> &Cpu<T>;
 
     fn cycle_io(&mut self);
-    fn cycle_read_u8(&mut self, addr: Address) -> u8;
+    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8;
 
-    fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
+    fn cycle_read_u16(&mut self, addr: AddressU24, wrap: Wrap) -> u16 {
         u16::from_le_bytes([
             self.cycle_read_u8(addr),
             self.cycle_read_u8(addr.add(1_u16, wrap)),
         ])
     }
 
-    fn cycle_read_u24(&mut self, addr: Address, wrap: Wrap) -> u32 {
+    fn cycle_read_u24(&mut self, addr: AddressU24, wrap: Wrap) -> u32 {
         u32::from_le_bytes([
             self.cycle_read_u8(addr),
             self.cycle_read_u8(addr.add(1_u16, wrap)),
@@ -531,7 +536,7 @@ impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for PeekWrapper<'a, T> {
 
     fn cycle_io(&mut self) {}
 
-    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
+    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
         self.0.bus.peek_u8(addr).unwrap_or_default()
     }
 }
@@ -548,7 +553,7 @@ impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for ReadWrapper<'a, T> {
         self.0.bus.cycle_io()
     }
 
-    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
+    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
         self.0.bus.cycle_read_u8(addr)
     }
 }

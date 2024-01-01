@@ -12,16 +12,16 @@ use crate::bus::Bus;
 use crate::bus::SresBus;
 use crate::cpu::Cpu;
 use crate::cpu::StatusFlags;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Trace {
-    pub pc: Address,
+    pub pc: AddressU24,
     pub instruction: String,
     pub operand: String,
-    pub operand_addr: Option<Address>,
+    pub operand_addr: Option<AddressU24>,
     pub a: u16,
     pub x: u16,
     pub y: u16,
@@ -168,13 +168,13 @@ mod test {
 
     fn example_trace() -> Trace {
         Trace {
-            pc: Address {
+            pc: AddressU24 {
                 bank: 0,
                 offset: 0xe811,
             },
             instruction: "bpl".to_string(),
             operand: "$e80e".to_string(),
-            operand_addr: Some(Address {
+            operand_addr: Some(AddressU24 {
                 bank: 0,
                 offset: 0xe80e,
             }),

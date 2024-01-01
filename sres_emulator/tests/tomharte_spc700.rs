@@ -16,111 +16,123 @@ use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use sres_emulator::bus::Bus;
-use sres_emulator::cpu::Cpu;
-use sres_emulator::cpu::StatusFlags;
+use sres_emulator::apu::spc700::Spc700;
+use sres_emulator::apu::spc700::Spc700Bus;
+use sres_emulator::apu::spc700::Spc700StatusFlags;
 use sres_emulator::debugger::DebuggerRef;
-use sres_emulator::trace::Trace;
 use sres_emulator::util::logging;
-use sres_emulator::util::memory::AddressU24;
+use sres_emulator::util::memory::AddressU16;
 use sres_emulator::util::memory::SparseMemory;
 use xz2::read::XzDecoder;
 
-const SKIP_OPCODES: &[u8] = &[
-    0x44, // MVP test cases seem to follow a very different implementation
-    0x54, // MVN test cases seem to follow a very different implementation
-];
+const SKIP_OPCODES: &[u8] = &[];
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_0x() {
     run_tomharte_test("0x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_1x() {
     run_tomharte_test("1x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_2x() {
     run_tomharte_test("2x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_3x() {
     run_tomharte_test("3x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_4x() {
     run_tomharte_test("4x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_5x() {
     run_tomharte_test("5x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_6x() {
     run_tomharte_test("6x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_7x() {
     run_tomharte_test("7x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_8x() {
     run_tomharte_test("8x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_9x() {
     run_tomharte_test("9x");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_ax() {
     run_tomharte_test("ax");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_bx() {
     run_tomharte_test("bx");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_cx() {
     run_tomharte_test("cx");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_dx() {
     run_tomharte_test("dx");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_ex() {
     run_tomharte_test("ex");
 }
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_opcodes_fx() {
     run_tomharte_test("fx");
 }
 
-/// Executes the test cases provided by tomharte_cpu/{test_name}.json.xz
+/// Executes the test cases provided by tomharte_spc700/{test_name}.json.xz
 fn run_tomharte_test(test_name: &str) {
     logging::test_init(false);
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let json_path = root_dir.join(format!("tests/tomharte_cpu/{test_name}.json.xz"));
+    let json_path = root_dir.join(format!("tests/tomharte_spc700/{test_name}.json.xz"));
     let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
 
     for test_case in TestCase::from_xz_file(&json_path) {
-        let mut actual_state = test_case.initial.create_cpu();
-        let expected_state = test_case.final_.create_cpu();
+        let mut actual_state = test_case.initial.create_spc700();
+        let expected_state = test_case.final_.create_spc700();
         let opcode = actual_state
             .bus
             .peek_u8(actual_state.pc)
@@ -132,10 +144,9 @@ fn run_tomharte_test(test_name: &str) {
         actual_state.step();
 
         // Compare before asserting to print additional information on failures
-        let state_matches = Trace::from_cpu(&actual_state) == Trace::from_cpu(&expected_state);
+        let state_matches = actual_state.to_string() == expected_state.to_string();
         let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
-        // Only compare cycle count. No need to be perfectly accurate with the order.
-        let cycles_match = actual_state.bus.cycles.len() == test_case.cycles().len();
+        let cycles_match = actual_state.bus.cycles == test_case.cycles();
 
         if state_matches && memory_matches && cycles_match {
             // Test case passed!
@@ -145,17 +156,10 @@ fn run_tomharte_test(test_name: &str) {
         *failed_opcodes.entry(opcode).or_insert(0) += 1;
 
         println!();
-        println!(
-            "Case {:2X}: {}",
-            opcode,
-            Trace::from_cpu(&test_case.initial.create_cpu())
-        );
+        println!("Case {:2X}: {}", opcode, test_case.initial.create_spc700());
         println!(
             "Result: {}",
-            StrComparison::new(
-                &Trace::from_cpu(&actual_state).to_string(),
-                &Trace::from_cpu(&expected_state).to_string()
-            )
+            StrComparison::new(&actual_state.to_string(), &expected_state.to_string())
         );
         println!(
             "Memory: {}",
@@ -184,38 +188,28 @@ fn run_tomharte_test(test_name: &str) {
 #[derive(Serialize, Deserialize)]
 struct TestCpuState {
     pc: u16,
-    s: u16,
-    p: u8,
-    a: u16,
-    x: u16,
-    y: u16,
-    dbr: u8,
-    d: u16,
-    pbr: u8,
-    e: u8,
-    ram: Vec<(u32, u8)>,
+    a: u8,
+    x: u8,
+    y: u8,
+    sp: u8,
+    psw: u8,
+    ram: Vec<(u16, u8)>,
 }
 
 impl TestCpuState {
-    /// Create a CPU instance with the state described in the test case.
-    fn create_cpu(&self) -> Cpu<TestBus> {
+    /// Create a SPC700 instance with the state described in the test case.
+    fn create_spc700(&self) -> Spc700<TestBus> {
         let mut bus = TestBus::default();
         for (addr, value) in &self.ram {
-            bus.memory.set(AddressU24::from(*addr), *value);
+            bus.memory.set(AddressU16(*addr), *value);
         }
-        let mut cpu = Cpu::new(bus, DebuggerRef::new());
-        cpu.pc = AddressU24 {
-            bank: self.pbr,
-            offset: self.pc,
-        };
-        cpu.s = self.s;
-        cpu.status = StatusFlags::from(self.p);
-        cpu.a.value = self.a;
-        cpu.x.value = self.x;
-        cpu.y.value = self.y;
-        cpu.db = self.dbr;
-        cpu.d = self.d;
-        cpu.emulation_mode = self.e == 1;
+        let mut cpu = Spc700::new(bus, DebuggerRef::new());
+        cpu.pc = AddressU16(self.pc);
+        cpu.a = self.a;
+        cpu.x = self.x;
+        cpu.y = self.y;
+        cpu.sp = self.sp;
+        cpu.status = Spc700StatusFlags::from(self.psw);
         cpu
     }
 }
@@ -225,24 +219,24 @@ impl TestCpuState {
 /// Stores memore sparsely and records all bus cycles for comparison to the test data.
 #[derive(Default)]
 struct TestBus {
-    pub memory: SparseMemory<AddressU24>,
+    pub memory: SparseMemory<AddressU16>,
     pub cycles: Vec<Cycle>,
 }
 
-impl Bus for TestBus {
-    fn peek_u8(&self, addr: AddressU24) -> Option<u8> {
+impl Spc700Bus for TestBus {
+    fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         self.memory.get(addr)
     }
 
-    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
+    fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
         let value = self.peek_u8(addr).unwrap_or_default();
-        self.cycles.push(Cycle::Read(u32::from(addr), value));
+        self.cycles.push(Cycle::Read(addr, value));
         value
     }
 
     #[allow(clippy::single_match)]
-    fn cycle_write_u8(&mut self, addr: AddressU24, val: u8) {
-        self.cycles.push(Cycle::Write(u32::from(addr), val));
+    fn cycle_write_u8(&mut self, addr: AddressU16, val: u8) {
+        self.cycles.push(Cycle::Write(addr, val));
         self.memory.set(addr, val);
     }
 
@@ -251,14 +245,6 @@ impl Bus for TestBus {
     }
 
     fn reset(&mut self) {}
-
-    fn check_nmi_interrupt(&mut self) -> bool {
-        false
-    }
-
-    fn consume_timer_interrupt(&mut self) -> bool {
-        false
-    }
 }
 
 /// A single test case, parsed from the JSON format described in
@@ -274,7 +260,7 @@ struct TestCase {
     final_: TestCpuState,
     /// Bus cycles during execution (address, value, state string)
     #[serde(rename = "cycles")]
-    raw_cycles: Vec<(Option<u32>, Option<u8>, String)>,
+    raw_cycles: Vec<(Option<u16>, Option<u8>, String)>,
 }
 
 impl TestCase {
@@ -282,17 +268,10 @@ impl TestCase {
     fn from_xz_file(path: &PathBuf) -> impl Iterator<Item = Self> {
         let file = File::open(path).unwrap();
         let reader = io::BufReader::new(XzDecoder::new(file));
-        // To speed things up, read json file line-by-line instead of reading the whole vector at
-        // once.
-        reader.lines().map(|line| {
-            let line = line.unwrap();
-            // Trim array syntax from each line
-            let trimmed = line
-                .trim_end_matches(']')
-                .trim_end_matches(',')
-                .trim_start_matches('[');
-            serde_json::from_str::<Self>(trimmed).unwrap()
-        })
+        // The json files have been reformatted to be one json object per line to speed up parsing.
+        reader
+            .lines()
+            .map(|line| serde_json::from_str(&line.unwrap()).unwrap())
     }
 
     /// Translates the JSON format cycles into the `Cycle` format.
@@ -300,14 +279,20 @@ impl TestCase {
         self.raw_cycles
             .iter()
             .map(|(addr, value, state)| {
-                if !(state.contains('p') || state.contains('d')) {
+                if state == "wait" {
                     Cycle::Internal
-                } else if state.contains('r') {
-                    Cycle::Read(addr.unwrap_or_default(), value.unwrap_or_default())
-                } else if state.contains('w') {
-                    Cycle::Write(addr.unwrap_or_default(), value.unwrap_or_default())
+                } else if state == "read" {
+                    Cycle::Read(
+                        AddressU16(addr.unwrap_or_default()),
+                        value.unwrap_or_default(),
+                    )
+                } else if state == "write" {
+                    Cycle::Write(
+                        AddressU16(addr.unwrap_or_default()),
+                        value.unwrap_or_default(),
+                    )
                 } else {
-                    Cycle::Internal
+                    panic!("Unknown cycle state: {}", state);
                 }
             })
             .collect()
@@ -318,9 +303,9 @@ impl TestCase {
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum Cycle {
     /// The bus was in read mode: (addr, value read)
-    Read(u32, u8),
+    Read(AddressU16, u8),
     /// The bus was in write mode: (addr, value written)
-    Write(u32, u8),
+    Write(AddressU16, u8),
     /// The bus performed an internal operation
     Internal,
 }
@@ -328,8 +313,8 @@ enum Cycle {
 impl Debug for Cycle {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Cycle::Read(addr, value) => write!(f, "R({:06X})={:02X}", addr, value),
-            Cycle::Write(addr, value) => write!(f, "W({:06X})={:02X}", addr, value),
+            Cycle::Read(addr, value) => write!(f, "R({})={:02X}", addr, value),
+            Cycle::Write(addr, value) => write!(f, "W({})={:02X}", addr, value),
             Cycle::Internal => write!(f, "I"),
         }
     }

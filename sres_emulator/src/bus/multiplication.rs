@@ -1,4 +1,4 @@
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::uint::U16Ext;
 
 pub struct MultiplicationUnit {
@@ -22,7 +22,7 @@ impl MultiplicationUnit {
         }
     }
 
-    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+    pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
             0x4214 => Some(self.peek_rddivl()),
             0x4215 => Some(self.peek_rddivh()),
@@ -32,7 +32,7 @@ impl MultiplicationUnit {
         }
     }
 
-    pub fn bus_read(&mut self, addr: Address) -> u8 {
+    pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
             0x4214 => self.peek_rddivl(),
             0x4215 => self.peek_rddivh(),
@@ -42,7 +42,7 @@ impl MultiplicationUnit {
         }
     }
 
-    pub fn bus_write(&mut self, addr: Address, value: u8) {
+    pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
         match addr.offset {
             0x4202 => self.write_wrmpya(value),
             0x4203 => self.write_wrmpyb(value),
