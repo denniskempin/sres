@@ -20,7 +20,7 @@ use sres_emulator::bus::Bus;
 use sres_emulator::cpu::NativeVectorTable;
 use sres_emulator::debugger::Debugger;
 use sres_emulator::debugger::Trigger;
-use sres_emulator::util::memory::Address;
+use sres_emulator::util::memory::AddressU24;
 use sres_emulator::util::memory::Wrap;
 use sres_emulator::util::RingBuffer;
 use sres_emulator::ExecutionResult;
@@ -31,7 +31,7 @@ use crate::util::Instant;
 struct MemoryViewer {
     title: String,
     is_open: bool,
-    scroll_to_location: Option<Address>,
+    scroll_to_location: Option<AddressU24>,
 }
 
 impl MemoryViewer {
@@ -45,7 +45,7 @@ impl MemoryViewer {
 
     pub fn show<F>(&mut self, ctx: &Context, peek: F)
     where
-        F: Fn(Address) -> Option<u8>,
+        F: Fn(AddressU24) -> Option<u8>,
     {
         egui::Window::new(&self.title)
             .open(&mut self.is_open)
@@ -73,7 +73,7 @@ impl MemoryViewer {
                 }
                 scroll.show_rows(ui, row_height, num_rows as usize, |ui, row_range| {
                     for row in row_range {
-                        let addr = Address::from(row as u32 * bytes_per_line);
+                        let addr = AddressU24::from(row as u32 * bytes_per_line);
                         let bytes =
                             (0..bytes_per_line).map(|offset| peek(addr.add(offset, Wrap::NoWrap)));
                         let bytes_str = bytes

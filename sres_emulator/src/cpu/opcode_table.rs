@@ -9,15 +9,15 @@ use crate::bus::Bus;
 use crate::cpu::operands::AccessMode;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 
 /// Metadata about a decoded instruction. Used to generate disassembly.
 pub struct InstructionMeta {
-    pub address: Address,
+    pub address: AddressU24,
     pub operation: &'static str,
     pub operand_str: Option<String>,
-    pub effective_addr: Option<Address>,
+    pub effective_addr: Option<AddressU24>,
 }
 
 /// An entry in the opcode table
@@ -26,7 +26,7 @@ pub struct Instruction<BusT: Bus> {
     pub execute: fn(&mut Cpu<BusT>),
 
     /// Return metadata about this instruction. Can be used on an immutable CPU.
-    pub meta: fn(&Cpu<BusT>, Address) -> (InstructionMeta, Address),
+    pub meta: fn(&Cpu<BusT>, AddressU24) -> (InstructionMeta, AddressU24),
 }
 
 /// Some instructions have a variable size depending on the size of a register. Used to add that

@@ -21,7 +21,7 @@ pub use self::vram::VramAddr;
 use crate::debugger::DebuggerRef;
 use crate::util::image::Image;
 use crate::util::image::Rgb15;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::uint::U16Ext;
 use crate::util::uint::U32Ext;
 use crate::util::uint::U8Ext;
@@ -100,7 +100,7 @@ impl Ppu {
         }
     }
 
-    pub fn bus_read(&mut self, addr: Address) -> u8 {
+    pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
             0x2138 => self.oam.read_oamdataread(),
             0x2139 => self.vram.read_vmdatalread(),
@@ -119,7 +119,7 @@ impl Ppu {
         }
     }
 
-    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+    pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
             0x2138 => Some(self.oam.peek_oamdataread()),
             0x2139 => Some(self.vram.peek_vmdatalread()),
@@ -135,7 +135,7 @@ impl Ppu {
         }
     }
 
-    pub fn bus_write(&mut self, addr: Address, value: u8) {
+    pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
         match addr.offset {
             0x2100 => self.write_inidisp(value),
             0x2101 => self.oam.write_objsel(value),
@@ -531,7 +531,7 @@ impl Ppu {
     /// |||| |||+- Horizontal tilemap count (0 = 1 tilemap, 1 = 2 tilemaps)
     /// |||| ||+-- Vertical tilemap count (0 = 1 tilemap, 1 = 2 tilemaps)
     /// ++++-++--- Tilemap VRAM address (word address = AAAAAA << 10)
-    fn write_bgnsc(&mut self, addr: Address, value: u8) {
+    fn write_bgnsc(&mut self, addr: AddressU24, value: u8) {
         let bg_id = (addr.offset - 0x2107) as usize;
         self.backgrounds[bg_id].tilemap_addr = VramAddr((value.bits(2..=7) as u16) << 10);
         self.backgrounds[bg_id].tilemap_size = match value.bits(0..=1) {
@@ -577,7 +577,7 @@ impl Ppu {
     /// On write: BGnHOFS = (value << 8) | (bgofs_latch & ~7) | (bghofs_latch & 7)
     ///           bgofs_latch = value
     ///           bghofs_latch = value
-    pub fn write_bgnhofs(&mut self, addr: Address, value: u8) {
+    pub fn write_bgnhofs(&mut self, addr: AddressU24, value: u8) {
         let bg_id = ((addr.offset - 0x210D) / 2) as usize;
         self.backgrounds[bg_id].h_offset = ((value as u32) << 8)
             | ((self.bgofs_latch as u32) & !7)
@@ -597,7 +597,7 @@ impl Ppu {
     ///           bgofs_latch = value
     ///
     /// Note: BG1VOFS uses the same address as M7VOFS
-    pub fn write_bgnvofs(&mut self, addr: Address, value: u8) {
+    pub fn write_bgnvofs(&mut self, addr: AddressU24, value: u8) {
         let bg_id = ((addr.offset - 0x210E) / 2) as usize;
         self.backgrounds[bg_id].v_offset = ((value as u32) << 8) | (self.bgofs_latch as u32);
         self.bgofs_latch = value;
@@ -723,7 +723,7 @@ impl Ppu {
     /// HHHH HHHH   MMMM MMMM   LLLL LLLL
     /// |||| ||||   |||| ||||   |||| ||||
     /// ++++-++++---++++-++++---++++-++++- 24-bit multiplication result (signed)
-    pub fn read_mpy(&self, addr: Address) -> u8 {
+    pub fn read_mpy(&self, addr: AddressU24) -> u8 {
         let mpy = (self.m7a_mul as i32 * self.m7b_mul as i32) as u32;
         match addr.offset {
             0x2134 => mpy.low_word().low_byte(),

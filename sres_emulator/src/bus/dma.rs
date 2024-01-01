@@ -6,7 +6,7 @@ use log::warn;
 use packed_struct::prelude::*;
 
 use crate::debugger::DebuggerRef;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 use crate::util::uint::U16Ext;
 use crate::util::uint::U8Ext;
@@ -40,13 +40,13 @@ impl DmaController {
         &mut self,
         master_clock: u64,
         clock_speed: u64,
-    ) -> Option<(Vec<(Address, Address)>, u64)> {
+    ) -> Option<(Vec<(AddressU24, AddressU24)>, u64)> {
         if !self.dma_active {
             return None;
         }
 
         let mut duration = 16 - master_clock % 8;
-        let mut transfers: Vec<(Address, Address)> = Vec::new();
+        let mut transfers: Vec<(AddressU24, AddressU24)> = Vec::new();
         for channel_idx in 0..8_usize {
             if self.dma_pending.bit(channel_idx) {
                 let channel = &mut self.dma_channels[channel_idx];
@@ -98,7 +98,7 @@ impl DmaController {
         Some((transfers, duration))
     }
 
-    pub fn bus_read(&mut self, addr: Address) -> u8 {
+    pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         match self.bus_peek(addr) {
             Some(value) => value,
             None => {
@@ -109,7 +109,7 @@ impl DmaController {
         }
     }
 
-    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+    pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
             0x43..=0x43FF => {
                 let low_byte = addr.offset.low_byte();
@@ -129,7 +129,7 @@ impl DmaController {
         }
     }
 
-    pub fn bus_write(&mut self, addr: Address, value: u8) {
+    pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
         match addr.offset {
             0x420B => self.write_mdmaen(value),
             0x420C => self.write_hdmaen(value),
@@ -278,8 +278,8 @@ impl DmaController {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct DmaChannel {
     parameters: DmaParameters,
-    bus_a_address: Address,
-    bus_b_address: Address,
+    bus_a_address: AddressU24,
+    bus_b_address: AddressU24,
     byte_count: u16,
 }
 
@@ -287,8 +287,8 @@ impl Default for DmaChannel {
     fn default() -> Self {
         Self {
             parameters: DmaParameters::default(),
-            bus_a_address: Address::default(),
-            bus_b_address: Address::new(0, 0x21FF),
+            bus_a_address: AddressU24::default(),
+            bus_b_address: AddressU24::new(0, 0x21FF),
             byte_count: 0,
         }
     }

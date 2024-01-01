@@ -1,6 +1,8 @@
+pub mod spc700;
+
 use log::debug;
 
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 
 pub struct Apu {
     channel_data: [u8; 4],
@@ -14,31 +16,31 @@ impl Apu {
         }
     }
 
-    pub fn bus_read(&mut self, addr: Address) -> u8 {
+    pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         self.read_apuio(addr)
     }
 
-    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+    pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         Some(self.peek_apuio(addr))
     }
 
-    pub fn bus_write(&mut self, addr: Address, value: u8) {
+    pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
         self.write_apuio(addr, value)
     }
 
     /// Register 2140..2144: APUION - APU IO Channels
-    fn write_apuio(&mut self, addr: Address, value: u8) {
+    fn write_apuio(&mut self, addr: AddressU24, value: u8) {
         let channel_id = (addr.offset - 0x2140) as usize % 4;
         self.channel_data[channel_id] = value;
         debug!("APUIO[{:04X}] = {:02X}", addr.offset, value);
     }
 
-    fn peek_apuio(&self, addr: Address) -> u8 {
+    fn peek_apuio(&self, addr: AddressU24) -> u8 {
         let channel_id = (addr.offset - 0x2140) as usize % 4;
         self.channel_data[channel_id]
     }
 
-    fn read_apuio(&mut self, addr: Address) -> u8 {
+    fn read_apuio(&mut self, addr: AddressU24) -> u8 {
         let channel_id = (addr.offset - 0x2140) as usize % 4;
         let value = self.channel_data[channel_id];
         self.channel_data[channel_id] = match channel_id {

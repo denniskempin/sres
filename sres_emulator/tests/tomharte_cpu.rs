@@ -5,7 +5,6 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
-use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fs::File;
 use std::io;
@@ -23,7 +22,7 @@ use sres_emulator::cpu::StatusFlags;
 use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::logging;
-use sres_emulator::util::memory::Address;
+use sres_emulator::util::memory::AddressU24;
 use sres_emulator::util::memory::SparseMemory;
 use xz2::read::XzDecoder;
 
@@ -202,10 +201,10 @@ impl TestCpuState {
     fn create_cpu(&self) -> Cpu<TestBus> {
         let mut bus = TestBus::default();
         for (addr, value) in &self.ram {
-            bus.memory.set(Address::from(*addr), *value);
+            bus.memory.set(AddressU24::from(*addr), *value);
         }
         let mut cpu = Cpu::new(bus, DebuggerRef::new());
-        cpu.pc = Address {
+        cpu.pc = AddressU24 {
             bank: self.pbr,
             offset: self.pc,
         };
@@ -226,23 +225,23 @@ impl TestCpuState {
 /// Stores memore sparsely and records all bus cycles for comparison to the test data.
 #[derive(Default)]
 struct TestBus {
-    pub memory: SparseMemory<Address>,
+    pub memory: SparseMemory<AddressU24>,
     pub cycles: Vec<Cycle>,
 }
 
 impl Bus for TestBus {
-    fn peek_u8(&self, addr: Address) -> Option<u8> {
+    fn peek_u8(&self, addr: AddressU24) -> Option<u8> {
         self.memory.get(addr)
     }
 
-    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
+    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
         let value = self.peek_u8(addr).unwrap_or_default();
         self.cycles.push(Cycle::Read(u32::from(addr), value));
         value
     }
 
     #[allow(clippy::single_match)]
-    fn cycle_write_u8(&mut self, addr: Address, val: u8) {
+    fn cycle_write_u8(&mut self, addr: AddressU24, val: u8) {
         self.cycles.push(Cycle::Write(u32::from(addr), val));
         self.memory.set(addr, val);
     }
@@ -292,7 +291,6 @@ impl TestCase {
                 .trim_end_matches(']')
                 .trim_end_matches(',')
                 .trim_start_matches('[');
-
             serde_json::from_str::<Self>(trimmed).unwrap()
         })
     }

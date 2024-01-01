@@ -13,7 +13,7 @@ pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
 use crate::bus::Bus;
 use crate::debugger::DebuggerRef;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 use crate::util::uint::RegisterSize;
 use crate::util::uint::UInt;
@@ -69,7 +69,7 @@ pub enum EmuVectorTable {
 
 pub struct Cpu<BusT: Bus> {
     pub bus: BusT,
-    pub pc: Address,
+    pub pc: AddressU24,
     pub a: VariableLengthRegister,
     pub x: VariableLengthRegister,
     pub y: VariableLengthRegister,
@@ -97,7 +97,7 @@ impl<BusT: Bus> Cpu<BusT> {
             d: 0,
             db: 0,
             status: StatusFlags::default(),
-            pc: Address::default(),
+            pc: AddressU24::default(),
             emulation_mode: true,
             master_cycle: 0,
             halt: false,
@@ -109,7 +109,7 @@ impl<BusT: Bus> Cpu<BusT> {
     }
 
     /// Return the instruction meta data for the instruction at the given address
-    pub fn load_instruction_meta(&self, addr: Address) -> (InstructionMeta, Address) {
+    pub fn load_instruction_meta(&self, addr: AddressU24) -> (InstructionMeta, AddressU24) {
         let opcode = self.bus.peek_u8(addr).unwrap_or_default();
         (self.instruction_table[opcode as usize].meta)(self, addr)
     }
@@ -132,11 +132,14 @@ impl<BusT: Bus> Cpu<BusT> {
 
     pub fn reset(&mut self) {
         self.bus.reset();
-        self.pc = Address {
+        self.pc = AddressU24 {
             bank: 0,
             offset: self
                 .bus
-                .peek_u16(Address::new(0, EmuVectorTable::Reset as u16), Wrap::NoWrap)
+                .peek_u16(
+                    AddressU24::new(0, EmuVectorTable::Reset as u16),
+                    Wrap::NoWrap,
+                )
                 .unwrap_or_default(),
         };
     }
@@ -162,12 +165,12 @@ impl<BusT: Bus> Cpu<BusT> {
         self.status.decimal = false;
         let address = self
             .bus
-            .cycle_read_u16(Address::new(0, handler as u16), Wrap::NoWrap);
-        self.pc = Address::new(0, address);
+            .cycle_read_u16(AddressU24::new(0, handler as u16), Wrap::NoWrap);
+        self.pc = AddressU24::new(0, address);
     }
 
     fn stack_push_u8(&mut self, value: u8) {
-        self.bus.cycle_write_u8(Address::new(0, self.s), value);
+        self.bus.cycle_write_u8(AddressU24::new(0, self.s), value);
         self.s = self.s.wrapping_sub(1);
     }
 
@@ -197,7 +200,7 @@ impl<BusT: Bus> Cpu<BusT> {
 
     fn stack_pop_u8(&mut self) -> u8 {
         self.s = self.s.wrapping_add(1);
-        self.bus.cycle_read_u8(Address::new(0, self.s))
+        self.bus.cycle_read_u8(AddressU24::new(0, self.s))
     }
 
     fn stack_pop_u16(&mut self) -> u16 {
@@ -241,7 +244,7 @@ mod tests {
     use crate::cartridge::Cartridge;
     use crate::cpu::VariableLengthRegister;
     use crate::debugger::DebuggerRef;
-    use crate::util::memory::Address;
+    use crate::util::memory::AddressU24;
     use crate::util::memory::Wrap;
     use crate::System;
 
@@ -270,7 +273,7 @@ mod tests {
             SresBus::new(&Cartridge::with_program(&assembled), debugger.clone()),
             debugger,
         );
-        cpu.pc = Address::new(0, 0x8000);
+        cpu.pc = AddressU24::new(0, 0x8000);
         cpu
     }
 
@@ -298,7 +301,7 @@ mod tests {
         cpu.stack_push_u8(0x12);
         assert_eq!(
             cpu.bus
-                .cycle_read_u8(Address::new(0, cpu.s).add(1_u8, Wrap::WrapBank)),
+                .cycle_read_u8(AddressU24::new(0, cpu.s).add(1_u8, Wrap::WrapBank)),
             0x12
         );
         assert_eq!(cpu.stack_pop_u8(), 0x12);
@@ -311,12 +314,12 @@ mod tests {
         cpu.stack_push_u16(0x1234);
         assert_eq!(
             cpu.bus
-                .cycle_read_u8(Address::new(0, cpu.s).add(1_u8, Wrap::WrapBank)),
+                .cycle_read_u8(AddressU24::new(0, cpu.s).add(1_u8, Wrap::WrapBank)),
             0x34
         );
         assert_eq!(
             cpu.bus
-                .cycle_read_u8(Address::new(0, cpu.s).add(2_u8, Wrap::WrapBank)),
+                .cycle_read_u8(AddressU24::new(0, cpu.s).add(2_u8, Wrap::WrapBank)),
             0x12
         );
         assert_eq!(cpu.stack_pop_u16(), 0x1234);

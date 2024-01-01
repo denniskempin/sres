@@ -89,8 +89,8 @@ impl SnesHeader {
         let hirom_header = Self::try_header(rom, MappingMode::HiRom);
 
         match (lorom_header, hirom_header) {
-            (Ok(lorom_header), Err(_)) => return Ok(lorom_header),
-            (Err(_), Ok(hirom_header)) => return Ok(hirom_header),
+            (Ok(lorom_header), Err(_)) => Ok(lorom_header),
+            (Err(_), Ok(hirom_header)) => Ok(hirom_header),
             (Ok(lorom_header), Ok(hirom_header)) => {
                 bail!(
                     "Failed to pick header. Both look ok.\n LoRom: {:?}\n HiRom: {:?}",

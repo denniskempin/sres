@@ -12,23 +12,23 @@ use crate::cartridge::MappingMode;
 use crate::debugger::DebuggerRef;
 use crate::ppu::HVTimerMode;
 use crate::ppu::Ppu;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 use crate::util::uint::RegisterSize;
 use crate::util::uint::U16Ext;
 use crate::util::uint::UInt;
 
 pub trait Bus {
-    fn peek_u8(&self, addr: Address) -> Option<u8>;
+    fn peek_u8(&self, addr: AddressU24) -> Option<u8>;
     fn cycle_io(&mut self);
-    fn cycle_read_u8(&mut self, addr: Address) -> u8;
-    fn cycle_write_u8(&mut self, addr: Address, value: u8);
+    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8;
+    fn cycle_write_u8(&mut self, addr: AddressU24, value: u8);
     fn reset(&mut self);
     fn check_nmi_interrupt(&mut self) -> bool;
     fn consume_timer_interrupt(&mut self) -> bool;
 
     #[inline]
-    fn cycle_read_u16(&mut self, addr: Address, wrap: Wrap) -> u16 {
+    fn cycle_read_u16(&mut self, addr: AddressU24, wrap: Wrap) -> u16 {
         u16::from_le_bytes([
             self.cycle_read_u8(addr),
             self.cycle_read_u8(addr.add(1_u16, wrap)),
@@ -36,7 +36,7 @@ pub trait Bus {
     }
 
     #[inline]
-    fn cycle_read_u24(&mut self, addr: Address, wrap: Wrap) -> u32 {
+    fn cycle_read_u24(&mut self, addr: AddressU24, wrap: Wrap) -> u32 {
         u32::from_le_bytes([
             self.cycle_read_u8(addr),
             self.cycle_read_u8(addr.add(1_u16, wrap)),
@@ -46,7 +46,7 @@ pub trait Bus {
     }
 
     #[inline]
-    fn cycle_read_generic<T: UInt>(&mut self, addr: Address, wrap: Wrap) -> T {
+    fn cycle_read_generic<T: UInt>(&mut self, addr: AddressU24, wrap: Wrap) -> T {
         match T::SIZE {
             RegisterSize::U8 => T::from_u8(self.cycle_read_u8(addr)),
             RegisterSize::U16 => T::from_u16(self.cycle_read_u16(addr, wrap)),
@@ -54,14 +54,14 @@ pub trait Bus {
     }
 
     #[inline]
-    fn cycle_write_u16(&mut self, addr: Address, value: u16, wrap: Wrap) {
+    fn cycle_write_u16(&mut self, addr: AddressU24, value: u16, wrap: Wrap) {
         let bytes = value.to_le_bytes();
         self.cycle_write_u8(addr, bytes[0]);
         self.cycle_write_u8(addr.add(1_u16, wrap), bytes[1]);
     }
 
     #[inline]
-    fn cycle_write_generic<T: UInt>(&mut self, addr: Address, value: T, wrap: Wrap) {
+    fn cycle_write_generic<T: UInt>(&mut self, addr: AddressU24, value: T, wrap: Wrap) {
         match T::SIZE {
             RegisterSize::U8 => self.cycle_write_u8(addr, value.to_u8()),
             RegisterSize::U16 => self.cycle_write_u16(addr, value.to_u16(), wrap),
@@ -69,7 +69,7 @@ pub trait Bus {
     }
 
     #[inline]
-    fn peek_u16(&self, addr: Address, wrap: Wrap) -> Option<u16> {
+    fn peek_u16(&self, addr: AddressU24, wrap: Wrap) -> Option<u16> {
         Some(u16::from_le_bytes([
             self.peek_u8(addr)?,
             self.peek_u8(addr.add(1_u16, wrap))?,
@@ -132,7 +132,7 @@ impl SresBus {
         }
     }
 
-    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+    pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => Some(self.wram[offset]),
             MemoryBlock::Rom(offset) => Some(self.rom[offset]),
@@ -154,7 +154,7 @@ impl SresBus {
         }
     }
 
-    pub fn bus_read(&mut self, addr: Address) -> u8 {
+    pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         self.debugger
             .on_cpu_memory_access(crate::debugger::MemoryAccess::Read(addr));
         match self.memory_map(addr) {
@@ -191,7 +191,7 @@ impl SresBus {
     }
 
     #[allow(clippy::single_match)]
-    fn bus_write(&mut self, addr: Address, value: u8) {
+    fn bus_write(&mut self, addr: AddressU24, value: u8) {
         self.debugger
             .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, value));
 
@@ -221,7 +221,7 @@ impl SresBus {
     }
 
     #[inline]
-    fn memory_map(&self, addr: Address) -> MemoryBlock {
+    fn memory_map(&self, addr: AddressU24) -> MemoryBlock {
         // TODO: Unnecessary branch on each cpu cycle
         match self.mapping_mode {
             MappingMode::LoRom => lorom_memory_map(addr),
@@ -308,11 +308,11 @@ impl SresBus {
 }
 
 impl Bus for SresBus {
-    fn peek_u8(&self, addr: Address) -> Option<u8> {
+    fn peek_u8(&self, addr: AddressU24) -> Option<u8> {
         self.bus_peek(addr)
     }
 
-    fn cycle_read_u8(&mut self, addr: Address) -> u8 {
+    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
         self.clock_speed = memory_access_speed(addr);
         trace!(target: "cycles", "cycle read {addr} ({} cycles)", self.clock_speed);
         self.ppu.advance_master_clock(self.clock_speed - 6);
@@ -322,7 +322,7 @@ impl Bus for SresBus {
     }
 
     #[allow(clippy::single_match)]
-    fn cycle_write_u8(&mut self, addr: Address, val: u8) {
+    fn cycle_write_u8(&mut self, addr: AddressU24, val: u8) {
         self.clock_speed = memory_access_speed(addr);
         self.advance_master_clock(self.clock_speed);
         trace!(
@@ -358,7 +358,7 @@ impl Bus for SresBus {
 
 /// Memory access speed as per memory map. See:
 /// https://wiki.superfamicom.org/memory-mapping#memory-map-67
-fn memory_access_speed(addr: Address) -> u64 {
+fn memory_access_speed(addr: AddressU24) -> u64 {
     static FAST: u64 = 6;
     static SLOW: u64 = 8;
     static XSLOW: u64 = 12;
@@ -386,7 +386,7 @@ fn memory_access_speed(addr: Address) -> u64 {
 }
 
 #[inline]
-fn lorom_memory_map(addr: Address) -> MemoryBlock {
+fn lorom_memory_map(addr: AddressU24) -> MemoryBlock {
     match addr.bank {
         0x00..=0x3F => match addr.offset {
             0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
@@ -429,7 +429,7 @@ fn lorom_memory_map(addr: Address) -> MemoryBlock {
 }
 
 #[inline]
-fn hirom_memory_map(addr: Address) -> MemoryBlock {
+fn hirom_memory_map(addr: AddressU24) -> MemoryBlock {
     match addr.bank {
         0x00..=0x2F => match addr.offset {
             0x0000..=0x1FFF => MemoryBlock::Ram(addr.offset as usize),
@@ -469,9 +469,11 @@ fn hirom_memory_map(addr: Address) -> MemoryBlock {
 
 #[cfg(test)]
 mod tests {
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
+    use std::path::PathBuf;
 
-    use image::{Rgba, RgbaImage};
+    use image::Rgba;
+    use image::RgbaImage;
 
     use super::*;
 
@@ -510,11 +512,11 @@ mod tests {
     const BLACK: [u8; 4] = [0x00, 0x00, 0x00, 0xFF];
     const GREY: [u8; 4] = [0x44, 0x44, 0x44, 0xFF];
 
-    fn test_memory_map(memory_map: fn(Address) -> MemoryBlock, path_prefix: &Path) {
+    fn test_memory_map(memory_map: fn(AddressU24) -> MemoryBlock, path_prefix: &Path) {
         let mut image = RgbaImage::new(0xFF, 0xFF);
         for bank in 0..0xFF {
             for offset in 0..0xFF {
-                let color = match memory_map(Address::new(bank, offset * 0x100)) {
+                let color = match memory_map(AddressU24::new(bank, offset * 0x100)) {
                     MemoryBlock::Ram(idx) => gradient(BLUE, idx, 0x20000),
                     MemoryBlock::Rom(idx) => gradient(GREEN, idx, 0x3E8000),
                     MemoryBlock::Sram(idx) => gradient(RED, idx, 0x78000),

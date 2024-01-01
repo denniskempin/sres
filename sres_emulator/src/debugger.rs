@@ -8,16 +8,16 @@ use super::cpu::InstructionMeta;
 use crate::bus::SresBus;
 use crate::cpu::Cpu;
 use crate::cpu::NativeVectorTable;
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::RingBuffer;
 
 pub enum MemoryAccess {
-    Read(Address),
-    Write(Address, u8),
+    Read(AddressU24),
+    Write(AddressU24, u8),
 }
 
 impl MemoryAccess {
-    pub fn addr(&self) -> Address {
+    pub fn addr(&self) -> AddressU24 {
         match self {
             MemoryAccess::Read(addr) => *addr,
             MemoryAccess::Write(addr, _) => *addr,
@@ -38,9 +38,9 @@ pub enum Trigger {
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone)]
 pub enum BreakReason {
-    ProgramCounter(Address),
-    CpuMemoryRead(Address),
-    CpuMemoryWrite(Address),
+    ProgramCounter(AddressU24),
+    CpuMemoryRead(AddressU24),
+    CpuMemoryWrite(AddressU24),
     ExecutionError(String),
     Interrupt(NativeVectorTable),
     Custom(String),
@@ -84,7 +84,7 @@ impl DebuggerRef {
         }
     }
 
-    pub fn before_instruction(&mut self, pc: Address) {
+    pub fn before_instruction(&mut self, pc: AddressU24) {
         if self.enabled {
             self.inner.deref().borrow_mut().before_instruction(pc);
         }
@@ -123,7 +123,7 @@ impl Default for DebuggerRef {
 pub struct Debugger {
     breakpoints: Vec<Trigger>,
     break_reason: Option<BreakReason>,
-    last_pcs: RingBuffer<Address, 20>,
+    last_pcs: RingBuffer<AddressU24, 20>,
 }
 
 impl Debugger {
@@ -172,7 +172,7 @@ impl Debugger {
         }
     }
 
-    fn before_instruction(&mut self, pc: Address) {
+    fn before_instruction(&mut self, pc: AddressU24) {
         self.last_pcs.push(pc);
         for trigger in self.breakpoints.iter() {
             if let Trigger::ProgramCounter(range) = trigger {

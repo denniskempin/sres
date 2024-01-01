@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::util::memory::Address;
+use crate::util::memory::AddressU24;
 use crate::util::uint::U16Ext;
 use crate::util::uint::UInt;
 use crate::util::EdgeDetector;
@@ -35,7 +35,7 @@ impl PpuTimer {
         }
     }
 
-    pub fn bus_peek(&self, addr: Address) -> Option<u8> {
+    pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
             0x4211 => self.peek_timeup(),
             0x4212 => self.peek_hvbjoy(),
@@ -43,7 +43,7 @@ impl PpuTimer {
         }
     }
 
-    pub fn bus_read(&mut self, addr: Address) -> u8 {
+    pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
             0x4211 => self.read_timeup(),
             0x4212 => self.read_hvbjoy(),
@@ -51,7 +51,7 @@ impl PpuTimer {
         }
     }
 
-    pub fn bus_write(&mut self, addr: Address, value: u8) {
+    pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
         match addr.offset {
             0x4207 => self.write_htimel(value),
             0x4208 => self.write_htimeh(value),
