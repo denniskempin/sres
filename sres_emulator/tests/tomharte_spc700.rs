@@ -22,6 +22,7 @@ use sres_emulator::apu::spc700::Spc700StatusFlags;
 use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::util::logging;
 use sres_emulator::util::memory::AddressU16;
+use sres_emulator::util::memory::Bus;
 use sres_emulator::util::memory::SparseMemory;
 use xz2::read::XzDecoder;
 
@@ -223,7 +224,7 @@ struct TestBus {
     pub cycles: Vec<Cycle>,
 }
 
-impl Spc700Bus for TestBus {
+impl Bus<AddressU16> for TestBus {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         self.memory.get(addr)
     }
@@ -246,6 +247,8 @@ impl Spc700Bus for TestBus {
 
     fn reset(&mut self) {}
 }
+
+impl Spc700Bus for TestBus {}
 
 /// A single test case, parsed from the JSON format described in
 /// https://github.com/TomHarte/ProcessorTests/tree/main/65816

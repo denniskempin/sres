@@ -7,9 +7,18 @@ use std::io::Write;
 
 use itertools::Itertools;
 
+use super::uint::RegisterSize;
+use super::uint::UInt;
 use crate::util::uint::U16Ext;
 use crate::util::uint::U32Ext;
 use crate::util::uint::UIntTruncate;
+
+pub trait Address: Eq + Hash + Display + Ord + Copy + Clone {
+    fn add_signed(&self, rhs: i32, wrap: Wrap) -> Self;
+    fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self;
+    fn add_detect_page_cross<T: UIntTruncate + Copy>(&self, rhs: T, wrap: Wrap) -> (bool, Self);
+    fn sub<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self;
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub enum Wrap {
@@ -35,8 +44,10 @@ impl AddressU24 {
             offset: ((page as u16) << 8) | (offset as u16),
         }
     }
+}
 
-    pub fn add_signed(&self, rhs: i32, wrap: Wrap) -> Self {
+impl Address for AddressU24 {
+    fn add_signed(&self, rhs: i32, wrap: Wrap) -> Self {
         if rhs > 0 {
             self.add(rhs.unsigned_abs(), wrap)
         } else {
@@ -44,7 +55,7 @@ impl AddressU24 {
         }
     }
 
-    pub fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
+    fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
         match wrap {
             Wrap::WrapPage => AddressU24 {
                 bank: self.bank,
@@ -59,16 +70,12 @@ impl AddressU24 {
         }
     }
 
-    pub fn add_detect_page_cross<T: UIntTruncate + Copy>(
-        &self,
-        rhs: T,
-        wrap: Wrap,
-    ) -> (Self, bool) {
+    fn add_detect_page_cross<T: UIntTruncate + Copy>(&self, rhs: T, wrap: Wrap) -> (bool, Self) {
         let page_cross = rhs.to_u8() as u16 + self.offset.to_u8() as u16 > 0xFF;
-        (self.add(rhs, wrap), page_cross)
+        (page_cross, self.add(rhs, wrap))
     }
 
-    pub fn sub<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
+    fn sub<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
         match wrap {
             Wrap::WrapPage => AddressU24 {
                 bank: self.bank,
@@ -114,8 +121,10 @@ impl AddressU16 {
     pub fn new_direct_page(page: u8, offset: u8) -> Self {
         AddressU16(((page as u16) << 8) | (offset as u16))
     }
+}
 
-    pub fn add_signed(&self, rhs: i16, wrap: Wrap) -> Self {
+impl Address for AddressU16 {
+    fn add_signed(&self, rhs: i32, wrap: Wrap) -> Self {
         if rhs > 0 {
             self.add(rhs.unsigned_abs(), wrap)
         } else {
@@ -123,7 +132,7 @@ impl AddressU16 {
         }
     }
 
-    pub fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
+    fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
         match wrap {
             Wrap::WrapPage => {
                 AddressU16((self.0 & 0xFF00) + (self.0 as u8).wrapping_add(rhs.to_u8()) as u16)
@@ -133,16 +142,12 @@ impl AddressU16 {
         }
     }
 
-    pub fn add_detect_page_cross<T: UIntTruncate + Copy>(
-        &self,
-        rhs: T,
-        wrap: Wrap,
-    ) -> (Self, bool) {
+    fn add_detect_page_cross<T: UIntTruncate + Copy>(&self, rhs: T, wrap: Wrap) -> (bool, Self) {
         let page_cross = rhs.to_u8() as u16 + self.0.to_u8() as u16 > 0xFF;
-        (self.add(rhs, wrap), page_cross)
+        (page_cross, self.add(rhs, wrap))
     }
 
-    pub fn sub<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
+    fn sub<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self {
         match wrap {
             Wrap::WrapPage => {
                 AddressU16((self.0 & 0xFF00) + (self.0 as u8).wrapping_sub(rhs.to_u8()) as u16)
@@ -161,11 +166,11 @@ impl Display for AddressU16 {
 
 /// Implements a sparse memory HashMap with a readable display format.
 #[derive(Default, PartialEq)]
-pub struct SparseMemory<AddressT: Eq + Hash + Display + Ord> {
+pub struct SparseMemory<AddressT: Address> {
     pub memory: HashMap<AddressT, u8>,
 }
 
-impl<AddressT: Eq + Hash + Display + Ord> SparseMemory<AddressT> {
+impl<AddressT: Address> SparseMemory<AddressT> {
     pub fn get(&self, addr: AddressT) -> Option<u8> {
         self.memory.get(&addr).copied()
     }
@@ -175,7 +180,7 @@ impl<AddressT: Eq + Hash + Display + Ord> SparseMemory<AddressT> {
     }
 }
 
-impl<AddressT: Eq + Hash + Display + Ord> Display for SparseMemory<AddressT> {
+impl<AddressT: Address> Display for SparseMemory<AddressT> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for (addr, value) in self.memory.iter().sorted() {
             writeln!(f, "{}: {:02X}", addr, value)?;
@@ -208,4 +213,52 @@ pub fn format_memory_u16(memory: &[u16]) -> String {
 
     let bytes = writer.into_inner().unwrap();
     String::from_utf8(bytes).unwrap()
+}
+
+/// Generic trait shared by all bus implementations.
+pub trait Bus<AddressT: Address> {
+    fn peek_u8(&self, addr: AddressT) -> Option<u8>;
+    fn cycle_io(&mut self);
+    fn cycle_read_u8(&mut self, addr: AddressT) -> u8;
+    fn cycle_write_u8(&mut self, addr: AddressT, value: u8);
+    fn reset(&mut self);
+
+    #[inline]
+    fn cycle_read_u16(&mut self, addr: AddressT, wrap: Wrap) -> u16 {
+        u16::from_le_bytes([
+            self.cycle_read_u8(addr),
+            self.cycle_read_u8(addr.add(1_u16, wrap)),
+        ])
+    }
+
+    #[inline]
+    fn cycle_write_u16(&mut self, addr: AddressT, value: u16, wrap: Wrap) {
+        let bytes = value.to_le_bytes();
+        self.cycle_write_u8(addr, bytes[0]);
+        self.cycle_write_u8(addr.add(1_u16, wrap), bytes[1]);
+    }
+
+    #[inline]
+    fn peek_u16(&self, addr: AddressT, wrap: Wrap) -> Option<u16> {
+        Some(u16::from_le_bytes([
+            self.peek_u8(addr)?,
+            self.peek_u8(addr.add(1_u16, wrap))?,
+        ]))
+    }
+
+    #[inline]
+    fn cycle_read_generic<T: UInt>(&mut self, addr: AddressT, wrap: Wrap) -> T {
+        match T::SIZE {
+            RegisterSize::U8 => T::from_u8(self.cycle_read_u8(addr)),
+            RegisterSize::U16 => T::from_u16(self.cycle_read_u16(addr, wrap)),
+        }
+    }
+
+    #[inline]
+    fn cycle_write_generic<T: UInt>(&mut self, addr: AddressT, value: T, wrap: Wrap) {
+        match T::SIZE {
+            RegisterSize::U8 => self.cycle_write_u8(addr, value.to_u8()),
+            RegisterSize::U16 => self.cycle_write_u16(addr, value.to_u16(), wrap),
+        }
+    }
 }

@@ -16,13 +16,14 @@ use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use sres_emulator::bus::Bus;
+use sres_emulator::bus::MainBus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::cpu::StatusFlags;
 use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::logging;
 use sres_emulator::util::memory::AddressU24;
+use sres_emulator::util::memory::Bus;
 use sres_emulator::util::memory::SparseMemory;
 use xz2::read::XzDecoder;
 
@@ -229,7 +230,7 @@ struct TestBus {
     pub cycles: Vec<Cycle>,
 }
 
-impl Bus for TestBus {
+impl Bus<AddressU24> for TestBus {
     fn peek_u8(&self, addr: AddressU24) -> Option<u8> {
         self.memory.get(addr)
     }
@@ -251,7 +252,9 @@ impl Bus for TestBus {
     }
 
     fn reset(&mut self) {}
+}
 
+impl MainBus for TestBus {
     fn check_nmi_interrupt(&mut self) -> bool {
         false
     }

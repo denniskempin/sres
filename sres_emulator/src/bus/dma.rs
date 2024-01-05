@@ -6,6 +6,7 @@ use log::warn;
 use packed_struct::prelude::*;
 
 use crate::debugger::DebuggerRef;
+use crate::util::memory::Address;
 use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 use crate::util::uint::U16Ext;

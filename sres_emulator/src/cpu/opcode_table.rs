@@ -5,10 +5,11 @@
 ///
 /// To reduce repetitive code, macros are used to build those unique functions.
 use super::Cpu;
-use crate::bus::Bus;
+use crate::bus::MainBus;
 use crate::cpu::operands::AccessMode;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
+use crate::util::memory::Address;
 use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 
@@ -21,7 +22,7 @@ pub struct InstructionMeta {
 }
 
 /// An entry in the opcode table
-pub struct Instruction<BusT: Bus> {
+pub struct Instruction<BusT: MainBus> {
     /// Execute the instruction on the provided CPU.
     pub execute: fn(&mut Cpu<BusT>),
 
@@ -37,7 +38,7 @@ enum Register {
     Y,
 }
 
-pub fn build_opcode_table<BusT: Bus>() -> [Instruction<BusT>; 256] {
+pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
     macro_rules! instruction {
         // Operand-less instruction
         ($method: ident) => {

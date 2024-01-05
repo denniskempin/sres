@@ -11,7 +11,7 @@ use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
-use crate::bus::Bus;
+use crate::bus::MainBus;
 use crate::debugger::DebuggerRef;
 use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
@@ -67,7 +67,7 @@ pub enum EmuVectorTable {
     Irq = 0xFFFE,
 }
 
-pub struct Cpu<BusT: Bus> {
+pub struct Cpu<BusT: MainBus> {
     pub bus: BusT,
     pub pc: AddressU24,
     pub a: VariableLengthRegister,
@@ -86,7 +86,7 @@ pub struct Cpu<BusT: Bus> {
 
 const STACK_BASE: u16 = 0;
 
-impl<BusT: Bus> Cpu<BusT> {
+impl<BusT: MainBus> Cpu<BusT> {
     pub fn new(bus: BusT, debugger: DebuggerRef) -> Self {
         let mut cpu = Self {
             bus,
@@ -239,12 +239,13 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use super::Cpu;
-    use crate::bus::Bus;
-    use crate::bus::SresBus;
+    use crate::bus::MainBusImpl;
     use crate::cartridge::Cartridge;
     use crate::cpu::VariableLengthRegister;
     use crate::debugger::DebuggerRef;
+    use crate::util::memory::Address;
     use crate::util::memory::AddressU24;
+    use crate::util::memory::Bus;
     use crate::util::memory::Wrap;
     use crate::System;
 
@@ -265,12 +266,12 @@ mod tests {
         assembled.stdout
     }
 
-    fn cpu_with_program(code: &str) -> Cpu<SresBus> {
+    fn cpu_with_program(code: &str) -> Cpu<MainBusImpl> {
         let assembled = assemble(code);
         let debugger = DebuggerRef::new();
         // TODO: Use a test bus instead of SresBus/System
         let mut cpu = Cpu::new(
-            SresBus::new(&Cartridge::with_program(&assembled), debugger.clone()),
+            MainBusImpl::new(&Cartridge::with_program(&assembled), debugger.clone()),
             debugger,
         );
         cpu.pc = AddressU24::new(0, 0x8000);

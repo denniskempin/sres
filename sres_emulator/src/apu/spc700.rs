@@ -4,39 +4,10 @@ use intbits::Bits;
 
 use crate::debugger::DebuggerRef;
 use crate::util::memory::AddressU16;
-use crate::util::memory::Wrap;
+use crate::util::memory::Bus;
 
 // TODO: Consider sharing a generic bus trait with cpu-specific extensions in a separate trait
-pub trait Spc700Bus {
-    fn peek_u8(&self, addr: AddressU16) -> Option<u8>;
-    fn cycle_io(&mut self);
-    fn cycle_read_u8(&mut self, addr: AddressU16) -> u8;
-    fn cycle_write_u8(&mut self, addr: AddressU16, value: u8);
-    fn reset(&mut self);
-
-    #[inline]
-    fn cycle_read_u16(&mut self, addr: AddressU16, wrap: Wrap) -> u16 {
-        u16::from_le_bytes([
-            self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add(1_u16, wrap)),
-        ])
-    }
-
-    #[inline]
-    fn cycle_write_u16(&mut self, addr: AddressU16, value: u16, wrap: Wrap) {
-        let bytes = value.to_le_bytes();
-        self.cycle_write_u8(addr, bytes[0]);
-        self.cycle_write_u8(addr.add(1_u16, wrap), bytes[1]);
-    }
-
-    #[inline]
-    fn peek_u16(&self, addr: AddressU16, wrap: Wrap) -> Option<u16> {
-        Some(u16::from_le_bytes([
-            self.peek_u8(addr)?,
-            self.peek_u8(addr.add(1_u16, wrap))?,
-        ]))
-    }
-}
+pub trait Spc700Bus: Bus<AddressU16> {}
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Default)]
 pub struct Spc700StatusFlags {
