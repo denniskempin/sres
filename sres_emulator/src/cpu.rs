@@ -11,10 +11,10 @@ use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
-use crate::bus::MainBus;
+use crate::bus::AddressU24;
+use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
-use crate::util::memory::AddressU24;
-use crate::util::memory::Wrap;
+use crate::main_bus::MainBus;
 use crate::util::uint::RegisterSize;
 use crate::util::uint::UInt;
 
@@ -239,14 +239,14 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use super::Cpu;
-    use crate::bus::MainBusImpl;
+    use crate::bus::Address;
+    use crate::bus::AddressU24;
+    use crate::bus::Bus;
+    use crate::bus::Wrap;
     use crate::cartridge::Cartridge;
     use crate::cpu::VariableLengthRegister;
     use crate::debugger::DebuggerRef;
-    use crate::util::memory::Address;
-    use crate::util::memory::AddressU24;
-    use crate::util::memory::Bus;
-    use crate::util::memory::Wrap;
+    use crate::main_bus::MainBusImpl;
     use crate::System;
 
     fn assemble(code: &str) -> Vec<u8> {

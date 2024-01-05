@@ -16,15 +16,15 @@ use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use sres_emulator::bus::MainBus;
+use sres_emulator::bus::test::SparseMemory;
+use sres_emulator::bus::AddressU24;
+use sres_emulator::bus::Bus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::cpu::StatusFlags;
 use sres_emulator::debugger::DebuggerRef;
+use sres_emulator::main_bus::MainBus;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::logging;
-use sres_emulator::util::memory::AddressU24;
-use sres_emulator::util::memory::Bus;
-use sres_emulator::util::memory::SparseMemory;
 use xz2::read::XzDecoder;
 
 const SKIP_OPCODES: &[u8] = &[

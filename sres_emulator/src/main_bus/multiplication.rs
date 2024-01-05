@@ -1,4 +1,4 @@
-use crate::util::memory::AddressU24;
+use crate::bus::AddressU24;
 use crate::util::uint::U16Ext;
 
 pub struct MultiplicationUnit {

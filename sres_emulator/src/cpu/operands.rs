@@ -5,10 +5,10 @@
 use super::Cpu;
 use super::UInt;
 use super::STACK_BASE;
-use crate::bus::MainBus;
-use crate::util::memory::Address;
-use crate::util::memory::AddressU24;
-use crate::util::memory::Wrap;
+use crate::bus::Address;
+use crate::bus::AddressU24;
+use crate::bus::Wrap;
+use crate::main_bus::MainBus;
 use crate::util::uint::U16Ext;
 
 /// The address mode describes how to load the operand for an instruction.

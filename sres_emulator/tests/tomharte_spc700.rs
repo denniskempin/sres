@@ -19,11 +19,11 @@ use serde::Serialize;
 use sres_emulator::apu::spc700::Spc700;
 use sres_emulator::apu::spc700::Spc700Bus;
 use sres_emulator::apu::spc700::Spc700StatusFlags;
+use sres_emulator::bus::test::SparseMemory;
+use sres_emulator::bus::AddressU16;
+use sres_emulator::bus::Bus;
 use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::util::logging;
-use sres_emulator::util::memory::AddressU16;
-use sres_emulator::util::memory::Bus;
-use sres_emulator::util::memory::SparseMemory;
 use xz2::read::XzDecoder;
 
 const SKIP_OPCODES: &[u8] = &[];

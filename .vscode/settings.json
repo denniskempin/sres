@@ -2,4 +2,7 @@
     "files.watcherExclude": {
         "**/target/**": true
     },
+    "rust-analyzer.linkedProjects": [
+        "./sres_emulator/Cargo.toml"
+    ],
 }

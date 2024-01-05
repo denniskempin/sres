@@ -8,11 +8,11 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 
-use crate::bus::MainBus;
-use crate::bus::MainBusImpl;
+use crate::bus::AddressU24;
 use crate::cpu::Cpu;
 use crate::cpu::StatusFlags;
-use crate::util::memory::AddressU24;
+use crate::main_bus::MainBus;
+use crate::main_bus::MainBusImpl;
 
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.

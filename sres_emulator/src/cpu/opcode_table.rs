@@ -5,13 +5,13 @@
 ///
 /// To reduce repetitive code, macros are used to build those unique functions.
 use super::Cpu;
-use crate::bus::MainBus;
+use crate::bus::Address;
+use crate::bus::AddressU24;
+use crate::bus::Wrap;
 use crate::cpu::operands::AccessMode;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
-use crate::util::memory::Address;
-use crate::util::memory::AddressU24;
-use crate::util::memory::Wrap;
+use crate::main_bus::MainBus;
 
 /// Metadata about a decoded instruction. Used to generate disassembly.
 pub struct InstructionMeta {

@@ -2,9 +2,9 @@ use std::fmt::Display;
 
 use intbits::Bits;
 
+use crate::bus::AddressU16;
+use crate::bus::Bus;
 use crate::debugger::DebuggerRef;
-use crate::util::memory::AddressU16;
-use crate::util::memory::Bus;
 
 // TODO: Consider sharing a generic bus trait with cpu-specific extensions in a separate trait
 pub trait Spc700Bus: Bus<AddressU16> {}
