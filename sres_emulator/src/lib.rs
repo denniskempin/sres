@@ -6,6 +6,7 @@ pub mod cpu;
 pub mod debugger;
 pub mod main_bus;
 pub mod ppu;
+pub mod spc700;
 pub mod trace;
 pub mod util;
 
@@ -21,7 +22,7 @@ use log::log_enabled;
 use log::Level;
 use main_bus::MainBusImpl;
 
-use crate::trace::Trace;
+use crate::trace::TraceLine;
 
 pub enum ExecutionResult {
     Normal,
@@ -85,7 +86,7 @@ impl System {
             }
 
             if log_enabled!(target: "cpu_state", Level::Trace) {
-                log::trace!(target: "cpu_state", "{}", Trace::from_sres_cpu(&self.cpu));
+                log::trace!(target: "cpu_state", "{}", TraceLine::from_sres_cpu(&self.cpu));
             }
             self.cpu.step();
 

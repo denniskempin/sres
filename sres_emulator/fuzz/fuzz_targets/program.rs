@@ -1,3 +1,4 @@
+//! Simple fuzzer that executes random programs on the emulator.
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;

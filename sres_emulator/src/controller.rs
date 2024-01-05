@@ -1,3 +1,4 @@
+//! Definition of the SNES controller data format.
 use packed_struct::prelude::*;
 
 /// Standard Controller bit layout:

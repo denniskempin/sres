@@ -1,3 +1,4 @@
+//! General utility functions and types.
 pub mod image;
 pub mod logging;
 pub mod memory;

@@ -1,7 +1,7 @@
-/// Executes CPU-only tests using test data at https://github.com/TomHarte/ProcessorTests
-///
-/// The data provides thousands of test cases with initial CPU state and expected CPU state after
-/// executing one instruction.
+// Executes SPC700 tests using test data at https://github.com/TomHarte/ProcessorTests
+//
+// The data provides thousands of test cases with initial CPU state and expected CPU state after
+// executing one instruction.
 mod util;
 
 use std::collections::HashMap;
@@ -15,11 +15,11 @@ use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use sres_emulator::apu::spc700::Spc700;
-use sres_emulator::apu::spc700::Spc700StatusFlags;
 use sres_emulator::bus::AddressU16;
 use sres_emulator::bus::Bus;
 use sres_emulator::debugger::DebuggerRef;
+use sres_emulator::spc700::Spc700;
+use sres_emulator::spc700::Spc700StatusFlags;
 use sres_emulator::util::logging;
 use util::test_bus::Cycle;
 use util::test_bus::TestBus;

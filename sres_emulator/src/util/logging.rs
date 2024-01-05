@@ -1,3 +1,4 @@
+//! Utilities for configuring logging
 use std::collections::VecDeque;
 use std::sync::Mutex;
 use std::sync::Once;

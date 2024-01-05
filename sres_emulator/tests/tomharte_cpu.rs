@@ -1,7 +1,7 @@
-/// Executes CPU-only tests using test data at https://github.com/TomHarte/ProcessorTests
-///
-/// The data provides thousands of test cases with initial CPU state and expected CPU state after
-/// executing one instruction.
+//! Executes CPU-only tests using test data at https://github.com/TomHarte/ProcessorTests
+//!
+//! The data provides thousands of test cases with initial CPU state and expected CPU state after
+//! executing one instruction.
 mod util;
 
 use std::collections::HashMap;
@@ -20,7 +20,7 @@ use sres_emulator::bus::Bus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::cpu::StatusFlags;
 use sres_emulator::debugger::DebuggerRef;
-use sres_emulator::trace::Trace;
+use sres_emulator::trace::TraceLine;
 use sres_emulator::util::logging;
 use util::test_bus::Cycle;
 use util::test_bus::TestBus;
@@ -132,7 +132,8 @@ fn run_tomharte_test(test_name: &str) {
         actual_state.step();
 
         // Compare before asserting to print additional information on failures
-        let state_matches = Trace::from_cpu(&actual_state) == Trace::from_cpu(&expected_state);
+        let state_matches =
+            TraceLine::from_cpu(&actual_state) == TraceLine::from_cpu(&expected_state);
         let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
         // Only compare cycle count. No need to be perfectly accurate with the order.
         let cycles_match = actual_state.bus.cycles.len() == test_case.cycles().len();
@@ -148,13 +149,13 @@ fn run_tomharte_test(test_name: &str) {
         println!(
             "Case {:2X}: {}",
             opcode,
-            Trace::from_cpu(&test_case.initial.create_cpu())
+            TraceLine::from_cpu(&test_case.initial.create_cpu())
         );
         println!(
             "Result: {}",
             StrComparison::new(
-                &Trace::from_cpu(&actual_state).to_string(),
-                &Trace::from_cpu(&expected_state).to_string()
+                &TraceLine::from_cpu(&actual_state).to_string(),
+                &TraceLine::from_cpu(&expected_state).to_string()
             )
         );
         println!(

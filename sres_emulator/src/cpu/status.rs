@@ -1,3 +1,4 @@
+//! Type for status register and boilerplate for conversion and display
 use std::str::FromStr;
 
 use anyhow::bail;

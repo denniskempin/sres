@@ -1,3 +1,4 @@
+//! Implementation of VRAM containing tile and tilemap data.
 use std::fmt::Display;
 use std::fmt::Formatter;
 

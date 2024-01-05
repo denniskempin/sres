@@ -1,3 +1,4 @@
+//! Implementation of the OAM containing sprite data.
 use std::fmt::Display;
 use std::fmt::Formatter;
 
@@ -5,7 +6,7 @@ use intbits::Bits;
 use serde::Deserialize;
 use serde::Serialize;
 
-use super::vram::VramAddr;
+use crate::ppu::vram::VramAddr;
 
 pub struct Oam {
     pub memory: Vec<u8>,

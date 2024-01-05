@@ -1,19 +1,19 @@
-/// Implements the 65816 CPU instruction set.
-///
-/// One function per instruction, each named after the mnemonic. They are mapped to opcodes by the
-/// (opcode table)[build_opcode_table].
-///
-/// Some functions are implemented for u8 and u16 using generics. This allows the opcode table
-/// to use the same implementation for operating on both u8 and u16 sized registers.
-use super::status::StatusFlags;
-use super::Cpu;
-use super::EmuVectorTable;
-use super::NativeVectorTable;
+//! Implements the 65816 CPU instruction set.
+//!
+//! One function per instruction, each named after the mnemonic. They are mapped to opcodes by the
+//! (opcode table)[build_opcode_table].
+//!
+//! Some functions are implemented for u8 and u16 using generics. This allows the opcode table
+//! to use the same implementation for operating on both u8 and u16 sized registers.
 use crate::bus::Address;
 use crate::bus::AddressU24;
 use crate::bus::Wrap;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
+use crate::cpu::status::StatusFlags;
+use crate::cpu::Cpu;
+use crate::cpu::EmuVectorTable;
+use crate::cpu::NativeVectorTable;
 use crate::main_bus::MainBus;
 use crate::util::uint::UInt;
 

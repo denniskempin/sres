@@ -1,3 +1,4 @@
+//! Fuzzer that loads random SFC data
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;

@@ -1,3 +1,4 @@
+//! Tracking of PPU events and timing.
 use std::fmt::Display;
 
 use crate::bus::AddressU24;

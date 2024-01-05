@@ -1,3 +1,10 @@
+//! High level testing focused on the PPU
+//!
+//! Most tests execute roms and compare the rendered framebuffer against a previously stored
+//! golden image.
+//!
+//! Some tests will use snapshots of the PPU state to run testing in isolation of the CPU
+//! behavior and in absence of ROM files.
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -7,13 +14,13 @@ use serde::Deserialize;
 use serde::Serialize;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::debugger::DebuggerRef;
-use sres_emulator::ppu::oam::SpriteSize;
 use sres_emulator::ppu::Background;
 use sres_emulator::ppu::BackgroundId;
 use sres_emulator::ppu::BgMode;
 use sres_emulator::ppu::BitDepth;
 use sres_emulator::ppu::ColorMathOperation;
 use sres_emulator::ppu::Ppu;
+use sres_emulator::ppu::SpriteSize;
 use sres_emulator::ppu::VramAddr;
 use sres_emulator::util::image::Image;
 use sres_emulator::util::image::Rgb15;

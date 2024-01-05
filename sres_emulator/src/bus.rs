@@ -1,10 +1,10 @@
+//! Generic Bus trait that can be used with both U16 and U24 addresses.
 mod address;
 
-pub use address::Address;
-pub use address::AddressU16;
-pub use address::AddressU24;
-pub use address::Wrap;
-
+pub use self::address::Address;
+pub use self::address::AddressU16;
+pub use self::address::AddressU24;
+pub use self::address::Wrap;
 use crate::util::uint::RegisterSize;
 use crate::util::uint::UInt;
 

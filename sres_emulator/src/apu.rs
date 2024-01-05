@@ -1,5 +1,4 @@
-pub mod spc700;
-
+//! Dummy implementation of the audio processing unit.
 use log::debug;
 
 use crate::bus::AddressU24;

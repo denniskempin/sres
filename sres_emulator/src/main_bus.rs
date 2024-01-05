@@ -1,3 +1,4 @@
+//! Main bus used by the 65816 CPU.
 mod dma;
 mod multiplication;
 
@@ -424,7 +425,7 @@ mod tests {
     use super::*;
 
     fn test_dir() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/bus")
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/main_bus")
     }
 
     fn compare_to_golden(image: &RgbaImage, path_prefix: &Path) {
