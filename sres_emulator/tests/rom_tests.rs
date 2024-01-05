@@ -7,15 +7,15 @@ use std::path::PathBuf;
 use anyhow::Result;
 use log::error;
 use pretty_assertions::assert_eq;
-use sres_emulator::bus::MainBusImpl;
+use sres_emulator::bus::Bus;
+use sres_emulator::bus::Wrap;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::cpu::Cpu;
+use sres_emulator::main_bus::MainBusImpl;
 use sres_emulator::ppu::fvh_to_master_clock;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::logging;
 use sres_emulator::util::memory::format_memory;
-use sres_emulator::util::memory::Bus;
-use sres_emulator::util::memory::Wrap;
 use sres_emulator::System;
 
 #[test]

@@ -4,6 +4,7 @@ pub mod cartridge;
 pub mod controller;
 pub mod cpu;
 pub mod debugger;
+pub mod main_bus;
 pub mod ppu;
 pub mod trace;
 pub mod util;
@@ -11,7 +12,6 @@ pub mod util;
 use std::cell::RefMut;
 use std::ops::Deref;
 
-use bus::MainBusImpl;
 use cartridge::Cartridge;
 use cpu::Cpu;
 use debugger::BreakReason;
@@ -19,6 +19,7 @@ use debugger::Debugger;
 use debugger::DebuggerRef;
 use log::log_enabled;
 use log::Level;
+use main_bus::MainBusImpl;
 
 use crate::trace::Trace;
 

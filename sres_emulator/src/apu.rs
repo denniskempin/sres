@@ -2,7 +2,7 @@ pub mod spc700;
 
 use log::debug;
 
-use crate::util::memory::AddressU24;
+use crate::bus::AddressU24;
 
 pub struct Apu {
     channel_data: [u8; 4],

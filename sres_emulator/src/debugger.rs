@@ -5,10 +5,10 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use super::cpu::InstructionMeta;
-use crate::bus::MainBusImpl;
+use crate::bus::AddressU24;
 use crate::cpu::Cpu;
 use crate::cpu::NativeVectorTable;
-use crate::util::memory::AddressU24;
+use crate::main_bus::MainBusImpl;
 use crate::util::RingBuffer;
 
 pub enum MemoryAccess {

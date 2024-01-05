@@ -9,12 +9,12 @@ use super::status::StatusFlags;
 use super::Cpu;
 use super::EmuVectorTable;
 use super::NativeVectorTable;
-use crate::bus::MainBus;
+use crate::bus::Address;
+use crate::bus::AddressU24;
+use crate::bus::Wrap;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
-use crate::util::memory::Address;
-use crate::util::memory::AddressU24;
-use crate::util::memory::Wrap;
+use crate::main_bus::MainBus;
 use crate::util::uint::UInt;
 
 pub fn nop(cpu: &mut Cpu<impl MainBus>) {

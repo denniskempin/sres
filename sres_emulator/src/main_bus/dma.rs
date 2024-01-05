@@ -5,10 +5,10 @@ use log::info;
 use log::warn;
 use packed_struct::prelude::*;
 
+use crate::bus::Address;
+use crate::bus::AddressU24;
+use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
-use crate::util::memory::Address;
-use crate::util::memory::AddressU24;
-use crate::util::memory::Wrap;
 use crate::util::uint::U16Ext;
 use crate::util::uint::U8Ext;
 
