@@ -5,7 +5,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use super::cpu::InstructionMeta;
-use crate::bus::SresBus;
+use crate::bus::MainBusImpl;
 use crate::cpu::Cpu;
 use crate::cpu::NativeVectorTable;
 use crate::util::memory::AddressU24;
@@ -129,7 +129,7 @@ pub struct Debugger {
 impl Debugger {
     /// Frontend facing API
 
-    pub fn previous_instructions(&self, cpu: &Cpu<SresBus>) -> Vec<InstructionMeta> {
+    pub fn previous_instructions(&self, cpu: &Cpu<MainBusImpl>) -> Vec<InstructionMeta> {
         self.last_pcs
             .iter()
             .map(move |pc| cpu.load_instruction_meta(*pc).0)

@@ -11,7 +11,7 @@ pub mod util;
 use std::cell::RefMut;
 use std::ops::Deref;
 
-use bus::SresBus;
+use bus::MainBusImpl;
 use cartridge::Cartridge;
 use cpu::Cpu;
 use debugger::BreakReason;
@@ -29,7 +29,7 @@ pub enum ExecutionResult {
 }
 
 pub struct System {
-    pub cpu: Cpu<SresBus>,
+    pub cpu: Cpu<MainBusImpl>,
     debugger: DebuggerRef,
 }
 
@@ -46,7 +46,10 @@ impl System {
     pub fn with_cartridge(cartridge: &Cartridge) -> Self {
         let debugger = DebuggerRef::new();
         Self {
-            cpu: Cpu::new(SresBus::new(cartridge, debugger.clone()), debugger.clone()),
+            cpu: Cpu::new(
+                MainBusImpl::new(cartridge, debugger.clone()),
+                debugger.clone(),
+            ),
             debugger,
         }
     }
@@ -73,7 +76,7 @@ impl System {
 
     pub fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
     where
-        F: Fn(&Cpu<SresBus>) -> bool,
+        F: Fn(&Cpu<MainBusImpl>) -> bool,
     {
         loop {
             if self.cpu.halt {

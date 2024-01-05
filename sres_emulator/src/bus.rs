@@ -13,68 +13,12 @@ use crate::debugger::DebuggerRef;
 use crate::ppu::HVTimerMode;
 use crate::ppu::Ppu;
 use crate::util::memory::AddressU24;
-use crate::util::memory::Wrap;
-use crate::util::uint::RegisterSize;
+use crate::util::memory::Bus;
 use crate::util::uint::U16Ext;
-use crate::util::uint::UInt;
 
-pub trait Bus {
-    fn peek_u8(&self, addr: AddressU24) -> Option<u8>;
-    fn cycle_io(&mut self);
-    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8;
-    fn cycle_write_u8(&mut self, addr: AddressU24, value: u8);
-    fn reset(&mut self);
+pub trait MainBus: Bus<AddressU24> {
     fn check_nmi_interrupt(&mut self) -> bool;
     fn consume_timer_interrupt(&mut self) -> bool;
-
-    #[inline]
-    fn cycle_read_u16(&mut self, addr: AddressU24, wrap: Wrap) -> u16 {
-        u16::from_le_bytes([
-            self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add(1_u16, wrap)),
-        ])
-    }
-
-    #[inline]
-    fn cycle_read_u24(&mut self, addr: AddressU24, wrap: Wrap) -> u32 {
-        u32::from_le_bytes([
-            self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add(1_u16, wrap)),
-            self.cycle_read_u8(addr.add(2_u16, wrap)),
-            0,
-        ])
-    }
-
-    #[inline]
-    fn cycle_read_generic<T: UInt>(&mut self, addr: AddressU24, wrap: Wrap) -> T {
-        match T::SIZE {
-            RegisterSize::U8 => T::from_u8(self.cycle_read_u8(addr)),
-            RegisterSize::U16 => T::from_u16(self.cycle_read_u16(addr, wrap)),
-        }
-    }
-
-    #[inline]
-    fn cycle_write_u16(&mut self, addr: AddressU24, value: u16, wrap: Wrap) {
-        let bytes = value.to_le_bytes();
-        self.cycle_write_u8(addr, bytes[0]);
-        self.cycle_write_u8(addr.add(1_u16, wrap), bytes[1]);
-    }
-
-    #[inline]
-    fn cycle_write_generic<T: UInt>(&mut self, addr: AddressU24, value: T, wrap: Wrap) {
-        match T::SIZE {
-            RegisterSize::U8 => self.cycle_write_u8(addr, value.to_u8()),
-            RegisterSize::U16 => self.cycle_write_u16(addr, value.to_u16(), wrap),
-        }
-    }
-
-    #[inline]
-    fn peek_u16(&self, addr: AddressU24, wrap: Wrap) -> Option<u16> {
-        Some(u16::from_le_bytes([
-            self.peek_u8(addr)?,
-            self.peek_u8(addr.add(1_u16, wrap))?,
-        ]))
-    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -86,7 +30,7 @@ enum MemoryBlock {
     Unmapped,
 }
 
-pub struct SresBus {
+pub struct MainBusImpl {
     pub wram: Vec<u8>,
     pub sram: Vec<u8>,
     pub rom: Vec<u8>,
@@ -105,7 +49,7 @@ pub struct SresBus {
     pub mapping_mode: MappingMode,
 }
 
-impl SresBus {
+impl MainBusImpl {
     pub fn new(cartridge: &Cartridge, debugger: DebuggerRef) -> Self {
         let mut rom = vec![0; 0x4000000];
         for (i, byte) in cartridge.rom.iter().enumerate() {
@@ -307,7 +251,7 @@ impl SresBus {
     }
 }
 
-impl Bus for SresBus {
+impl Bus<AddressU24> for MainBusImpl {
     fn peek_u8(&self, addr: AddressU24) -> Option<u8> {
         self.bus_peek(addr)
     }
@@ -344,7 +288,9 @@ impl Bus for SresBus {
         self.ppu.reset();
         self.advance_master_clock(186);
     }
+}
 
+impl MainBus for MainBusImpl {
     fn check_nmi_interrupt(&mut self) -> bool {
         let value = self.nmi_interrupt;
         self.nmi_interrupt = false;

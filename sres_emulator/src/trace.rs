@@ -8,8 +8,8 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 
-use crate::bus::Bus;
-use crate::bus::SresBus;
+use crate::bus::MainBus;
+use crate::bus::MainBusImpl;
 use crate::cpu::Cpu;
 use crate::cpu::StatusFlags;
 use crate::util::memory::AddressU24;
@@ -118,7 +118,7 @@ impl Trace {
         Ok(trace_reader.lines().map(|l| l?.parse()))
     }
 
-    pub fn from_sres_cpu(cpu: &Cpu<SresBus>) -> Self {
+    pub fn from_sres_cpu(cpu: &Cpu<MainBusImpl>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
         let ppu_timer = cpu.bus.ppu.timer;
         Trace {
@@ -139,7 +139,7 @@ impl Trace {
         }
     }
 
-    pub fn from_cpu(cpu: &Cpu<impl Bus>) -> Self {
+    pub fn from_cpu(cpu: &Cpu<impl MainBus>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
         Trace {
             pc: cpu.pc,

@@ -5,7 +5,8 @@
 use super::Cpu;
 use super::UInt;
 use super::STACK_BASE;
-use crate::bus::Bus;
+use crate::bus::MainBus;
+use crate::util::memory::Address;
 use crate::util::memory::AddressU24;
 use crate::util::memory::Wrap;
 use crate::util::uint::U16Ext;
@@ -72,7 +73,7 @@ impl Operand {
     /// Returns the operand and address of the next instruction.
     #[inline]
     pub fn decode(
-        cpu: &mut Cpu<impl Bus>,
+        cpu: &mut Cpu<impl MainBus>,
         mode: AddressMode,
         rwm: AccessMode,
     ) -> (Self, AddressU24) {
@@ -85,7 +86,7 @@ impl Operand {
     /// Returns the operand and address of the next instruction.
     #[inline]
     pub fn peek(
-        cpu: &Cpu<impl Bus>,
+        cpu: &Cpu<impl MainBus>,
         instruction_addr: AddressU24,
         mode: AddressMode,
         rwm: AccessMode,
@@ -99,7 +100,7 @@ impl Operand {
     /// execution (where read cycles will modify the system state), and decoding
     /// operands for disassemply without modifying the system state.
     #[inline]
-    fn decode_impl<'a, BusT: Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
+    fn decode_impl<'a, BusT: MainBus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
         bus: &'a mut WrapperT,
         instruction_addr: AddressU24,
         mode: AddressMode,
@@ -195,7 +196,7 @@ impl Operand {
                     AddressMode::AbsoluteLong => AddressU24::from(operand_data),
 
                     AddressMode::AbsoluteYIndexed => {
-                        let (addr, page_cross) = AddressU24 {
+                        let (page_cross, addr) = AddressU24 {
                             bank: bus.cpu().db,
                             offset: operand_data as u16,
                         }
@@ -209,7 +210,7 @@ impl Operand {
                         addr
                     }
                     AddressMode::AbsoluteXIndexed => {
-                        let (addr, page_cross) = AddressU24 {
+                        let (page_cross, addr) = AddressU24 {
                             bank: bus.cpu().db,
                             offset: operand_data as u16,
                         }
@@ -352,7 +353,7 @@ impl Operand {
                                 Wrap::WrapBank,
                             ),
                         };
-                        let (addr, page_cross) =
+                        let (page_cross, addr) =
                             addr.add_detect_page_cross(bus.cpu().y.value, Wrap::NoWrap);
                         if !bus.cpu().status.index_register_size_or_break
                             || page_cross
@@ -416,7 +417,7 @@ impl Operand {
     ///
     /// This method supports both u8 and u16 operands.
     #[inline]
-    pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl Bus>) -> T {
+    pub fn load<T: UInt>(&self, cpu: &mut Cpu<impl MainBus>) -> T {
         match self {
             Self::Implied => panic!("loading implied operand"),
             Self::MoveAddressPair(_, _) => panic!("loading from MoveAddressPair"),
@@ -438,7 +439,7 @@ impl Operand {
     ///
     /// This method supports both u8 and u16 operands.
     #[inline]
-    pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl Bus>, value: T) {
+    pub fn store<T: UInt>(&self, cpu: &mut Cpu<impl MainBus>, value: T) {
         match self {
             Self::Implied => panic!("writing to implied operand"),
             Self::MoveAddressPair(_, _) => panic!("writing to MoveAddressPair"),
@@ -499,7 +500,7 @@ impl Operand {
 ///
 /// This allows logic for decoding of operands to be re-used for execution (mutable bus)
 /// and disassembly generation (immutable bus).
-trait ReadOrPeekWrapper<'a, T: Bus>
+trait ReadOrPeekWrapper<'a, T: MainBus>
 where
     Self: Sized,
 {
@@ -528,8 +529,8 @@ where
 
 /// Implements ReadOrPeekWrapper for an immutable bus. Will perform peek's instead
 /// of read's, since a read operation will modify the state of the system.
-struct PeekWrapper<'a, T: Bus>(pub &'a Cpu<T>);
-impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for PeekWrapper<'a, T> {
+struct PeekWrapper<'a, T: MainBus>(pub &'a Cpu<T>);
+impl<'a, T: MainBus> ReadOrPeekWrapper<'a, T> for PeekWrapper<'a, T> {
     fn cpu(&self) -> &Cpu<T> {
         self.0
     }
@@ -543,8 +544,8 @@ impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for PeekWrapper<'a, T> {
 
 /// Implements ReadOrPeekWrapper for a mutable bus. Will perform read bus cycles that
 /// will modify the system state.
-struct ReadWrapper<'a, T: Bus>(pub &'a mut Cpu<T>);
-impl<'a, T: Bus> ReadOrPeekWrapper<'a, T> for ReadWrapper<'a, T> {
+struct ReadWrapper<'a, T: MainBus>(pub &'a mut Cpu<T>);
+impl<'a, T: MainBus> ReadOrPeekWrapper<'a, T> for ReadWrapper<'a, T> {
     fn cpu(&self) -> &Cpu<T> {
         self.0
     }
