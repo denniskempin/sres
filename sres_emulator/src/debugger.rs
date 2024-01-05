@@ -1,12 +1,16 @@
+//! Debugger functionality
+//!
+//! Allows internal components to notify of events during emulation (e.g. memory access),
+//! and allows the front end to set and detect breakpoints on those events.
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::Range;
 use std::rc::Rc;
 
-use super::cpu::InstructionMeta;
 use crate::bus::AddressU24;
 use crate::cpu::Cpu;
+use crate::cpu::InstructionMeta;
 use crate::cpu::NativeVectorTable;
 use crate::main_bus::MainBusImpl;
 use crate::util::RingBuffer;

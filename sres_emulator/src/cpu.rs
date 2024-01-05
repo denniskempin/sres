@@ -1,3 +1,4 @@
+//! Implementation of the 65816 main cpu of the SNES.
 mod instructions;
 mod opcode_table;
 mod operands;
@@ -238,13 +239,12 @@ mod tests {
 
     use tempfile::NamedTempFile;
 
-    use super::Cpu;
+    use super::*;
     use crate::bus::Address;
     use crate::bus::AddressU24;
     use crate::bus::Bus;
     use crate::bus::Wrap;
     use crate::cartridge::Cartridge;
-    use crate::cpu::VariableLengthRegister;
     use crate::debugger::DebuggerRef;
     use crate::main_bus::MainBusImpl;
     use crate::System;

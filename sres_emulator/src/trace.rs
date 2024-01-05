@@ -1,3 +1,6 @@
+//! Implements the trace log format used by BSNES to compare the emulator to BSNES.
+//!
+//! Also a useful, compact format for debugging emulator execution.
 use std::fmt::Display;
 use std::fs::File;
 use std::io;
@@ -17,7 +20,7 @@ use crate::main_bus::MainBusImpl;
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Trace {
+pub struct TraceLine {
     pub pc: AddressU24,
     pub instruction: String,
     pub operand: String,
@@ -34,7 +37,7 @@ pub struct Trace {
     pub f: u64,
 }
 
-impl Display for Trace {
+impl Display for TraceLine {
     /// Format a trace object into a BSNES trace line
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -62,7 +65,7 @@ impl Display for Trace {
     }
 }
 
-impl FromStr for Trace {
+impl FromStr for TraceLine {
     type Err = anyhow::Error;
 
     /// Parse a BSNES trace line into a Trace object
@@ -78,7 +81,7 @@ impl FromStr for Trace {
         // BSNES can output h in clocks instead of pixels. This will require an additional character
         // for H: and shifts F: by one index.
         let is_hcounter = s[94..=95].trim() == "F:";
-        Ok(Trace {
+        Ok(TraceLine {
             pc: u32::from_str_radix(&s[0..6], 16)
                 .with_context(|| "pc")?
                 .into(),
@@ -112,7 +115,7 @@ impl FromStr for Trace {
     }
 }
 
-impl Trace {
+impl TraceLine {
     pub fn from_file(path: &Path) -> Result<impl Iterator<Item = Result<Self>>> {
         let trace_reader = io::BufReader::new(File::open(path)?);
         Ok(trace_reader.lines().map(|l| l?.parse()))
@@ -121,7 +124,7 @@ impl Trace {
     pub fn from_sres_cpu(cpu: &Cpu<MainBusImpl>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
         let ppu_timer = cpu.bus.ppu.timer;
-        Trace {
+        TraceLine {
             pc: cpu.pc,
             instruction: instruction.operation.to_string(),
             operand: instruction.operand_str.unwrap_or_default(),
@@ -141,7 +144,7 @@ impl Trace {
 
     pub fn from_cpu(cpu: &Cpu<impl MainBus>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
-        Trace {
+        TraceLine {
             pc: cpu.pc,
             instruction: instruction.operation.to_string(),
             operand: instruction.operand_str.unwrap_or_default(),
@@ -166,8 +169,8 @@ mod test {
 
     static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:236 F:32";
 
-    fn example_trace() -> Trace {
-        Trace {
+    fn example_trace() -> TraceLine {
+        TraceLine {
             pc: AddressU24 {
                 bank: 0,
                 offset: 0xe811,
@@ -203,7 +206,7 @@ mod test {
     #[test]
     pub fn test_from_str() {
         assert_eq!(
-            EXAMPLE_BSNES_TRACE.parse::<Trace>().unwrap(),
+            EXAMPLE_BSNES_TRACE.parse::<TraceLine>().unwrap(),
             example_trace()
         );
     }

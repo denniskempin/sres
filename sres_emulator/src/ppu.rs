@@ -1,6 +1,7 @@
+//! Implementation of the Picture Processing Unit
 mod cgram;
-pub mod oam;
-pub mod timer;
+mod oam;
+mod timer;
 mod vram;
 
 use std::fmt::Display;
@@ -13,9 +14,10 @@ use serde::Serialize;
 
 use self::cgram::CgRam;
 use self::oam::Oam;
+pub use self::oam::SpriteSize;
 pub use self::timer::fvh_to_master_clock;
 pub use self::timer::HVTimerMode;
-use self::timer::PpuTimer;
+pub use self::timer::PpuTimer;
 use self::vram::Vram;
 pub use self::vram::VramAddr;
 use crate::bus::AddressU24;

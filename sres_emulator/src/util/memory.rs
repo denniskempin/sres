@@ -1,3 +1,4 @@
+//! Utilities for formatting blocks of memory.
 use std::io::BufWriter;
 use std::io::Write;
 

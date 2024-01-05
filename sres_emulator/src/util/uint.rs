@@ -1,3 +1,5 @@
+//! Utility extensions for unsigned integers and generic traits to allow abstraction over
+//! multiple types of unsigned integers.
 use std::ops::BitXor;
 use std::ops::Shl;
 
@@ -347,7 +349,7 @@ impl U8Ext for u8 {
 #[cfg(test)]
 #[allow(clippy::bool_assert_comparison)]
 mod tests {
-    use super::UInt;
+    use super::*;
 
     #[test]
     fn u8_bcd_add() {

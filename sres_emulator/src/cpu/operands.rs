@@ -1,15 +1,15 @@
-/// This module handles loading of operands used by instructions.
-///
-/// Each instruction in the [opcode table](build_opcode_table) has an associated
-/// address mode, which is decoded here to handle how the operand is loaded and stored.
-use super::Cpu;
-use super::UInt;
-use super::STACK_BASE;
+//! This module handles loading of operands used by instructions.
+//!
+//! Each instruction in the [opcode table](build_opcode_table) has an associated
+//! address mode, which is decoded here to handle how the operand is loaded and stored.
 use crate::bus::Address;
 use crate::bus::AddressU24;
 use crate::bus::Wrap;
+use crate::cpu::Cpu;
+use crate::cpu::STACK_BASE;
 use crate::main_bus::MainBus;
 use crate::util::uint::U16Ext;
+use crate::util::uint::UInt;
 
 /// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]

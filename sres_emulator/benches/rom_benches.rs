@@ -1,3 +1,4 @@
+//! Benchmarks that measure the time it takes to execute each frame of executing a ROM.
 use std::path::PathBuf;
 
 use criterion::criterion_group;

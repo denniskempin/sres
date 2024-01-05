@@ -1,3 +1,4 @@
+//! Implementation of DMA functionality in the main bus.
 use std::fmt::Display;
 
 use intbits::Bits;

@@ -1,3 +1,4 @@
+//! Implementation of SFC file parsing.
 use std::path::Path;
 
 use anyhow::bail;

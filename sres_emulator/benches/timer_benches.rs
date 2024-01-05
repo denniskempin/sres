@@ -1,8 +1,10 @@
+//! Benchmark that measures the performances of `PpuTimer::advance_master_clock`.
+//! This function is simple, but called very often during execution.
 use criterion::black_box;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::Criterion;
-use sres_emulator::ppu::timer::PpuTimer;
+use sres_emulator::ppu::PpuTimer;
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("advance_master_clock", |b| {

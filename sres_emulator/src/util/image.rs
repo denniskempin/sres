@@ -1,3 +1,4 @@
+//! Color types and image abstraction
 use std::ops::Add;
 use std::ops::Div;
 

@@ -1,3 +1,4 @@
+//! Types for both U16 and U24 addresses used by the different CPUs
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::hash::Hash;
@@ -6,6 +7,7 @@ use crate::util::uint::U16Ext;
 use crate::util::uint::U32Ext;
 use crate::util::uint::UIntTruncate;
 
+/// Address types enforce that the wrapping behavior for each calculation is explicitly specified.
 pub trait Address: Eq + Hash + Display + Ord + Copy + Clone {
     fn add_signed(&self, rhs: i32, wrap: Wrap) -> Self;
     fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self;
@@ -20,6 +22,7 @@ pub enum Wrap {
     NoWrap,
 }
 
+/// Address type used by the main bus.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Copy, Hash, PartialOrd, Ord)]
 pub struct AddressU24 {
     pub bank: u8,
@@ -107,6 +110,7 @@ impl Display for AddressU24 {
     }
 }
 
+/// Address type used by the SPC700.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Copy, Hash, PartialOrd, Ord)]
 pub struct AddressU16(pub u16);
 

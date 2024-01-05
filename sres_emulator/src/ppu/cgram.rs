@@ -1,3 +1,4 @@
+//! Implementation of the CGRAM containing color palette data.
 use crate::util::image::Image;
 use crate::util::image::Rgb15;
 use crate::util::uint::U16Ext;

@@ -1,16 +1,16 @@
-/// Combines [AddressModes]s with instruction implementations to form the opcode table.
-///
-/// The code is designed so that each opcode gets a unique function that can be optimized by
-/// the compiler specifically for that combination of instruction and address mode.
-///
-/// To reduce repetitive code, macros are used to build those unique functions.
-use super::Cpu;
+//! Combines [AddressModes]s with instruction implementations to form the opcode table.
+//!
+//! The code is designed so that each opcode gets a unique function that can be optimized by
+//! the compiler specifically for that combination of instruction and address mode.
+//!
+//! To reduce repetitive code, macros are used to build those unique functions.
 use crate::bus::Address;
 use crate::bus::AddressU24;
 use crate::bus::Wrap;
 use crate::cpu::operands::AccessMode;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
+use crate::cpu::Cpu;
 use crate::main_bus::MainBus;
 
 /// Metadata about a decoded instruction. Used to generate disassembly.
