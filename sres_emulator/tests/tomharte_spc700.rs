@@ -2,10 +2,9 @@
 ///
 /// The data provides thousands of test cases with initial CPU state and expected CPU state after
 /// executing one instruction.
+mod util;
+
 use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Debug;
-use std::fmt::Formatter;
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
@@ -17,13 +16,13 @@ use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
 use sres_emulator::apu::spc700::Spc700;
-use sres_emulator::apu::spc700::Spc700Bus;
 use sres_emulator::apu::spc700::Spc700StatusFlags;
-use sres_emulator::bus::test::SparseMemory;
 use sres_emulator::bus::AddressU16;
 use sres_emulator::bus::Bus;
 use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::util::logging;
+use util::test_bus::Cycle;
+use util::test_bus::TestBus;
 use xz2::read::XzDecoder;
 
 const SKIP_OPCODES: &[u8] = &[];
@@ -199,7 +198,7 @@ struct TestCpuState {
 
 impl TestCpuState {
     /// Create a SPC700 instance with the state described in the test case.
-    fn create_spc700(&self) -> Spc700<TestBus> {
+    fn create_spc700(&self) -> Spc700<TestBus<AddressU16>> {
         let mut bus = TestBus::default();
         for (addr, value) in &self.ram {
             bus.memory.set(AddressU16(*addr), *value);
@@ -214,41 +213,6 @@ impl TestCpuState {
         cpu
     }
 }
-
-/// A test implementation of the `Bus`.
-///
-/// Stores memore sparsely and records all bus cycles for comparison to the test data.
-#[derive(Default)]
-struct TestBus {
-    pub memory: SparseMemory<AddressU16>,
-    pub cycles: Vec<Cycle>,
-}
-
-impl Bus<AddressU16> for TestBus {
-    fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
-        self.memory.get(addr)
-    }
-
-    fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
-        let value = self.peek_u8(addr).unwrap_or_default();
-        self.cycles.push(Cycle::Read(addr, value));
-        value
-    }
-
-    #[allow(clippy::single_match)]
-    fn cycle_write_u8(&mut self, addr: AddressU16, val: u8) {
-        self.cycles.push(Cycle::Write(addr, val));
-        self.memory.set(addr, val);
-    }
-
-    fn cycle_io(&mut self) {
-        self.cycles.push(Cycle::Internal);
-    }
-
-    fn reset(&mut self) {}
-}
-
-impl Spc700Bus for TestBus {}
 
 /// A single test case, parsed from the JSON format described in
 /// https://github.com/TomHarte/ProcessorTests/tree/main/65816
@@ -278,7 +242,7 @@ impl TestCase {
     }
 
     /// Translates the JSON format cycles into the `Cycle` format.
-    fn cycles(&self) -> Vec<Cycle> {
+    fn cycles(&self) -> Vec<Cycle<AddressU16>> {
         self.raw_cycles
             .iter()
             .map(|(addr, value, state)| {
@@ -299,26 +263,5 @@ impl TestCase {
                 }
             })
             .collect()
-    }
-}
-
-/// Description of a bus cycle
-#[derive(Clone, Copy, Eq, PartialEq)]
-enum Cycle {
-    /// The bus was in read mode: (addr, value read)
-    Read(AddressU16, u8),
-    /// The bus was in write mode: (addr, value written)
-    Write(AddressU16, u8),
-    /// The bus performed an internal operation
-    Internal,
-}
-
-impl Debug for Cycle {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Cycle::Read(addr, value) => write!(f, "R({})={:02X}", addr, value),
-            Cycle::Write(addr, value) => write!(f, "W({})={:02X}", addr, value),
-            Cycle::Internal => write!(f, "I"),
-        }
     }
 }

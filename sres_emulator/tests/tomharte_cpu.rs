@@ -2,10 +2,9 @@
 ///
 /// The data provides thousands of test cases with initial CPU state and expected CPU state after
 /// executing one instruction.
+mod util;
+
 use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Debug;
-use std::fmt::Formatter;
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
@@ -16,15 +15,15 @@ use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use sres_emulator::bus::test::SparseMemory;
 use sres_emulator::bus::AddressU24;
 use sres_emulator::bus::Bus;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::cpu::StatusFlags;
 use sres_emulator::debugger::DebuggerRef;
-use sres_emulator::main_bus::MainBus;
 use sres_emulator::trace::Trace;
 use sres_emulator::util::logging;
+use util::test_bus::Cycle;
+use util::test_bus::TestBus;
 use xz2::read::XzDecoder;
 
 const SKIP_OPCODES: &[u8] = &[
@@ -199,7 +198,7 @@ struct TestCpuState {
 
 impl TestCpuState {
     /// Create a CPU instance with the state described in the test case.
-    fn create_cpu(&self) -> Cpu<TestBus> {
+    fn create_cpu(&self) -> Cpu<TestBus<AddressU24>> {
         let mut bus = TestBus::default();
         for (addr, value) in &self.ram {
             bus.memory.set(AddressU24::from(*addr), *value);
@@ -218,49 +217,6 @@ impl TestCpuState {
         cpu.d = self.d;
         cpu.emulation_mode = self.e == 1;
         cpu
-    }
-}
-
-/// A test implementation of the `Bus`.
-///
-/// Stores memore sparsely and records all bus cycles for comparison to the test data.
-#[derive(Default)]
-struct TestBus {
-    pub memory: SparseMemory<AddressU24>,
-    pub cycles: Vec<Cycle>,
-}
-
-impl Bus<AddressU24> for TestBus {
-    fn peek_u8(&self, addr: AddressU24) -> Option<u8> {
-        self.memory.get(addr)
-    }
-
-    fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
-        let value = self.peek_u8(addr).unwrap_or_default();
-        self.cycles.push(Cycle::Read(u32::from(addr), value));
-        value
-    }
-
-    #[allow(clippy::single_match)]
-    fn cycle_write_u8(&mut self, addr: AddressU24, val: u8) {
-        self.cycles.push(Cycle::Write(u32::from(addr), val));
-        self.memory.set(addr, val);
-    }
-
-    fn cycle_io(&mut self) {
-        self.cycles.push(Cycle::Internal);
-    }
-
-    fn reset(&mut self) {}
-}
-
-impl MainBus for TestBus {
-    fn check_nmi_interrupt(&mut self) -> bool {
-        false
-    }
-
-    fn consume_timer_interrupt(&mut self) -> bool {
-        false
     }
 }
 
@@ -299,41 +255,20 @@ impl TestCase {
     }
 
     /// Translates the JSON format cycles into the `Cycle` format.
-    fn cycles(&self) -> Vec<Cycle> {
+    fn cycles(&self) -> Vec<Cycle<AddressU24>> {
         self.raw_cycles
             .iter()
             .map(|(addr, value, state)| {
                 if !(state.contains('p') || state.contains('d')) {
                     Cycle::Internal
                 } else if state.contains('r') {
-                    Cycle::Read(addr.unwrap_or_default(), value.unwrap_or_default())
+                    Cycle::Read(addr.unwrap_or_default().into(), value.unwrap_or_default())
                 } else if state.contains('w') {
-                    Cycle::Write(addr.unwrap_or_default(), value.unwrap_or_default())
+                    Cycle::Write(addr.unwrap_or_default().into(), value.unwrap_or_default())
                 } else {
                     Cycle::Internal
                 }
             })
             .collect()
-    }
-}
-
-/// Description of a bus cycle
-#[derive(Clone, Copy, Eq, PartialEq)]
-enum Cycle {
-    /// The bus was in read mode: (addr, value read)
-    Read(u32, u8),
-    /// The bus was in write mode: (addr, value written)
-    Write(u32, u8),
-    /// The bus performed an internal operation
-    Internal,
-}
-
-impl Debug for Cycle {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Cycle::Read(addr, value) => write!(f, "R({:06X})={:02X}", addr, value),
-            Cycle::Write(addr, value) => write!(f, "W({:06X})={:02X}", addr, value),
-            Cycle::Internal => write!(f, "I"),
-        }
     }
 }
