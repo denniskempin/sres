@@ -1,5 +1,4 @@
 mod address;
-pub mod test;
 
 pub use address::Address;
 pub use address::AddressU16;
