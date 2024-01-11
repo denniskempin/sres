@@ -2,6 +2,8 @@
 //!
 //! Each instruction in the [opcode table](build_opcode_table) has an associated
 //! address mode, which is decoded here to handle how the operand is loaded and stored.
+use intbits::Bits;
+
 use crate::bus::Address;
 use crate::bus::AddressU16;
 use crate::bus::Wrap;
@@ -14,6 +16,8 @@ use crate::util::uint::UInt;
 pub enum AddressMode {
     Implied,
     DirectPage,
+    /// m.b: 13-bit address with 3-bit selection of bit
+    AbsoluteBit,
 }
 
 /// Describes how the instruction will access the operand. This may subtly affect the
@@ -34,6 +38,7 @@ pub enum AccessMode {
 pub enum Operand {
     Implied,
     Address(u16, AddressMode, AddressU16),
+    Bit(AddressMode, AddressU16, u8),
 }
 
 impl Operand {
@@ -73,33 +78,40 @@ impl Operand {
         bus: &'a mut WrapperT,
         instruction_addr: AddressU16,
         mode: AddressMode,
-        rwm: AccessMode,
+        _rwm: AccessMode,
     ) -> (Self, AddressU16) {
         // The size of the operand part of the instruction depends on the address mode.
         let operand_size: u8 = match mode {
             AddressMode::Implied => 0,
             AddressMode::DirectPage => 1,
+            AddressMode::AbsoluteBit => 2,
         };
 
         // Regardless of how many bytes were read, store them all as u16 for simplicity.
-        let next_addr = instruction_addr.add(1_u8, Wrap::WrapBank);
+        let next_addr = instruction_addr.add(1_u8, Wrap::NoWrap);
         let operand_data: u16 = match operand_size {
             0 => 0,
             1 => bus.cycle_read_u8(next_addr) as u16,
-            2 => bus.cycle_read_u16(next_addr, Wrap::WrapBank) as u16,
+            2 => bus.cycle_read_u16(next_addr, Wrap::NoWrap),
             _ => unreachable!(),
         };
 
         // Interpret the address mode to figure out where the operand is located.
         let operand = match mode {
             AddressMode::Implied => Operand::Implied,
+            AddressMode::AbsoluteBit => {
+                let bit = operand_data.bits(13..16);
+                let addr = AddressU16(operand_data.bits(0..13));
+                Operand::Bit(mode, addr, bit as u8)
+            }
             // Operand is in memory, calculate the effective address
             _ => {
                 let operand_addr: AddressU16 = match mode {
-                    AddressMode::DirectPage => {
-                        AddressU16::new_direct_page(bus.cpu().dsw, operand_data as u8)
-                    }
-                    AddressMode::Implied => unreachable!(),
+                    AddressMode::DirectPage => AddressU16::new_direct_page(
+                        if bus.cpu().status.direct_page { 1 } else { 0 },
+                        operand_data as u8,
+                    ),
+                    _ => unreachable!(),
                 };
                 Operand::Address(operand_data, mode, operand_addr)
             }
@@ -107,8 +119,8 @@ impl Operand {
         (
             operand,
             instruction_addr
-                .add(1_u8, Wrap::WrapBank)
-                .add(operand_size, Wrap::WrapBank),
+                .add(1_u8, Wrap::NoWrap)
+                .add(operand_size, Wrap::NoWrap),
         )
     }
 
@@ -118,6 +130,7 @@ impl Operand {
         match self {
             Self::Implied => None,
             Self::Address(_, _, addr) => Some(*addr),
+            Self::Bit(_, addr, _) => Some(*addr),
         }
     }
 
@@ -130,12 +143,24 @@ impl Operand {
             Self::Implied => panic!("loading implied operand"),
             Self::Address(_, address_mode, addr) => {
                 let wrap = if matches!(*address_mode, AddressMode::DirectPage) {
-                    Wrap::WrapBank
+                    Wrap::WrapPage
                 } else {
                     Wrap::NoWrap
                 };
                 cpu.bus.cycle_read_generic::<T>(*addr, wrap)
             }
+            _ => unreachable!(),
+        }
+    }
+
+    /// Load the operand. This may perform [bus](Bus) cycles to load the operand from memory.
+    ///
+    /// This method supports both u8 and u16 operands.
+    #[inline]
+    pub fn load_bit(&self, cpu: &mut Spc700<impl Spc700Bus>) -> bool {
+        match self {
+            Self::Bit(_, addr, idx) => cpu.bus.cycle_read_u8(*addr).bit(*idx),
+            _ => unreachable!(),
         }
     }
 
@@ -146,9 +171,10 @@ impl Operand {
     pub fn store<T: UInt>(&self, cpu: &mut Spc700<impl Spc700Bus>, value: T) {
         match self {
             Self::Implied => panic!("writing to implied operand"),
+            Self::Bit(_, _, _) => panic!("writing to bit operand"),
             Self::Address(_, _, addr) => {
                 cpu.bus
-                    .cycle_write_generic::<T>(*addr, value, Wrap::WrapBank);
+                    .cycle_write_generic::<T>(*addr, value, Wrap::WrapPage);
             }
         }
     }
@@ -162,7 +188,11 @@ impl Operand {
             Self::Implied => "".to_string(),
             Self::Address(value, mode, _) => match mode {
                 AddressMode::DirectPage => format!("${:02x}", value),
-                AddressMode::Implied => unreachable!(),
+                _ => unreachable!(),
+            },
+            Self::Bit(address_mode, addr, bit) => match address_mode {
+                AddressMode::AbsoluteBit => format!("{}.{}", addr, bit),
+                _ => unreachable!(),
             },
         }
     }

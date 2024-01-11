@@ -28,98 +28,97 @@ use xz2::read::XzDecoder;
 const SKIP_OPCODES: &[u8] = &[];
 
 #[test]
-#[ignore = "Not yet implemented"]
-pub fn test_opcodes_0x() {
+pub fn test_spc700_opcodes_0x() {
     run_tomharte_test("0x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_1x() {
+pub fn test_spc700_opcodes_1x() {
     run_tomharte_test("1x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_2x() {
+pub fn test_spc700_opcodes_2x() {
     run_tomharte_test("2x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_3x() {
+pub fn test_spc700_opcodes_3x() {
     run_tomharte_test("3x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_4x() {
+pub fn test_spc700_opcodes_4x() {
     run_tomharte_test("4x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_5x() {
+pub fn test_spc700_opcodes_5x() {
     run_tomharte_test("5x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_6x() {
+pub fn test_spc700_opcodes_6x() {
     run_tomharte_test("6x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_7x() {
+pub fn test_spc700_opcodes_7x() {
     run_tomharte_test("7x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_8x() {
+pub fn test_spc700_opcodes_8x() {
     run_tomharte_test("8x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_9x() {
+pub fn test_spc700_opcodes_9x() {
     run_tomharte_test("9x");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_ax() {
+pub fn test_spc700_opcodes_ax() {
     run_tomharte_test("ax");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_bx() {
+pub fn test_spc700_opcodes_bx() {
     run_tomharte_test("bx");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_cx() {
+pub fn test_spc700_opcodes_cx() {
     run_tomharte_test("cx");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_dx() {
+pub fn test_spc700_opcodes_dx() {
     run_tomharte_test("dx");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_ex() {
+pub fn test_spc700_opcodes_ex() {
     run_tomharte_test("ex");
 }
 
 #[test]
 #[ignore = "Not yet implemented"]
-pub fn test_opcodes_fx() {
+pub fn test_spc700_opcodes_fx() {
     run_tomharte_test("fx");
 }
 
@@ -172,6 +171,8 @@ fn run_tomharte_test(test_name: &str) {
             "Cycles: {}",
             Comparison::new(&actual_state.bus.cycles, &test_case.cycles())
         );
+        println!("Actual: {:?}", actual_state.bus.cycles);
+        println!("Expected: {:?}", test_case.cycles());
         panic!("test failed");
     }
 
