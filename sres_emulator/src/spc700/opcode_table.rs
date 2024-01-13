@@ -89,5 +89,9 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
     opcodes[0x00] = instruction!(nop);
     opcodes[0x0A] = instruction!(or1, AddressMode::AbsoluteBit, AccessMode::Read);
     opcodes[0x0B] = instruction!(asl, AddressMode::DirectPage, AccessMode::Modify);
+    opcodes[0x0C] = instruction!(asl, AddressMode::Absolute, AccessMode::Modify);
+    opcodes[0x0D] = instruction!(push_psw);
+    opcodes[0x0E] = instruction!(tset1, AddressMode::Absolute, AccessMode::Modify);
+    opcodes[0x0F] = instruction!(brk);
     opcodes
 }

@@ -18,6 +18,7 @@ pub enum AddressMode {
     DirectPage,
     /// m.b: 13-bit address with 3-bit selection of bit
     AbsoluteBit,
+    Absolute,
 }
 
 /// Describes how the instruction will access the operand. This may subtly affect the
@@ -85,6 +86,7 @@ impl Operand {
             AddressMode::Implied => 0,
             AddressMode::DirectPage => 1,
             AddressMode::AbsoluteBit => 2,
+            AddressMode::Absolute => 2,
         };
 
         // Regardless of how many bytes were read, store them all as u16 for simplicity.
@@ -111,6 +113,7 @@ impl Operand {
                         if bus.cpu().status.direct_page { 1 } else { 0 },
                         operand_data as u8,
                     ),
+                    AddressMode::Absolute => AddressU16(operand_data),
                     _ => unreachable!(),
                 };
                 Operand::Address(operand_data, mode, operand_addr)
@@ -188,6 +191,7 @@ impl Operand {
             Self::Implied => "".to_string(),
             Self::Address(value, mode, _) => match mode {
                 AddressMode::DirectPage => format!("${:02x}", value),
+                AddressMode::Absolute => format!("${:04x}", value),
                 _ => unreachable!(),
             },
             Self::Bit(address_mode, addr, bit) => match address_mode {
