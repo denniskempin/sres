@@ -72,6 +72,27 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.status.negative = value.bit(T::N_BITS - 1);
         self.status.zero = value.is_zero();
     }
+    fn stack_push_u8(&mut self, value: u8) {
+        self.bus
+            .cycle_write_u8(AddressU16::new_direct_page(1, self.sp), value);
+        self.sp = self.sp.wrapping_sub(1);
+    }
+
+    fn stack_push_u16(&mut self, value: u16) {
+        let bytes = value.to_le_bytes();
+        self.stack_push_u8(bytes[1]);
+        self.stack_push_u8(bytes[0]);
+    }
+
+    fn stack_pop_u8(&mut self) -> u8 {
+        self.sp = self.sp.wrapping_add(1);
+        self.bus
+            .cycle_read_u8(AddressU16::new_direct_page(1, self.sp))
+    }
+
+    fn stack_pop_u16(&mut self) -> u16 {
+        u16::from_le_bytes([self.stack_pop_u8(), self.stack_pop_u8()])
+    }
 }
 
 impl<BusT: Spc700Bus> Display for Spc700<BusT> {
