@@ -9,25 +9,125 @@ use crate::bus::AddressU16;
 use crate::bus::Wrap;
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
-use crate::util::uint::UInt;
 
 /// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]
 pub enum AddressMode {
-    Implied,
     DirectPage,
-    /// m.b: 13-bit address with 3-bit selection of bit
-    AbsoluteBit,
     Absolute,
 }
 
-/// Describes how the instruction will access the operand. This may subtly affect the
-/// load/store behavior.
-#[derive(Copy, Clone, PartialEq)]
-pub enum AccessMode {
-    Read,
-    Write,
-    Modify,
+#[derive(Clone, Copy, PartialEq)]
+pub enum Register {
+    Accumulator,
+    X,
+    Y,
+    Psw,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum OperandDef {
+    Implied,
+    Immediate,
+    Register(Register),
+    Const(u8),
+    InMemory(AddressMode),
+    AbsoluteBit,
+    DirectPageBit(u8),
+}
+
+impl OperandDef {
+    /// Decodes the next operand located at the program counter.
+    ///
+    /// Returns the operand and address of the next instruction.
+    #[inline]
+    pub fn decode(&self, cpu: &mut Spc700<impl Spc700Bus>) -> (Operand, AddressU16) {
+        let pc = cpu.pc;
+        self.decode_impl(&mut ReadWrapper(cpu), pc)
+    }
+
+    /// Peeks at the operand at `instruction_addr` without modifying the system state.
+    ///
+    /// Returns the operand and address of the next instruction.
+    #[inline]
+    pub fn peek(
+        &self,
+        cpu: &Spc700<impl Spc700Bus>,
+        instruction_addr: AddressU16,
+    ) -> (Operand, AddressU16) {
+        self.decode_impl(&mut PeekWrapper(cpu), instruction_addr)
+    }
+
+    /// Decodes an operand from the bus.
+    ///
+    /// Uses the [ReadOrPeekWrapper] to use the same logic for decoding operands during
+    /// execution (where read cycles will modify the system state), and decoding
+    /// operands for disassemply without modifying the system state.
+    #[inline]
+    fn decode_impl<'a, BusT: Spc700Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
+        &self,
+        bus: &'a mut WrapperT,
+        instruction_addr: AddressU16,
+    ) -> (Operand, AddressU16) {
+        // Regardless of how many bytes were read, store them all as u16 for simplicity.
+        let next_addr = instruction_addr.add(1_u8, Wrap::NoWrap);
+        let operand_data: u16 = match self.operand_size() {
+            0 => 0,
+            1 => bus.cycle_read_u8(next_addr) as u16,
+            2 => bus.cycle_read_u16(next_addr, Wrap::NoWrap),
+            _ => unreachable!(),
+        };
+
+        // Interpret the address mode to figure out where the operand is located.
+        let operand = match self {
+            OperandDef::Implied => Operand::Implied,
+            OperandDef::Immediate => Operand::Immediate(operand_data),
+            OperandDef::Register(register) => Operand::Register(*register),
+            OperandDef::Const(value) => Operand::Const(*value),
+            OperandDef::InMemory(mode) => {
+                let operand_addr: AddressU16 = match mode {
+                    AddressMode::DirectPage => AddressU16::new_direct_page(
+                        if bus.cpu().status.direct_page { 1 } else { 0 },
+                        operand_data as u8,
+                    ),
+                    AddressMode::Absolute => AddressU16(operand_data),
+                };
+                Operand::InMemory(operand_data, *mode, operand_addr)
+            }
+            OperandDef::AbsoluteBit => {
+                let bit = operand_data.bits(13..16);
+                let addr = AddressU16(operand_data.bits(0..13));
+                Operand::InMemoryBit(addr, bit as u8)
+            }
+            OperandDef::DirectPageBit(bit) => {
+                let addr = AddressU16::new_direct_page(
+                    if bus.cpu().status.direct_page { 1 } else { 0 },
+                    operand_data as u8,
+                );
+                Operand::InMemoryBit(addr, *bit)
+            }
+        };
+        (
+            operand,
+            instruction_addr
+                .add(1_u8, Wrap::NoWrap)
+                .add(self.operand_size(), Wrap::NoWrap),
+        )
+    }
+
+    #[inline]
+    fn operand_size(&self) -> u8 {
+        match self {
+            Self::Implied => 0,
+            Self::Immediate => 1,
+            Self::Register(_) => 0,
+            Self::Const(_) => 0,
+            Self::InMemory(AddressMode::DirectPage) => 1,
+            Self::InMemory(AddressMode::Absolute) => 2,
+            Self::AbsoluteBit => 2,
+            Self::DirectPageBit(_) => 1,
+        }
+    }
 }
 
 /// A decoded operand. The operand may be an immediate value, the accumulator register, or lives
@@ -38,102 +138,24 @@ pub enum AccessMode {
 #[derive(Copy, Clone)]
 pub enum Operand {
     Implied,
-    Address(u16, AddressMode, AddressU16),
-    Bit(AddressMode, AddressU16, u8),
+    Immediate(u16),
+    Register(Register),
+    Const(u8),
+    InMemory(u16, AddressMode, AddressU16),
+    InMemoryBit(AddressU16, u8),
 }
 
 impl Operand {
-    /// Decodes the next operand located at the program counter.
-    ///
-    /// Returns the operand and address of the next instruction.
-    #[inline]
-    pub fn decode(
-        cpu: &mut Spc700<impl Spc700Bus>,
-        mode: AddressMode,
-        rwm: AccessMode,
-    ) -> (Self, AddressU16) {
-        let pc = cpu.pc;
-        Self::decode_impl(&mut ReadWrapper(cpu), pc, mode, rwm)
-    }
-
-    /// Peeks at the operand at `instruction_addr` without modifying the system state.
-    ///
-    /// Returns the operand and address of the next instruction.
-    #[inline]
-    pub fn peek(
-        cpu: &Spc700<impl Spc700Bus>,
-        instruction_addr: AddressU16,
-        mode: AddressMode,
-        rwm: AccessMode,
-    ) -> (Self, AddressU16) {
-        Self::decode_impl(&mut PeekWrapper(cpu), instruction_addr, mode, rwm)
-    }
-
-    /// Decodes an operand from the bus.
-    ///
-    /// Uses the [ReadOrPeekWrapper] to use the same logic for decoding operands during
-    /// execution (where read cycles will modify the system state), and decoding
-    /// operands for disassemply without modifying the system state.
-    #[inline]
-    fn decode_impl<'a, BusT: Spc700Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
-        bus: &'a mut WrapperT,
-        instruction_addr: AddressU16,
-        mode: AddressMode,
-        _rwm: AccessMode,
-    ) -> (Self, AddressU16) {
-        // The size of the operand part of the instruction depends on the address mode.
-        let operand_size: u8 = match mode {
-            AddressMode::Implied => 0,
-            AddressMode::DirectPage => 1,
-            AddressMode::AbsoluteBit => 2,
-            AddressMode::Absolute => 2,
-        };
-
-        // Regardless of how many bytes were read, store them all as u16 for simplicity.
-        let next_addr = instruction_addr.add(1_u8, Wrap::NoWrap);
-        let operand_data: u16 = match operand_size {
-            0 => 0,
-            1 => bus.cycle_read_u8(next_addr) as u16,
-            2 => bus.cycle_read_u16(next_addr, Wrap::NoWrap),
-            _ => unreachable!(),
-        };
-
-        // Interpret the address mode to figure out where the operand is located.
-        let operand = match mode {
-            AddressMode::Implied => Operand::Implied,
-            AddressMode::AbsoluteBit => {
-                let bit = operand_data.bits(13..16);
-                let addr = AddressU16(operand_data.bits(0..13));
-                Operand::Bit(mode, addr, bit as u8)
-            }
-            // Operand is in memory, calculate the effective address
-            _ => {
-                let operand_addr: AddressU16 = match mode {
-                    AddressMode::DirectPage => AddressU16::new_direct_page(
-                        if bus.cpu().status.direct_page { 1 } else { 0 },
-                        operand_data as u8,
-                    ),
-                    AddressMode::Absolute => AddressU16(operand_data),
-                    _ => unreachable!(),
-                };
-                Operand::Address(operand_data, mode, operand_addr)
-            }
-        };
-        (
-            operand,
-            instruction_addr
-                .add(1_u8, Wrap::NoWrap)
-                .add(operand_size, Wrap::NoWrap),
-        )
-    }
-
     /// Returns the effective [Address] of the operand lies in memory. None otherwise.
     #[inline]
     pub fn effective_addr(&self) -> Option<AddressU16> {
         match self {
             Self::Implied => None,
-            Self::Address(_, _, addr) => Some(*addr),
-            Self::Bit(_, addr, _) => Some(*addr),
+            Self::Immediate(_) => None,
+            Self::Register(_) => None,
+            Self::Const(_) => None,
+            Self::InMemory(_, _, addr) => Some(*addr),
+            Self::InMemoryBit(addr, _) => Some(*addr),
         }
     }
 
@@ -141,18 +163,17 @@ impl Operand {
     ///
     /// This method supports both u8 and u16 operands.
     #[inline]
-    pub fn load<T: UInt>(&self, cpu: &mut Spc700<impl Spc700Bus>) -> T {
+    pub fn load_u8(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
         match self {
             Self::Implied => panic!("loading implied operand"),
-            Self::Address(_, address_mode, addr) => {
-                let wrap = if matches!(*address_mode, AddressMode::DirectPage) {
-                    Wrap::WrapPage
-                } else {
-                    Wrap::NoWrap
-                };
-                cpu.bus.cycle_read_generic::<T>(*addr, wrap)
-            }
-            _ => unreachable!(),
+            Self::Immediate(value) => *value as u8,
+            Self::Register(Register::Accumulator) => cpu.a,
+            Self::Register(Register::X) => cpu.x,
+            Self::Register(Register::Y) => cpu.y,
+            Self::Register(Register::Psw) => cpu.status.into(),
+            Self::Const(value) => *value,
+            Self::InMemory(_, _, addr) => cpu.bus.cycle_read_u8(*addr),
+            Self::InMemoryBit(_addr, _bit) => panic!("Loading bit operand as u8"),
         }
     }
 
@@ -162,8 +183,8 @@ impl Operand {
     #[inline]
     pub fn load_bit(&self, cpu: &mut Spc700<impl Spc700Bus>) -> bool {
         match self {
-            Self::Bit(_, addr, idx) => cpu.bus.cycle_read_u8(*addr).bit(*idx),
-            _ => unreachable!(),
+            Self::InMemoryBit(addr, bit) => cpu.bus.cycle_read_u8(*addr).bit(*bit),
+            _ => panic!("Loading non-bit operand as bit"),
         }
     }
 
@@ -171,14 +192,17 @@ impl Operand {
     ///
     /// This method supports both u8 and u16 operands.
     #[inline]
-    pub fn store<T: UInt>(&self, cpu: &mut Spc700<impl Spc700Bus>, value: T) {
+    pub fn store_u8(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u8) {
         match self {
-            Self::Implied => panic!("writing to implied operand"),
-            Self::Bit(_, _, _) => panic!("writing to bit operand"),
-            Self::Address(_, _, addr) => {
-                cpu.bus
-                    .cycle_write_generic::<T>(*addr, value, Wrap::WrapPage);
-            }
+            Self::Implied => panic!("storing implied operand"),
+            Self::Immediate(_) => panic!("storing immediate operand"),
+            Self::Register(Register::Accumulator) => cpu.a = value,
+            Self::Register(Register::X) => cpu.x = value,
+            Self::Register(Register::Y) => cpu.y = value,
+            Self::Register(Register::Psw) => cpu.status = value.into(),
+            Self::Const(_) => panic!("storing const operand"),
+            Self::InMemory(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value),
+            Self::InMemoryBit(_addr, _bit) => panic!("storing bit operand as u8"),
         }
     }
 
@@ -188,16 +212,15 @@ impl Operand {
     #[inline]
     pub fn format(&self) -> String {
         match self {
-            Self::Implied => "".to_string(),
-            Self::Address(value, mode, _) => match mode {
-                AddressMode::DirectPage => format!("${:02x}", value),
-                AddressMode::Absolute => format!("${:04x}", value),
-                _ => unreachable!(),
-            },
-            Self::Bit(address_mode, addr, bit) => match address_mode {
-                AddressMode::AbsoluteBit => format!("{}.{}", addr, bit),
-                _ => unreachable!(),
-            },
+            Self::Implied => String::new(),
+            Self::Immediate(value) => format!("#${:02X}", value),
+            Self::Register(Register::Accumulator) => "A".to_string(),
+            Self::Register(Register::X) => "X".to_string(),
+            Self::Register(Register::Y) => "Y".to_string(),
+            Self::Register(Register::Psw) => "PSW".to_string(),
+            Self::Const(value) => format!("#${:02X}", value),
+            Self::InMemory(_, _, addr) => format!("${:04X}", addr.0),
+            Self::InMemoryBit(addr, bit) => format!("(${:04X}.{})", addr.0, bit),
         }
     }
 }

@@ -1,11 +1,9 @@
 use crate::bus::Address;
 use crate::bus::AddressU16;
 use crate::bus::Wrap;
-use crate::spc700::operands::AccessMode;
-use crate::spc700::AddressMode;
-use crate::spc700::Operand;
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
+
 /// Metadata about a decoded instruction. Used to generate disassembly.
 pub struct InstructionMeta {
     pub address: AddressU16,
@@ -46,16 +44,15 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
             }
         };
         // Single operand instruction
-        ($method: ident, $address_mode: expr, $rwm: expr) => {
+        ($method: ident, $operand_def: expr) => {
             InstructionDef::<BusT> {
                 execute: |cpu| {
-                    let (operand, next_addr) = Operand::decode(cpu, $address_mode, $rwm);
+                    let (operand, next_addr) = $operand_def.decode(cpu);
                     $method(cpu, operand);
                     cpu.pc = next_addr;
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) =
-                        Operand::peek(cpu, instruction_addr, $address_mode, $rwm);
+                    let (operand, next_addr) = $operand_def.peek(cpu, instruction_addr);
                     (
                         InstructionMeta {
                             address: instruction_addr,
@@ -86,12 +83,15 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
     });
 
     use crate::spc700::instructions::*;
+    use crate::spc700::operands::AddressMode::*;
+    use crate::spc700::operands::OperandDef::*;
+    use crate::spc700::operands::Register::*;
     opcodes[0x00] = instruction!(nop);
-    opcodes[0x0A] = instruction!(or1, AddressMode::AbsoluteBit, AccessMode::Read);
-    opcodes[0x0B] = instruction!(asl, AddressMode::DirectPage, AccessMode::Modify);
-    opcodes[0x0C] = instruction!(asl, AddressMode::Absolute, AccessMode::Modify);
-    opcodes[0x0D] = instruction!(push_psw);
-    opcodes[0x0E] = instruction!(tset1, AddressMode::Absolute, AccessMode::Modify);
+    opcodes[0x0A] = instruction!(or1, AbsoluteBit);
+    opcodes[0x0B] = instruction!(asl, InMemory(DirectPage));
+    opcodes[0x0C] = instruction!(asl, InMemory(Absolute));
+    opcodes[0x0D] = instruction!(push, Register(Psw));
+    opcodes[0x0E] = instruction!(tset1, InMemory(Absolute));
     opcodes[0x0F] = instruction!(brk);
     opcodes
 }

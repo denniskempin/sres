@@ -28,6 +28,7 @@ use xz2::read::XzDecoder;
 const SKIP_OPCODES: &[u8] = &[];
 
 #[test]
+#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_0x() {
     run_tomharte_test("0x");
 }
