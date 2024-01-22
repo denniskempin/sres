@@ -28,17 +28,16 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
             InstructionDef::<BusT> {
                 execute: |cpu| {
                     $method(cpu);
-                    cpu.pc = cpu.pc.add(1_u8, Wrap::NoWrap);
                 },
-                meta: |_, instruction_addr| {
+                meta: |_, operand_addr| {
                     (
                         InstructionMeta {
-                            address: instruction_addr,
+                            address: operand_addr,
                             operation: stringify!($method),
                             operand_str: None,
                             effective_addr: None,
                         },
-                        instruction_addr.add(1_u8, Wrap::NoWrap),
+                        operand_addr,
                     )
                 },
             }
@@ -48,17 +47,42 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
             InstructionDef::<BusT> {
                 execute: |cpu| {
                     let (operand, next_addr) = $operand_def.decode(cpu);
-                    $method(cpu, operand);
                     cpu.pc = next_addr;
+                    $method(cpu, operand);
                 },
-                meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) = $operand_def.peek(cpu, instruction_addr);
+                meta: |cpu, operand_addr| {
+                    let (operand, next_addr) = $operand_def.peek(cpu, operand_addr);
                     (
                         InstructionMeta {
-                            address: instruction_addr,
+                            address: operand_addr,
                             operation: stringify!($method),
                             operand_str: Some(operand.format()),
                             effective_addr: operand.effective_addr(),
+                        },
+                        next_addr,
+                    )
+                },
+            }
+        };
+        // Two operand instruction
+        ($method: ident, $left_def: expr, $right_def: expr) => {
+            InstructionDef::<BusT> {
+                execute: |cpu| {
+                    let (left, next_addr) = $left_def.decode(cpu);
+                    cpu.pc = next_addr;
+                    let (right, next_addr) = $right_def.decode(cpu);
+                    cpu.pc = next_addr;
+                    $method(cpu, left, right);
+                },
+                meta: |cpu, operand_addr| {
+                    let (left, next_addr) = $left_def.peek(cpu, operand_addr);
+                    let (right, next_addr) = $right_def.peek(cpu, next_addr);
+                    (
+                        InstructionMeta {
+                            address: operand_addr,
+                            operation: stringify!($method),
+                            operand_str: Some(left.format() + ", " + &right.format()),
+                            effective_addr: None,
                         },
                         next_addr,
                     )
@@ -87,6 +111,11 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
     use crate::spc700::operands::OperandDef::*;
     use crate::spc700::operands::Register::*;
     opcodes[0x00] = instruction!(nop);
+    opcodes[0x01] = instruction!(tcall, Const(0));
+    opcodes[0x02] = instruction!(set1, DirectPageBit(0));
+    opcodes[0x03] = instruction!(bbs, DirectPageBit(0), Immediate);
+    opcodes[0x04] = instruction!(or, Register(Accumulator), InMemory(DirectPage));
+    opcodes[0x05] = instruction!(or, Register(Accumulator), InMemoryInverted(Absolute));
     opcodes[0x0A] = instruction!(or1, AbsoluteBit);
     opcodes[0x0B] = instruction!(asl, InMemory(DirectPage));
     opcodes[0x0C] = instruction!(asl, InMemory(Absolute));

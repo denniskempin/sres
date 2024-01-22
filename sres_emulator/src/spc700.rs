@@ -7,8 +7,10 @@ mod status;
 use std::fmt::Display;
 
 use self::opcode_table::InstructionMeta;
+use crate::bus::Address;
 use crate::bus::AddressU16;
 use crate::bus::Bus;
+use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
 use crate::spc700::opcode_table::InstructionDef;
 pub use crate::spc700::operands::AddressMode;
@@ -58,12 +60,13 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     pub fn instruction_meta(&self) -> InstructionMeta {
         let opcode = self.bus.peek_u8(self.pc).unwrap_or_default();
         let instruction = &self.opcode_table[opcode as usize];
-        let (meta, _next_addr) = (instruction.meta)(self, self.pc);
+        let (meta, _next_addr) = (instruction.meta)(self, self.pc.add(1_u8, Wrap::NoWrap));
         meta
     }
 
     pub fn step(&mut self) {
         let opcode = self.bus.cycle_read_u8(self.pc);
+        self.pc = self.pc.add(1_u8, Wrap::NoWrap);
         let instruction = &self.opcode_table[opcode as usize];
         (instruction.execute)(self);
     }
