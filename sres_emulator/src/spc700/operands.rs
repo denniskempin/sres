@@ -17,6 +17,26 @@ pub enum AddressMode {
     Absolute,
 }
 
+impl AddressMode {
+    #[inline]
+    pub fn operand_size(&self) -> u8 {
+        match self {
+            AddressMode::DirectPage => 1,
+            AddressMode::Absolute => 2,
+        }
+    }
+
+    pub fn effective_addr(&self, cpu: &Spc700<impl Spc700Bus>, operand_data: u16) -> AddressU16 {
+        match self {
+            AddressMode::DirectPage => AddressU16::new_direct_page(
+                if cpu.status.direct_page { 1 } else { 0 },
+                operand_data as u8,
+            ),
+            AddressMode::Absolute => AddressU16(operand_data),
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum Register {
     Accumulator,
@@ -32,6 +52,7 @@ pub enum OperandDef {
     Register(Register),
     Const(u8),
     InMemory(AddressMode),
+    InMemoryInverted(AddressMode),
     AbsoluteBit,
     DirectPageBit(u8),
 }
@@ -53,9 +74,9 @@ impl OperandDef {
     pub fn peek(
         &self,
         cpu: &Spc700<impl Spc700Bus>,
-        instruction_addr: AddressU16,
+        operand_addr: AddressU16,
     ) -> (Operand, AddressU16) {
-        self.decode_impl(&mut PeekWrapper(cpu), instruction_addr)
+        self.decode_impl(&mut PeekWrapper(cpu), operand_addr)
     }
 
     /// Decodes an operand from the bus.
@@ -67,14 +88,13 @@ impl OperandDef {
     fn decode_impl<'a, BusT: Spc700Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
         &self,
         bus: &'a mut WrapperT,
-        instruction_addr: AddressU16,
+        operand_addr: AddressU16,
     ) -> (Operand, AddressU16) {
         // Regardless of how many bytes were read, store them all as u16 for simplicity.
-        let next_addr = instruction_addr.add(1_u8, Wrap::NoWrap);
         let operand_data: u16 = match self.operand_size() {
             0 => 0,
-            1 => bus.cycle_read_u8(next_addr) as u16,
-            2 => bus.cycle_read_u16(next_addr, Wrap::NoWrap),
+            1 => bus.cycle_read_u8(operand_addr) as u16,
+            2 => bus.cycle_read_u16(operand_addr, Wrap::NoWrap),
             _ => unreachable!(),
         };
 
@@ -84,16 +104,16 @@ impl OperandDef {
             OperandDef::Immediate => Operand::Immediate(operand_data),
             OperandDef::Register(register) => Operand::Register(*register),
             OperandDef::Const(value) => Operand::Const(*value),
-            OperandDef::InMemory(mode) => {
-                let operand_addr: AddressU16 = match mode {
-                    AddressMode::DirectPage => AddressU16::new_direct_page(
-                        if bus.cpu().status.direct_page { 1 } else { 0 },
-                        operand_data as u8,
-                    ),
-                    AddressMode::Absolute => AddressU16(operand_data),
-                };
-                Operand::InMemory(operand_data, *mode, operand_addr)
-            }
+            OperandDef::InMemory(mode) => Operand::InMemory(
+                operand_data,
+                *mode,
+                mode.effective_addr(bus.cpu(), operand_data),
+            ),
+            OperandDef::InMemoryInverted(mode) => Operand::InMemoryInverted(
+                operand_data,
+                *mode,
+                mode.effective_addr(bus.cpu(), operand_data),
+            ),
             OperandDef::AbsoluteBit => {
                 let bit = operand_data.bits(13..16);
                 let addr = AddressU16(operand_data.bits(0..13));
@@ -107,12 +127,7 @@ impl OperandDef {
                 Operand::InMemoryBit(addr, *bit)
             }
         };
-        (
-            operand,
-            instruction_addr
-                .add(1_u8, Wrap::NoWrap)
-                .add(self.operand_size(), Wrap::NoWrap),
-        )
+        (operand, operand_addr.add(self.operand_size(), Wrap::NoWrap))
     }
 
     #[inline]
@@ -122,8 +137,8 @@ impl OperandDef {
             Self::Immediate => 1,
             Self::Register(_) => 0,
             Self::Const(_) => 0,
-            Self::InMemory(AddressMode::DirectPage) => 1,
-            Self::InMemory(AddressMode::Absolute) => 2,
+            Self::InMemory(mode) => mode.operand_size(),
+            Self::InMemoryInverted(mode) => mode.operand_size(),
             Self::AbsoluteBit => 2,
             Self::DirectPageBit(_) => 1,
         }
@@ -142,6 +157,7 @@ pub enum Operand {
     Register(Register),
     Const(u8),
     InMemory(u16, AddressMode, AddressU16),
+    InMemoryInverted(u16, AddressMode, AddressU16),
     InMemoryBit(AddressU16, u8),
 }
 
@@ -155,6 +171,7 @@ impl Operand {
             Self::Register(_) => None,
             Self::Const(_) => None,
             Self::InMemory(_, _, addr) => Some(*addr),
+            Self::InMemoryInverted(_, _, addr) => Some(*addr),
             Self::InMemoryBit(addr, _) => Some(*addr),
         }
     }
@@ -173,18 +190,16 @@ impl Operand {
             Self::Register(Register::Psw) => cpu.status.into(),
             Self::Const(value) => *value,
             Self::InMemory(_, _, addr) => cpu.bus.cycle_read_u8(*addr),
-            Self::InMemoryBit(_addr, _bit) => panic!("Loading bit operand as u8"),
+            Self::InMemoryInverted(_, _, addr) => cpu.bus.cycle_read_u8(*addr) ^ 0xFF,
+            Self::InMemoryBit(addr, _) => cpu.bus.cycle_read_u8(*addr),
         }
     }
 
-    /// Load the operand. This may perform [bus](Bus) cycles to load the operand from memory.
-    ///
-    /// This method supports both u8 and u16 operands.
     #[inline]
-    pub fn load_bit(&self, cpu: &mut Spc700<impl Spc700Bus>) -> bool {
+    pub fn bit_idx(&self) -> usize {
         match self {
-            Self::InMemoryBit(addr, bit) => cpu.bus.cycle_read_u8(*addr).bit(*bit),
-            _ => panic!("Loading non-bit operand as bit"),
+            Self::InMemoryBit(_, bit) => *bit as usize,
+            _ => panic!("Not a bit operand"),
         }
     }
 
@@ -202,7 +217,8 @@ impl Operand {
             Self::Register(Register::Psw) => cpu.status = value.into(),
             Self::Const(_) => panic!("storing const operand"),
             Self::InMemory(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value),
-            Self::InMemoryBit(_addr, _bit) => panic!("storing bit operand as u8"),
+            Self::InMemoryInverted(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value ^ 0xFF),
+            Self::InMemoryBit(addr, _) => cpu.bus.cycle_write_u8(*addr, value),
         }
     }
 
@@ -218,8 +234,9 @@ impl Operand {
             Self::Register(Register::X) => "X".to_string(),
             Self::Register(Register::Y) => "Y".to_string(),
             Self::Register(Register::Psw) => "PSW".to_string(),
-            Self::Const(value) => format!("#${:02X}", value),
+            Self::Const(value) => format!("{:02X}", value),
             Self::InMemory(_, _, addr) => format!("${:04X}", addr.0),
+            Self::InMemoryInverted(_, _, addr) => format!("!${:04X}", addr.0),
             Self::InMemoryBit(addr, bit) => format!("(${:04X}.{})", addr.0, bit),
         }
     }
