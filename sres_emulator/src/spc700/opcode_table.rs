@@ -68,15 +68,15 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
         ($method: ident, $left_def: expr, $right_def: expr) => {
             InstructionDef::<BusT> {
                 execute: |cpu| {
-                    let (left, next_addr) = $left_def.decode(cpu);
-                    cpu.pc = next_addr;
                     let (right, next_addr) = $right_def.decode(cpu);
+                    cpu.pc = next_addr;
+                    let (left, next_addr) = $left_def.decode(cpu);
                     cpu.pc = next_addr;
                     $method(cpu, left, right);
                 },
                 meta: |cpu, operand_addr| {
-                    let (left, next_addr) = $left_def.peek(cpu, operand_addr);
-                    let (right, next_addr) = $right_def.peek(cpu, next_addr);
+                    let (right, next_addr) = $right_def.peek(cpu, operand_addr);
+                    let (left, next_addr) = $left_def.peek(cpu, next_addr);
                     (
                         InstructionMeta {
                             address: operand_addr,
@@ -113,9 +113,13 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
     opcodes[0x00] = instruction!(nop);
     opcodes[0x01] = instruction!(tcall, Const(0));
     opcodes[0x02] = instruction!(set1, DirectPageBit(0));
-    opcodes[0x03] = instruction!(bbs, DirectPageBit(0), Immediate);
+    opcodes[0x03] = instruction!(bbs, Immediate, DirectPageBit(0));
     opcodes[0x04] = instruction!(or, Register(Accumulator), InMemory(DirectPage));
-    opcodes[0x05] = instruction!(or, Register(Accumulator), InMemoryInverted(Absolute));
+    opcodes[0x05] = instruction!(or, Register(Accumulator), InMemory(Absolute));
+    opcodes[0x06] = instruction!(or, Register(Accumulator), InMemory(IndirectX));
+    opcodes[0x07] = instruction!(or, Register(Accumulator), InMemory(DirectPageXIndexed));
+    opcodes[0x08] = instruction!(or, Register(Accumulator), Immediate);
+    opcodes[0x09] = instruction!(or, InMemory(DirectPage), InMemory(DirectPage));
     opcodes[0x0A] = instruction!(or1, AbsoluteBit);
     opcodes[0x0B] = instruction!(asl, InMemory(DirectPage));
     opcodes[0x0C] = instruction!(asl, InMemory(Absolute));

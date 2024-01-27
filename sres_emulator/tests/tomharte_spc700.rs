@@ -28,10 +28,13 @@ use xz2::read::XzDecoder;
 const SKIP_OPCODES: &[u8] = &[];
 
 /// Opcodes that have a different cycle order than the test data expects.
+#[rustfmt::skip]
 const IGNORE_CYCLE_ORDER: &[u8] = &[
     // BBS: 3rd byte of program data is read late. Hard to do with current architecture of reading
     // all operands before executing the instruction.
     0x03,
+    // OR (a), (b) operand read order is different
+    0x09,
 ];
 
 #[test]
