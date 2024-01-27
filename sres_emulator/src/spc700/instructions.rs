@@ -1,3 +1,5 @@
+use std::fmt::LowerExp;
+
 use intbits::Bits;
 
 use crate::bus::Address;
@@ -39,15 +41,17 @@ pub fn set1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
 }
 
 pub fn or(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
-    let value = left.load_u8(cpu) | right.load_u8(cpu);
+    let left_value = left.load_u8(cpu);
+    let right_value = right.load_u8(cpu);
+    let value = left_value | right_value;
     cpu.update_negative_zero_flags(value);
     left.store_u8(cpu, value);
 }
 
 pub fn bbs(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
-    let value = left.load_u8(cpu).bit(left.bit_idx());
+    let value = right.load_u8(cpu).bit(right.bit_idx());
     cpu.bus.cycle_io();
-    let offset = right.load_u8(cpu) as i8;
+    let offset = left.load_u8(cpu) as i8;
     if value {
         cpu.bus.cycle_io();
         cpu.bus.cycle_io();

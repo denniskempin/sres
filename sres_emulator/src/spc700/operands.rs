@@ -15,6 +15,8 @@ use crate::spc700::Spc700Bus;
 pub enum AddressMode {
     DirectPage,
     Absolute,
+    IndirectX,
+    DirectPageXIndexed,
 }
 
 impl AddressMode {
@@ -23,16 +25,8 @@ impl AddressMode {
         match self {
             AddressMode::DirectPage => 1,
             AddressMode::Absolute => 2,
-        }
-    }
-
-    pub fn effective_addr(&self, cpu: &Spc700<impl Spc700Bus>, operand_data: u16) -> AddressU16 {
-        match self {
-            AddressMode::DirectPage => AddressU16::new_direct_page(
-                if cpu.status.direct_page { 1 } else { 0 },
-                operand_data as u8,
-            ),
-            AddressMode::Absolute => AddressU16(operand_data),
+            AddressMode::IndirectX => 0,
+            AddressMode::DirectPageXIndexed => 1,
         }
     }
 }
@@ -52,7 +46,6 @@ pub enum OperandDef {
     Register(Register),
     Const(u8),
     InMemory(AddressMode),
-    InMemoryInverted(AddressMode),
     AbsoluteBit,
     DirectPageBit(u8),
 }
@@ -104,26 +97,33 @@ impl OperandDef {
             OperandDef::Immediate => Operand::Immediate(operand_data),
             OperandDef::Register(register) => Operand::Register(*register),
             OperandDef::Const(value) => Operand::Const(*value),
-            OperandDef::InMemory(mode) => Operand::InMemory(
-                operand_data,
-                *mode,
-                mode.effective_addr(bus.cpu(), operand_data),
-            ),
-            OperandDef::InMemoryInverted(mode) => Operand::InMemoryInverted(
-                operand_data,
-                *mode,
-                mode.effective_addr(bus.cpu(), operand_data),
-            ),
+            OperandDef::InMemory(mode) => {
+                let addr = match mode {
+                    AddressMode::DirectPage => bus.cpu().direct_page_addr(operand_data as u8),
+                    AddressMode::Absolute => AddressU16(operand_data),
+                    AddressMode::IndirectX => {
+                        bus.cycle_read_u8(operand_addr); // Dummy read
+                        let addr = bus.cpu().direct_page_addr(bus.cpu().x);
+                        addr
+                    }
+                    AddressMode::DirectPageXIndexed => {
+                        bus.cycle_io();
+                        let addr = bus
+                            .cpu()
+                            .direct_page_addr(operand_data as u8)
+                            .add(bus.cpu().x, Wrap::WrapPage);
+                        AddressU16(bus.cycle_read_u16(addr, Wrap::WrapPage))
+                    }
+                };
+                Operand::InMemory(operand_data, *mode, addr)
+            }
             OperandDef::AbsoluteBit => {
                 let bit = operand_data.bits(13..16);
                 let addr = AddressU16(operand_data.bits(0..13));
                 Operand::InMemoryBit(addr, bit as u8)
             }
             OperandDef::DirectPageBit(bit) => {
-                let addr = AddressU16::new_direct_page(
-                    if bus.cpu().status.direct_page { 1 } else { 0 },
-                    operand_data as u8,
-                );
+                let addr = bus.cpu().direct_page_addr(operand_data as u8);
                 Operand::InMemoryBit(addr, *bit)
             }
         };
@@ -138,7 +138,6 @@ impl OperandDef {
             Self::Register(_) => 0,
             Self::Const(_) => 0,
             Self::InMemory(mode) => mode.operand_size(),
-            Self::InMemoryInverted(mode) => mode.operand_size(),
             Self::AbsoluteBit => 2,
             Self::DirectPageBit(_) => 1,
         }
@@ -190,7 +189,7 @@ impl Operand {
             Self::Register(Register::Psw) => cpu.status.into(),
             Self::Const(value) => *value,
             Self::InMemory(_, _, addr) => cpu.bus.cycle_read_u8(*addr),
-            Self::InMemoryInverted(_, _, addr) => cpu.bus.cycle_read_u8(*addr) ^ 0xFF,
+            Self::InMemoryInverted(_, _, addr) => !cpu.bus.cycle_read_u8(*addr),
             Self::InMemoryBit(addr, _) => cpu.bus.cycle_read_u8(*addr),
         }
     }

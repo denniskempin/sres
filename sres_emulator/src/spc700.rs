@@ -96,6 +96,10 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     fn stack_pop_u16(&mut self) -> u16 {
         u16::from_le_bytes([self.stack_pop_u8(), self.stack_pop_u8()])
     }
+
+    fn direct_page_addr(&self, offset: u8) -> AddressU16 {
+        AddressU16::new_direct_page(if self.status.direct_page { 1 } else { 0 }, offset)
+    }
 }
 
 impl<BusT: Spc700Bus> Display for Spc700<BusT> {
