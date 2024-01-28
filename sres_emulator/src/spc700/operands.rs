@@ -87,6 +87,7 @@ pub enum OperandDef {
     Const(u8),
     InMemory(AddressMode),
     AbsoluteBit,
+    AbsoluteBitInv,
     DpBit(u8),
 }
 
@@ -184,6 +185,11 @@ impl OperandDef {
                 let addr = AddressU16(operand_data.bits(0..13));
                 Operand::InMemoryBit(addr, bit as u8)
             }
+            OperandDef::AbsoluteBitInv => {
+                let bit = operand_data.bits(13..16);
+                let addr = AddressU16(operand_data.bits(0..13));
+                Operand::InMemoryBitInv(addr, bit as u8)
+            }
             OperandDef::DpBit(bit) => {
                 let addr = bus.cpu().direct_page_addr(operand_data as u8);
                 Operand::InMemoryBit(addr, *bit)
@@ -201,6 +207,7 @@ impl OperandDef {
             Self::Const(_) => 0,
             Self::InMemory(mode) => mode.operand_size(),
             Self::AbsoluteBit => 2,
+            Self::AbsoluteBitInv => 2,
             Self::DpBit(_) => 1,
         }
     }
@@ -220,6 +227,7 @@ pub enum Operand {
     InMemory(u16, AddressMode, AddressU16),
     InMemoryInverted(u16, AddressMode, AddressU16),
     InMemoryBit(AddressU16, u8),
+    InMemoryBitInv(AddressU16, u8),
 }
 
 impl Operand {
@@ -234,6 +242,7 @@ impl Operand {
             Self::InMemory(_, _, addr) => Some(*addr),
             Self::InMemoryInverted(_, _, addr) => Some(*addr),
             Self::InMemoryBit(addr, _) => Some(*addr),
+            Self::InMemoryBitInv(addr, _) => Some(*addr),
         }
     }
 
@@ -251,6 +260,7 @@ impl Operand {
             Self::InMemory(_, _, addr) => cpu.bus.cycle_read_u8(*addr),
             Self::InMemoryInverted(_, _, addr) => !cpu.bus.cycle_read_u8(*addr),
             Self::InMemoryBit(addr, _) => cpu.bus.cycle_read_u8(*addr),
+            Self::InMemoryBitInv(addr, _) => !cpu.bus.cycle_read_u8(*addr),
         }
     }
 
@@ -266,6 +276,7 @@ impl Operand {
     pub fn bit_idx(&self) -> usize {
         match self {
             Self::InMemoryBit(_, bit) => *bit as usize,
+            Self::InMemoryBitInv(_, bit) => *bit as usize,
             _ => panic!("Not a bit operand"),
         }
     }
@@ -286,6 +297,7 @@ impl Operand {
             Self::InMemory(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value),
             Self::InMemoryInverted(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value ^ 0xFF),
             Self::InMemoryBit(addr, _) => cpu.bus.cycle_write_u8(*addr, value),
+            Self::InMemoryBitInv(addr, _) => cpu.bus.cycle_write_u8(*addr, value),
         }
     }
 
@@ -315,6 +327,7 @@ impl Operand {
             Self::InMemory(_, _, addr) => format!("${:04X}", addr.0),
             Self::InMemoryInverted(_, _, addr) => format!("!${:04X}", addr.0),
             Self::InMemoryBit(addr, bit) => format!("(${:04X}.{})", addr.0, bit),
+            Self::InMemoryBitInv(addr, bit) => format!("(/${:04X}.{})", addr.0, bit),
         }
     }
 }

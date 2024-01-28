@@ -46,6 +46,19 @@ pub fn set1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     operand.store_u8(cpu, value);
 }
 
+pub fn and(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
+    if let Operand::InMemory(_, AddressMode::XIndirect, _)
+    | Operand::InMemory(_, AddressMode::YIndirect, _) = right
+    {
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
+    let left_value = left.load_u8(cpu);
+    let right_value = right.load_u8(cpu);
+    let value = left_value & right_value;
+    cpu.update_negative_zero_flags(value);
+    left.store_u8(cpu, value);
+}
+
 pub fn or(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
     if let Operand::InMemory(_, AddressMode::XIndirect, _)
     | Operand::InMemory(_, AddressMode::YIndirect, _) = right
@@ -147,4 +160,39 @@ pub fn cmp(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
 
 pub fn jmp(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     cpu.pc = operand.effective_addr().unwrap();
+}
+
+pub fn rol(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let value = operand.load_u8(cpu);
+    if let Operand::Register(_) = operand {
+        // ROL on registers has an extra unused read cycle
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
+    let new_value = (value << 1) | cpu.status.carry as u8;
+    cpu.status.carry = value.bit(7);
+    cpu.update_negative_zero_flags(new_value);
+    operand.store_u8(cpu, new_value);
+}
+
+pub fn cbne(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
+    let value = right.load_u8(cpu);
+    let offset = left.load_u8(cpu) as i8;
+    cpu.bus.cycle_io();
+    if value != cpu.a {
+        cpu.bus.cycle_io();
+        cpu.bus.cycle_io();
+        cpu.pc = cpu.pc.add_signed(offset.into(), Wrap::NoWrap);
+    }
+}
+
+pub fn clrp(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.status.direct_page = false;
+}
+
+pub fn bra(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let offset = operand.load_u8(cpu) as i8;
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
+    cpu.pc = cpu.pc.add_signed(offset.into(), Wrap::NoWrap);
 }

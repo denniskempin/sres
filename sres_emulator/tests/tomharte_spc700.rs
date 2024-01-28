@@ -34,8 +34,11 @@ const IGNORE_CYCLE_ORDER: &[u8] = &[
     // all operands before executing the instruction.
     0x03,
     0x13,
+    0x23,
+    0x2E,
     // OR (a), (b) operand read order is different
     0x09,
+    0x29,
     //0x19,
     // decw operates on each byte separately instead of reading and writing u16
     0x1A,
@@ -52,7 +55,6 @@ pub fn test_spc700_opcodes_1x() {
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_2x() {
     run_tomharte_test("2x");
 }
