@@ -30,11 +30,15 @@ const SKIP_OPCODES: &[u8] = &[];
 /// Opcodes that have a different cycle order than the test data expects.
 #[rustfmt::skip]
 const IGNORE_CYCLE_ORDER: &[u8] = &[
-    // BBS: 3rd byte of program data is read late. Hard to do with current architecture of reading
+    // BBS/BBC: 3rd byte of program data is read late. Hard to do with current architecture of reading
     // all operands before executing the instruction.
     0x03,
+    0x13,
     // OR (a), (b) operand read order is different
     0x09,
+    //0x19,
+    // decw operates on each byte separately instead of reading and writing u16
+    0x1A,
 ];
 
 #[test]
@@ -43,7 +47,6 @@ pub fn test_spc700_opcodes_0x() {
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_1x() {
     run_tomharte_test("1x");
 }
