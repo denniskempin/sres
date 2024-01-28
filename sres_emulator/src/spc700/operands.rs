@@ -2,6 +2,8 @@
 //!
 //! Each instruction in the [opcode table](build_opcode_table) has an associated
 //! address mode, which is decoded here to handle how the operand is loaded and stored.
+use std::ops::Add;
+
 use intbits::Bits;
 
 use crate::bus::Address;
@@ -13,20 +15,58 @@ use crate::spc700::Spc700Bus;
 /// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]
 pub enum AddressMode {
-    DirectPage,
-    Absolute,
-    IndirectX,
-    DirectPageXIndexed,
+    // d: Direct page
+    Dp,
+    // d+X: Direct page, X indexed
+    DpXIdx,
+    // [d+X]: Direct page, X indexed, indirect
+    DpXIdxIndirect,
+    // [d]+Y: Direct page, indirect, Y indexed
+    DpIndirectYIdx,
+    // (X): Indirect X
+    XIndirect,
+    // (Y): Indirect Y
+    YIndirect,
+    // !a: Absolute
+    Abs,
+    // !a+X: Absolute, X indexed
+    AbsXIdx,
+    // !a+Y: Absolute, Y indexed
+    AbsYIdx,
+    // [!a+X]: Absolute, X indexed, indirect
+    AbsXIdxIndirect,
 }
 
 impl AddressMode {
     #[inline]
     pub fn operand_size(&self) -> u8 {
         match self {
-            AddressMode::DirectPage => 1,
-            AddressMode::Absolute => 2,
-            AddressMode::IndirectX => 0,
-            AddressMode::DirectPageXIndexed => 1,
+            Self::Dp => 1,
+            Self::DpXIdx => 1,
+            Self::DpXIdxIndirect => 1,
+            Self::DpIndirectYIdx => 1,
+            Self::XIndirect => 0,
+            Self::YIndirect => 0,
+            Self::Abs => 2,
+            Self::AbsXIdx => 2,
+            Self::AbsYIdx => 2,
+            Self::AbsXIdxIndirect => 2,
+        }
+    }
+
+    #[inline]
+    pub fn wrap_mode(&self) -> Wrap {
+        match self {
+            Self::Dp => Wrap::WrapPage,
+            Self::DpXIdx => Wrap::WrapPage,
+            Self::DpXIdxIndirect => Wrap::WrapPage,
+            Self::DpIndirectYIdx => Wrap::WrapPage,
+            Self::XIndirect => Wrap::NoWrap,
+            Self::YIndirect => Wrap::NoWrap,
+            Self::Abs => Wrap::NoWrap,
+            Self::AbsXIdx => Wrap::NoWrap,
+            Self::AbsYIdx => Wrap::NoWrap,
+            Self::AbsXIdxIndirect => Wrap::NoWrap,
         }
     }
 }
@@ -47,7 +87,7 @@ pub enum OperandDef {
     Const(u8),
     InMemory(AddressMode),
     AbsoluteBit,
-    DirectPageBit(u8),
+    DpBit(u8),
 }
 
 impl OperandDef {
@@ -99,20 +139,42 @@ impl OperandDef {
             OperandDef::Const(value) => Operand::Const(*value),
             OperandDef::InMemory(mode) => {
                 let addr = match mode {
-                    AddressMode::DirectPage => bus.cpu().direct_page_addr(operand_data as u8),
-                    AddressMode::Absolute => AddressU16(operand_data),
-                    AddressMode::IndirectX => {
-                        bus.cycle_read_u8(operand_addr); // Dummy read
-                        let addr = bus.cpu().direct_page_addr(bus.cpu().x);
-                        addr
+                    AddressMode::Dp => bus.cpu().direct_page_addr(operand_data as u8),
+                    AddressMode::DpXIdx => {
+                        bus.cycle_io();
+                        bus.cpu()
+                            .direct_page_addr(operand_data as u8)
+                            .add(bus.cpu().x as u16, Wrap::WrapPage)
                     }
-                    AddressMode::DirectPageXIndexed => {
+                    AddressMode::DpXIdxIndirect => {
                         bus.cycle_io();
                         let addr = bus
                             .cpu()
                             .direct_page_addr(operand_data as u8)
-                            .add(bus.cpu().x, Wrap::WrapPage);
+                            .add(bus.cpu().x as u16, Wrap::WrapPage);
                         AddressU16(bus.cycle_read_u16(addr, Wrap::WrapPage))
+                    }
+                    AddressMode::DpIndirectYIdx => {
+                        bus.cycle_io();
+                        let addr = bus.cpu().direct_page_addr(operand_data as u8);
+                        AddressU16(bus.cycle_read_u16(addr, Wrap::WrapPage))
+                            .add(bus.cpu().y, Wrap::NoWrap)
+                    }
+                    AddressMode::XIndirect => bus.cpu().direct_page_addr(bus.cpu().x),
+                    AddressMode::YIndirect => bus.cpu().direct_page_addr(bus.cpu().y),
+                    AddressMode::Abs => AddressU16(operand_data),
+                    AddressMode::AbsXIdx => {
+                        bus.cycle_io();
+                        AddressU16(operand_data).add(bus.cpu().x as u16, Wrap::NoWrap)
+                    }
+                    AddressMode::AbsYIdx => {
+                        bus.cycle_io();
+                        AddressU16(operand_data).add(bus.cpu().y as u16, Wrap::NoWrap)
+                    }
+                    AddressMode::AbsXIdxIndirect => {
+                        let addr = AddressU16(operand_data).add(bus.cpu().x as u16, Wrap::NoWrap);
+                        bus.cycle_io();
+                        AddressU16(bus.cycle_read_u16(addr, Wrap::NoWrap))
                     }
                 };
                 Operand::InMemory(operand_data, *mode, addr)
@@ -122,7 +184,7 @@ impl OperandDef {
                 let addr = AddressU16(operand_data.bits(0..13));
                 Operand::InMemoryBit(addr, bit as u8)
             }
-            OperandDef::DirectPageBit(bit) => {
+            OperandDef::DpBit(bit) => {
                 let addr = bus.cpu().direct_page_addr(operand_data as u8);
                 Operand::InMemoryBit(addr, *bit)
             }
@@ -139,7 +201,7 @@ impl OperandDef {
             Self::Const(_) => 0,
             Self::InMemory(mode) => mode.operand_size(),
             Self::AbsoluteBit => 2,
-            Self::DirectPageBit(_) => 1,
+            Self::DpBit(_) => 1,
         }
     }
 }
@@ -176,8 +238,6 @@ impl Operand {
     }
 
     /// Load the operand. This may perform [bus](Bus) cycles to load the operand from memory.
-    ///
-    /// This method supports both u8 and u16 operands.
     #[inline]
     pub fn load_u8(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
         match self {
@@ -191,6 +251,14 @@ impl Operand {
             Self::InMemory(_, _, addr) => cpu.bus.cycle_read_u8(*addr),
             Self::InMemoryInverted(_, _, addr) => !cpu.bus.cycle_read_u8(*addr),
             Self::InMemoryBit(addr, _) => cpu.bus.cycle_read_u8(*addr),
+        }
+    }
+
+    #[inline]
+    pub fn load_u16(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u16 {
+        match self {
+            Self::InMemory(_, mode, addr) => cpu.bus.cycle_read_u16(*addr, mode.wrap_mode()),
+            _ => panic!("Not a u16 operand"),
         }
     }
 
@@ -218,6 +286,16 @@ impl Operand {
             Self::InMemory(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value),
             Self::InMemoryInverted(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value ^ 0xFF),
             Self::InMemoryBit(addr, _) => cpu.bus.cycle_write_u8(*addr, value),
+        }
+    }
+
+    #[inline]
+    pub fn store_u16(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u16) {
+        match self {
+            Self::InMemory(_, mode, addr) => {
+                cpu.bus.cycle_write_u16(*addr, value, mode.wrap_mode())
+            }
+            _ => panic!("Not a u16 operand"),
         }
     }
 
