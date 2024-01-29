@@ -134,6 +134,31 @@ pub fn tcall(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     cpu.pc = AddressU16(cpu.bus.cycle_read_u16(addr, Wrap::NoWrap));
 }
 
+pub fn incw(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let value = operand.load_u16(cpu).wrapping_add(1);
+    cpu.update_negative_zero_flags(value);
+    operand.store_u16(cpu, value);
+}
+
+pub fn bmi(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let offset = operand.load_u8(cpu) as i8;
+    if cpu.status.negative {
+        cpu.bus.cycle_io();
+        cpu.bus.cycle_io();
+        cpu.pc = cpu.pc.add_signed(offset.into(), Wrap::NoWrap);
+    }
+}
+
+pub fn inc(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let value = operand.load_u8(cpu).wrapping_add(1);
+    if let Operand::Register(_) = operand {
+        // ASL on registers has an extra unused read cycle
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
+    cpu.update_negative_zero_flags(value);
+    operand.store_u8(cpu, value);
+}
+
 pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let value = operand.load_u16(cpu).wrapping_sub(1);
     cpu.update_negative_zero_flags(value);
