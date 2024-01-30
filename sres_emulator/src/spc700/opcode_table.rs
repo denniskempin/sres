@@ -46,9 +46,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
         ($method: ident, $operand_def: expr) => {
             InstructionDef::<BusT> {
                 execute: |cpu| {
-                    let (operand, next_addr) = $operand_def.decode(cpu);
-                    cpu.pc = next_addr;
-                    $method(cpu, operand);
+                    $method(cpu, $operand_def);
                 },
                 meta: |cpu, operand_addr| {
                     let (operand, next_addr) = $operand_def.peek(cpu, operand_addr);
@@ -68,11 +66,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
         ($method: ident, $left_def: expr, $right_def: expr) => {
             InstructionDef::<BusT> {
                 execute: |cpu| {
-                    let (right, next_addr) = $right_def.decode(cpu);
-                    cpu.pc = next_addr;
-                    let (left, next_addr) = $left_def.decode(cpu);
-                    cpu.pc = next_addr;
-                    $method(cpu, left, right);
+                    $method(cpu, $left_def, $right_def);
                 },
                 meta: |cpu, operand_addr| {
                     let (right, next_addr) = $right_def.peek(cpu, operand_addr);
