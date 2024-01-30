@@ -172,6 +172,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
     opcodes[0x3B] = instruction!(rol, InMemory(DpXIdx));
     opcodes[0x3C] = instruction!(rol, Register(Accumulator));
     opcodes[0x3D] = instruction!(inc, Register(X));
-    opcodes[0x3E] = instruction!(cmp, Register(X), InMemory(AbsXIdx));
+    opcodes[0x3E] = instruction!(cmp, Register(X), InMemory(Dp));
+    opcodes[0x3F] = instruction!(call, InMemory(Abs));
     opcodes
 }
