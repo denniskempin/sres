@@ -25,30 +25,16 @@ use util::test_bus::Cycle;
 use util::test_bus::TestBus;
 use xz2::read::XzDecoder;
 
-const SKIP_OPCODES: &[u8] = &[];
+const SKIP_OPCODES: &[u8] = &[
+    // decw/incw
+    0x1A, 0x3A,
+];
 
 /// Opcodes that have a different cycle order than the test data expects.
 /// A couple of opcodes handle operand loading in a way that does not fit
 /// the abstaction used here.
 #[rustfmt::skip]
 const IGNORE_CYCLE_ORDER: &[u8] = &[
-    0x03,
-    0x13,
-    0x23,
-    0x2E,
-    0x33,
-    0x43,
-    0x53,
-    0x3E,
-    0x09,
-    0x19,
-    0x29,
-    0x39,
-    0x49,
-    0x59,
-    0x1A,
-    0x3A,
-    0x4A,
 ];
 
 #[test]

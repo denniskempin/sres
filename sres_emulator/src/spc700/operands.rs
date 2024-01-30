@@ -90,7 +90,7 @@ pub enum OperandDef {
     InMemory(AddressMode),
     AbsoluteBit,
     AbsoluteBitInv,
-    DpBit(u8),
+    DpBit(u8)
 }
 
 impl OperandDef {
@@ -98,9 +98,11 @@ impl OperandDef {
     ///
     /// Returns the operand and address of the next instruction.
     #[inline]
-    pub fn decode(&self, cpu: &mut Spc700<impl Spc700Bus>) -> (Operand, AddressU16) {
+    pub fn decode(&self, cpu: &mut Spc700<impl Spc700Bus>) -> Operand {
         let pc = cpu.pc;
-        self.decode_impl(&mut ReadWrapper(cpu), pc)
+        let (operand, next_pc) = self.decode_impl(&mut ReadWrapper(cpu), pc);
+        cpu.pc = next_pc;
+        operand
     }
 
     /// Peeks at the operand at `instruction_addr` without modifying the system state.
