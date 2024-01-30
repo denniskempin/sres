@@ -37,13 +37,16 @@ const IGNORE_CYCLE_ORDER: &[u8] = &[
     0x23,
     0x2E,
     0x33,
+    0x43,
     0x3E,
     0x09,
     0x19,
     0x29,
     0x39,
+    0x49,
     0x1A,
     0x3A,
+    0x4A,
 ];
 
 #[test]
@@ -67,7 +70,6 @@ pub fn test_spc700_opcodes_3x() {
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_4x() {
     run_tomharte_test("4x");
 }
