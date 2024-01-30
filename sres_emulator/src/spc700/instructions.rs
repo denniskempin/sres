@@ -278,3 +278,27 @@ pub fn pcall(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     cpu.bus.cycle_io();
     cpu.pc = AddressU16(0xFF00).add(operand.load_u8(cpu) as u16, Wrap::WrapPage);
 }
+
+pub fn bvc(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let offset = operand.load_u8(cpu) as i8;
+    if !cpu.status.overflow {
+        cpu.bus.cycle_io();
+        cpu.bus.cycle_io();
+        cpu.pc = cpu.pc.add_signed(offset.into(), Wrap::NoWrap);
+    }
+}
+
+pub fn cmpw(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
+    let left_value = left.load_u16(cpu);
+    let right_value = right.load_u16(cpu);
+    let value = left_value.wrapping_sub(right_value);
+    cpu.update_negative_zero_flags(value);
+    cpu.status.carry = left_value >= right_value;
+}
+
+pub fn mov(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
+    let value = right.load_u8(cpu);
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.update_negative_zero_flags(value);
+    left.store_u8(cpu, value);
+}
