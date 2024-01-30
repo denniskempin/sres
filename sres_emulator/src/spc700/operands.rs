@@ -11,6 +11,7 @@ use crate::bus::AddressU16;
 use crate::bus::Wrap;
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
+use crate::util::uint::U16Ext;
 
 /// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]
@@ -73,9 +74,10 @@ impl AddressMode {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Register {
-    Accumulator,
+    A,
     X,
     Y,
+    YA,
     Psw,
 }
 
@@ -252,10 +254,11 @@ impl Operand {
         match self {
             Self::Implied => panic!("loading implied operand"),
             Self::Immediate(value) => *value as u8,
-            Self::Register(Register::Accumulator) => cpu.a,
+            Self::Register(Register::A) => cpu.a,
             Self::Register(Register::X) => cpu.x,
             Self::Register(Register::Y) => cpu.y,
             Self::Register(Register::Psw) => cpu.status.into(),
+            Self::Register(Register::YA) => panic!("not u8"),
             Self::Const(value) => *value,
             Self::InMemory(_, _, addr) => cpu.bus.cycle_read_u8(*addr),
             Self::InMemoryInverted(_, _, addr) => !cpu.bus.cycle_read_u8(*addr),
@@ -268,6 +271,7 @@ impl Operand {
     pub fn load_u16(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u16 {
         match self {
             Self::InMemory(_, mode, addr) => cpu.bus.cycle_read_u16(*addr, mode.wrap_mode()),
+            Self::Register(Register::YA) => ((cpu.y as u16) << 8) | cpu.a as u16,
             _ => panic!("Not a u16 operand"),
         }
     }
@@ -289,9 +293,10 @@ impl Operand {
         match self {
             Self::Implied => panic!("storing implied operand"),
             Self::Immediate(_) => panic!("storing immediate operand"),
-            Self::Register(Register::Accumulator) => cpu.a = value,
+            Self::Register(Register::A) => cpu.a = value,
             Self::Register(Register::X) => cpu.x = value,
             Self::Register(Register::Y) => cpu.y = value,
+            Self::Register(Register::YA) => panic!("not u8"),
             Self::Register(Register::Psw) => cpu.status = value.into(),
             Self::Const(_) => panic!("storing const operand"),
             Self::InMemory(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value),
@@ -307,6 +312,10 @@ impl Operand {
             Self::InMemory(_, mode, addr) => {
                 cpu.bus.cycle_write_u16(*addr, value, mode.wrap_mode())
             }
+            Self::Register(Register::YA) => {
+                cpu.a = value.low_byte();
+                cpu.y = value.high_byte();
+            }
             _ => panic!("Not a u16 operand"),
         }
     }
@@ -319,9 +328,10 @@ impl Operand {
         match self {
             Self::Implied => String::new(),
             Self::Immediate(value) => format!("#${:02X}", value),
-            Self::Register(Register::Accumulator) => "A".to_string(),
+            Self::Register(Register::A) => "A".to_string(),
             Self::Register(Register::X) => "X".to_string(),
             Self::Register(Register::Y) => "Y".to_string(),
+            Self::Register(Register::YA) => "YA".to_string(),
             Self::Register(Register::Psw) => "PSW".to_string(),
             Self::Const(value) => format!("{:02X}", value),
             Self::InMemory(_, _, addr) => format!("${:04X}", addr.0),
