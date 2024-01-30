@@ -159,6 +159,14 @@ pub fn inc(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     operand.store_u8(cpu, value);
 }
 
+pub fn call(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    cpu.bus.cycle_io();
+    cpu.stack_push_u16(cpu.pc.0);
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
+    cpu.pc = operand.effective_addr().unwrap();
+}
+
 pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let value = operand.load_u16(cpu).wrapping_sub(1);
     cpu.update_negative_zero_flags(value);
