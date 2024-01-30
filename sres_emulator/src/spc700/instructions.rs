@@ -229,3 +229,52 @@ pub fn bra(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     cpu.bus.cycle_io();
     cpu.pc = cpu.pc.add_signed(offset.into(), Wrap::NoWrap);
 }
+
+pub fn setp(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.status.direct_page = true;
+}
+
+pub fn eor(cpu: &mut Spc700<impl Spc700Bus>, left: Operand, right: Operand) {
+    if let Operand::InMemory(_, AddressMode::XIndirect, _)
+    | Operand::InMemory(_, AddressMode::YIndirect, _) = right
+    {
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
+    let left_value = left.load_u8(cpu);
+    let right_value = right.load_u8(cpu);
+    let value = left_value ^ right_value;
+    cpu.update_negative_zero_flags(value);
+    left.store_u8(cpu, value);
+}
+
+pub fn and1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let bit = operand.load_u8(cpu).bit(operand.bit_idx());
+    cpu.status.carry = cpu.status.carry && bit;
+}
+
+pub fn lsr(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let value = operand.load_u8(cpu);
+    if let Operand::Register(_) = operand {
+        // LSR on registers has an extra unused read cycle
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
+    let new_value = value >> 1;
+    cpu.status.carry = value.bit(0);
+    cpu.update_negative_zero_flags(new_value);
+    operand.store_u8(cpu, new_value);
+}
+
+pub fn tclr1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    let value = operand.load_u8(cpu);
+    operand.load_u8(cpu); // CPU will re-read the value for another cycle
+    operand.store_u8(cpu, value & !cpu.a);
+    cpu.update_negative_zero_flags(cpu.a.wrapping_sub(value));
+}
+
+pub fn pcall(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
+    cpu.bus.cycle_io();
+    cpu.stack_push_u16(cpu.pc.0);
+    cpu.bus.cycle_io();
+    cpu.pc = AddressU16(0xFF00).add(operand.load_u8(cpu) as u16, Wrap::WrapPage);
+}

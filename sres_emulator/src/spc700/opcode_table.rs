@@ -174,5 +174,21 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
     opcodes[0x3D] = instruction!(inc, Register(X));
     opcodes[0x3E] = instruction!(cmp, Register(X), InMemory(Dp));
     opcodes[0x3F] = instruction!(call, InMemory(Abs));
+    opcodes[0x40] = instruction!(setp);
+    opcodes[0x41] = instruction!(tcall, Const(4));
+    opcodes[0x42] = instruction!(set1, DpBit(2));
+    opcodes[0x43] = instruction!(bbs, Immediate, DpBit(2));
+    opcodes[0x44] = instruction!(eor, Register(Accumulator), InMemory(Dp));
+    opcodes[0x45] = instruction!(eor, Register(Accumulator), InMemory(Abs));
+    opcodes[0x46] = instruction!(eor, Register(Accumulator), InMemory(XIndirect));
+    opcodes[0x47] = instruction!(eor, Register(Accumulator), InMemory(DpXIdxIndirect));
+    opcodes[0x48] = instruction!(eor, Register(Accumulator), Immediate);
+    opcodes[0x49] = instruction!(eor, InMemory(Dp), InMemory(Dp));
+    opcodes[0x4A] = instruction!(and1, AbsoluteBit);
+    opcodes[0x4B] = instruction!(lsr, InMemory(Dp));
+    opcodes[0x4C] = instruction!(lsr, InMemory(Abs));
+    opcodes[0x4D] = instruction!(push, Register(X));
+    opcodes[0x4E] = instruction!(tclr1, InMemory(Abs));
+    opcodes[0x4F] = instruction!(pcall, Immediate);
     opcodes
 }
