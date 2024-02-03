@@ -68,7 +68,6 @@ pub fn test_spc700_opcodes_5x() {
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_6x() {
     run_tomharte_test("6x");
 }

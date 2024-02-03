@@ -8,6 +8,7 @@ use crate::bus::Wrap;
 use crate::spc700::Operand;
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
+use crate::util::uint::U16Ext;
 use crate::util::uint::UInt;
 
 use super::operands::OperandDef;
@@ -207,11 +208,19 @@ pub fn dec(cpu: &mut Spc700<impl Spc700Bus>, operand: OperandDef) {
 }
 
 pub fn cmp(cpu: &mut Spc700<impl Spc700Bus>, left: OperandDef, right: OperandDef) {
+    if let OperandDef::InMemory(AddressMode::XIndirect)
+    | OperandDef::InMemory(AddressMode::YIndirect) = right
+    {
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
     let right = right.decode(cpu);
+    let right_value = right.load_u8(cpu);
     let left = left.decode(cpu);
     let left_value = left.load_u8(cpu);
-    let right_value = right.load_u8(cpu);
     let value = left_value.wrapping_sub(right_value);
+    if let Operand::InMemory(_, _, _) = left {
+        cpu.bus.cycle_io();
+    }
     cpu.update_negative_zero_flags(value);
     cpu.status.carry = left_value >= right_value;
 }
@@ -297,6 +306,47 @@ pub fn lsr(cpu: &mut Spc700<impl Spc700Bus>, operand: OperandDef) {
     cpu.status.carry = value.bit(0);
     cpu.update_negative_zero_flags(new_value);
     operand.store_u8(cpu, new_value);
+}
+
+pub fn ror(cpu: &mut Spc700<impl Spc700Bus>, operand: OperandDef) {
+    let operand = operand.decode(cpu);
+    let value = operand.load_u8(cpu);
+    if let Operand::Register(_) = operand {
+        // ROR on registers has an extra unused read cycle
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
+    let new_value = (value >> 1) | (cpu.status.carry as u8) << 7;
+    cpu.status.carry = value.bit(0);
+    cpu.update_negative_zero_flags(new_value);
+    operand.store_u8(cpu, new_value);
+}
+
+pub fn clrc(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.status.carry = false;
+}
+
+pub fn dbnz(cpu: &mut Spc700<impl Spc700Bus>, left: OperandDef, right: OperandDef) {
+    let left = left.decode(cpu);
+    let value = left.load_u8(cpu);
+    let new_value = value.wrapping_sub(1);
+    left.store_u8(cpu, new_value);
+    let right = right.decode(cpu);
+    let offset = right.load_u8(cpu) as i8;
+    if new_value != 0 {
+        cpu.bus.cycle_io();
+        cpu.bus.cycle_io();
+        cpu.pc = cpu.pc.add_signed(offset.into(), Wrap::NoWrap);
+    }
+}
+
+pub fn ret(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    let pcl = cpu.stack_pop_u8();
+    let pch = cpu.stack_pop_u8();
+    cpu.pc.0.set_low_byte(pcl);
+    cpu.pc.0.set_high_byte(pch);
 }
 
 pub fn tclr1(cpu: &mut Spc700<impl Spc700Bus>, operand: OperandDef) {
