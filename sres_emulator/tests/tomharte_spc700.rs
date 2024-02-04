@@ -25,9 +25,12 @@ use util::test_bus::Cycle;
 use util::test_bus::TestBus;
 use xz2::read::XzDecoder;
 
+#[rustfmt::skip]
 const SKIP_OPCODES: &[u8] = &[
-    // decw/incw
-    0x1A, 0x3A,
+    // subw
+    0x9A,
+    // div
+    0x9E,
 ];
 
 /// Opcodes that have a different cycle order than the test data expects.
@@ -35,6 +38,11 @@ const SKIP_OPCODES: &[u8] = &[
 /// the abstaction used here.
 #[rustfmt::skip]
 const IGNORE_CYCLE_ORDER: &[u8] = &[
+    // decw/incw
+    0x1A, 0x3A,
+    // addw, subw: i/o between read cycles of u16 value
+    0x7A,
+    0x9A,
 ];
 
 #[test]
@@ -73,19 +81,16 @@ pub fn test_spc700_opcodes_6x() {
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_7x() {
     run_tomharte_test("7x");
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_8x() {
     run_tomharte_test("8x");
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_9x() {
     run_tomharte_test("9x");
 }

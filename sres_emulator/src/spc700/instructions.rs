@@ -1,4 +1,5 @@
 use std::fmt::LowerExp;
+use std::ops::Div;
 
 use intbits::Bits;
 
@@ -13,6 +14,7 @@ use crate::util::uint::UInt;
 
 use super::operands::OperandDef;
 use super::AddressMode;
+use super::Spc700StatusFlags;
 
 pub fn nop(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.bus.cycle_read_u8(cpu.pc);
@@ -388,8 +390,156 @@ pub fn cmpw(cpu: &mut Spc700<impl Spc700Bus>, left: OperandDef, right: OperandDe
 pub fn mov(cpu: &mut Spc700<impl Spc700Bus>, left: OperandDef, right: OperandDef) {
     let right = right.decode(cpu);
     let value = right.load_u8(cpu);
-    cpu.bus.cycle_read_u8(cpu.pc);
-    cpu.update_negative_zero_flags(value);
     let left = left.decode(cpu);
+
+    if let Operand::Register(_) = left {
+        // Moves into registers will update the N and Z flags
+        cpu.update_negative_zero_flags(value);
+        if let Operand::Register(_) = right {
+            cpu.bus.cycle_read_u8(cpu.pc);
+        }
+    } else {
+        // Moves into memory locations will read from the target address
+        // first.
+        if let Operand::InMemory(_, AddressMode::Dp, _) = right {
+            // Somehow 0xFA (MOV from a direct page address into another) is an exception.
+            cpu.bus.cycle_io();
+        } else {
+            left.load_u8(cpu);
+        }
+    }
     left.store_u8(cpu, value);
+}
+
+pub fn bvs(cpu: &mut Spc700<impl Spc700Bus>, operand: OperandDef) {
+    let operand = operand.decode(cpu);
+    let offset = operand.load_u8(cpu) as i8;
+    if cpu.status.overflow {
+        cpu.bus.cycle_io();
+        cpu.bus.cycle_io();
+        cpu.pc = cpu.pc.add_signed(offset.into(), Wrap::NoWrap);
+    }
+}
+
+pub fn addw(cpu: &mut Spc700<impl Spc700Bus>, left: OperandDef, right: OperandDef) {
+    let right = right.decode(cpu);
+    let right_value = right.load_u16(cpu);
+    let left = left.decode(cpu);
+    let left_value = left.load_u16(cpu);
+    if let Operand::Register(_) = left {
+        cpu.bus.cycle_io();
+    }
+
+    let (value, carry) = left_value.overflowing_add(right_value);
+    cpu.update_negative_zero_flags(value);
+    cpu.status.carry = carry;
+    cpu.status.overflow = ((right_value ^ value) & (left_value ^ value)).msb();
+    cpu.status.half_carry = ((right_value & 0x0FFF) + (left_value & 0x0FFF)) > 0x0FFF;
+    left.store_u16(cpu, value)
+}
+
+pub fn reti(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    cpu.status = Spc700StatusFlags::from(cpu.stack_pop_u8());
+    let pcl = cpu.stack_pop_u8();
+    let pch = cpu.stack_pop_u8();
+    cpu.pc.0.set_low_byte(pcl);
+    cpu.pc.0.set_high_byte(pch);
+}
+
+pub fn setc(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.status.carry = true;
+}
+
+pub fn adc(cpu: &mut Spc700<impl Spc700Bus>, left: OperandDef, right: OperandDef) {
+    if let OperandDef::InMemory(AddressMode::XIndirect)
+    | OperandDef::InMemory(AddressMode::YIndirect) = right
+    {
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
+    let right = right.decode(cpu);
+    let right_value = right.load_u8(cpu);
+    let left = left.decode(cpu);
+    let left_value = left.load_u8(cpu);
+    let (mut value, mut carry) = left_value.overflowing_add(right_value);
+    if cpu.status.carry {
+        let (value2, carry2) = value.overflowing_add(1);
+        value = value2;
+        carry = carry || carry2;
+    }
+    cpu.status.half_carry =
+        ((right_value & 0x0F) + (left_value & 0x0F) + cpu.status.carry as u8) > 0x0F;
+    cpu.status.carry = carry;
+    cpu.status.overflow = ((right_value ^ value) & (left_value ^ value)).msb();
+    cpu.update_negative_zero_flags(value);
+    left.store_u8(cpu, value);
+}
+
+pub fn eor1(cpu: &mut Spc700<impl Spc700Bus>, operand: OperandDef) {
+    let operand = operand.decode(cpu);
+    let bit = operand.load_u8(cpu).bit(operand.bit_idx());
+    cpu.bus.cycle_io();
+    cpu.status.carry = cpu.status.carry ^ bit;
+}
+
+pub fn pop(cpu: &mut Spc700<impl Spc700Bus>, operand: OperandDef) {
+    let operand = operand.decode(cpu);
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    let value = cpu.stack_pop_u8();
+    operand.store_u8(cpu, value);
+}
+
+pub fn bcc(cpu: &mut Spc700<impl Spc700Bus>, operand: OperandDef) {
+    let operand = operand.decode(cpu);
+    let offset = operand.load_u8(cpu) as i8;
+    if !cpu.status.carry {
+        cpu.bus.cycle_io();
+        cpu.bus.cycle_io();
+        cpu.pc = cpu.pc.add_signed(offset.into(), Wrap::NoWrap);
+    }
+}
+
+pub fn subw(cpu: &mut Spc700<impl Spc700Bus>, left: OperandDef, right: OperandDef) {
+    let right = right.decode(cpu);
+    let right_value = right.load_u16(cpu);
+    let left = left.decode(cpu);
+    let left_value = left.load_u16(cpu);
+    if let Operand::Register(_) = left {
+        cpu.bus.cycle_io();
+    }
+
+    let (value, carry) = left_value.overflowing_sub(right_value);
+    cpu.update_negative_zero_flags(value);
+    cpu.status.carry = !carry;
+    cpu.status.overflow = ((right_value ^ value) & (!left_value ^ value)).msb();
+    cpu.status.half_carry = ((right_value & 0x0FFF) - (left_value & 0x0FFF)) > 0x0FFF;
+    left.store_u16(cpu, value);
+}
+
+pub fn div(cpu: &mut Spc700<impl Spc700Bus>) {
+    let y = cpu.y as u16;
+    let a = cpu.a as u16;
+    if y != 0 {
+        let quotient = a / y;
+        let remainder = a % y;
+        cpu.update_negative_zero_flags(quotient as u8);
+        cpu.y = remainder as u8;
+        cpu.a = quotient as u8;
+    } else {
+        cpu.status.overflow = true;
+    }
+}
+
+pub fn xcn(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_io();
+    let a = cpu.a;
+    let a = (a >> 4) | (a << 4);
+    cpu.update_negative_zero_flags(a);
+    cpu.a = a;
 }
