@@ -79,6 +79,7 @@ pub enum Register {
     Y,
     YA,
     Psw,
+    Sp,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -90,7 +91,7 @@ pub enum OperandDef {
     InMemory(AddressMode),
     AbsoluteBit,
     AbsoluteBitInv,
-    DpBit(u8)
+    DpBit(u8),
 }
 
 impl OperandDef {
@@ -259,6 +260,7 @@ impl Operand {
             Self::Register(Register::A) => cpu.a,
             Self::Register(Register::X) => cpu.x,
             Self::Register(Register::Y) => cpu.y,
+            Self::Register(Register::Sp) => cpu.sp,
             Self::Register(Register::Psw) => cpu.status.into(),
             Self::Register(Register::YA) => panic!("not u8"),
             Self::Const(value) => *value,
@@ -299,6 +301,7 @@ impl Operand {
             Self::Register(Register::X) => cpu.x = value,
             Self::Register(Register::Y) => cpu.y = value,
             Self::Register(Register::YA) => panic!("not u8"),
+            Self::Register(Register::Sp) => cpu.sp = value,
             Self::Register(Register::Psw) => cpu.status = value.into(),
             Self::Const(_) => panic!("storing const operand"),
             Self::InMemory(_, _, addr) => cpu.bus.cycle_write_u8(*addr, value),
@@ -334,6 +337,7 @@ impl Operand {
             Self::Register(Register::X) => "X".to_string(),
             Self::Register(Register::Y) => "Y".to_string(),
             Self::Register(Register::YA) => "YA".to_string(),
+            Self::Register(Register::Sp) => "SP".to_string(),
             Self::Register(Register::Psw) => "PSW".to_string(),
             Self::Const(value) => format!("{:02X}", value),
             Self::InMemory(_, _, addr) => format!("${:04X}", addr.0),
