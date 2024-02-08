@@ -72,6 +72,8 @@ pub enum AddressMode {
     Dp,
     // d+X: Direct page, X indexed
     DpXIdx,
+    // d+Y: Direct page, X indexed
+    DpYIdx,
     // [d+X]: Direct page, X indexed, indirect
     DpXIdxIndirect,
     // [d]+Y: Direct page, indirect, Y indexed
@@ -104,6 +106,7 @@ impl AddressMode {
         let operand_size = match self {
             Self::Dp => 1,
             Self::DpXIdx => 1,
+            Self::DpYIdx => 1,
             Self::DpXIdxIndirect => 1,
             Self::DpIndirectYIdx => 1,
             Self::XIndirect => 0,
@@ -131,6 +134,12 @@ impl AddressMode {
                     .direct_page_addr(operand_data as u8)
                     .add(bus.cpu().x as u16, Wrap::WrapPage)
             }
+            AddressMode::DpYIdx => {
+                bus.cycle_io();
+                bus.cpu()
+                    .direct_page_addr(operand_data as u8)
+                    .add(bus.cpu().y as u16, Wrap::WrapPage)
+            }
             AddressMode::DpXIdxIndirect => {
                 bus.cycle_io();
                 let addr = bus
@@ -141,8 +150,9 @@ impl AddressMode {
             }
             AddressMode::DpIndirectYIdx => {
                 bus.cycle_io();
-                let addr = bus.cpu().direct_page_addr(operand_data as u8);
-                AddressU16(bus.cycle_read_u16(addr, Wrap::WrapPage)).add(bus.cpu().y, Wrap::NoWrap)
+                let indirect_addr = bus.cpu().direct_page_addr(operand_data as u8);
+                let addr = AddressU16(bus.cycle_read_u16(indirect_addr, Wrap::WrapPage));
+                addr.add(bus.cpu().y, Wrap::NoWrap)
             }
             AddressMode::XIndirect => bus.cpu().direct_page_addr(bus.cpu().x),
             AddressMode::YIndirect => bus.cpu().direct_page_addr(bus.cpu().y),
@@ -171,6 +181,7 @@ impl AddressMode {
         match self {
             Self::Dp => Wrap::WrapPage,
             Self::DpXIdx => Wrap::WrapPage,
+            Self::DpYIdx => Wrap::WrapPage,
             Self::DpXIdxIndirect => Wrap::WrapPage,
             Self::DpIndirectYIdx => Wrap::WrapPage,
             Self::XIndirect => Wrap::NoWrap,
@@ -420,6 +431,15 @@ impl DecodedOperand<u16> for DecodedU16Operand {
 
 impl DecodedU16Operand {
     #[inline]
+    pub fn load_low(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
+        match self {
+            Self::JumpAddress(mode, addr) => addr.0.low_byte(),
+            Self::InMemory(mode, addr) => cpu.bus.cycle_read_u8(*addr),
+            Self::RegisterYA => cpu.a,
+        }
+    }
+
+    #[inline]
     pub fn is_register(&self) -> bool {
         matches!(self, Self::RegisterYA)
     }
@@ -521,6 +541,22 @@ impl DecodedOperand<bool> for DecodedBitOperand {
             Self::Carry => "C".to_string(),
             Self::InMemory(addr, bit) => format!("(${:04X}.{})", addr.0, bit),
             Self::InMemoryInv(addr, bit) => format!("(/${:04X}.{})", addr.0, bit),
+        }
+    }
+}
+
+impl DecodedBitOperand {
+    #[inline]
+    pub fn is_carry(&self) -> bool {
+        matches!(self, Self::Carry)
+    }
+
+    #[inline]
+    pub fn peek(&self, cpu: &mut Spc700<impl Spc700Bus>) -> bool {
+        match self {
+            Self::Carry => cpu.status.carry,
+            Self::InMemory(addr, bit) => cpu.bus.peek_u8(*addr).unwrap_or_default().bit(*bit),
+            Self::InMemoryInv(addr, bit) => !cpu.bus.peek_u8(*addr).unwrap_or_default().bit(*bit),
         }
     }
 }
