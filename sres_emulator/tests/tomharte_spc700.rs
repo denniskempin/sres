@@ -48,6 +48,10 @@ const IGNORE_CYCLE_ORDER: &[u8] = &[
     0xBA,
     // mov1: io cycle between read/write of AbsBit
     0xCA,
+    // mov [d]+Y, A: io cycle in an odd place
+    0xD7,
+    // dbnz: Test cases read open bus and a value from the same address
+    0xFE,
 ];
 
 #[test]
@@ -116,19 +120,16 @@ pub fn test_spc700_opcodes_cx() {
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_dx() {
     run_tomharte_test("dx");
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_ex() {
     run_tomharte_test("ex");
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_fx() {
     run_tomharte_test("fx");
 }
@@ -266,10 +267,7 @@ impl TestCase {
                 if state == "wait" {
                     Cycle::Internal
                 } else if state == "read" {
-                    Cycle::Read(
-                        AddressU16(addr.unwrap_or_default()),
-                        value.unwrap_or_default(),
-                    )
+                    Cycle::Read(AddressU16(addr.unwrap_or_default()), *value)
                 } else if state == "write" {
                     Cycle::Write(
                         AddressU16(addr.unwrap_or_default()),

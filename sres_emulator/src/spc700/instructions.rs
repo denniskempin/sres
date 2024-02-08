@@ -15,6 +15,7 @@ use crate::util::uint::UInt;
 
 use super::operands::BitOperand;
 use super::operands::DecodedOperand;
+use super::operands::DecodedU16Operand;
 use super::operands::Operand;
 use super::operands::U16Operand;
 use super::operands::U8Operand;
@@ -250,6 +251,16 @@ pub fn clrc(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.status.carry = false;
 }
 
+pub fn setv(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.status.overflow = true;
+}
+
+pub fn clrv(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.status.overflow = false;
+}
+
 pub fn ei(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.bus.cycle_read_u8(cpu.pc);
     cpu.bus.cycle_io();
@@ -356,6 +367,14 @@ pub fn bra(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     branch(cpu, operand, true);
 }
 
+pub fn beq(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    branch(cpu, operand, cpu.status.zero);
+}
+
+pub fn bne(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    branch(cpu, operand, !cpu.status.zero);
+}
+
 pub fn bpl(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     branch(cpu, operand, !cpu.status.negative);
 }
@@ -400,6 +419,10 @@ pub fn cbne(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Op
 
 pub fn dbnz(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
     let left_op = left_op.decode(cpu);
+    if left_op.is_alu_register() {
+        cpu.bus.cycle_read_u8(cpu.pc);
+        cpu.bus.cycle_io();
+    }
     let value = left_op.load(cpu).wrapping_sub(1);
     left_op.store(cpu, value);
     branch(cpu, right_op, value != 0);
@@ -430,6 +453,17 @@ pub fn tclr1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     operand.load(cpu); // CPU will re-read the value for another cycle
     operand.store(cpu, value & !cpu.a);
     cpu.update_negative_zero_flags(cpu.a.wrapping_sub(value));
+}
+
+pub fn not1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
+    let operand = operand.decode(cpu);
+    if operand.is_carry() {
+        cpu.bus.cycle_read_u8(cpu.pc);
+        cpu.bus.cycle_io();
+    }
+    // TODO: this stinks!
+    let bit = operand.peek(cpu);
+    operand.store(cpu, !bit);
 }
 
 pub fn or1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
@@ -517,12 +551,13 @@ pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
 pub fn movw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U16Operand, right_op: U16Operand) {
     let right = right_op.decode(cpu).load(cpu);
     let left_op = left_op.decode(cpu);
-    cpu.bus.cycle_io();
 
     if left_op.is_register() {
         // Moves into registers will update the N and Z flags
         cpu.update_negative_zero_flags(right);
+        cpu.bus.cycle_io();
     } else {
+        left_op.load_low(cpu);
     }
     left_op.store(cpu, right);
 }
@@ -531,7 +566,14 @@ pub fn movw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U16Operand, right_op: U16
 // Misc instructions
 
 pub fn mov(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
-    let right = right_op.decode(cpu).load(cpu);
+    let right = if right_op.is_address_mode(AddressMode::XIndirect) {
+        // TODO: this stinks!
+        let right_op = right_op.decode(cpu);
+        cpu.bus.cycle_read_u8(cpu.pc);
+        right_op.load(cpu)
+    } else {
+        right_op.decode(cpu).load(cpu)
+    };
     let left_op = left_op.decode(cpu);
 
     if left_op.is_alu_register() {
@@ -544,11 +586,12 @@ pub fn mov(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
         // Moves into memory locations will do an extra read from the target address.
         if right_op.is_address_mode(AddressMode::Dp) {
             // Somehow 0xFA (MOV from a direct page address into another) is an exception.
-            cpu.bus.cycle_io();
+            // cpu.bus.cycle_io();
         } else if left_op.is_address_mode(AddressMode::XIndirect) {
             cpu.bus.cycle_read_u8(cpu.pc);
             left_op.load(cpu);
         } else if left_op.is_address_mode(AddressMode::XIndirectAutoInc) {
+            // TODO: this stinks!
             cpu.bus.cycle_read_u8(cpu.pc);
             cpu.bus.cycle_io();
         } else {
@@ -575,18 +618,15 @@ pub fn xcn(cpu: &mut Spc700<impl Spc700Bus>) {
 
 pub fn daa(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.bus.cycle_read_u8(cpu.pc);
-    let mut a = cpu.a;
-    let mut carry = cpu.status.carry;
-    if cpu.status.half_carry || (!cpu.status.negative && (a & 0x0F) > 0x09) {
-        a = a.wrapping_add(0x06);
+    cpu.bus.cycle_io();
+    if cpu.status.carry || cpu.a > 0x99 {
+        cpu.a = cpu.a.wrapping_add(0x60);
+        cpu.status.carry = true;
     }
-    if carry || (!cpu.status.negative && a > 0x9F) {
-        a = a.wrapping_add(0x60);
-        carry = true;
+    if cpu.status.half_carry || cpu.a.low_nibble() > 0x09 {
+        cpu.a = cpu.a.wrapping_add(0x06);
     }
-    cpu.status.carry = carry;
-    cpu.update_negative_zero_flags(a);
-    cpu.a = a;
+    cpu.update_negative_zero_flags(cpu.a);
 }
 
 pub fn das(cpu: &mut Spc700<impl Spc700Bus>) {
@@ -600,4 +640,22 @@ pub fn das(cpu: &mut Spc700<impl Spc700Bus>) {
         cpu.a = cpu.a.wrapping_sub(0x06);
     }
     cpu.update_negative_zero_flags(cpu.a);
+}
+
+pub fn sleep(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+}
+
+pub fn stop(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
 }

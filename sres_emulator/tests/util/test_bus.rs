@@ -27,9 +27,9 @@ impl<AddressT: Address> Bus<AddressT> for TestBus<AddressT> {
     }
 
     fn cycle_read_u8(&mut self, addr: AddressT) -> u8 {
-        let value = self.peek_u8(addr).unwrap_or_default();
+        let value = self.peek_u8(addr);
         self.cycles.push(Cycle::Read(addr, value));
-        value
+        value.unwrap_or_default()
     }
 
     #[allow(clippy::single_match)]
@@ -49,7 +49,7 @@ impl<AddressT: Address> Bus<AddressT> for TestBus<AddressT> {
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum Cycle<AddressT: Address> {
     /// The bus was in read mode: (addr, value read)
-    Read(AddressT, u8),
+    Read(AddressT, Option<u8>),
     /// The bus was in write mode: (addr, value written)
     Write(AddressT, u8),
     /// The bus performed an internal operation
@@ -59,7 +59,13 @@ pub enum Cycle<AddressT: Address> {
 impl<AddressT: Address> Debug for Cycle<AddressT> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Cycle::Read(addr, value) => write!(f, "R({})={:02X}", addr, value),
+            Cycle::Read(addr, value) => {
+                if let Some(value) = value {
+                    write!(f, "R({})={:02X}", addr, value)
+                } else {
+                    write!(f, "R({})=XX", addr)
+                }
+            }
             Cycle::Write(addr, value) => write!(f, "W({})={:02X}", addr, value),
             Cycle::Internal => write!(f, "I"),
         }

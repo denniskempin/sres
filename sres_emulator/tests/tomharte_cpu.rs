@@ -263,7 +263,7 @@ impl TestCase {
                 if !(state.contains('p') || state.contains('d')) {
                     Cycle::Internal
                 } else if state.contains('r') {
-                    Cycle::Read(addr.unwrap_or_default().into(), value.unwrap_or_default())
+                    Cycle::Read(addr.unwrap_or_default().into(), *value)
                 } else if state.contains('w') {
                     Cycle::Write(addr.unwrap_or_default().into(), value.unwrap_or_default())
                 } else {
