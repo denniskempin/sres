@@ -31,6 +31,8 @@ const SKIP_OPCODES: &[u8] = &[
     0x9A,
     // div
     0x9E,
+    // mul
+    0xCF,
 ];
 
 /// Opcodes that have a different cycle order than the test data expects.
@@ -40,9 +42,12 @@ const SKIP_OPCODES: &[u8] = &[
 const IGNORE_CYCLE_ORDER: &[u8] = &[
     // decw/incw
     0x1A, 0x3A,
-    // addw, subw: i/o between read cycles of u16 value
+    // addw, subw, movw: i/o between read cycles of u16 value
     0x7A,
     0x9A,
+    0xBA,
+    // mov1: io cycle between read/write of AbsBit
+    0xCA,
 ];
 
 #[test]
@@ -96,19 +101,16 @@ pub fn test_spc700_opcodes_9x() {
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_ax() {
     run_tomharte_test("ax");
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_bx() {
     run_tomharte_test("bx");
 }
 
 #[test]
-#[ignore = "Not yet implemented"]
 pub fn test_spc700_opcodes_cx() {
     run_tomharte_test("cx");
 }
