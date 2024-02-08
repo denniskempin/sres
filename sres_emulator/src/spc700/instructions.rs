@@ -10,6 +10,7 @@ use crate::spc700::DecodedU8Operand;
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
 use crate::util::uint::U16Ext;
+use crate::util::uint::U8Ext;
 use crate::util::uint::UInt;
 
 use super::operands::BitOperand;
@@ -46,6 +47,30 @@ pub fn adc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
     left_op.store(cpu, value);
 }
 
+pub fn sbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+    if right_op.is_address_mode(AddressMode::XIndirect)
+        || right_op.is_address_mode(AddressMode::YIndirect)
+    {
+        cpu.bus.cycle_read_u8(cpu.pc);
+    }
+    let right = right_op.decode(cpu).load(cpu);
+    let left_op = left_op.decode(cpu);
+    let left = left_op.load(cpu);
+
+    let (mut value, mut carry) = left.overflowing_sub(right);
+    if !cpu.status.carry {
+        let (value2, carry2) = value.overflowing_sub(1);
+        value = value2;
+        carry = carry || carry2;
+    }
+    cpu.status.half_carry =
+        !((left & 0x0F).wrapping_sub((right & 0x0F) + !cpu.status.carry as u8) & 0x10 == 0x10);
+    cpu.status.carry = !carry;
+    cpu.status.overflow = ((left ^ right) & (left ^ value)).msb();
+    cpu.update_negative_zero_flags(value);
+    left_op.store(cpu, value);
+}
+
 pub fn cmp(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
     if right_op.is_address_mode(AddressMode::XIndirect)
         || right_op.is_address_mode(AddressMode::YIndirect)
@@ -65,7 +90,7 @@ pub fn cmp(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
 pub fn inc(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu).wrapping_add(1);
-    if operand.is_register() {
+    if operand.is_alu_register() {
         cpu.bus.cycle_read_u8(cpu.pc);
     }
     cpu.update_negative_zero_flags(value);
@@ -75,14 +100,24 @@ pub fn inc(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
 pub fn dec(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu).wrapping_sub(1);
-    if operand.is_register() {
+    if operand.is_alu_register() {
         cpu.bus.cycle_read_u8(cpu.pc);
     }
     cpu.update_negative_zero_flags(value);
     operand.store(cpu, value);
 }
 
+pub fn mul(cpu: &mut Spc700<impl Spc700Bus>) {
+    let a = cpu.a as u16;
+    let x = cpu.x as u16;
+    let result = a * x;
+    cpu.update_negative_zero_flags((result >> 8) as u8);
+    cpu.a = (result & 0xFF) as u8;
+    cpu.x = (result >> 8) as u8;
+}
+
 pub fn div(cpu: &mut Spc700<impl Spc700Bus>) {
+    // TODO: Naiive, and wrong implementation
     let y = cpu.y as u16;
     let a = cpu.a as u16;
     if y != 0 {
@@ -102,7 +137,7 @@ pub fn div(cpu: &mut Spc700<impl Spc700Bus>) {
 pub fn rol(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu);
-    if operand.is_register() {
+    if operand.is_alu_register() {
         cpu.bus.cycle_read_u8(cpu.pc);
     }
     let new_value = (value << 1) | cpu.status.carry as u8;
@@ -114,7 +149,7 @@ pub fn rol(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
 pub fn ror(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu);
-    if operand.is_register() {
+    if operand.is_alu_register() {
         cpu.bus.cycle_read_u8(cpu.pc);
     }
     let new_value = (value >> 1) | (cpu.status.carry as u8) << 7;
@@ -126,7 +161,7 @@ pub fn ror(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
 pub fn asl(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu);
-    if operand.is_register() {
+    if operand.is_alu_register() {
         cpu.bus.cycle_read_u8(cpu.pc);
     }
     let new_value = value << 1;
@@ -138,7 +173,7 @@ pub fn asl(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
 pub fn lsr(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu);
-    if operand.is_register() {
+    if operand.is_alu_register() {
         cpu.bus.cycle_read_u8(cpu.pc);
     }
     let new_value = value >> 1;
@@ -213,6 +248,18 @@ pub fn setc(cpu: &mut Spc700<impl Spc700Bus>) {
 pub fn clrc(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.bus.cycle_read_u8(cpu.pc);
     cpu.status.carry = false;
+}
+
+pub fn ei(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    cpu.status.irq_enable = true;
+}
+
+pub fn di(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    cpu.status.irq_enable = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -325,6 +372,10 @@ pub fn bvs(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     branch(cpu, operand, cpu.status.overflow);
 }
 
+pub fn bcs(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    branch(cpu, operand, cpu.status.carry);
+}
+
 pub fn bcc(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     branch(cpu, operand, !cpu.status.carry);
 }
@@ -398,6 +449,14 @@ pub fn eor1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
     cpu.status.carry = cpu.status.carry ^ bit;
 }
 
+pub fn mov1(cpu: &mut Spc700<impl Spc700Bus>, left_op: BitOperand, right_op: BitOperand) {
+    let bit = right_op.decode(cpu).load(cpu);
+    left_op.decode(cpu).store(cpu, bit);
+    if right_op.is_carry() {
+        cpu.bus.cycle_io();
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // 16-bit (wide) instructions
 
@@ -455,6 +514,19 @@ pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
     operand.store(cpu, result);
 }
 
+pub fn movw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U16Operand, right_op: U16Operand) {
+    let right = right_op.decode(cpu).load(cpu);
+    let left_op = left_op.decode(cpu);
+    cpu.bus.cycle_io();
+
+    if left_op.is_register() {
+        // Moves into registers will update the N and Z flags
+        cpu.update_negative_zero_flags(right);
+    } else {
+    }
+    left_op.store(cpu, right);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Misc instructions
 
@@ -462,16 +534,22 @@ pub fn mov(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
     let right = right_op.decode(cpu).load(cpu);
     let left_op = left_op.decode(cpu);
 
-    if left_op.is_register() {
+    if left_op.is_alu_register() {
         // Moves into registers will update the N and Z flags
         cpu.update_negative_zero_flags(right);
-        if right_op.is_register() {
+        if right_op.is_alu_register() {
             cpu.bus.cycle_read_u8(cpu.pc);
         }
     } else {
         // Moves into memory locations will do an extra read from the target address.
         if right_op.is_address_mode(AddressMode::Dp) {
             // Somehow 0xFA (MOV from a direct page address into another) is an exception.
+            cpu.bus.cycle_io();
+        } else if left_op.is_address_mode(AddressMode::XIndirect) {
+            cpu.bus.cycle_read_u8(cpu.pc);
+            left_op.load(cpu);
+        } else if left_op.is_address_mode(AddressMode::XIndirectAutoInc) {
+            cpu.bus.cycle_read_u8(cpu.pc);
             cpu.bus.cycle_io();
         } else {
             left_op.load(cpu);
@@ -493,4 +571,33 @@ pub fn xcn(cpu: &mut Spc700<impl Spc700Bus>) {
     let a = (a >> 4) | (a << 4);
     cpu.update_negative_zero_flags(a);
     cpu.a = a;
+}
+
+pub fn daa(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    let mut a = cpu.a;
+    let mut carry = cpu.status.carry;
+    if cpu.status.half_carry || (!cpu.status.negative && (a & 0x0F) > 0x09) {
+        a = a.wrapping_add(0x06);
+    }
+    if carry || (!cpu.status.negative && a > 0x9F) {
+        a = a.wrapping_add(0x60);
+        carry = true;
+    }
+    cpu.status.carry = carry;
+    cpu.update_negative_zero_flags(a);
+    cpu.a = a;
+}
+
+pub fn das(cpu: &mut Spc700<impl Spc700Bus>) {
+    cpu.bus.cycle_read_u8(cpu.pc);
+    cpu.bus.cycle_io();
+    if !cpu.status.carry || cpu.a > 0x99 {
+        cpu.a = cpu.a.wrapping_sub(0x60);
+        cpu.status.carry = false;
+    }
+    if !cpu.status.half_carry || cpu.a.low_nibble() > 0x09 {
+        cpu.a = cpu.a.wrapping_sub(0x06);
+    }
+    cpu.update_negative_zero_flags(cpu.a);
 }

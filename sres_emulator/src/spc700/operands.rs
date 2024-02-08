@@ -250,12 +250,11 @@ impl U8Operand {
     }
 
     #[inline]
-    pub fn is_register(&self) -> bool {
-        if let Self::Register(_) = self {
-            true
-        } else {
-            false
-        }
+    pub fn is_alu_register(&self) -> bool {
+        matches!(
+            self,
+            Self::Register(Register::A) | Self::Register(Register::X) | Self::Register(Register::Y)
+        )
     }
 }
 
@@ -275,22 +274,36 @@ impl DecodedOperand<u8> for DecodedU8Operand {
             Self::Register(Register::A) => cpu.a,
             Self::Register(Register::X) => cpu.x,
             Self::Register(Register::Y) => cpu.y,
-            Self::Register(Register::Sp) => cpu.sp,
+            Self::Register(Register::Sp) => {
+                cpu.bus.cycle_read_u8(cpu.pc);
+                cpu.sp
+            }
             Self::Register(Register::Psw) => cpu.status.into(),
             Self::Const(value) => *value,
+            Self::InMemory(AddressMode::XIndirectAutoInc, addr) => {
+                cpu.bus.cycle_read_u8(cpu.pc);
+                cpu.x = cpu.x.wrapping_add(1);
+                let value = cpu.bus.cycle_read_u8(*addr);
+                cpu.bus.cycle_io();
+                value
+            }
             Self::InMemory(_, addr) => cpu.bus.cycle_read_u8(*addr),
         }
     }
 
     fn store(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u8) {
         match self {
-            Self::Immediate(_) => panic!("loading implied operand"),
+            Self::Immediate(_) => panic!("storing immediate operand"),
             Self::Register(Register::A) => cpu.a = value,
             Self::Register(Register::X) => cpu.x = value,
             Self::Register(Register::Y) => cpu.y = value,
             Self::Register(Register::Sp) => cpu.sp = value,
             Self::Register(Register::Psw) => cpu.status = value.into(),
-            Self::Const(_) => panic!("loading implied operand"),
+            Self::Const(_) => panic!("storing const operand"),
+            Self::InMemory(AddressMode::XIndirectAutoInc, addr) => {
+                cpu.x = cpu.x.wrapping_add(1);
+                cpu.bus.cycle_write_u8(*addr, value)
+            }
             Self::InMemory(_, addr) => cpu.bus.cycle_write_u8(*addr, value),
         }
     }
@@ -312,12 +325,20 @@ impl DecodedOperand<u8> for DecodedU8Operand {
 
 impl DecodedU8Operand {
     #[inline]
-    pub fn is_register(&self) -> bool {
-        if let Self::Register(_) = self {
-            true
+    pub fn is_address_mode(&self, address_mode: AddressMode) -> bool {
+        if let Self::InMemory(mode, _) = self {
+            *mode == address_mode
         } else {
             false
         }
+    }
+
+    #[inline]
+    pub fn is_alu_register(&self) -> bool {
+        matches!(
+            self,
+            Self::Register(Register::A) | Self::Register(Register::X) | Self::Register(Register::Y)
+        )
     }
 
     #[inline]
@@ -450,6 +471,13 @@ impl Operand<bool, DecodedBitOperand> for BitOperand {
             }
         };
         (operand, operand_addr.add(operand_size, Wrap::NoWrap))
+    }
+}
+
+impl BitOperand {
+    #[inline]
+    pub fn is_carry(&self) -> bool {
+        matches!(self, Self::Carry)
     }
 }
 
