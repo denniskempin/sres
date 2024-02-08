@@ -61,7 +61,7 @@ pub trait DecodedOperand<T> {
     fn load(&self, cpu: &mut Spc700<impl Spc700Bus>) -> T;
     /// Stores the operand. May perform the memory writes needed to write the operand to memory.
     fn store(&self, cpu: &mut Spc700<impl Spc700Bus>, value: T);
-    /// Returns a string to produce disassembly
+    /// Returns a string to produce disassembly.
     fn format(&self) -> String;
 }
 
@@ -230,6 +230,35 @@ impl Operand<u8, DecodedU8Operand> for U8Operand {
     }
 }
 
+impl U8Operand {
+    #[inline]
+    pub fn is_address_mode(&self, address_mode: AddressMode) -> bool {
+        if let Self::U8InMemory(mode) = self {
+            *mode == address_mode
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    pub fn is_in_memory(&self) -> bool {
+        if let Self::U8InMemory(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    pub fn is_register(&self) -> bool {
+        if let Self::Register(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 pub enum DecodedU8Operand {
     Immediate(u8),
@@ -277,6 +306,26 @@ impl DecodedOperand<u8> for DecodedU8Operand {
             Self::Register(Register::Psw) => "PSW".to_string(),
             Self::Const(value) => format!("{:02X}", value),
             Self::InMemory(_, addr) => format!("${:04X}", addr.0),
+        }
+    }
+}
+
+impl DecodedU8Operand {
+    #[inline]
+    pub fn is_register(&self) -> bool {
+        if let Self::Register(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    pub fn is_in_memory(&self) -> bool {
+        if let Self::InMemory(_, _) = self {
+            true
+        } else {
+            false
         }
     }
 }
@@ -345,6 +394,13 @@ impl DecodedOperand<u16> for DecodedU16Operand {
             Self::JumpAddress(_, addr) => format!("${:04X}", addr.0),
             Self::InMemory(_, addr) => format!("${:04X}", addr.0),
         }
+    }
+}
+
+impl DecodedU16Operand {
+    #[inline]
+    pub fn is_register(&self) -> bool {
+        matches!(self, Self::RegisterYA)
     }
 }
 
