@@ -1,6 +1,4 @@
-use crate::bus::Address;
 use crate::bus::AddressU16;
-use crate::bus::Wrap;
 use crate::spc700::operands::DecodedOperand;
 use crate::spc700::operands::Operand;
 use crate::spc700::Spc700;

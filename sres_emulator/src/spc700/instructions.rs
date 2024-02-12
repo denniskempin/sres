@@ -1,26 +1,20 @@
-use std::fmt::LowerExp;
-use std::ops::Div;
-
 use intbits::Bits;
-
-use crate::bus::Address;
-use crate::bus::AddressU16;
-use crate::bus::Wrap;
-use crate::spc700::DecodedU8Operand;
-use crate::spc700::Spc700;
-use crate::spc700::Spc700Bus;
-use crate::util::uint::U16Ext;
-use crate::util::uint::U8Ext;
-use crate::util::uint::UInt;
 
 use super::operands::BitOperand;
 use super::operands::DecodedOperand;
-use super::operands::DecodedU16Operand;
 use super::operands::Operand;
 use super::operands::U16Operand;
 use super::operands::U8Operand;
 use super::AddressMode;
 use super::Spc700StatusFlags;
+use crate::bus::Address;
+use crate::bus::AddressU16;
+use crate::bus::Wrap;
+use crate::spc700::Spc700;
+use crate::spc700::Spc700Bus;
+use crate::util::uint::U16Ext;
+use crate::util::uint::U8Ext;
+use crate::util::uint::UInt;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Arithmetic instructions
@@ -65,7 +59,7 @@ pub fn sbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
         carry = carry || carry2;
     }
     cpu.status.half_carry =
-        !((left & 0x0F).wrapping_sub((right & 0x0F) + !cpu.status.carry as u8) & 0x10 == 0x10);
+        (left & 0x0F).wrapping_sub((right & 0x0F) + !cpu.status.carry as u8) & 0x10 != 0x10;
     cpu.status.carry = !carry;
     cpu.status.overflow = ((left ^ right) & (left ^ value)).msb();
     cpu.update_negative_zero_flags(value);
@@ -247,11 +241,6 @@ pub fn clrc(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.status.carry = false;
 }
 
-pub fn setv(cpu: &mut Spc700<impl Spc700Bus>) {
-    cpu.bus.cycle_read_u8(cpu.pc);
-    cpu.status.overflow = true;
-}
-
 pub fn clrv(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.bus.cycle_read_u8(cpu.pc);
     cpu.status.overflow = false;
@@ -350,6 +339,7 @@ pub fn reti(cpu: &mut Spc700<impl Spc700Bus>) {
 ////////////////////////////////////////////////////////////////////////////////
 // Branch instructions
 
+#[inline]
 fn branch(cpu: &mut Spc700<impl Spc700Bus>, offset_op: U8Operand, condition: bool) {
     let offset = offset_op.decode(cpu).load(cpu) as i8;
     if condition {
@@ -476,7 +466,7 @@ pub fn and1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
 pub fn eor1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
     let bit = operand.decode(cpu).load(cpu);
     cpu.bus.cycle_io();
-    cpu.status.carry = cpu.status.carry ^ bit;
+    cpu.status.carry ^= bit;
 }
 
 pub fn mov1(cpu: &mut Spc700<impl Spc700Bus>, left_op: BitOperand, right_op: BitOperand) {
@@ -601,6 +591,8 @@ pub fn mov(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
         // Moves into memory locations will do an extra read from the target address.
         if right_op.is_address_mode(AddressMode::Dp) {
             // Somehow 0xFA (MOV from a direct page address into another) is an exception.
+        } else if left_op.is_address_mode(AddressMode::DpIndirectYIdx) {
+            left_op.load(cpu);
         } else if left_op.is_address_mode(AddressMode::XIndirect) {
             cpu.bus.cycle_read_u8(cpu.pc);
             left_op.load(cpu);

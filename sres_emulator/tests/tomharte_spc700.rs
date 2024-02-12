@@ -35,15 +35,10 @@ const SKIP_OPCODES: &[u8] = &[
     0xCF,
 ];
 
-/// Opcodes that have a different cycle order than the test data expects.
-/// A couple of opcodes handle operand loading in a way that does not fit
-/// the abstaction used here.
+/// For some opcodes we only want to ensure the correct number of cycles have been
+/// have been executed and ignore the details of what those cycles actually do.
 #[rustfmt::skip]
-const IGNORE_CYCLE_ORDER: &[u8] = &[
-    // addw, subw, movw: i/o between read cycles of u16 value
-    // 0x7A,
-    // 0x9A,
-    // 0xBA,
+const IGNORE_CYCLE_DETAILS: &[u8] = &[
     // mov1: io cycle between read/write of AbsBit
     0xCA,
     // mov [d]+Y, A: io cycle in an odd place
@@ -155,7 +150,7 @@ fn run_tomharte_test(test_name: &str) {
         // Compare before asserting to print additional information on failures
         let state_matches = actual_state.to_string() == expected_state.to_string();
         let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
-        let cycles_match = if IGNORE_CYCLE_ORDER.contains(&opcode) {
+        let cycles_match = if IGNORE_CYCLE_DETAILS.contains(&opcode) {
             actual_state.bus.cycles.len() == test_case.cycles().len()
         } else {
             actual_state.bus.cycles == test_case.cycles()
