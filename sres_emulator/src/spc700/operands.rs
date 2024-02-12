@@ -21,6 +21,18 @@ use crate::util::uint::U16Ext;
 /// memory) into a [DecodedOperand], then can be loaded or stored. This are separate steps since
 /// the order in which memory is accessed varies, and instructions may want to decode once, but
 /// load/store multiple times.
+///
+/// Design note:
+///
+/// In retrospect this abstraction just does not work well and overcomplicates things
+/// way too much. It only works well with single operands.
+/// With multiple operands, the cycle order of decoding and loading the operands
+/// cannot be easily abstracted. There are too many irregularities based on the combination
+/// of operand types (e.g. look at the mess in [crate::spc700::instructions::mov]) or the
+/// special handling needed for [AddressMode::XIndirect] since `MOV (X) (Y)` has different idle
+/// cycles than other uses of `(X)` or `(Y)`.
+/// U16 operands are especially complex as decoding, loading and storing of the operands is
+/// interleaved.
 pub trait Operand<ValueT, DecodedT: DecodedOperand<ValueT>> {
     /// Consumes enough bytes of program memory to decode this operand
     ///
