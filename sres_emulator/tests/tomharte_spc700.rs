@@ -26,14 +26,7 @@ use util::test_bus::TestBus;
 use xz2::read::XzDecoder;
 
 #[rustfmt::skip]
-const SKIP_OPCODES: &[u8] = &[
-    // subw
-    0x9A,
-    // div
-    0x9E,
-    // mul
-    0xCF,
-];
+const SKIP_OPCODES: &[u8] = &[];
 
 /// For some opcodes we only want to ensure the correct number of cycles have been
 /// have been executed and ignore the details of what those cycles actually do.
