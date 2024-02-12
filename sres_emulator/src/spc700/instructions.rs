@@ -52,18 +52,18 @@ pub fn sbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
     let left_op = left_op.decode(cpu);
     let left = left_op.load(cpu);
 
-    let (mut value, mut carry) = left.overflowing_sub(right);
+    let (mut result, mut carry) = left.overflowing_sub(right);
     if !cpu.status.carry {
-        let (value2, carry2) = value.overflowing_sub(1);
-        value = value2;
+        let (value2, carry2) = result.overflowing_sub(1);
+        result = value2;
         carry = carry || carry2;
     }
     cpu.status.half_carry =
         (left & 0x0F).wrapping_sub((right & 0x0F) + !cpu.status.carry as u8) & 0x10 != 0x10;
     cpu.status.carry = !carry;
-    cpu.status.overflow = ((left ^ right) & (left ^ value)).msb();
-    cpu.update_negative_zero_flags(value);
-    left_op.store(cpu, value);
+    cpu.status.overflow = ((left ^ right) & (left ^ result)).msb();
+    cpu.update_negative_zero_flags(result);
+    left_op.store(cpu, result);
 }
 
 pub fn cmp(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
@@ -103,27 +103,39 @@ pub fn dec(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
 }
 
 pub fn mul(cpu: &mut Spc700<impl Spc700Bus>) {
-    let a = cpu.a as u16;
-    let x = cpu.x as u16;
-    let result = a * x;
-    cpu.update_negative_zero_flags((result >> 8) as u8);
-    cpu.a = (result & 0xFF) as u8;
-    cpu.x = (result >> 8) as u8;
+    cpu.bus.cycle_read_u8(cpu.pc);
+    for _ in 0..7 {
+        cpu.bus.cycle_io();
+    }
+    let result = cpu.y as u16 * cpu.a as u16;
+    cpu.a = result.low_byte();
+    cpu.y = result.high_byte();
+    cpu.update_negative_zero_flags(cpu.y);
 }
 
 pub fn div(cpu: &mut Spc700<impl Spc700Bus>) {
-    // TODO: Naiive, and wrong implementation
-    let y = cpu.y as u16;
-    let a = cpu.a as u16;
-    if y != 0 {
-        let quotient = a / y;
-        let remainder = a % y;
-        cpu.update_negative_zero_flags(quotient as u8);
-        cpu.y = remainder as u8;
-        cpu.a = quotient as u8;
-    } else {
-        cpu.status.overflow = true;
+    cpu.bus.cycle_read_u8(cpu.pc);
+    for _ in 0..10 {
+        cpu.bus.cycle_io();
     }
+
+    let ya = u16::from_be_bytes([cpu.y, cpu.a]);
+    let y = cpu.y as u16;
+    let x = cpu.x as u16;
+
+    cpu.status.half_carry = (y & 15) >= (x & 15);
+    cpu.status.overflow = y >= x;
+
+    // The logic for overflowing div's is weird, helpful explanation at:
+    // https://helmet.kafuka.org/bboard/thread.php?id=228
+    if y < (x << 1) {
+        cpu.a = (ya / x) as u8;
+        cpu.y = (ya % x) as u8;
+    } else {
+        cpu.a = 255_u16.wrapping_sub(ya.wrapping_sub(x << 9) / (256 - x)) as u8;
+        cpu.y = (x + ((ya.wrapping_sub(x << 9)) % (256 - x))) as u8;
+    }
+    cpu.update_negative_zero_flags(cpu.a);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -508,8 +520,10 @@ pub fn subw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
     let (result, carry) = left.overflowing_sub(right);
     cpu.update_negative_zero_flags(result);
     cpu.status.carry = !carry;
-    cpu.status.overflow = ((right ^ result) & (!left ^ result)).msb();
-    cpu.status.half_carry = ((right & 0x0FFF) - (left & 0x0FFF)) > 0x0FFF;
+    cpu.status.half_carry =
+        (left & 0x0FFF).wrapping_sub((right & 0x0FFF) + !cpu.status.carry as u16) & 0x1000
+            != 0x1000;
+    cpu.status.overflow = ((left ^ right) & (left ^ result)).msb();
     cpu.a = result.low_byte();
     cpu.y = result.high_byte();
 }
