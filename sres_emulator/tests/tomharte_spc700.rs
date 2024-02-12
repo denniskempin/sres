@@ -40,12 +40,10 @@ const SKIP_OPCODES: &[u8] = &[
 /// the abstaction used here.
 #[rustfmt::skip]
 const IGNORE_CYCLE_ORDER: &[u8] = &[
-    // decw/incw
-    0x1A, 0x3A,
     // addw, subw, movw: i/o between read cycles of u16 value
-    0x7A,
-    0x9A,
-    0xBA,
+    // 0x7A,
+    // 0x9A,
+    // 0xBA,
     // mov1: io cycle between read/write of AbsBit
     0xCA,
     // mov [d]+Y, A: io cycle in an odd place

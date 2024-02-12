@@ -225,7 +225,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
     opcodes[0x77] = instruction!(cmp, Register(A), U8InMemory(DpIndirectYIdx));
     opcodes[0x78] = instruction!(cmp, U8InMemory(Dp), Immediate);
     opcodes[0x79] = instruction!(cmp, U8InMemory(XIndirect), U8InMemory(YIndirect));
-    opcodes[0x7A] = instruction!(addw, RegisterYA, U16InMemory(Dp));
+    opcodes[0x7A] = instruction!(addw, U16InMemory(Dp));
     opcodes[0x7B] = instruction!(ror, U8InMemory(DpXIdx));
     opcodes[0x7C] = instruction!(ror, Register(A));
     opcodes[0x7D] = instruction!(mov, Register(A), Register(X));
@@ -257,7 +257,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
     opcodes[0x97] = instruction!(adc, Register(A), U8InMemory(DpIndirectYIdx));
     opcodes[0x98] = instruction!(adc, U8InMemory(Dp), Immediate);
     opcodes[0x99] = instruction!(adc, U8InMemory(XIndirect), U8InMemory(YIndirect));
-    opcodes[0x9A] = instruction!(subw, RegisterYA, U16InMemory(Dp));
+    opcodes[0x9A] = instruction!(subw, U16InMemory(Dp));
     opcodes[0x9B] = instruction!(dec, U8InMemory(DpXIdx));
     opcodes[0x9C] = instruction!(dec, Register(A));
     opcodes[0x9D] = instruction!(mov, Register(X), Register(Sp));
