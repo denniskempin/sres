@@ -400,23 +400,15 @@ pub enum DecodedU16Operand {
 impl DecodedOperand<u16> for DecodedU16Operand {
     #[inline]
     fn load(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u16 {
-        match self {
-            Self::JumpAddress(mode, addr) => addr.0,
-            Self::InMemory(mode, addr) => cpu.bus.cycle_read_u16(*addr, mode.wrap_mode()),
-            Self::RegisterYA => ((cpu.y as u16) << 8) | cpu.a as u16,
-        }
+        let low = self.load_low(cpu);
+        let high = self.load_high(cpu);
+        u16::from_le_bytes([low, high])
     }
 
     #[inline]
     fn store(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u16) {
-        match self {
-            Self::JumpAddress(_, _) => panic!("Cannot store into address"),
-            Self::InMemory(mode, addr) => cpu.bus.cycle_write_u16(*addr, value, mode.wrap_mode()),
-            Self::RegisterYA => {
-                cpu.a = value.low_byte();
-                cpu.y = value.high_byte();
-            }
-        }
+        self.store_low(cpu, value.low_byte());
+        self.store_high(cpu, value.high_byte());
     }
 
     #[inline]
@@ -436,6 +428,33 @@ impl DecodedU16Operand {
             Self::JumpAddress(mode, addr) => addr.0.low_byte(),
             Self::InMemory(mode, addr) => cpu.bus.cycle_read_u8(*addr),
             Self::RegisterYA => cpu.a,
+        }
+    }
+
+    #[inline]
+    pub fn load_high(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
+        match self {
+            Self::JumpAddress(mode, addr) => addr.0.high_byte(),
+            Self::InMemory(mode, addr) => cpu.bus.cycle_read_u8(addr.add(1_u16, mode.wrap_mode())),
+            Self::RegisterYA => cpu.y,
+        }
+    }
+
+    pub fn store_low(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u8) {
+        match self {
+            Self::JumpAddress(_, _) => panic!("Cannot store into address"),
+            Self::InMemory(mode, addr) => cpu.bus.cycle_write_u8(*addr, value),
+            Self::RegisterYA => cpu.a = value,
+        }
+    }
+
+    pub fn store_high(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u8) {
+        match self {
+            Self::JumpAddress(_, _) => panic!("Cannot store into address"),
+            Self::InMemory(mode, addr) => cpu
+                .bus
+                .cycle_write_u8(addr.add(1_u16, mode.wrap_mode()), value),
+            Self::RegisterYA => cpu.y = value,
         }
     }
 
