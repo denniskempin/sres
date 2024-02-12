@@ -135,52 +135,48 @@ pub fn div(cpu: &mut Spc700<impl Spc700Bus>) {
 ////////////////////////////////////////////////////////////////////////////////
 // Shift instructions
 
-pub fn rol(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+enum ShiftType {
+    Rol,
+    Ror,
+    Asl,
+    Lsr,
+}
+
+#[inline]
+fn shift(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand, shift_type: ShiftType) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu);
     if operand.is_alu_register() {
         cpu.bus.cycle_read_u8(cpu.pc);
     }
-    let new_value = (value << 1) | cpu.status.carry as u8;
-    cpu.status.carry = value.bit(7);
+    let new_value = match shift_type {
+        ShiftType::Rol => (value << 1).with_bit(0, cpu.status.carry),
+        ShiftType::Ror => (value >> 1).with_bit(7, cpu.status.carry),
+        ShiftType::Asl => value << 1,
+        ShiftType::Lsr => value >> 1,
+    };
+    cpu.status.carry = match shift_type {
+        ShiftType::Rol | ShiftType::Asl => value.bit(7),
+        ShiftType::Ror | ShiftType::Lsr => value.bit(0),
+    };
     cpu.update_negative_zero_flags(new_value);
     operand.store(cpu, new_value);
+}
+
+pub fn rol(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    shift(cpu, operand, ShiftType::Rol);
 }
 
 pub fn ror(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
-    let operand = operand.decode(cpu);
-    let value = operand.load(cpu);
-    if operand.is_alu_register() {
-        cpu.bus.cycle_read_u8(cpu.pc);
-    }
-    let new_value = (value >> 1) | (cpu.status.carry as u8) << 7;
-    cpu.status.carry = value.bit(0);
-    cpu.update_negative_zero_flags(new_value);
-    operand.store(cpu, new_value);
+    shift(cpu, operand, ShiftType::Ror);
 }
 
 pub fn asl(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
-    let operand = operand.decode(cpu);
-    let value = operand.load(cpu);
-    if operand.is_alu_register() {
-        cpu.bus.cycle_read_u8(cpu.pc);
-    }
-    let new_value = value << 1;
-    cpu.status.carry = value.bit(7);
-    cpu.update_negative_zero_flags(new_value);
-    operand.store(cpu, new_value);
+    shift(cpu, operand, ShiftType::Asl);
 }
 
 pub fn lsr(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
-    let operand = operand.decode(cpu);
-    let value = operand.load(cpu);
-    if operand.is_alu_register() {
-        cpu.bus.cycle_read_u8(cpu.pc);
-    }
-    let new_value = value >> 1;
-    cpu.status.carry = value.bit(0);
-    cpu.update_negative_zero_flags(new_value);
-    operand.store(cpu, new_value);
+    shift(cpu, operand, ShiftType::Lsr);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
