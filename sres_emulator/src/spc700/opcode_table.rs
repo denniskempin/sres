@@ -97,7 +97,6 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
 
     use crate::spc700::instructions::*;
     use crate::spc700::operands::AddressMode::*;
-    use crate::spc700::operands::BitOperand::*;
     use crate::spc700::operands::Register::*;
     use crate::spc700::operands::U8Operand::*;
     opcodes[0x00] = instruction!(nop);
