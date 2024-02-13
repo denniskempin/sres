@@ -3,7 +3,6 @@ use intbits::Bits;
 use super::operands::BitOperand;
 use super::operands::DecodedOperand;
 use super::operands::Operand;
-use super::operands::U16Operand;
 use super::operands::U8Operand;
 use super::AddressMode;
 use super::Spc700StatusFlags;
@@ -292,8 +291,8 @@ pub fn pop(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
 ////////////////////////////////////////////////////////////////////////////////
 // Call / Jump / Break instructions
 
-pub fn jmp(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
-    cpu.pc = AddressU16(operand.decode(cpu).load(cpu));
+pub fn jmp(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    cpu.pc = AddressU16(operand.decode(cpu).load_u16(cpu));
 }
 
 pub fn brk(cpu: &mut Spc700<impl Spc700Bus>) {
@@ -306,13 +305,13 @@ pub fn brk(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.pc = AddressU16(cpu.bus.cycle_read_u16(AddressU16(0xffde), Wrap::NoWrap));
 }
 
-pub fn call(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
+pub fn call(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     cpu.bus.cycle_io();
     cpu.stack_push_u16(cpu.pc.0);
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
-    cpu.pc = AddressU16(operand.load(cpu));
+    cpu.pc = AddressU16(operand.load_u16(cpu));
 }
 
 pub fn tcall(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
@@ -492,9 +491,9 @@ pub fn mov1(cpu: &mut Spc700<impl Spc700Bus>, left_op: BitOperand, right_op: Bit
 ////////////////////////////////////////////////////////////////////////////////
 // 16-bit (wide) instructions
 
-pub fn addw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
+pub fn addw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
-    let low = operand.load_low(cpu);
+    let low = operand.load(cpu);
     cpu.bus.cycle_io();
     let high = operand.load_high(cpu);
 
@@ -509,9 +508,9 @@ pub fn addw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
     cpu.y = result.high_byte();
 }
 
-pub fn subw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
+pub fn subw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
-    let low = operand.load_low(cpu);
+    let low = operand.load(cpu);
     cpu.bus.cycle_io();
     let high = operand.load_high(cpu);
 
@@ -528,56 +527,56 @@ pub fn subw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
     cpu.y = result.high_byte();
 }
 
-pub fn cmpw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U16Operand, right_op: U16Operand) {
-    let right = right_op.decode(cpu).load(cpu);
-    let left = left_op.decode(cpu).load(cpu);
+pub fn cmpw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+    let right = right_op.decode(cpu).load_u16(cpu);
+    let left = left_op.decode(cpu).load_u16(cpu);
     let result = left.wrapping_sub(right);
     cpu.update_negative_zero_flags(result);
     cpu.status.carry = left >= right;
 }
 
-pub fn incw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
+pub fn incw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     // decrement low and high byte separately to match hardware read/write cycle order
-    let (low, overflow) = operand.load_low(cpu).overflowing_add(1);
-    operand.store_low(cpu, low);
+    let (low, overflow) = operand.load(cpu).overflowing_add(1);
+    operand.store(cpu, low);
     let high = operand.load_high(cpu).wrapping_add(overflow as u8);
     operand.store_high(cpu, high);
     cpu.update_negative_zero_flags(u16::from_le_bytes([low, high]));
 }
 
-pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: U16Operand) {
+pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
     // decrement low and high byte separately to match hardware read/write cycle order
-    let (low, overflow) = operand.load_low(cpu).overflowing_sub(1);
-    operand.store_low(cpu, low);
+    let (low, overflow) = operand.load(cpu).overflowing_sub(1);
+    operand.store(cpu, low);
     let high = operand.load_high(cpu).wrapping_sub(overflow as u8);
     operand.store_high(cpu, high);
     cpu.update_negative_zero_flags(u16::from_le_bytes([low, high]));
 }
 
-pub fn movw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U16Operand, right_op: U16Operand) {
+pub fn movw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
     let right_op = right_op.decode(cpu);
     let left_op = left_op.decode(cpu);
 
-    if left_op.is_register() {
+    if left_op.is_alu_register() {
         // MOVW YA, dp
         // Loading the dp has an extra idle cycle between bytes.
         // Smell: Leaky abstraction
-        let low = right_op.load_low(cpu);
+        let low = right_op.load(cpu);
         cpu.bus.cycle_io();
         let high = right_op.load_high(cpu);
         let right = u16::from_le_bytes([low, high]);
         cpu.update_negative_zero_flags(right);
-        left_op.store(cpu, right);
+        left_op.store_u16(cpu, right);
     } else {
         // MOVW dp, YA
         // Storing into the dp address will do an extra read from the target
         // address.
         // Smell: Leaky abstraction
-        let right = right_op.load(cpu);
-        left_op.load_low(cpu);
-        left_op.store(cpu, right);
+        let right = right_op.load_u16(cpu);
+        left_op.load(cpu);
+        left_op.store_u16(cpu, right);
     };
 }
 
