@@ -1,10 +1,10 @@
 use intbits::Bits;
 
-use super::operands::BitOperand;
 use super::operands::DecodedOperand;
 use super::operands::Operand;
 use super::operands::U8Operand;
 use super::AddressMode;
+use super::DecodedU8Operand;
 use super::Spc700StatusFlags;
 use crate::bus::Address;
 use crate::bus::AddressU16;
@@ -396,14 +396,16 @@ pub fn bcc(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     branch(cpu, operand, !cpu.status.carry);
 }
 
-pub fn bbs(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: BitOperand) {
-    let value = right_op.decode(cpu).load(cpu);
+pub fn bbs(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+    let right_op = right_op.decode(cpu);
+    let value = right_op.load(cpu).bit(right_op.bit());
     cpu.bus.cycle_io();
     branch(cpu, left_op, value);
 }
 
-pub fn bbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: BitOperand) {
-    let value = right_op.decode(cpu).load(cpu);
+pub fn bbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+    let right_op = right_op.decode(cpu);
+    let value = right_op.load(cpu).bit(right_op.bit());
     cpu.bus.cycle_io();
     branch(cpu, left_op, !value);
 }
@@ -428,12 +430,16 @@ pub fn dbnz(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Op
 ////////////////////////////////////////////////////////////////////////////////
 // Single-bit instructions
 
-pub fn set1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
-    operand.decode(cpu).store(cpu, true);
+pub fn set1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    let operand = operand.decode(cpu);
+    let value = operand.load(cpu).with_bit(operand.bit(), true);
+    operand.store(cpu, value);
 }
 
-pub fn clr1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
-    operand.decode(cpu).store(cpu, false);
+pub fn clr1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    let operand = operand.decode(cpu);
+    let value = operand.load(cpu).with_bit(operand.bit(), false);
+    operand.store(cpu, value);
 }
 
 pub fn tset1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
@@ -452,38 +458,45 @@ pub fn tclr1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.update_negative_zero_flags(cpu.a.wrapping_sub(value));
 }
 
-pub fn not1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
+pub fn not1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     let operand = operand.decode(cpu);
-    if operand.is_carry() {
+    if matches!(operand, DecodedU8Operand::Carry) {
         cpu.bus.cycle_read_u8(cpu.pc);
         cpu.bus.cycle_io();
     }
-    // TODO: this stinks!
-    let bit = operand.peek(cpu);
-    operand.store(cpu, !bit);
+    let value = operand.load(cpu);
+    let result = value.with_bit(operand.bit(), !value.bit(operand.bit()));
+    operand.store(cpu, result);
 }
 
-pub fn or1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
-    let bit = operand.decode(cpu).load(cpu);
+pub fn or1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    let operand = operand.decode(cpu);
+    let bit = operand.load(cpu).bit(operand.bit());
     cpu.status.carry = cpu.status.carry || bit;
     cpu.bus.cycle_io()
 }
 
-pub fn and1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
-    let bit = operand.decode(cpu).load(cpu);
+pub fn and1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    let operand = operand.decode(cpu);
+    let bit = operand.load(cpu).bit(operand.bit());
     cpu.status.carry = cpu.status.carry && bit;
 }
 
-pub fn eor1(cpu: &mut Spc700<impl Spc700Bus>, operand: BitOperand) {
-    let bit = operand.decode(cpu).load(cpu);
+pub fn eor1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+    let operand = operand.decode(cpu);
+    let bit = operand.load(cpu).bit(operand.bit());
     cpu.bus.cycle_io();
     cpu.status.carry ^= bit;
 }
 
-pub fn mov1(cpu: &mut Spc700<impl Spc700Bus>, left_op: BitOperand, right_op: BitOperand) {
-    let bit = right_op.decode(cpu).load(cpu);
-    left_op.decode(cpu).store(cpu, bit);
-    if right_op.is_carry() {
+pub fn mov1(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+    let right_op = right_op.decode(cpu);
+    let bit = right_op.load(cpu).bit(right_op.bit());
+    let left_op = left_op.decode(cpu);
+    let value = left_op.load(cpu);
+    let result = value.with_bit(left_op.bit(), bit);
+    left_op.store(cpu, result);
+    if matches!(right_op, DecodedU8Operand::Carry) {
         cpu.bus.cycle_io();
     }
 }
