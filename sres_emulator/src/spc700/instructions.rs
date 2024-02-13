@@ -1,10 +1,8 @@
 use intbits::Bits;
 
-use super::operands::DecodedOperand;
 use super::operands::Operand;
-use super::operands::U8Operand;
 use super::AddressMode;
-use super::DecodedU8Operand;
+use super::DecodedOperand;
 use super::Spc700StatusFlags;
 use crate::bus::Address;
 use crate::bus::AddressU16;
@@ -18,7 +16,7 @@ use crate::util::uint::UInt;
 ////////////////////////////////////////////////////////////////////////////////
 // Arithmetic instructions
 
-pub fn adc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn adc(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     if right_op.is_address_mode(AddressMode::XIndirect)
         || right_op.is_address_mode(AddressMode::YIndirect)
     {
@@ -41,7 +39,7 @@ pub fn adc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
     left_op.store(cpu, value);
 }
 
-pub fn sbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn sbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     if right_op.is_address_mode(AddressMode::XIndirect)
         || right_op.is_address_mode(AddressMode::YIndirect)
     {
@@ -65,7 +63,7 @@ pub fn sbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
     left_op.store(cpu, result);
 }
 
-pub fn cmp(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn cmp(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     if right_op.is_address_mode(AddressMode::XIndirect)
         || right_op.is_address_mode(AddressMode::YIndirect)
     {
@@ -81,7 +79,7 @@ pub fn cmp(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
     cpu.status.carry = left >= right;
 }
 
-pub fn inc(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn inc(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu).wrapping_add(1);
     if operand.is_alu_register() {
@@ -91,7 +89,7 @@ pub fn inc(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     operand.store(cpu, value);
 }
 
-pub fn dec(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn dec(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu).wrapping_sub(1);
     if operand.is_alu_register() {
@@ -148,7 +146,7 @@ enum ShiftType {
 }
 
 #[inline]
-fn shift(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand, shift_type: ShiftType) {
+fn shift(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand, shift_type: ShiftType) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu);
     if operand.is_alu_register() {
@@ -168,26 +166,26 @@ fn shift(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand, shift_type: Shift
     operand.store(cpu, new_value);
 }
 
-pub fn rol(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn rol(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     shift(cpu, operand, ShiftType::Rol);
 }
 
-pub fn ror(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn ror(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     shift(cpu, operand, ShiftType::Ror);
 }
 
-pub fn asl(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn asl(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     shift(cpu, operand, ShiftType::Asl);
 }
 
-pub fn lsr(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn lsr(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     shift(cpu, operand, ShiftType::Lsr);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Binary logic instructions
 
-pub fn and(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn and(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     if right_op.is_address_mode(AddressMode::XIndirect)
         | right_op.is_address_mode(AddressMode::YIndirect)
     {
@@ -201,7 +199,7 @@ pub fn and(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Ope
     left_op.store(cpu, value);
 }
 
-pub fn or(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn or(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     if right_op.is_address_mode(AddressMode::XIndirect)
         | right_op.is_address_mode(AddressMode::YIndirect)
     {
@@ -215,7 +213,7 @@ pub fn or(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Oper
     left_op.store(cpu, value);
 }
 
-pub fn eor(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn eor(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     if right_op.is_address_mode(AddressMode::XIndirect)
         | right_op.is_address_mode(AddressMode::YIndirect)
     {
@@ -272,7 +270,7 @@ pub fn di(cpu: &mut Spc700<impl Spc700Bus>) {
 ////////////////////////////////////////////////////////////////////////////////
 // Stack instructions
 
-pub fn push(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn push(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     cpu.bus.cycle_read_u8(cpu.pc);
     let value = operand.load(cpu);
@@ -280,7 +278,7 @@ pub fn push(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.bus.cycle_io();
 }
 
-pub fn pop(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn pop(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     cpu.bus.cycle_read_u8(cpu.pc);
     cpu.bus.cycle_io();
@@ -291,7 +289,7 @@ pub fn pop(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
 ////////////////////////////////////////////////////////////////////////////////
 // Call / Jump / Break instructions
 
-pub fn jmp(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn jmp(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     cpu.pc = AddressU16(operand.decode(cpu).load_u16(cpu));
 }
 
@@ -305,7 +303,7 @@ pub fn brk(cpu: &mut Spc700<impl Spc700Bus>) {
     cpu.pc = AddressU16(cpu.bus.cycle_read_u16(AddressU16(0xffde), Wrap::NoWrap));
 }
 
-pub fn call(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn call(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     cpu.bus.cycle_io();
     cpu.stack_push_u16(cpu.pc.0);
@@ -314,7 +312,7 @@ pub fn call(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.pc = AddressU16(operand.load_u16(cpu));
 }
 
-pub fn tcall(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn tcall(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     cpu.bus.cycle_read_u8(cpu.pc);
     cpu.bus.cycle_io();
@@ -324,7 +322,7 @@ pub fn tcall(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.pc = AddressU16(cpu.bus.cycle_read_u16(addr, Wrap::NoWrap));
 }
 
-pub fn pcall(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn pcall(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     cpu.bus.cycle_io();
     cpu.stack_push_u16(cpu.pc.0);
@@ -351,7 +349,7 @@ pub fn reti(cpu: &mut Spc700<impl Spc700Bus>) {
 // Branch instructions
 
 #[inline]
-fn branch(cpu: &mut Spc700<impl Spc700Bus>, offset_op: U8Operand, condition: bool) {
+fn branch(cpu: &mut Spc700<impl Spc700Bus>, offset_op: Operand, condition: bool) {
     let offset = offset_op.decode(cpu).load(cpu) as i8;
     if condition {
         cpu.bus.cycle_io();
@@ -360,63 +358,63 @@ fn branch(cpu: &mut Spc700<impl Spc700Bus>, offset_op: U8Operand, condition: boo
     }
 }
 
-pub fn bra(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn bra(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, true);
 }
 
-pub fn beq(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn beq(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, cpu.status.zero);
 }
 
-pub fn bne(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn bne(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, !cpu.status.zero);
 }
 
-pub fn bpl(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn bpl(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, !cpu.status.negative);
 }
 
-pub fn bmi(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn bmi(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, cpu.status.negative);
 }
 
-pub fn bvc(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn bvc(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, !cpu.status.overflow);
 }
 
-pub fn bvs(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn bvs(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, cpu.status.overflow);
 }
 
-pub fn bcs(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn bcs(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, cpu.status.carry);
 }
 
-pub fn bcc(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn bcc(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     branch(cpu, operand, !cpu.status.carry);
 }
 
-pub fn bbs(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn bbs(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     let right_op = right_op.decode(cpu);
     let value = right_op.load(cpu).bit(right_op.bit());
     cpu.bus.cycle_io();
     branch(cpu, left_op, value);
 }
 
-pub fn bbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn bbc(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     let right_op = right_op.decode(cpu);
     let value = right_op.load(cpu).bit(right_op.bit());
     cpu.bus.cycle_io();
     branch(cpu, left_op, !value);
 }
 
-pub fn cbne(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn cbne(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     let value = right_op.decode(cpu).load(cpu);
     cpu.bus.cycle_io();
     branch(cpu, left_op, value != cpu.a);
 }
 
-pub fn dbnz(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn dbnz(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     let left_op = left_op.decode(cpu);
     if left_op.is_alu_register() {
         cpu.bus.cycle_read_u8(cpu.pc);
@@ -430,19 +428,19 @@ pub fn dbnz(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Op
 ////////////////////////////////////////////////////////////////////////////////
 // Single-bit instructions
 
-pub fn set1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn set1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu).with_bit(operand.bit(), true);
     operand.store(cpu, value);
 }
 
-pub fn clr1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn clr1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu).with_bit(operand.bit(), false);
     operand.store(cpu, value);
 }
 
-pub fn tset1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn tset1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu);
     operand.load(cpu); // CPU will re-read the value for another cycle
@@ -450,7 +448,7 @@ pub fn tset1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.update_negative_zero_flags(cpu.a.wrapping_sub(value));
 }
 
-pub fn tclr1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn tclr1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let value = operand.load(cpu);
     operand.load(cpu); // CPU will re-read the value for another cycle
@@ -458,9 +456,9 @@ pub fn tclr1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.update_negative_zero_flags(cpu.a.wrapping_sub(value));
 }
 
-pub fn not1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn not1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
-    if matches!(operand, DecodedU8Operand::Carry) {
+    if matches!(operand, DecodedOperand::Carry) {
         cpu.bus.cycle_read_u8(cpu.pc);
         cpu.bus.cycle_io();
     }
@@ -469,34 +467,34 @@ pub fn not1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     operand.store(cpu, result);
 }
 
-pub fn or1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn or1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let bit = operand.load(cpu).bit(operand.bit());
     cpu.status.carry = cpu.status.carry || bit;
     cpu.bus.cycle_io()
 }
 
-pub fn and1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn and1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let bit = operand.load(cpu).bit(operand.bit());
     cpu.status.carry = cpu.status.carry && bit;
 }
 
-pub fn eor1(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn eor1(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let bit = operand.load(cpu).bit(operand.bit());
     cpu.bus.cycle_io();
     cpu.status.carry ^= bit;
 }
 
-pub fn mov1(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn mov1(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     let right_op = right_op.decode(cpu);
     let bit = right_op.load(cpu).bit(right_op.bit());
     let left_op = left_op.decode(cpu);
     let value = left_op.load(cpu);
     let result = value.with_bit(left_op.bit(), bit);
     left_op.store(cpu, result);
-    if matches!(right_op, DecodedU8Operand::Carry) {
+    if matches!(right_op, DecodedOperand::Carry) {
         cpu.bus.cycle_io();
     }
 }
@@ -504,7 +502,7 @@ pub fn mov1(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Op
 ////////////////////////////////////////////////////////////////////////////////
 // 16-bit (wide) instructions
 
-pub fn addw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn addw(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let low = operand.load(cpu);
     cpu.bus.cycle_io();
@@ -521,7 +519,7 @@ pub fn addw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.y = result.high_byte();
 }
 
-pub fn subw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn subw(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     let low = operand.load(cpu);
     cpu.bus.cycle_io();
@@ -540,7 +538,7 @@ pub fn subw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.y = result.high_byte();
 }
 
-pub fn cmpw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn cmpw(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     let right = right_op.decode(cpu).load_u16(cpu);
     let left = left_op.decode(cpu).load_u16(cpu);
     let result = left.wrapping_sub(right);
@@ -548,7 +546,7 @@ pub fn cmpw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Op
     cpu.status.carry = left >= right;
 }
 
-pub fn incw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn incw(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     // decrement low and high byte separately to match hardware read/write cycle order
     let (low, overflow) = operand.load(cpu).overflowing_add(1);
@@ -558,7 +556,7 @@ pub fn incw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.update_negative_zero_flags(u16::from_le_bytes([low, high]));
 }
 
-pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
+pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: Operand) {
     let operand = operand.decode(cpu);
     // decrement low and high byte separately to match hardware read/write cycle order
     let (low, overflow) = operand.load(cpu).overflowing_sub(1);
@@ -568,7 +566,7 @@ pub fn decw(cpu: &mut Spc700<impl Spc700Bus>, operand: U8Operand) {
     cpu.update_negative_zero_flags(u16::from_le_bytes([low, high]));
 }
 
-pub fn movw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn movw(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     let right_op = right_op.decode(cpu);
     let left_op = left_op.decode(cpu);
 
@@ -596,7 +594,7 @@ pub fn movw(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Op
 ////////////////////////////////////////////////////////////////////////////////
 // Misc instructions
 
-pub fn mov(cpu: &mut Spc700<impl Spc700Bus>, left_op: U8Operand, right_op: U8Operand) {
+pub fn mov(cpu: &mut Spc700<impl Spc700Bus>, left_op: Operand, right_op: Operand) {
     let right = if right_op.is_address_mode(AddressMode::XIndirect) {
         // TODO: this stinks!
         let right_op = right_op.decode(cpu);

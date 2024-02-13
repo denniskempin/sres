@@ -1,6 +1,4 @@
 use crate::bus::AddressU16;
-use crate::spc700::operands::DecodedOperand;
-use crate::spc700::operands::Operand;
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
 
@@ -97,8 +95,8 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
 
     use crate::spc700::instructions::*;
     use crate::spc700::operands::AddressMode::*;
+    use crate::spc700::operands::Operand::*;
     use crate::spc700::operands::Register::*;
-    use crate::spc700::operands::U8Operand::*;
     opcodes[0x00] = instruction!(nop);
     opcodes[0x01] = instruction!(tcall, Const(0));
     opcodes[0x02] = instruction!(set1, DpBit(0));
