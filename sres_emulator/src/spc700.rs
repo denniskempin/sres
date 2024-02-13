@@ -14,7 +14,7 @@ use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
 use crate::spc700::opcode_table::InstructionDef;
 pub use crate::spc700::operands::AddressMode;
-pub use crate::spc700::operands::DecodedU8Operand;
+pub use crate::spc700::operands::DecodedOperand;
 pub use crate::spc700::status::Spc700StatusFlags;
 use crate::util::uint::UInt;
 
