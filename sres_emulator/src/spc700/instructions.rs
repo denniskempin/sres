@@ -15,9 +15,15 @@ use crate::util::uint::UInt;
 
 impl<BusT: Spc700Bus> Spc700<BusT> {
     ////////////////////////////////////////////////////////////////////////////////
-    // Arithmetic instructions
+    // Arithmetic/Logic instructions
 
-    pub fn adc(&mut self, left_op: Operand, right_op: Operand) {
+    #[inline]
+    fn alu_operation(
+        &mut self,
+        left_op: Operand,
+        right_op: Operand,
+        f: impl FnOnce(&mut Self, u8, u8) -> u8,
+    ) {
         if right_op.is_address_mode(AddressMode::XIndirect)
             || right_op.is_address_mode(AddressMode::YIndirect)
         {
@@ -26,42 +32,53 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         let right = right_op.decode(self).load(self);
         let left_op = left_op.decode(self);
         let left = left_op.load(self);
+        let result = f(self, left, right);
+        self.update_negative_zero_flags(result);
+        left_op.store(self, result);
+    }
 
-        let (mut value, mut carry) = left.overflowing_add(right);
-        if self.status.carry {
-            let (value2, carry2) = value.overflowing_add(1);
-            value = value2;
-            carry = carry || carry2;
-        }
-        self.status.half_carry = ((right & 0x0F) + (left & 0x0F) + self.status.carry as u8) > 0x0F;
-        self.status.carry = carry;
-        self.status.overflow = ((right ^ value) & (left ^ value)).msb();
-        self.update_negative_zero_flags(value);
-        left_op.store(self, value);
+    pub fn adc(&mut self, left_op: Operand, right_op: Operand) {
+        self.alu_operation(left_op, right_op, |cpu, left, right| {
+            let (mut result, mut carry) = left.overflowing_add(right);
+            if cpu.status.carry {
+                let (value2, carry2) = result.overflowing_add(1);
+                result = value2;
+                carry = carry || carry2;
+            }
+            cpu.status.half_carry =
+                ((right & 0x0F) + (left & 0x0F) + cpu.status.carry as u8) > 0x0F;
+            cpu.status.carry = carry;
+            cpu.status.overflow = ((right ^ result) & (left ^ result)).msb();
+            result
+        });
     }
 
     pub fn sbc(&mut self, left_op: Operand, right_op: Operand) {
-        if right_op.is_address_mode(AddressMode::XIndirect)
-            || right_op.is_address_mode(AddressMode::YIndirect)
-        {
-            self.bus.cycle_read_u8(self.pc);
-        }
-        let right = right_op.decode(self).load(self);
-        let left_op = left_op.decode(self);
-        let left = left_op.load(self);
+        self.alu_operation(left_op, right_op, |cpu, left, right| {
+            let (mut result, mut carry) = left.overflowing_sub(right);
+            if !cpu.status.carry {
+                let (value2, carry2) = result.overflowing_sub(1);
+                result = value2;
+                carry = carry || carry2;
+            }
+            cpu.status.half_carry =
+                (left & 0x0F).wrapping_sub((right & 0x0F) + !cpu.status.carry as u8) & 0x10 != 0x10;
+            cpu.status.carry = !carry;
+            cpu.status.overflow = ((left ^ right) & (left ^ result)).msb();
+            result
+        });
+    }
 
-        let (mut result, mut carry) = left.overflowing_sub(right);
-        if !self.status.carry {
-            let (value2, carry2) = result.overflowing_sub(1);
-            result = value2;
-            carry = carry || carry2;
-        }
-        self.status.half_carry =
-            (left & 0x0F).wrapping_sub((right & 0x0F) + !self.status.carry as u8) & 0x10 != 0x10;
-        self.status.carry = !carry;
-        self.status.overflow = ((left ^ right) & (left ^ result)).msb();
-        self.update_negative_zero_flags(result);
-        left_op.store(self, result);
+    pub fn and(&mut self, left_op: Operand, right_op: Operand) {
+        self.alu_operation(left_op, right_op, |_, left, right| left & right);
+    }
+
+    pub fn or(&mut self, left_op: Operand, right_op: Operand) {
+        self.alu_operation(left_op, right_op, |_, left, right| left | right);
+    }
+
+    pub fn eor(&mut self, left_op: Operand, right_op: Operand) {
+        self.alu_operation(left_op, right_op, |_, left, right| left ^ right);
     }
 
     pub fn cmp(&mut self, left_op: Operand, right_op: Operand) {
@@ -140,85 +157,36 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     // Shift instructions
 
     #[inline]
-    fn shift(&mut self, operand: Operand, shift_type: ShiftType) {
+    fn shift_operation(&mut self, operand: Operand, f: impl FnOnce(u8, bool) -> (u8, bool)) {
         let operand = operand.decode(self);
         let value = operand.load(self);
         if operand.is_alu_register() {
             self.bus.cycle_read_u8(self.pc);
         }
-        let new_value = match shift_type {
-            ShiftType::Rol => (value << 1).with_bit(0, self.status.carry),
-            ShiftType::Ror => (value >> 1).with_bit(7, self.status.carry),
-            ShiftType::Asl => value << 1,
-            ShiftType::Lsr => value >> 1,
-        };
-        self.status.carry = match shift_type {
-            ShiftType::Rol | ShiftType::Asl => value.bit(7),
-            ShiftType::Ror | ShiftType::Lsr => value.bit(0),
-        };
-        self.update_negative_zero_flags(new_value);
-        operand.store(self, new_value);
+        let (result, new_carry) = f(value, self.status.carry);
+        self.status.carry = new_carry;
+        self.update_negative_zero_flags(result);
+        operand.store(self, result);
     }
 
     pub fn rol(&mut self, operand: Operand) {
-        self.shift(operand, ShiftType::Rol);
+        self.shift_operation(operand, |value, carry| {
+            ((value << 1).with_bit(0, carry), value.bit(7))
+        });
     }
 
     pub fn ror(&mut self, operand: Operand) {
-        self.shift(operand, ShiftType::Ror);
+        self.shift_operation(operand, |value, carry| {
+            ((value >> 1).with_bit(7, carry), value.bit(0))
+        });
     }
 
     pub fn asl(&mut self, operand: Operand) {
-        self.shift(operand, ShiftType::Asl);
+        self.shift_operation(operand, |value, _| (value << 1, value.bit(7)));
     }
 
     pub fn lsr(&mut self, operand: Operand) {
-        self.shift(operand, ShiftType::Lsr);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
-    // Binary logic instructions
-
-    pub fn and(&mut self, left_op: Operand, right_op: Operand) {
-        if right_op.is_address_mode(AddressMode::XIndirect)
-            | right_op.is_address_mode(AddressMode::YIndirect)
-        {
-            self.bus.cycle_read_u8(self.pc);
-        }
-        let right = right_op.decode(self).load(self);
-        let left_op = left_op.decode(self);
-        let left = left_op.load(self);
-        let value = left & right;
-        self.update_negative_zero_flags(value);
-        left_op.store(self, value);
-    }
-
-    pub fn or(&mut self, left_op: Operand, right_op: Operand) {
-        if right_op.is_address_mode(AddressMode::XIndirect)
-            | right_op.is_address_mode(AddressMode::YIndirect)
-        {
-            self.bus.cycle_read_u8(self.pc);
-        }
-        let right = right_op.decode(self).load(self);
-        let left_op = left_op.decode(self);
-        let left = left_op.load(self);
-        let value = left | right;
-        self.update_negative_zero_flags(value);
-        left_op.store(self, value);
-    }
-
-    pub fn eor(&mut self, left_op: Operand, right_op: Operand) {
-        if right_op.is_address_mode(AddressMode::XIndirect)
-            | right_op.is_address_mode(AddressMode::YIndirect)
-        {
-            self.bus.cycle_read_u8(self.pc);
-        }
-        let right = right_op.decode(self).load(self);
-        let left_op = left_op.decode(self);
-        let left = left_op.load(self);
-        let value = left ^ right;
-        self.update_negative_zero_flags(value);
-        left_op.store(self, value);
+        self.shift_operation(operand, |value, _| (value >> 1, value.bit(0)));
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -683,11 +651,4 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.bus.cycle_read_u8(self.pc);
         self.bus.cycle_io();
     }
-}
-
-enum ShiftType {
-    Rol,
-    Ror,
-    Asl,
-    Lsr,
 }
