@@ -2,20 +2,13 @@ use crate::bus::AddressU16;
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
 
-/// Metadata about a decoded instruction. Used to generate disassembly.
-pub struct InstructionMeta {
-    pub address: AddressU16,
-    pub operation: &'static str,
-    pub operand_str: String,
-}
-
 /// An entry in the opcode table
 pub struct InstructionDef<BusT: Spc700Bus> {
     /// Execute the instruction on the provided CPU.
     pub execute: fn(&mut Spc700<BusT>),
 
     /// Return metadata about this instruction. Can be used on an immutable CPU.
-    pub meta: fn(&Spc700<BusT>, AddressU16) -> (InstructionMeta, AddressU16),
+    pub disassembly: fn(&Spc700<BusT>, AddressU16) -> (String, AddressU16),
 }
 
 pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
@@ -26,16 +19,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                 execute: |cpu| {
                     $method(cpu);
                 },
-                meta: |_, operand_addr| {
-                    (
-                        InstructionMeta {
-                            address: operand_addr,
-                            operation: stringify!($method),
-                            operand_str: "".to_string(),
-                        },
-                        operand_addr,
-                    )
-                },
+                disassembly: |_, operand_addr| (stringify!($method).to_string(), operand_addr),
             }
         };
         // Single operand instruction
@@ -44,16 +28,9 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                 execute: |cpu| {
                     $method(cpu, $operand_def);
                 },
-                meta: |cpu, operand_addr| {
+                disassembly: |cpu, operand_addr| {
                     let (operand, next_addr) = $operand_def.disassembly(cpu, operand_addr);
-                    (
-                        InstructionMeta {
-                            address: operand_addr,
-                            operation: stringify!($method),
-                            operand_str: operand,
-                        },
-                        next_addr,
-                    )
+                    (format!("{} {}", stringify!($method), operand), next_addr)
                 },
             }
         };
@@ -63,15 +40,11 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                 execute: |cpu| {
                     $method(cpu, $left_def, $right_def);
                 },
-                meta: |cpu, operand_addr| {
+                disassembly: |cpu, operand_addr| {
                     let (right, next_addr) = $right_def.disassembly(cpu, operand_addr);
                     let (left, next_addr) = $left_def.disassembly(cpu, next_addr);
                     (
-                        InstructionMeta {
-                            address: operand_addr,
-                            operation: stringify!($method),
-                            operand_str: left + ", " + &right,
-                        },
+                        format!("{} {}, {}", stringify!($method), left, right),
                         next_addr,
                     )
                 },
@@ -81,16 +54,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
 
     let mut opcodes = [(); 256].map(|_| InstructionDef::<BusT> {
         execute: |_| {},
-        meta: |_, instruction_addr| {
-            (
-                InstructionMeta {
-                    address: instruction_addr,
-                    operation: "ill",
-                    operand_str: "".to_string(),
-                },
-                instruction_addr,
-            )
-        },
+        disassembly: |_, instruction_addr| ("ill".to_string(), instruction_addr),
     });
 
     use crate::spc700::instructions::*;

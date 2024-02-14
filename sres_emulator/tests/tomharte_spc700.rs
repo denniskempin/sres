@@ -173,9 +173,6 @@ fn run_tomharte_test(test_name: &str) {
             "Cycles: {}",
             Comparison::new(&actual_state.bus.cycles, &test_case.cycles())
         );
-        println!("Actual: {:?}", actual_state.bus.cycles);
-        println!("Expected: {:?}", test_case.cycles());
-        //panic!("test failed");
     }
 
     if !failed_opcodes.is_empty() {

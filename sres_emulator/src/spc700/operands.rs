@@ -12,6 +12,258 @@ use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
 use crate::util::uint::U16Ext;
 
+/// Each instruction is defined by it's opcode and a variable number of bytes to descibe the
+/// operands of the instruction.
+///
+/// The operands are defined for each opcode in `opcode_table.rs`, and then passed to the
+/// instructions in `instructions.rs`.
+///
+/// To access operands, they first need to be decoded (i.e. consume and interpret bytes of program
+/// memory) into a [DecodedOperand], then can be loaded or stored. This are separate steps since
+/// the order in which memory is accessed varies, and instructions may want to decode once, but
+/// load/store multiple times.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Operand {
+    Immediate,
+    Register(Register),
+    Const(u8),
+    InMemory(AddressMode),
+    JumpAddress(AddressMode),
+    Carry,
+    AbsBit,
+    AbsBitInv,
+    DpBit(usize),
+}
+
+impl Operand {
+    /// Consumes program bytes to decode an operand from the bus.
+    #[inline]
+    pub fn decode(&self, cpu: &mut Spc700<impl Spc700Bus>) -> DecodedOperand {
+        match self {
+            Self::Immediate => DecodedOperand::Immediate(cpu.fetch_program_u8()),
+            Self::Register(register) => DecodedOperand::Register(*register),
+            Self::Const(value) => DecodedOperand::Const(*value),
+            Self::InMemory(mode) => DecodedOperand::InMemory(*mode, mode.decode(cpu)),
+            Self::JumpAddress(mode) => DecodedOperand::JumpAddress(*mode, mode.decode(cpu)),
+            Self::Carry => DecodedOperand::Carry,
+            Self::AbsBit => {
+                let operand_data = cpu.fetch_program_u16();
+                DecodedOperand::BitInMemory(
+                    AddressU16(operand_data.bits(0..13)),
+                    operand_data.bits(13..16) as usize,
+                )
+            }
+            Self::AbsBitInv => {
+                let operand_data = cpu.fetch_program_u16();
+                DecodedOperand::BitInMemoryInv(
+                    AddressU16(operand_data.bits(0..13)),
+                    operand_data.bits(13..16) as usize,
+                )
+            }
+            Self::DpBit(bit) => {
+                let dp_addr = cpu.fetch_program_u8();
+                DecodedOperand::BitInMemory(cpu.direct_page_addr(dp_addr), *bit)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn disassembly(
+        &self,
+        cpu: &Spc700<impl Spc700Bus>,
+        addr: AddressU16,
+    ) -> (String, AddressU16) {
+        let operand_size: u16 = match self {
+            Operand::Immediate => 1,
+            Operand::Register(_) => 0,
+            Operand::Const(_) => 0,
+            Operand::Carry => 0,
+            Operand::InMemory(mode) => mode.operand_size(),
+            Operand::JumpAddress(mode) => mode.operand_size(),
+            Operand::AbsBit => 2,
+            Operand::AbsBitInv => 2,
+            Operand::DpBit(_) => 1,
+        };
+        let value: u16 = match operand_size {
+            0 => 0,
+            1 => cpu.bus.peek_u8(addr).unwrap_or_default() as u16,
+            2 => cpu.bus.peek_u16(addr, Wrap::NoWrap).unwrap_or_default(),
+            _ => unreachable!(),
+        };
+        let disassembly = match self {
+            Self::Immediate => format!("#${:02X}", value),
+            Self::Register(register) => register.to_string(),
+            Self::Const(value) => format!("{:02X}", value),
+            Self::InMemory(mode) => mode.disassembly(cpu, addr),
+            Self::JumpAddress(mode) => mode.disassembly(cpu, addr),
+            Self::Carry => "C".to_string(),
+            Self::AbsBit => format!("${:04X}.{}", value.bits(0..13), value.bits(13..16)),
+            Self::AbsBitInv => format!("/${:04X}.{}", value.bits(0..13), value.bits(13..16)),
+            Self::DpBit(bit) => format!("${:02X}.{}", value, bit),
+        };
+        (disassembly, addr.add(operand_size, Wrap::NoWrap))
+    }
+
+    #[inline]
+    pub fn is_address_mode(&self, address_mode: AddressMode) -> bool {
+        if let Self::InMemory(mode) = self {
+            *mode == address_mode
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    pub fn is_in_memory(&self) -> bool {
+        matches!(self, Self::InMemory(_))
+    }
+
+    #[inline]
+    pub fn is_alu_register(&self) -> bool {
+        matches!(
+            self,
+            Self::Register(Register::A) | Self::Register(Register::X) | Self::Register(Register::Y)
+        )
+    }
+}
+
+#[derive(Copy, Clone)]
+pub enum DecodedOperand {
+    Immediate(u8),
+    Register(Register),
+    Const(u8),
+    InMemory(AddressMode, AddressU16),
+    JumpAddress(AddressMode, AddressU16),
+    Carry,
+    BitInMemory(AddressU16, usize),
+    BitInMemoryInv(AddressU16, usize),
+}
+
+impl DecodedOperand {
+    #[inline]
+    pub fn load(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
+        match self {
+            Self::Immediate(value) => *value,
+            Self::Register(Register::A) => cpu.a,
+            Self::Register(Register::X) => cpu.x,
+            Self::Register(Register::Y) => cpu.y,
+            Self::Register(Register::YA) => cpu.a,
+            Self::Register(Register::Sp) => {
+                cpu.bus.cycle_read_u8(cpu.pc);
+                cpu.sp
+            }
+            Self::Register(Register::Psw) => cpu.status.into(),
+            Self::Const(value) => *value,
+            Self::InMemory(AddressMode::XIndirectAutoInc, addr) => {
+                cpu.bus.cycle_read_u8(cpu.pc);
+                cpu.x = cpu.x.wrapping_add(1);
+                let value = cpu.bus.cycle_read_u8(*addr);
+                cpu.bus.cycle_io();
+                value
+            }
+            Self::InMemory(_, addr) => cpu.bus.cycle_read_u8(*addr),
+            Self::JumpAddress(_, addr) => addr.0.low_byte(),
+            Self::Carry => cpu.status.into(),
+            Self::BitInMemory(addr, _bit) => cpu.bus.cycle_read_u8(*addr),
+            Self::BitInMemoryInv(addr, _bit) => !cpu.bus.cycle_read_u8(*addr),
+        }
+    }
+
+    #[inline]
+    pub fn store(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u8) {
+        match self {
+            Self::Immediate(_) => panic!("storing immediate operand"),
+            Self::Register(Register::A) => cpu.a = value,
+            Self::Register(Register::X) => cpu.x = value,
+            Self::Register(Register::Y) => cpu.y = value,
+            Self::Register(Register::YA) => cpu.a = value,
+            Self::Register(Register::Sp) => cpu.sp = value,
+            Self::Register(Register::Psw) => cpu.status = value.into(),
+            Self::Const(_) => panic!("storing const operand"),
+            Self::InMemory(AddressMode::XIndirectAutoInc, addr) => {
+                cpu.x = cpu.x.wrapping_add(1);
+                cpu.bus.cycle_write_u8(*addr, value)
+            }
+            Self::InMemory(_, addr) => cpu.bus.cycle_write_u8(*addr, value),
+            Self::JumpAddress(_, _) => panic!("read only"),
+            Self::Carry => cpu.status = value.into(),
+            Self::BitInMemory(addr, _bit) => {
+                cpu.bus.cycle_write_u8(*addr, value);
+            }
+            Self::BitInMemoryInv(addr, _bit) => {
+                cpu.bus.cycle_write_u8(*addr, value);
+            }
+        }
+    }
+
+    #[inline]
+    pub fn is_address_mode(&self, address_mode: AddressMode) -> bool {
+        if let Self::InMemory(mode, _) = self {
+            *mode == address_mode
+        } else {
+            false
+        }
+    }
+
+    #[inline]
+    pub fn is_alu_register(&self) -> bool {
+        matches!(
+            self,
+            Self::Register(Register::A)
+                | Self::Register(Register::X)
+                | Self::Register(Register::Y)
+                | Self::Register(Register::YA)
+        )
+    }
+
+    #[inline]
+    pub fn is_in_memory(&self) -> bool {
+        matches!(self, Self::InMemory(_, _))
+    }
+
+    #[inline]
+    pub fn load_u16(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u16 {
+        u16::from_le_bytes([self.load(cpu), self.load_high(cpu)])
+    }
+
+    #[inline]
+    pub fn store_u16(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u16) {
+        self.store(cpu, value.low_byte());
+        self.store_high(cpu, value.high_byte());
+    }
+
+    #[inline]
+    pub fn load_high(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
+        match self {
+            Self::JumpAddress(_, addr) => addr.0.high_byte(),
+            Self::InMemory(mode, addr) => cpu.bus.cycle_read_u8(addr.add(1_u16, mode.wrap_mode())),
+            Self::Register(Register::YA) => cpu.y,
+            _ => panic!("Not a u16 operand"),
+        }
+    }
+
+    #[inline]
+    pub fn store_high(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u8) {
+        match self {
+            Self::InMemory(mode, addr) => cpu
+                .bus
+                .cycle_write_u8(addr.add(1_u16, mode.wrap_mode()), value),
+            Self::Register(Register::YA) => cpu.y = value,
+            _ => panic!("Not a writeable u16 operand"),
+        }
+    }
+
+    #[inline]
+    pub fn bit(&self) -> usize {
+        match self {
+            Self::Carry => 0,
+            Self::BitInMemory(_, bit) => *bit,
+            Self::BitInMemoryInv(_, bit) => *bit,
+            _ => panic!("Not a bit operand"),
+        }
+    }
+}
+
 /// The address mode describes where in memory an operand is located
 #[derive(Clone, Copy, PartialEq)]
 pub enum AddressMode {
@@ -115,9 +367,9 @@ impl AddressMode {
             Self::DpYIdx => format!("${:02X}+Y", value),
             Self::DpXIdxIndirect => format!("[${:02X}+X]", value),
             Self::DpIndirectYIdx => format!("[${:02X}]+Y", value),
-            Self::XIndirect => format!("(X)"),
-            Self::YIndirect => format!("(Y)"),
-            Self::XIndirectAutoInc => format!("(X++)"),
+            Self::XIndirect => "(X)".to_string(),
+            Self::YIndirect => "(Y)".to_string(),
+            Self::XIndirectAutoInc => "(X++)".to_string(),
             Self::Abs => format!("${:04X}", value),
             Self::AbsXIdx => format!("${:04X}+X", value),
             Self::AbsYIdx => format!("${:04X}+Y", value),
@@ -181,274 +433,6 @@ impl Display for Register {
             Register::YA => write!(f, "YA"),
             Register::Psw => write!(f, "Psw"),
             Register::Sp => write!(f, "Sp"),
-        }
-    }
-}
-
-/// Each instruction is defined by it's opcode and a variable number of bytes to descibe the
-/// operands of the instruction.
-///
-/// The operands are defined for each opcode in `opcode_table.rs`, and then passed to the
-/// instructions in `instructions.rs`.
-///
-/// To access operands, they first need to be decoded (i.e. consume and interpret bytes of program
-/// memory) into a [DecodedOperand], then can be loaded or stored. This are separate steps since
-/// the order in which memory is accessed varies, and instructions may want to decode once, but
-/// load/store multiple times.
-#[derive(Clone, Copy, PartialEq)]
-pub enum Operand {
-    Immediate,
-    Register(Register),
-    Const(u8),
-    InMemory(AddressMode),
-    JumpAddress(AddressMode),
-    Carry,
-    AbsBit,
-    AbsBitInv,
-    DpBit(usize),
-}
-
-impl Operand {
-    /// Consumes program bytes to decode an operand from the bus.
-    #[inline]
-    pub fn decode(&self, cpu: &mut Spc700<impl Spc700Bus>) -> DecodedOperand {
-        match self {
-            Self::Immediate => DecodedOperand::Immediate(cpu.fetch_program_u8()),
-            Self::Register(register) => DecodedOperand::Register(*register),
-            Self::Const(value) => DecodedOperand::Const(*value),
-            Self::InMemory(mode) => DecodedOperand::InMemory(*mode, mode.decode(cpu)),
-            Self::JumpAddress(mode) => DecodedOperand::JumpAddress(*mode, mode.decode(cpu)),
-            Self::Carry => DecodedOperand::Carry,
-            Self::AbsBit => {
-                let operand_data = cpu.fetch_program_u16();
-                DecodedOperand::BitInMemory(
-                    AddressU16(operand_data.bits(0..13)),
-                    operand_data.bits(13..16) as usize,
-                )
-            }
-            Self::AbsBitInv => {
-                let operand_data = cpu.fetch_program_u16();
-                DecodedOperand::BitInMemoryInv(
-                    AddressU16(operand_data.bits(0..13)),
-                    operand_data.bits(13..16) as usize,
-                )
-            }
-            Self::DpBit(bit) => {
-                let dp_addr = cpu.fetch_program_u8();
-                DecodedOperand::BitInMemory(cpu.direct_page_addr(dp_addr), *bit)
-            }
-        }
-    }
-
-    #[inline]
-    pub fn disassembly(
-        &self,
-        cpu: &Spc700<impl Spc700Bus>,
-        addr: AddressU16,
-    ) -> (String, AddressU16) {
-        let operand_size: u16 = match self {
-            Operand::Immediate => 0,
-            Operand::Register(_) => 0,
-            Operand::Const(_) => 0,
-            Operand::Carry => 0,
-            Operand::InMemory(mode) => mode.operand_size(),
-            Operand::JumpAddress(mode) => mode.operand_size(),
-            Operand::AbsBit => 2,
-            Operand::AbsBitInv => 2,
-            Operand::DpBit(_) => 1,
-        };
-        let value: u16 = match operand_size {
-            0 => 0,
-            1 => cpu.bus.peek_u8(addr).unwrap_or_default() as u16,
-            2 => cpu.bus.peek_u16(addr, Wrap::NoWrap).unwrap_or_default(),
-            _ => unreachable!(),
-        };
-        let disassembly = match self {
-            Self::Immediate => format!("#${:02X}", value),
-            Self::Register(register) => register.to_string(),
-            Self::Const(value) => format!("{:02X}", value),
-            Self::InMemory(mode) => mode.disassembly(cpu, addr),
-            Self::JumpAddress(mode) => mode.disassembly(cpu, addr),
-            Self::Carry => "C".to_string(),
-            Self::AbsBit => format!("${:04X}.{}", value.bits(0..13), value.bits(13..16)),
-            Self::AbsBitInv => format!("/${:04X}.{}", value.bits(0..13), value.bits(13..16)),
-            Self::DpBit(bit) => format!("${:02X}.{}", value, bit),
-        };
-        (disassembly, addr.add(operand_size, Wrap::NoWrap))
-    }
-
-    #[inline]
-    pub fn is_address_mode(&self, address_mode: AddressMode) -> bool {
-        if let Self::InMemory(mode) = self {
-            *mode == address_mode
-        } else {
-            false
-        }
-    }
-
-    #[inline]
-    pub fn is_in_memory(&self) -> bool {
-        matches!(self, Self::InMemory(_))
-    }
-
-    #[inline]
-    pub fn is_alu_register(&self) -> bool {
-        matches!(
-            self,
-            Self::Register(Register::A) | Self::Register(Register::X) | Self::Register(Register::Y)
-        )
-    }
-}
-
-#[derive(Copy, Clone)]
-pub enum DecodedOperand {
-    Immediate(u8),
-    Register(Register),
-    Const(u8),
-    InMemory(AddressMode, AddressU16),
-    JumpAddress(AddressMode, AddressU16),
-    Carry,
-    BitInMemory(AddressU16, usize),
-    BitInMemoryInv(AddressU16, usize),
-}
-
-impl DecodedOperand {
-    #[inline]
-    pub fn load(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
-        match self {
-            Self::Immediate(value) => *value,
-            Self::Register(Register::A) => cpu.a,
-            Self::Register(Register::X) => cpu.x,
-            Self::Register(Register::Y) => cpu.y,
-            Self::Register(Register::YA) => cpu.a,
-            Self::Register(Register::Sp) => {
-                cpu.bus.cycle_read_u8(cpu.pc);
-                cpu.sp
-            }
-            Self::Register(Register::Psw) => cpu.status.into(),
-            Self::Const(value) => *value,
-            Self::InMemory(AddressMode::XIndirectAutoInc, addr) => {
-                cpu.bus.cycle_read_u8(cpu.pc);
-                cpu.x = cpu.x.wrapping_add(1);
-                let value = cpu.bus.cycle_read_u8(*addr);
-                cpu.bus.cycle_io();
-                value
-            }
-            Self::InMemory(_, addr) => cpu.bus.cycle_read_u8(*addr),
-            Self::JumpAddress(_, addr) => addr.0.low_byte(),
-            Self::Carry => cpu.status.into(),
-            Self::BitInMemory(addr, _bit) => cpu.bus.cycle_read_u8(*addr),
-            Self::BitInMemoryInv(addr, _bit) => !cpu.bus.cycle_read_u8(*addr),
-        }
-    }
-
-    pub fn store(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u8) {
-        match self {
-            Self::Immediate(_) => panic!("storing immediate operand"),
-            Self::Register(Register::A) => cpu.a = value,
-            Self::Register(Register::X) => cpu.x = value,
-            Self::Register(Register::Y) => cpu.y = value,
-            Self::Register(Register::YA) => cpu.a = value,
-            Self::Register(Register::Sp) => cpu.sp = value,
-            Self::Register(Register::Psw) => cpu.status = value.into(),
-            Self::Const(_) => panic!("storing const operand"),
-            Self::InMemory(AddressMode::XIndirectAutoInc, addr) => {
-                cpu.x = cpu.x.wrapping_add(1);
-                cpu.bus.cycle_write_u8(*addr, value)
-            }
-            Self::InMemory(_, addr) => cpu.bus.cycle_write_u8(*addr, value),
-            Self::JumpAddress(_, _) => panic!("read only"),
-            Self::Carry => cpu.status = value.into(),
-            Self::BitInMemory(addr, _bit) => {
-                cpu.bus.cycle_write_u8(*addr, value);
-            }
-            Self::BitInMemoryInv(addr, _bit) => {
-                cpu.bus.cycle_write_u8(*addr, value);
-            }
-        }
-    }
-
-    #[inline]
-    pub fn format(&self) -> String {
-        match self {
-            Self::Immediate(value) => format!("#${:02X}", value),
-            Self::Register(Register::A) => "A".to_string(),
-            Self::Register(Register::X) => "X".to_string(),
-            Self::Register(Register::Y) => "Y".to_string(),
-            Self::Register(Register::YA) => "YA".to_string(),
-            Self::Register(Register::Sp) => "SP".to_string(),
-            Self::Register(Register::Psw) => "PSW".to_string(),
-            Self::Const(value) => format!("{:02X}", value),
-            Self::InMemory(_, addr) => format!("${:04X}", addr.0),
-            Self::JumpAddress(_, addr) => format!("${:04X}", addr.0),
-            Self::Carry => "C".to_string(),
-            Self::BitInMemory(addr, bit) => format!("(${:04X}.{})", addr.0, bit),
-            Self::BitInMemoryInv(addr, bit) => format!("(/${:04X}.{})", addr.0, bit),
-        }
-    }
-
-    #[inline]
-    pub fn is_address_mode(&self, address_mode: AddressMode) -> bool {
-        if let Self::InMemory(mode, _) = self {
-            *mode == address_mode
-        } else {
-            false
-        }
-    }
-
-    #[inline]
-    pub fn is_alu_register(&self) -> bool {
-        matches!(
-            self,
-            Self::Register(Register::A)
-                | Self::Register(Register::X)
-                | Self::Register(Register::Y)
-                | Self::Register(Register::YA)
-        )
-    }
-
-    #[inline]
-    pub fn is_in_memory(&self) -> bool {
-        matches!(self, Self::InMemory(_, _))
-    }
-
-    #[inline]
-    pub fn load_u16(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u16 {
-        u16::from_le_bytes([self.load(cpu), self.load_high(cpu)])
-    }
-
-    #[inline]
-    pub fn store_u16(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u16) {
-        self.store(cpu, value.low_byte());
-        self.store_high(cpu, value.high_byte());
-    }
-
-    #[inline]
-    pub fn load_high(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
-        match self {
-            Self::JumpAddress(_, addr) => addr.0.high_byte(),
-            Self::InMemory(mode, addr) => cpu.bus.cycle_read_u8(addr.add(1_u16, mode.wrap_mode())),
-            Self::Register(Register::YA) => cpu.y,
-            _ => panic!("Not a u16 operand"),
-        }
-    }
-
-    pub fn store_high(&self, cpu: &mut Spc700<impl Spc700Bus>, value: u8) {
-        match self {
-            Self::InMemory(mode, addr) => cpu
-                .bus
-                .cycle_write_u8(addr.add(1_u16, mode.wrap_mode()), value),
-            Self::Register(Register::YA) => cpu.y = value,
-            _ => panic!("Not a writeable u16 operand"),
-        }
-    }
-
-    pub fn bit(&self) -> usize {
-        match self {
-            Self::Carry => 0,
-            Self::BitInMemory(_, bit) => *bit,
-            Self::BitInMemoryInv(_, bit) => *bit,
-            _ => panic!("Not a bit operand"),
         }
     }
 }
