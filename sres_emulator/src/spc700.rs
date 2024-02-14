@@ -100,6 +100,18 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     fn direct_page_addr(&self, offset: u8) -> AddressU16 {
         AddressU16::new_direct_page(if self.status.direct_page { 1 } else { 0 }, offset)
     }
+
+    fn fetch_program_u8(&mut self) -> u8 {
+        let value = self.bus.cycle_read_u8(self.pc);
+        self.pc = self.pc.add(1_u8, Wrap::NoWrap);
+        value
+    }
+
+    fn fetch_program_u16(&mut self) -> u16 {
+        let value = self.bus.cycle_read_u16(self.pc, Wrap::NoWrap);
+        self.pc = self.pc.add(2_u8, Wrap::NoWrap);
+        value
+    }
 }
 
 impl<BusT: Spc700Bus> Display for Spc700<BusT> {
@@ -110,7 +122,7 @@ impl<BusT: Spc700Bus> Display for Spc700<BusT> {
             "{} {} {} A:{:02X} X:{:02X} Y:{:02X} SP:{:02X} DSW:{:02X} {}",
             self.pc,
             meta.operation,
-            meta.operand_str.unwrap_or_default(),
+            meta.operand_str,
             self.a,
             self.x,
             self.y,

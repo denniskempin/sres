@@ -1,7 +1,8 @@
-//! This module handles loading of operands used by instructions.
 //! Each instruction in the [opcode table](build_opcode_table) has an associated
 //!
 //! address mode, which is decoded here to handle how the operand is loaded and stored.
+use std::fmt::Display;
+
 use intbits::Bits;
 
 use crate::bus::Address;
@@ -41,15 +42,65 @@ pub enum AddressMode {
 }
 
 impl AddressMode {
-    /// Decodes the address mode from program memory, and returns the target address and how many
-    /// program bytes have been read.
+    /// Consumes program bytes to decode the operand data.
     #[inline]
-    pub fn decode<'a, BusT: Spc700Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
-        &self,
-        bus: &'a mut WrapperT,
-        operand_addr: AddressU16,
-    ) -> (AddressU16, u8) {
-        let operand_size = match self {
+    pub fn decode(&self, cpu: &mut Spc700<impl Spc700Bus>) -> AddressU16 {
+        // Regardless of how many bytes were read, store them all as u16 for simplicity.
+        let operand_size = self.operand_size();
+        let operand_data: u16 = match operand_size {
+            0 => 0,
+            1 => cpu.fetch_program_u8() as u16,
+            2 => cpu.fetch_program_u16(),
+            _ => unreachable!(),
+        };
+
+        match self {
+            AddressMode::Dp => cpu.direct_page_addr(operand_data as u8),
+            AddressMode::DpXIdx => {
+                cpu.bus.cycle_io();
+                cpu.direct_page_addr(operand_data as u8)
+                    .add(cpu.x as u16, Wrap::WrapPage)
+            }
+            AddressMode::DpYIdx => {
+                cpu.bus.cycle_io();
+                cpu.direct_page_addr(operand_data as u8)
+                    .add(cpu.y as u16, Wrap::WrapPage)
+            }
+            AddressMode::DpXIdxIndirect => {
+                cpu.bus.cycle_io();
+                let addr = cpu
+                    .direct_page_addr(operand_data as u8)
+                    .add(cpu.x as u16, Wrap::WrapPage);
+                AddressU16(cpu.bus.cycle_read_u16(addr, Wrap::WrapPage))
+            }
+            AddressMode::DpIndirectYIdx => {
+                cpu.bus.cycle_io();
+                let indirect_addr = cpu.direct_page_addr(operand_data as u8);
+                let addr = AddressU16(cpu.bus.cycle_read_u16(indirect_addr, Wrap::WrapPage));
+                addr.add(cpu.y, Wrap::NoWrap)
+            }
+            AddressMode::XIndirect => cpu.direct_page_addr(cpu.x),
+            AddressMode::YIndirect => cpu.direct_page_addr(cpu.y),
+            AddressMode::XIndirectAutoInc => cpu.direct_page_addr(cpu.x),
+            AddressMode::Abs => AddressU16(operand_data),
+            AddressMode::AbsXIdx => {
+                cpu.bus.cycle_io();
+                AddressU16(operand_data).add(cpu.x as u16, Wrap::NoWrap)
+            }
+            AddressMode::AbsYIdx => {
+                cpu.bus.cycle_io();
+                AddressU16(operand_data).add(cpu.y as u16, Wrap::NoWrap)
+            }
+            AddressMode::AbsXIdxIndirect => {
+                let addr = AddressU16(operand_data).add(cpu.x as u16, Wrap::NoWrap);
+                cpu.bus.cycle_io();
+                AddressU16(cpu.bus.cycle_read_u16(addr, Wrap::NoWrap))
+            }
+        }
+    }
+
+    pub fn operand_size(&self) -> u16 {
+        match self {
             Self::Dp => 1,
             Self::DpXIdx => 1,
             Self::DpYIdx => 1,
@@ -62,63 +113,7 @@ impl AddressMode {
             Self::AbsXIdx => 2,
             Self::AbsYIdx => 2,
             Self::AbsXIdxIndirect => 2,
-        };
-
-        // Regardless of how many bytes were read, store them all as u16 for simplicity.
-        let operand_data: u16 = match operand_size {
-            0 => 0,
-            1 => bus.cycle_read_u8(operand_addr) as u16,
-            2 => bus.cycle_read_u16(operand_addr, Wrap::NoWrap),
-            _ => unreachable!(),
-        };
-
-        let addr = match self {
-            AddressMode::Dp => bus.cpu().direct_page_addr(operand_data as u8),
-            AddressMode::DpXIdx => {
-                bus.cycle_io();
-                bus.cpu()
-                    .direct_page_addr(operand_data as u8)
-                    .add(bus.cpu().x as u16, Wrap::WrapPage)
-            }
-            AddressMode::DpYIdx => {
-                bus.cycle_io();
-                bus.cpu()
-                    .direct_page_addr(operand_data as u8)
-                    .add(bus.cpu().y as u16, Wrap::WrapPage)
-            }
-            AddressMode::DpXIdxIndirect => {
-                bus.cycle_io();
-                let addr = bus
-                    .cpu()
-                    .direct_page_addr(operand_data as u8)
-                    .add(bus.cpu().x as u16, Wrap::WrapPage);
-                AddressU16(bus.cycle_read_u16(addr, Wrap::WrapPage))
-            }
-            AddressMode::DpIndirectYIdx => {
-                bus.cycle_io();
-                let indirect_addr = bus.cpu().direct_page_addr(operand_data as u8);
-                let addr = AddressU16(bus.cycle_read_u16(indirect_addr, Wrap::WrapPage));
-                addr.add(bus.cpu().y, Wrap::NoWrap)
-            }
-            AddressMode::XIndirect => bus.cpu().direct_page_addr(bus.cpu().x),
-            AddressMode::YIndirect => bus.cpu().direct_page_addr(bus.cpu().y),
-            AddressMode::XIndirectAutoInc => bus.cpu().direct_page_addr(bus.cpu().x),
-            AddressMode::Abs => AddressU16(operand_data),
-            AddressMode::AbsXIdx => {
-                bus.cycle_io();
-                AddressU16(operand_data).add(bus.cpu().x as u16, Wrap::NoWrap)
-            }
-            AddressMode::AbsYIdx => {
-                bus.cycle_io();
-                AddressU16(operand_data).add(bus.cpu().y as u16, Wrap::NoWrap)
-            }
-            AddressMode::AbsXIdxIndirect => {
-                let addr = AddressU16(operand_data).add(bus.cpu().x as u16, Wrap::NoWrap);
-                bus.cycle_io();
-                AddressU16(bus.cycle_read_u16(addr, Wrap::NoWrap))
-            }
-        };
-        (addr, operand_size)
+        }
     }
 
     /// How memory addresse overflows are wrapped when using this address mode.
@@ -151,6 +146,19 @@ pub enum Register {
     Sp,
 }
 
+impl Display for Register {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Register::A => write!(f, "A"),
+            Register::X => write!(f, "X"),
+            Register::Y => write!(f, "Y"),
+            Register::YA => write!(f, "YA"),
+            Register::Psw => write!(f, "Psw"),
+            Register::Sp => write!(f, "Sp"),
+        }
+    }
+}
+
 /// Each instruction is defined by it's opcode and a variable number of bytes to descibe the
 /// operands of the instruction.
 ///
@@ -175,84 +183,83 @@ pub enum Operand {
 }
 
 impl Operand {
-    /// Consumes enough bytes of program memory to decode this operand
-    ///
-    /// Advances the program counter and returns the decoded operand
+    /// Consumes program bytes to decode an operand from the bus.
     #[inline]
     pub fn decode(&self, cpu: &mut Spc700<impl Spc700Bus>) -> DecodedOperand {
-        let pc = cpu.pc;
-        let (operand, next_pc) = self.decode_impl(&mut ReadWrapper(cpu), pc);
-        cpu.pc = next_pc;
-        operand
-    }
-
-    /// Peeks at the operand at `operand_addr` without modifying the system state.
-    ///
-    /// Returns the decoded operand and address of the next instruction (or next operand).
-    #[inline]
-    pub fn peek(
-        &self,
-        cpu: &Spc700<impl Spc700Bus>,
-        operand_addr: AddressU16,
-    ) -> (DecodedOperand, AddressU16) {
-        self.decode_impl(&mut PeekWrapper(cpu), operand_addr)
-    }
-    /// Decodes an operand from the bus.
-    ///
-    /// Uses the [ReadOrPeekWrapper] to use the same logic for decoding operands during
-    /// execution (where read cycles will modify the system state), and decoding
-    /// operands for disassemply without modifying the system state.
-    #[inline]
-    fn decode_impl<'a, BusT: Spc700Bus, WrapperT: ReadOrPeekWrapper<'a, BusT>>(
-        &self,
-        bus: &'a mut WrapperT,
-        operand_addr: AddressU16,
-    ) -> (DecodedOperand, AddressU16) {
-        let (operand, operand_size) = match self {
-            Self::Immediate => (
-                DecodedOperand::Immediate(bus.cycle_read_u8(operand_addr)),
-                1,
-            ),
-            Self::Register(register) => (DecodedOperand::Register(*register), 0),
-            Self::Const(value) => (DecodedOperand::Const(*value), 0),
-            Self::InMemory(mode) => {
-                let (addr, operand_size) = mode.decode(bus, operand_addr);
-                (DecodedOperand::InMemory(*mode, addr), operand_size)
-            }
-            Self::JumpAddress(mode) => {
-                let (addr, operand_size) = mode.decode(bus, operand_addr);
-                (DecodedOperand::JumpAddress(*mode, addr), operand_size)
-            }
-            Self::Carry => (DecodedOperand::Carry, 0),
+        match self {
+            Self::Immediate => DecodedOperand::Immediate(cpu.fetch_program_u8()),
+            Self::Register(register) => DecodedOperand::Register(*register),
+            Self::Const(value) => DecodedOperand::Const(*value),
+            Self::InMemory(mode) => DecodedOperand::InMemory(*mode, mode.decode(cpu)),
+            Self::JumpAddress(mode) => DecodedOperand::JumpAddress(*mode, mode.decode(cpu)),
+            Self::Carry => DecodedOperand::Carry,
             Self::AbsBit => {
-                let operand_data = bus.cycle_read_u16(operand_addr, Wrap::NoWrap);
-                (
-                    DecodedOperand::BitInMemory(
-                        AddressU16(operand_data.bits(0..13)),
-                        operand_data.bits(13..16) as usize,
-                    ),
-                    2,
+                let operand_data = cpu.fetch_program_u16();
+                DecodedOperand::BitInMemory(
+                    AddressU16(operand_data.bits(0..13)),
+                    operand_data.bits(13..16) as usize,
                 )
             }
             Self::AbsBitInv => {
-                let operand_data = bus.cycle_read_u16(operand_addr, Wrap::NoWrap);
-                (
-                    DecodedOperand::BitInMemoryInv(
-                        AddressU16(operand_data.bits(0..13)),
-                        operand_data.bits(13..16) as usize,
-                    ),
-                    2,
+                let operand_data = cpu.fetch_program_u16();
+                DecodedOperand::BitInMemoryInv(
+                    AddressU16(operand_data.bits(0..13)),
+                    operand_data.bits(13..16) as usize,
                 )
             }
             Self::DpBit(bit) => {
-                let dp_addr = bus.cycle_read_u8(operand_addr);
-                (
-                    DecodedOperand::BitInMemory(bus.cpu().direct_page_addr(dp_addr), *bit),
-                    1,
-                )
+                let dp_addr = cpu.fetch_program_u8();
+                DecodedOperand::BitInMemory(cpu.direct_page_addr(dp_addr), *bit)
             }
+        }
+    }
+
+    #[inline]
+    pub fn disassembly(
+        &self,
+        cpu: &Spc700<impl Spc700Bus>,
+        addr: AddressU16,
+    ) -> (String, AddressU16) {
+        let operand_size: u16 = match self {
+            Operand::Immediate => 0,
+            Operand::Register(_) => 0,
+            Operand::Const(_) => 0,
+            Operand::InMemory(mode) => mode.operand_size(),
+            Operand::JumpAddress(mode) => mode.operand_size(),
+            Operand::Carry => 0,
+            Operand::AbsBit => 2,
+            Operand::AbsBitInv => 2,
+            Operand::DpBit(_) => 1,
         };
-        (operand, operand_addr.add(operand_size, Wrap::NoWrap))
+        let operand_value: u16 = match operand_size {
+            0 => 0,
+            1 => cpu.bus.peek_u8(addr).unwrap_or_default() as u16,
+            2 => cpu.bus.peek_u16(addr, Wrap::NoWrap).unwrap_or_default(),
+            _ => unreachable!(),
+        };
+
+        let disassembly = match self {
+            Self::Immediate => format!("#${:02X}", operand_value),
+            Self::Register(register) => register.to_string(),
+            Self::Const(value) => format!("#${:02X}", value),
+            Self::InMemory(AddressMode::Abs) => format!("#${:04X}", operand_value),
+            Self::InMemory(_) => "XX".to_string(),
+            Self::JumpAddress(AddressMode::Abs) => format!("#${:04X}", operand_value),
+            Self::JumpAddress(_) => "XX".to_string(),
+            Self::Carry => "C".to_string(),
+            Self::AbsBit => format!(
+                "(${:04X}.{})",
+                operand_value.bits(0..13),
+                operand_value.bits(13..16)
+            ),
+            Self::AbsBitInv => format!(
+                "(/${:04X}.{})",
+                operand_value.bits(0..13),
+                operand_value.bits(13..16)
+            ),
+            Self::DpBit(bit) => format!("(${:02X}.{})", operand_value, bit),
+        };
+        (disassembly, addr.add(operand_size, Wrap::NoWrap))
     }
 
     #[inline]
@@ -428,69 +435,5 @@ impl DecodedOperand {
             Self::BitInMemoryInv(_, bit) => *bit,
             _ => panic!("Not a bit operand"),
         }
-    }
-}
-
-/// A wrapper around a CPU that will either perform reads on a mutable bus or
-/// peeks on an immutable bus.
-///
-/// This allows logic for decoding of operands to be re-used for execution (mutable bus)
-/// and disassembly generation (immutable bus).
-pub trait ReadOrPeekWrapper<'a, T: Spc700Bus>
-where
-    Self: Sized,
-{
-    /// Returns an immutable reference to the underlying CPU.
-    fn cpu(&self) -> &Spc700<T>;
-
-    fn cycle_io(&mut self);
-    fn cycle_read_u8(&mut self, addr: AddressU16) -> u8;
-
-    fn cycle_read_u16(&mut self, addr: AddressU16, wrap: Wrap) -> u16 {
-        u16::from_le_bytes([
-            self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add(1_u16, wrap)),
-        ])
-    }
-
-    fn cycle_read_u24(&mut self, addr: AddressU16, wrap: Wrap) -> u32 {
-        u32::from_le_bytes([
-            self.cycle_read_u8(addr),
-            self.cycle_read_u8(addr.add(1_u16, wrap)),
-            self.cycle_read_u8(addr.add(2_u16, wrap)),
-            0,
-        ])
-    }
-}
-
-/// Implements ReadOrPeekWrapper for an immutable bus. Will perform peek's instead
-/// of read's, since a read operation will modify the state of the system.
-struct PeekWrapper<'a, T: Spc700Bus>(pub &'a Spc700<T>);
-impl<'a, T: Spc700Bus> ReadOrPeekWrapper<'a, T> for PeekWrapper<'a, T> {
-    fn cpu(&self) -> &Spc700<T> {
-        self.0
-    }
-
-    fn cycle_io(&mut self) {}
-
-    fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
-        self.0.bus.peek_u8(addr).unwrap_or_default()
-    }
-}
-
-/// Implements ReadOrPeekWrapper for a mutable bus. Will perform read bus cycles that
-/// will modify the system state.
-struct ReadWrapper<'a, T: Spc700Bus>(pub &'a mut Spc700<T>);
-impl<'a, T: Spc700Bus> ReadOrPeekWrapper<'a, T> for ReadWrapper<'a, T> {
-    fn cpu(&self) -> &Spc700<T> {
-        self.0
-    }
-
-    fn cycle_io(&mut self) {
-        self.0.bus.cycle_io()
-    }
-
-    fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
-        self.0.bus.cycle_read_u8(addr)
     }
 }
