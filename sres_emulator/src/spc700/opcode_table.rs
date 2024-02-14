@@ -6,7 +6,7 @@ use crate::spc700::Spc700Bus;
 pub struct InstructionMeta {
     pub address: AddressU16,
     pub operation: &'static str,
-    pub operand_str: Option<String>,
+    pub operand_str: String,
 }
 
 /// An entry in the opcode table
@@ -31,7 +31,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                         InstructionMeta {
                             address: operand_addr,
                             operation: stringify!($method),
-                            operand_str: None,
+                            operand_str: "".to_string(),
                         },
                         operand_addr,
                     )
@@ -45,12 +45,12 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                     $method(cpu, $operand_def);
                 },
                 meta: |cpu, operand_addr| {
-                    let (operand, next_addr) = $operand_def.peek(cpu, operand_addr);
+                    let (operand, next_addr) = $operand_def.disassembly(cpu, operand_addr);
                     (
                         InstructionMeta {
                             address: operand_addr,
                             operation: stringify!($method),
-                            operand_str: Some(operand.format()),
+                            operand_str: operand,
                         },
                         next_addr,
                     )
@@ -64,13 +64,13 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                     $method(cpu, $left_def, $right_def);
                 },
                 meta: |cpu, operand_addr| {
-                    let (right, next_addr) = $right_def.peek(cpu, operand_addr);
-                    let (left, next_addr) = $left_def.peek(cpu, next_addr);
+                    let (right, next_addr) = $right_def.disassembly(cpu, operand_addr);
+                    let (left, next_addr) = $left_def.disassembly(cpu, next_addr);
                     (
                         InstructionMeta {
                             address: operand_addr,
                             operation: stringify!($method),
-                            operand_str: Some(left.format() + ", " + &right.format()),
+                            operand_str: left + ", " + &right,
                         },
                         next_addr,
                     )
@@ -86,7 +86,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                 InstructionMeta {
                     address: instruction_addr,
                     operation: "ill",
-                    operand_str: None,
+                    operand_str: "".to_string(),
                 },
                 instruction_addr,
             )
