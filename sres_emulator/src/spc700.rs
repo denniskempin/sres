@@ -6,7 +6,6 @@ mod status;
 
 use std::fmt::Display;
 
-use self::opcode_table::InstructionMeta;
 use crate::bus::Address;
 use crate::bus::AddressU16;
 use crate::bus::Bus;
@@ -57,11 +56,10 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.pc = AddressU16(0);
     }
 
-    pub fn instruction_meta(&self) -> InstructionMeta {
-        let opcode = self.bus.peek_u8(self.pc).unwrap_or_default();
+    pub fn disassembly(&self, addr: AddressU16) -> (String, AddressU16) {
+        let opcode = self.bus.peek_u8(addr).unwrap_or_default();
         let instruction = &self.opcode_table[opcode as usize];
-        let (meta, _next_addr) = (instruction.meta)(self, self.pc.add(1_u8, Wrap::NoWrap));
-        meta
+        (instruction.disassembly)(self, addr.add(1_u8, Wrap::NoWrap))
     }
 
     pub fn step(&mut self) {
@@ -116,19 +114,11 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
 
 impl<BusT: Spc700Bus> Display for Spc700<BusT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let meta = self.instruction_meta();
+        let (disassembly, _) = self.disassembly(self.pc);
         write!(
             f,
-            "{} {} {} A:{:02X} X:{:02X} Y:{:02X} SP:{:02X} DSW:{:02X} {}",
-            self.pc,
-            meta.operation,
-            meta.operand_str,
-            self.a,
-            self.x,
-            self.y,
-            self.sp,
-            self.dsw,
-            self.status,
+            "{} {} A:{:02X} X:{:02X} Y:{:02X} SP:{:02X} DSW:{:02X} {}",
+            self.pc, disassembly, self.a, self.x, self.y, self.sp, self.dsw, self.status,
         )
     }
 }
