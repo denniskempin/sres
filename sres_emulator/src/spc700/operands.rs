@@ -99,6 +99,32 @@ impl AddressMode {
         }
     }
 
+    #[inline]
+    pub fn disassembly(&self, cpu: &Spc700<impl Spc700Bus>, addr: AddressU16) -> String {
+        let operand_size: u16 = self.operand_size();
+        let value: u16 = match operand_size {
+            0 => 0,
+            1 => cpu.bus.peek_u8(addr).unwrap_or_default() as u16,
+            2 => cpu.bus.peek_u16(addr, Wrap::NoWrap).unwrap_or_default(),
+            _ => unreachable!(),
+        };
+
+        match self {
+            Self::Dp => format!("${:02X}", value),
+            Self::DpXIdx => format!("${:02X}+X", value),
+            Self::DpYIdx => format!("${:02X}+Y", value),
+            Self::DpXIdxIndirect => format!("[${:02X}+X]", value),
+            Self::DpIndirectYIdx => format!("[${:02X}]+Y", value),
+            Self::XIndirect => format!("(X)"),
+            Self::YIndirect => format!("(Y)"),
+            Self::XIndirectAutoInc => format!("(X++)"),
+            Self::Abs => format!("${:04X}", value),
+            Self::AbsXIdx => format!("${:04X}+X", value),
+            Self::AbsYIdx => format!("${:04X}+Y", value),
+            Self::AbsXIdxIndirect => format!("[${:04X}+X]", value),
+        }
+    }
+
     pub fn operand_size(&self) -> u16 {
         match self {
             Self::Dp => 1,
@@ -224,40 +250,29 @@ impl Operand {
             Operand::Immediate => 0,
             Operand::Register(_) => 0,
             Operand::Const(_) => 0,
+            Operand::Carry => 0,
             Operand::InMemory(mode) => mode.operand_size(),
             Operand::JumpAddress(mode) => mode.operand_size(),
-            Operand::Carry => 0,
             Operand::AbsBit => 2,
             Operand::AbsBitInv => 2,
             Operand::DpBit(_) => 1,
         };
-        let operand_value: u16 = match operand_size {
+        let value: u16 = match operand_size {
             0 => 0,
             1 => cpu.bus.peek_u8(addr).unwrap_or_default() as u16,
             2 => cpu.bus.peek_u16(addr, Wrap::NoWrap).unwrap_or_default(),
             _ => unreachable!(),
         };
-
         let disassembly = match self {
-            Self::Immediate => format!("#${:02X}", operand_value),
+            Self::Immediate => format!("#${:02X}", value),
             Self::Register(register) => register.to_string(),
-            Self::Const(value) => format!("#${:02X}", value),
-            Self::InMemory(AddressMode::Abs) => format!("#${:04X}", operand_value),
-            Self::InMemory(_) => "XX".to_string(),
-            Self::JumpAddress(AddressMode::Abs) => format!("#${:04X}", operand_value),
-            Self::JumpAddress(_) => "XX".to_string(),
+            Self::Const(value) => format!("{:02X}", value),
+            Self::InMemory(mode) => mode.disassembly(cpu, addr),
+            Self::JumpAddress(mode) => mode.disassembly(cpu, addr),
             Self::Carry => "C".to_string(),
-            Self::AbsBit => format!(
-                "(${:04X}.{})",
-                operand_value.bits(0..13),
-                operand_value.bits(13..16)
-            ),
-            Self::AbsBitInv => format!(
-                "(/${:04X}.{})",
-                operand_value.bits(0..13),
-                operand_value.bits(13..16)
-            ),
-            Self::DpBit(bit) => format!("(${:02X}.{})", operand_value, bit),
+            Self::AbsBit => format!("${:04X}.{}", value.bits(0..13), value.bits(13..16)),
+            Self::AbsBitInv => format!("/${:04X}.{}", value.bits(0..13), value.bits(13..16)),
+            Self::DpBit(bit) => format!("${:02X}.{}", value, bit),
         };
         (disassembly, addr.add(operand_size, Wrap::NoWrap))
     }
