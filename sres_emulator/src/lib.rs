@@ -22,7 +22,7 @@ use log::log_enabled;
 use log::Level;
 use main_bus::MainBusImpl;
 
-use crate::trace::TraceLine;
+use crate::trace::CpuTraceLine;
 
 pub enum ExecutionResult {
     Normal,
@@ -86,7 +86,7 @@ impl System {
             }
 
             if log_enabled!(target: "cpu_state", Level::Trace) {
-                log::trace!(target: "cpu_state", "{}", TraceLine::from_sres_cpu(&self.cpu));
+                log::trace!(target: "cpu_state", "{}", CpuTraceLine::from_sres_cpu(&self.cpu));
             }
             self.cpu.step();
 

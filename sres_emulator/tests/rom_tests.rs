@@ -16,7 +16,7 @@ use sres_emulator::cartridge::Cartridge;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::main_bus::MainBusImpl;
 use sres_emulator::ppu::fvh_to_master_clock;
-use sres_emulator::trace::TraceLine;
+use sres_emulator::trace::CpuTraceLine;
 use sres_emulator::util::logging;
 use sres_emulator::util::memory::format_memory;
 use sres_emulator::System;
@@ -72,9 +72,9 @@ pub fn test_nmi_sub_cycle_accuracy() {
         }
 
         // Execute `bit $4210` instruction
-        println!("before: {}", TraceLine::from_sres_cpu(cpu));
+        println!("before: {}", CpuTraceLine::from_sres_cpu(cpu));
         cpu.step();
-        println!("after: {}", TraceLine::from_sres_cpu(cpu));
+        println!("after: {}", CpuTraceLine::from_sres_cpu(cpu));
 
         // If the NMI bit is set, the negative status bit will be true.
         assert_eq!(cpu.status.negative, *expected_nmi);
@@ -227,7 +227,7 @@ fn run_rom_test(test_name: &str) {
             );
         }
 
-        let mut actual_line = TraceLine::from_sres_cpu(&system.cpu);
+        let mut actual_line = CpuTraceLine::from_sres_cpu(&system.cpu);
 
         // Fix some BSNES trace inconsistencies:
 
@@ -359,7 +359,7 @@ fn run_test_rom(test_name: &str) -> Cpu<MainBusImpl> {
     system.cpu
 }
 
-pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<TraceLine>>> {
+pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<CpuTraceLine>>> {
     use xz2::read::XzDecoder;
     let file = File::open(path)?;
     let decoder = XzDecoder::new(file);

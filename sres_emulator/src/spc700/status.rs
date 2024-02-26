@@ -1,5 +1,7 @@
 use std::fmt::Display;
+use std::str::FromStr;
 
+use anyhow::bail;
 use intbits::Bits;
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Default)]
@@ -47,14 +49,35 @@ impl Display for Spc700StatusFlags {
         write!(
             f,
             "{}{}{}{}{}{}{}{}",
-            if self.carry { "C" } else { "." },
-            if self.zero { "Z" } else { "." },
-            if self.irq_enable { "I" } else { "." },
-            if self.half_carry { "H" } else { "." },
-            if self.break_command { "B" } else { "." },
-            if self.direct_page { "D" } else { "." },
-            if self.overflow { "V" } else { "." },
             if self.negative { "N" } else { "." },
+            if self.overflow { "V" } else { "." },
+            if self.direct_page { "D" } else { "." },
+            if self.break_command { "B" } else { "." },
+            if self.half_carry { "H" } else { "." },
+            if self.irq_enable { "I" } else { "." },
+            if self.zero { "Z" } else { "." },
+            if self.carry { "C" } else { "." },
         )
+    }
+}
+
+impl FromStr for Spc700StatusFlags {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 8 {
+            bail!("StatusFlags string must be 8 characters long");
+        }
+        let mut chars = s.chars();
+        Ok(Self {
+            negative: chars.next().unwrap() != '.',
+            overflow: chars.next().unwrap() != '.',
+            direct_page: chars.next().unwrap() != '.',
+            break_command: chars.next().unwrap() != '.',
+            half_carry: chars.next().unwrap() != '.',
+            irq_enable: chars.next().unwrap() != '.',
+            zero: chars.next().unwrap() != '.',
+            carry: chars.next().unwrap() != '.',
+        })
     }
 }

@@ -11,16 +11,91 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 
+use crate::bus::AddressU16;
 use crate::bus::AddressU24;
 use crate::cpu::Cpu;
 use crate::cpu::StatusFlags;
 use crate::main_bus::MainBus;
 use crate::main_bus::MainBusImpl;
+use crate::spc700::Spc700;
+use crate::spc700::Spc700Bus;
+use crate::spc700::Spc700StatusFlags;
+
+#[allow(dead_code)]
+enum TraceLine {
+    Cpu(CpuTraceLine),
+    Spc700(Spc700TraceLine),
+}
+
+// Representation of the state of [Spc700] in the same format as logged by BSNES.
+#[derive(Debug, Eq, PartialEq)]
+pub struct Spc700TraceLine {
+    pub pc: AddressU16,
+    pub instruction: String,
+    pub a: u8,
+    pub x: u8,
+    pub y: u8,
+    pub sp: AddressU16,
+    pub status: Spc700StatusFlags,
+}
+
+impl Spc700TraceLine {
+    pub fn from_spc700(cpu: &Spc700<impl Spc700Bus>) -> Self {
+        Self {
+            pc: cpu.pc,
+            instruction: cpu.disassembly(cpu.pc).0,
+            a: cpu.a,
+            x: cpu.x,
+            y: cpu.y,
+            sp: cpu.direct_page_addr(cpu.sp),
+            status: cpu.status,
+        }
+    }
+}
+
+impl FromStr for Spc700TraceLine {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        // Example:
+        //
+        // ..ffe2 mov   ($000)+y, a       A:8f X:cc Y:f9 SP:01ef YA:f98f N......C
+        // 0      7     13                  33   38   43    49      57   62
+        Ok(Self {
+            pc: AddressU16(u16::from_str_radix(&s[2..6], 16).with_context(|| "pc")?),
+            instruction: s[7..30].trim().to_string(),
+            a: u8::from_str_radix(&s[33..35], 16).with_context(|| "a")?,
+            x: u8::from_str_radix(&s[38..40], 16).with_context(|| "x")?,
+            y: u8::from_str_radix(&s[43..45], 16).with_context(|| "y")?,
+            sp: AddressU16(u16::from_str_radix(&s[49..53], 16).with_context(|| "y")?),
+            status: s[62..70].trim().parse().with_context(|| "status")?,
+        })
+    }
+}
+
+impl Display for Spc700TraceLine {
+    /// Format a trace object into a BSNES trace line
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "..{:04x} {:<23} A:{:02x} X:{:02x} Y:{:02x} SP:{:04x} YA:{:02x}{:02x} {}",
+            self.pc.0,
+            self.instruction,
+            self.a,
+            self.x,
+            self.y,
+            self.sp.0,
+            self.y,
+            self.a,
+            self.status,
+        )
+    }
+}
 
 /// Represents a snapshot of the current state of the system.
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct TraceLine {
+pub struct CpuTraceLine {
     pub pc: AddressU24,
     pub instruction: String,
     pub operand: String,
@@ -37,7 +112,7 @@ pub struct TraceLine {
     pub f: u64,
 }
 
-impl Display for TraceLine {
+impl Display for CpuTraceLine {
     /// Format a trace object into a BSNES trace line
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -65,7 +140,7 @@ impl Display for TraceLine {
     }
 }
 
-impl FromStr for TraceLine {
+impl FromStr for CpuTraceLine {
     type Err = anyhow::Error;
 
     /// Parse a BSNES trace line into a Trace object
@@ -81,7 +156,7 @@ impl FromStr for TraceLine {
         // BSNES can output h in clocks instead of pixels. This will require an additional character
         // for H: and shifts F: by one index.
         let is_hcounter = s[94..=95].trim() == "F:";
-        Ok(TraceLine {
+        Ok(CpuTraceLine {
             pc: u32::from_str_radix(&s[0..6], 16)
                 .with_context(|| "pc")?
                 .into(),
@@ -115,7 +190,7 @@ impl FromStr for TraceLine {
     }
 }
 
-impl TraceLine {
+impl CpuTraceLine {
     pub fn from_file(path: &Path) -> Result<impl Iterator<Item = Result<Self>>> {
         let trace_reader = io::BufReader::new(File::open(path)?);
         Ok(trace_reader.lines().map(|l| l?.parse()))
@@ -124,7 +199,7 @@ impl TraceLine {
     pub fn from_sres_cpu(cpu: &Cpu<MainBusImpl>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
         let ppu_timer = cpu.bus.ppu.timer;
-        TraceLine {
+        CpuTraceLine {
             pc: cpu.pc,
             instruction: instruction.operation.to_string(),
             operand: instruction.operand_str.unwrap_or_default(),
@@ -144,7 +219,7 @@ impl TraceLine {
 
     pub fn from_cpu(cpu: &Cpu<impl MainBus>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
-        TraceLine {
+        CpuTraceLine {
             pc: cpu.pc,
             instruction: instruction.operation.to_string(),
             operand: instruction.operand_str.unwrap_or_default(),
@@ -169,8 +244,8 @@ mod test {
 
     static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:236 F:32";
 
-    fn example_trace() -> TraceLine {
-        TraceLine {
+    fn example_trace() -> CpuTraceLine {
+        CpuTraceLine {
             pc: AddressU24 {
                 bank: 0,
                 offset: 0xe811,
@@ -206,7 +281,7 @@ mod test {
     #[test]
     pub fn test_from_str() {
         assert_eq!(
-            EXAMPLE_BSNES_TRACE.parse::<TraceLine>().unwrap(),
+            EXAMPLE_BSNES_TRACE.parse::<CpuTraceLine>().unwrap(),
             example_trace()
         );
     }
@@ -214,5 +289,42 @@ mod test {
     #[test]
     pub fn test_to_str() {
         assert_eq!(format!("{}", example_trace()), EXAMPLE_BSNES_TRACE);
+    }
+
+    static EXAMPLE_SPC700_TRACE: &str =
+        r"..ffe2 mov   ($000)+y, a       A:8f X:cc Y:f9 SP:01ef YA:f98f N.....ZC";
+
+    fn example_spc700_trace() -> Spc700TraceLine {
+        Spc700TraceLine {
+            pc: AddressU16(0xffe2),
+            instruction: "mov   ($000)+y, a".to_string(),
+            a: 0x8f,
+            x: 0xcc,
+            y: 0xf9,
+            sp: AddressU16(0x01ef),
+            status: Spc700StatusFlags {
+                carry: true,
+                zero: true,
+                irq_enable: false,
+                half_carry: false,
+                break_command: false,
+                direct_page: false,
+                overflow: false,
+                negative: true,
+            },
+        }
+    }
+
+    #[test]
+    pub fn test_spc700_from_str() {
+        assert_eq!(
+            EXAMPLE_SPC700_TRACE.parse::<Spc700TraceLine>().unwrap(),
+            example_spc700_trace()
+        );
+    }
+
+    #[test]
+    pub fn test_spc700_to_str() {
+        assert_eq!(format!("{}", example_spc700_trace()), EXAMPLE_SPC700_TRACE);
     }
 }
