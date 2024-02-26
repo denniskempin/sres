@@ -54,6 +54,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
 
     pub fn reset(&mut self) {
         self.pc = AddressU16(0);
+        self.bus.peek_u16(AddressU16(0), Wrap::NoWrap);
     }
 
     pub fn disassembly(&self, addr: AddressU16) -> (String, AddressU16) {
@@ -73,6 +74,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.status.negative = value.bit(T::N_BITS - 1);
         self.status.zero = value.is_zero();
     }
+
     fn stack_push_u8(&mut self, value: u8) {
         self.bus
             .cycle_write_u8(AddressU16::new_direct_page(1, self.sp), value);
@@ -95,7 +97,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         u16::from_le_bytes([self.stack_pop_u8(), self.stack_pop_u8()])
     }
 
-    fn direct_page_addr(&self, offset: u8) -> AddressU16 {
+    pub fn direct_page_addr(&self, offset: u8) -> AddressU16 {
         AddressU16::new_direct_page(if self.status.direct_page { 1 } else { 0 }, offset)
     }
 
