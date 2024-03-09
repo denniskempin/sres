@@ -233,22 +233,24 @@ fn run_rom_test(test_name: &str) {
 
         // Disassembly for branch instructions prints the absolute operand address, not the
         // relative address.
-        if expected_line.instruction.starts_with('b') && expected_line.instruction != "bit" {
-            actual_line.operand = "".to_string();
-            expected_line.operand = "".to_string();
+        if expected_line.instruction.operation.starts_with('b')
+            && expected_line.instruction.operation != "bit"
+        {
+            actual_line.instruction.operand_str = None;
+            expected_line.instruction.operand_str = None;
         }
         // `per` instruction prints relative address as effective address, not the calculated
         // absolute address.
-        if expected_line.instruction == "per" {
-            actual_line.operand = "".to_string();
-            expected_line.operand = "".to_string();
-            actual_line.operand_addr = None;
-            expected_line.operand_addr = None;
+        if expected_line.instruction.operation == "per" {
+            actual_line.instruction.operand_str = None;
+            expected_line.instruction.operand_str = None;
+            actual_line.instruction.effective_addr = None;
+            expected_line.instruction.effective_addr = None;
         }
         // `jmp` instructions in bsnes print an inconsistent effective address. Skip comparison.
-        if expected_line.instruction.starts_with('j') {
-            expected_line.operand_addr = None;
-            actual_line.operand_addr = None;
+        if expected_line.instruction.operation.starts_with('j') {
+            actual_line.instruction.effective_addr = None;
+            expected_line.instruction.effective_addr = None;
         }
 
         if actual_line != expected_line {

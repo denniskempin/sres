@@ -12,7 +12,11 @@ use crate::bus::AddressU24;
 use crate::cpu::Cpu;
 use crate::cpu::InstructionMeta;
 use crate::cpu::NativeVectorTable;
+use crate::main_bus::MainBus;
 use crate::main_bus::MainBusImpl;
+use crate::trace::CpuTraceLine;
+use crate::trace::Spc700TraceLine;
+use crate::trace::TraceLine;
 use crate::util::RingBuffer;
 
 pub enum MemoryAccess {
@@ -88,30 +92,32 @@ impl DebuggerRef {
         }
     }
 
-    pub fn before_instruction(&mut self, pc: AddressU24) {
+    pub fn before_cpu_instruction(&self, cpu: &Cpu<impl MainBus>) {
         if self.enabled {
-            self.inner.deref().borrow_mut().before_instruction(pc);
+            self.inner.deref().borrow_mut().before_cpu_instruction(cpu);
         }
     }
-    pub fn on_interrupt(&mut self, handler: NativeVectorTable) {
+
+    pub fn on_interrupt(&self, handler: NativeVectorTable) {
         if self.enabled {
             self.inner.deref().borrow_mut().on_interrupt(handler);
         }
     }
-    pub fn on_error(&mut self, msg: String) {
+
+    pub fn on_error(&self, msg: String) {
         log::error!("{}", msg);
         if self.enabled {
             self.inner.deref().borrow_mut().on_error(msg);
         }
     }
 
-    pub fn trigger_custom(&mut self, msg: String) {
+    pub fn trigger_custom(&self, msg: String) {
         if self.enabled {
             self.inner.deref().borrow_mut().trigger_custom(msg);
         }
     }
 
-    pub fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
+    pub fn on_cpu_memory_access(&self, access: MemoryAccess) {
         if self.enabled {
             self.inner.deref().borrow_mut().on_cpu_memory_access(access);
         }
@@ -127,18 +133,17 @@ impl Default for DebuggerRef {
 pub struct Debugger {
     breakpoints: Vec<Trigger>,
     break_reason: Option<BreakReason>,
-    last_pcs: RingBuffer<AddressU24, 20>,
+    trace: RingBuffer<TraceLine, 128>,
 }
 
 impl Debugger {
     /// Frontend facing API
 
-    pub fn previous_instructions(&self, cpu: &Cpu<MainBusImpl>) -> Vec<InstructionMeta> {
-        self.last_pcs
-            .iter()
-            .map(move |pc| cpu.load_instruction_meta(*pc).0)
-            .rev()
-            .collect()
+    pub fn cpu_trace(&self) -> impl Iterator<Item = &CpuTraceLine> {
+        self.trace.iter().filter_map(|line| match line {
+            TraceLine::Cpu(cpu) => Some(cpu),
+            _ => None,
+        })
     }
 
     pub fn take_break_reason(&mut self) -> Option<BreakReason> {
@@ -172,16 +177,16 @@ impl Debugger {
         Self {
             breakpoints: vec![],
             break_reason: None,
-            last_pcs: RingBuffer::default(),
+            trace: RingBuffer::default(),
         }
     }
 
-    fn before_instruction(&mut self, pc: AddressU24) {
-        self.last_pcs.push(pc);
+    fn before_cpu_instruction(&mut self, cpu: &Cpu<impl MainBus>) {
+        self.trace.push(TraceLine::Cpu(CpuTraceLine::from_cpu(cpu)));
         for trigger in self.breakpoints.iter() {
             if let Trigger::ProgramCounter(range) = trigger {
-                if range.contains(&u32::from(pc)) {
-                    self.break_reason = Some(BreakReason::ProgramCounter(pc));
+                if range.contains(&u32::from(cpu.pc)) {
+                    self.break_reason = Some(BreakReason::ProgramCounter(cpu.pc));
                 }
             }
         }

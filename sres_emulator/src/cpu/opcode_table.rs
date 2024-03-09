@@ -14,9 +14,10 @@ use crate::cpu::Cpu;
 use crate::main_bus::MainBus;
 
 /// Metadata about a decoded instruction. Used to generate disassembly.
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct InstructionMeta {
     pub address: AddressU24,
-    pub operation: &'static str,
+    pub operation: String,
     pub operand_str: Option<String>,
     pub effective_addr: Option<AddressU24>,
 }
@@ -51,7 +52,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                     (
                         InstructionMeta {
                             address: instruction_addr,
-                            operation: stringify!($method),
+                            operation: stringify!($method).to_string(),
                             operand_str: None,
                             effective_addr: None,
                         },
@@ -75,7 +76,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                     (
                         InstructionMeta {
                             address: instruction_addr,
-                            operation: stringify!($method),
+                            operation: stringify!($method).to_string(),
                             operand_str: Some(operand.format()),
                             effective_addr: operand.effective_addr(),
                         },
@@ -107,7 +108,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                     (
                         InstructionMeta {
                             address: instruction_addr,
-                            operation: stringify!($method),
+                            operation: stringify!($method).to_string(),
                             operand_str: Some(operand.format()),
                             effective_addr: operand.effective_addr(),
                         },
@@ -124,7 +125,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
             (
                 InstructionMeta {
                     address: instruction_addr,
-                    operation: "ill",
+                    operation: "ill".to_string(),
                     operand_str: None,
                     effective_addr: None,
                 },

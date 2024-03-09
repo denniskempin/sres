@@ -30,8 +30,8 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
 pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
     ui.label(RichText::new("Operations").strong());
 
-    for meta in emulator.debugger().previous_instructions(&emulator.cpu) {
-        disassembly_line(ui, meta, false);
+    for trace_line in emulator.debugger().cpu_trace().skip(100) {
+        disassembly_line(ui, trace_line.instruction.clone(), false);
     }
     for (idx, meta) in emulator.cpu.peek_next_operations(20).enumerate() {
         disassembly_line(ui, meta, idx == 0);
