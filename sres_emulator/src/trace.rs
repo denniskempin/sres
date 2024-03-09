@@ -14,6 +14,7 @@ use anyhow::Result;
 use crate::bus::AddressU16;
 use crate::bus::AddressU24;
 use crate::cpu::Cpu;
+use crate::cpu::InstructionMeta;
 use crate::cpu::StatusFlags;
 use crate::main_bus::MainBus;
 use crate::main_bus::MainBusImpl;
@@ -22,7 +23,7 @@ use crate::spc700::Spc700Bus;
 use crate::spc700::Spc700StatusFlags;
 
 #[allow(dead_code)]
-enum TraceLine {
+pub enum TraceLine {
     Cpu(CpuTraceLine),
     Spc700(Spc700TraceLine),
 }
@@ -96,10 +97,7 @@ impl Display for Spc700TraceLine {
 /// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CpuTraceLine {
-    pub pc: AddressU24,
-    pub instruction: String,
-    pub operand: String,
-    pub operand_addr: Option<AddressU24>,
+    pub instruction: InstructionMeta,
     pub a: u16,
     pub x: u16,
     pub y: u16,
@@ -118,10 +116,10 @@ impl Display for CpuTraceLine {
         write!(
             f,
             "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} {} V:{:03} H:{:03} F:{:02}",
-            u32::from(self.pc),
-            self.instruction,
-            self.operand,
-            if let Some(addr) = &self.operand_addr {
+            u32::from(self.instruction.address),
+            self.instruction.operation,
+            self.instruction.operand_str.as_deref().unwrap_or_default(),
+            if let Some(addr) = &self.instruction.effective_addr {
                 format!("[{:06x}]", u32::from(*addr))
             } else {
                 "".to_string()
@@ -157,22 +155,24 @@ impl FromStr for CpuTraceLine {
         // for H: and shifts F: by one index.
         let is_hcounter = s[94..=95].trim() == "F:";
         Ok(CpuTraceLine {
-            pc: u32::from_str_radix(&s[0..6], 16)
-                .with_context(|| "pc")?
-                .into(),
-            instruction: s[7..10].trim().to_string(),
-            operand: s[11..21].trim().to_string(),
-            operand_addr: {
-                let addr = s[23..29].trim();
-                if addr.is_empty() {
-                    None
-                } else {
-                    Some(
-                        u32::from_str_radix(addr, 16)
-                            .with_context(|| "operand_addr")?
-                            .into(),
-                    )
-                }
+            instruction: InstructionMeta {
+                address: u32::from_str_radix(&s[0..6], 16)
+                    .with_context(|| "pc")?
+                    .into(),
+                operation: s[7..10].trim().to_string(),
+                operand_str: Some(s[11..21].trim().to_string()),
+                effective_addr: {
+                    let addr = s[23..29].trim();
+                    if addr.is_empty() {
+                        None
+                    } else {
+                        Some(
+                            u32::from_str_radix(addr, 16)
+                                .with_context(|| "operand_addr")?
+                                .into(),
+                        )
+                    }
+                },
             },
             a: u16::from_str_radix(&s[33..37], 16).with_context(|| "a")?,
             x: u16::from_str_radix(&s[40..44], 16).with_context(|| "x")?,
@@ -200,10 +200,7 @@ impl CpuTraceLine {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
         let ppu_timer = cpu.bus.ppu.timer;
         CpuTraceLine {
-            pc: cpu.pc,
-            instruction: instruction.operation.to_string(),
-            operand: instruction.operand_str.unwrap_or_default(),
-            operand_addr: instruction.effective_addr,
+            instruction,
             a: cpu.a.value,
             x: cpu.x.value,
             y: cpu.y.value,
@@ -220,10 +217,7 @@ impl CpuTraceLine {
     pub fn from_cpu(cpu: &Cpu<impl MainBus>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
         CpuTraceLine {
-            pc: cpu.pc,
-            instruction: instruction.operation.to_string(),
-            operand: instruction.operand_str.unwrap_or_default(),
-            operand_addr: instruction.effective_addr,
+            instruction,
             a: cpu.a.value,
             x: cpu.x.value,
             y: cpu.y.value,
@@ -246,16 +240,18 @@ mod test {
 
     fn example_trace() -> CpuTraceLine {
         CpuTraceLine {
-            pc: AddressU24 {
-                bank: 0,
-                offset: 0xe811,
+            instruction: InstructionMeta {
+                address: AddressU24 {
+                    bank: 0,
+                    offset: 0xe811,
+                },
+                operation: "bpl".to_string(),
+                operand_str: Some("$e80e".to_string()),
+                effective_addr: Some(AddressU24 {
+                    bank: 0,
+                    offset: 0xe80e,
+                }),
             },
-            instruction: "bpl".to_string(),
-            operand: "$e80e".to_string(),
-            operand_addr: Some(AddressU24 {
-                bank: 0,
-                offset: 0xe80e,
-            }),
             a: 0x9901,
             x: 0x0100,
             y: 0x0000,

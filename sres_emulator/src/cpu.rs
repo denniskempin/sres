@@ -146,7 +146,7 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
-        self.debugger.before_instruction(self.pc);
+        self.debugger.before_cpu_instruction(self);
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
 
