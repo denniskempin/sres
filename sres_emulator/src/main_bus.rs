@@ -15,11 +15,13 @@ use crate::cartridge::MappingMode;
 use crate::debugger::DebuggerRef;
 use crate::ppu::HVTimerMode;
 use crate::ppu::Ppu;
+use crate::ppu::PpuTimer;
 use crate::util::uint::U16Ext;
 
 pub trait MainBus: Bus<AddressU24> {
     fn check_nmi_interrupt(&mut self) -> bool;
     fn consume_timer_interrupt(&mut self) -> bool;
+    fn ppu_timer(&self) -> &PpuTimer;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -300,6 +302,11 @@ impl MainBus for MainBusImpl {
 
     fn consume_timer_interrupt(&mut self) -> bool {
         self.ppu.timer.consume_timer_interrupt()
+    }
+
+    fn ppu_timer(&self) -> &PpuTimer {
+        &self.ppu.timer
+
     }
 }
 

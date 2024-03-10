@@ -2,22 +2,17 @@
 //!
 //! Also a useful, compact format for debugging emulator execution.
 use std::fmt::Display;
-use std::fs::File;
-use std::io;
-use std::io::BufRead;
-use std::path::Path;
 use std::str::FromStr;
 
 use anyhow::Context;
 use anyhow::Result;
 
 use crate::bus::AddressU16;
-use crate::bus::AddressU24;
 use crate::cpu::Cpu;
 use crate::cpu::InstructionMeta;
 use crate::cpu::StatusFlags;
 use crate::main_bus::MainBus;
-use crate::main_bus::MainBusImpl;
+
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
 use crate::spc700::Spc700StatusFlags;
@@ -26,6 +21,27 @@ use crate::spc700::Spc700StatusFlags;
 pub enum TraceLine {
     Cpu(CpuTraceLine),
     Spc700(Spc700TraceLine),
+}
+
+impl FromStr for TraceLine {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        if s.starts_with("..") {
+            Ok(TraceLine::Spc700(s.parse()?))
+        } else {
+            Ok(TraceLine::Cpu(s.parse()?))
+        }
+    }
+}
+
+impl Display for TraceLine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TraceLine::Cpu(line) => write!(f, "{}", line),
+            TraceLine::Spc700(line) => write!(f, "{}", line),
+        }
+    }
 }
 
 // Representation of the state of [Spc700] in the same format as logged by BSNES.
@@ -154,13 +170,18 @@ impl FromStr for CpuTraceLine {
         // BSNES can output h in clocks instead of pixels. This will require an additional character
         // for H: and shifts F: by one index.
         let is_hcounter = s[94..=95].trim() == "F:";
+        let operand_str = s[11..21].trim().to_string();
         Ok(CpuTraceLine {
             instruction: InstructionMeta {
                 address: u32::from_str_radix(&s[0..6], 16)
                     .with_context(|| "pc")?
                     .into(),
                 operation: s[7..10].trim().to_string(),
-                operand_str: Some(s[11..21].trim().to_string()),
+                operand_str: if operand_str.is_empty() {
+                    None
+                } else {
+                    Some(operand_str)
+                },
                 effective_addr: {
                     let addr = s[23..29].trim();
                     if addr.is_empty() {
@@ -191,14 +212,9 @@ impl FromStr for CpuTraceLine {
 }
 
 impl CpuTraceLine {
-    pub fn from_file(path: &Path) -> Result<impl Iterator<Item = Result<Self>>> {
-        let trace_reader = io::BufReader::new(File::open(path)?);
-        Ok(trace_reader.lines().map(|l| l?.parse()))
-    }
-
-    pub fn from_sres_cpu(cpu: &Cpu<MainBusImpl>) -> Self {
+    pub fn from_cpu(cpu: &Cpu<impl MainBus>) -> Self {
         let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
-        let ppu_timer = cpu.bus.ppu.timer;
+        let ppu_timer = cpu.bus.ppu_timer();
         CpuTraceLine {
             instruction,
             a: cpu.a.value,
@@ -213,26 +229,13 @@ impl CpuTraceLine {
             f: ppu_timer.f,
         }
     }
-
-    pub fn from_cpu(cpu: &Cpu<impl MainBus>) -> Self {
-        let (instruction, _) = cpu.load_instruction_meta(cpu.pc);
-        CpuTraceLine {
-            instruction,
-            a: cpu.a.value,
-            x: cpu.x.value,
-            y: cpu.y.value,
-            s: cpu.s,
-            d: cpu.d,
-            db: cpu.db,
-            status: cpu.status,
-            ..Default::default()
-        }
-    }
 }
 
 #[cfg(test)]
 mod test {
     use pretty_assertions::assert_eq;
+
+    use crate::bus::AddressU24;
 
     use super::*;
 

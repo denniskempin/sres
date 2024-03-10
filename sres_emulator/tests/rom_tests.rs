@@ -9,14 +9,18 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use log::error;
+
 use pretty_assertions::assert_eq;
+
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::Wrap;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::main_bus::MainBusImpl;
-use sres_emulator::ppu::fvh_to_master_clock;
+
 use sres_emulator::trace::CpuTraceLine;
+use sres_emulator::trace::Spc700TraceLine;
+use sres_emulator::trace::TraceLine;
 use sres_emulator::util::logging;
 use sres_emulator::util::memory::format_memory;
 use sres_emulator::System;
@@ -72,9 +76,9 @@ pub fn test_nmi_sub_cycle_accuracy() {
         }
 
         // Execute `bit $4210` instruction
-        println!("before: {}", CpuTraceLine::from_sres_cpu(cpu));
+        println!("before: {}", CpuTraceLine::from_cpu(cpu));
         cpu.step();
-        println!("after: {}", CpuTraceLine::from_sres_cpu(cpu));
+        println!("after: {}", CpuTraceLine::from_cpu(cpu));
 
         // If the NMI bit is set, the negative status bit will be true.
         assert_eq!(cpu.status.negative, *expected_nmi);
@@ -85,204 +89,209 @@ pub fn test_nmi_sub_cycle_accuracy() {
 
 #[test]
 pub fn test_krom_adc() {
-    run_rom_test("krom_adc");
+    run_rom_test("krom_adc", false);
 }
 
 #[test]
 pub fn test_krom_and() {
-    run_rom_test("krom_and");
+    run_rom_test("krom_and", false);
 }
 
 #[test]
 pub fn test_krom_asl() {
-    run_rom_test("krom_asl");
+    run_rom_test("krom_asl", false);
 }
 
 #[test]
 pub fn test_krom_bit() {
-    run_rom_test("krom_bit");
+    run_rom_test("krom_bit", false);
 }
 
 #[test]
 pub fn test_krom_bra() {
-    run_rom_test("krom_bra");
+    run_rom_test("krom_bra", false);
 }
 
 #[test]
 pub fn test_krom_cmp() {
-    run_rom_test("krom_cmp");
+    run_rom_test("krom_cmp", false);
 }
 
 #[test]
 pub fn test_krom_dec() {
-    run_rom_test("krom_dec");
+    run_rom_test("krom_dec", false);
 }
 
 #[test]
 pub fn test_krom_eor() {
-    run_rom_test("krom_eor");
+    run_rom_test("krom_eor", false);
 }
 
 #[test]
 pub fn test_krom_inc() {
-    run_rom_test("krom_inc");
+    run_rom_test("krom_inc", false);
 }
 
 #[test]
 pub fn test_krom_jmp() {
-    run_rom_test("krom_jmp");
+    run_rom_test("krom_jmp", false);
 }
 
 #[test]
 pub fn test_krom_ldr() {
-    run_rom_test("krom_ldr");
+    run_rom_test("krom_ldr", false);
 }
 
 #[test]
 pub fn test_krom_lsr() {
-    run_rom_test("krom_lsr");
+    run_rom_test("krom_lsr", false);
 }
 
 #[test]
 pub fn test_krom_mov() {
-    run_rom_test("krom_mov");
+    run_rom_test("krom_mov", false);
 }
 
 #[test]
 #[ignore = "Instructions not implemented yet"]
 pub fn test_krom_msc() {
-    run_rom_test("krom_msc");
+    run_rom_test("krom_msc", false);
 }
 
 #[test]
 pub fn test_krom_ora() {
-    run_rom_test("krom_ora");
+    run_rom_test("krom_ora", false);
 }
 
 #[test]
 pub fn test_krom_phl() {
-    run_rom_test("krom_phl");
+    run_rom_test("krom_phl", false);
 }
 
 #[test]
 pub fn test_krom_psr() {
-    run_rom_test("krom_psr");
+    run_rom_test("krom_psr", false);
 }
 
 #[test]
 pub fn test_krom_ret() {
-    run_rom_test("krom_ret");
+    run_rom_test("krom_ret", false);
 }
 
 #[test]
 pub fn test_krom_rol() {
-    run_rom_test("krom_rol");
+    run_rom_test("krom_rol", false);
 }
 
 #[test]
 pub fn test_krom_ror() {
-    run_rom_test("krom_ror");
+    run_rom_test("krom_ror", false);
 }
 
 #[test]
 pub fn test_krom_sbc() {
-    run_rom_test("krom_sbc");
+    run_rom_test("krom_sbc", false);
 }
 
 #[test]
 pub fn test_krom_str() {
-    run_rom_test("krom_str");
+    run_rom_test("krom_str", false);
 }
 
 #[test]
 pub fn test_krom_trn() {
-    run_rom_test("krom_trn");
+    run_rom_test("krom_trn", false);
 }
 
 #[test]
 pub fn test_ppu_timing() {
-    run_rom_test("ppu_timing");
+    run_rom_test("ppu_timing", false);
 }
 
-fn run_rom_test(test_name: &str) {
-    logging::test_init(true);
+#[test]
+#[ignore = "not implemented yet"]
+pub fn test_play_noise() {
+    run_rom_test("play_noise", true);
+}
+
+fn run_rom_test(test_name: &str, check_spc700: bool) {
+    logging::test_init(false);
 
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let trace_path = root_dir.join(format!("tests/rom_tests/{test_name}-trace.log.xz"));
     let rom_path = root_dir.join(format!("tests/rom_tests/{test_name}.sfc"));
 
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
+    system.enable_debugger();
     // CPUMSC reads 0x93 from $000000 at the first instruction. I cannot figure out why, it
     // should be mapped to RAM.
     system.cpu.bus.cycle_write_u8(0x000000.into(), 0x93);
     system.cpu.reset();
 
-    let mut previous_master_cycle = 0;
-    for (i, expected_line) in trace_log_from_xz_file(&trace_path).unwrap().enumerate() {
-        let mut expected_line = expected_line.unwrap();
-        if i == 0 {
-            assert_eq!(
-                expected_line.h, 186,
-                "Trace file is using dots not H-position"
-            );
-        }
-
-        let mut actual_line = CpuTraceLine::from_sres_cpu(&system.cpu);
-
-        // Fix some BSNES trace inconsistencies:
-
-        // Disassembly for branch instructions prints the absolute operand address, not the
-        // relative address.
-        if expected_line.instruction.operation.starts_with('b')
-            && expected_line.instruction.operation != "bit"
-        {
-            actual_line.instruction.operand_str = None;
-            expected_line.instruction.operand_str = None;
-        }
-        // `per` instruction prints relative address as effective address, not the calculated
-        // absolute address.
-        if expected_line.instruction.operation == "per" {
-            actual_line.instruction.operand_str = None;
-            expected_line.instruction.operand_str = None;
-            actual_line.instruction.effective_addr = None;
-            expected_line.instruction.effective_addr = None;
-        }
-        // `jmp` instructions in bsnes print an inconsistent effective address. Skip comparison.
-        if expected_line.instruction.operation.starts_with('j') {
-            actual_line.instruction.effective_addr = None;
-            expected_line.instruction.effective_addr = None;
-        }
-
-        if actual_line != expected_line {
-            error!("Assertion failure at instruction {i}");
-
-            // Convert F: V: H: from BSNES trace to master cycles to make it easier to compare how
-            // many cycles each instruction takes (or should take).
-            let expected_master_cycle =
-                fvh_to_master_clock(expected_line.f, expected_line.v, expected_line.h);
-            let expected_duration = expected_master_cycle.saturating_sub(previous_master_cycle);
-            let actual_duration = system
-                .cpu
-                .bus
-                .ppu
-                .timer
-                .master_clock
-                .saturating_sub(previous_master_cycle);
-            if expected_duration != actual_duration {
-                error!(
-                    "Expected duration: {} - Actual: {}, diff: {}",
-                    expected_duration,
-                    actual_duration,
-                    (expected_duration as i64) - (actual_duration as i64),
-                );
+    let mut expected_trace_lines = trace_log_from_xz_file(&trace_path).unwrap();
+    let mut line_num = 0;
+    loop {
+        // Execute one instruction, then compare trace log against expected_trace_lines.
+        system.execute_one_instruction();
+        let trace = system.debugger().consume_trace();
+        assert!(!trace.is_empty());
+        for actual_line in trace {
+            println!("{}", actual_line);
+            if !check_spc700 && matches!(actual_line, TraceLine::Spc700(_)) {
+                continue;
             }
 
-            // Compare as strings to get a nice diff.
-            assert_eq!(actual_line.to_string(), expected_line.to_string())
-        }
+            let expected_line = expected_trace_lines.next();
+            if expected_line.is_none() {
+                return;
+            }
+            let expected_line = expected_line.unwrap().unwrap();
 
-        previous_master_cycle = system.cpu.bus.ppu.timer.master_clock;
-        system.execute_one_instruction();
+            match (expected_line, actual_line) {
+                (TraceLine::Cpu(expected), TraceLine::Cpu(actual)) => {
+                    compare_cpu_trace(line_num, expected, actual);
+                }
+                (TraceLine::Spc700(expected), TraceLine::Spc700(actual)) => {
+                    compare_spc700_trace(line_num, expected, actual);
+                }
+                (expected_line, actual_line) => {
+                    error!("Unexpected trace line type at instruction {line_num}");
+                    assert_eq!(actual_line.to_string(), expected_line.to_string());
+                }
+            }
+        }
+        line_num += 1;
+    }
+}
+
+fn compare_spc700_trace(_i: usize, expected: Spc700TraceLine, actual: Spc700TraceLine) {
+    assert_eq!(actual.to_string(), expected.to_string())
+}
+
+fn compare_cpu_trace(i: usize, mut expected: CpuTraceLine, mut actual: CpuTraceLine) {
+    // Disassembly for branch instructions prints the absolute operand address, not the
+    // relative address.
+    if expected.instruction.operation.starts_with('b') && expected.instruction.operation != "bit" {
+        actual.instruction.operand_str = None;
+        expected.instruction.operand_str = None;
+    }
+    // `per` instruction prints relative address as effective address, not the calculated
+    // absolute address.
+    if expected.instruction.operation == "per" {
+        actual.instruction.operand_str = None;
+        expected.instruction.operand_str = None;
+        actual.instruction.effective_addr = None;
+        expected.instruction.effective_addr = None;
+    }
+    // `jmp` instructions in bsnes print an inconsistent effective address. Skip comparison.
+    if expected.instruction.operation.starts_with('j') {
+        actual.instruction.effective_addr = None;
+        expected.instruction.effective_addr = None;
+    }
+
+    if actual != expected {
+        error!("Assertion failed at instruction {i}");
+        assert_eq!(actual.to_string(), expected.to_string());
     }
 }
 
@@ -361,7 +370,7 @@ fn run_test_rom(test_name: &str) -> Cpu<MainBusImpl> {
     system.cpu
 }
 
-pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<CpuTraceLine>>> {
+pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<TraceLine>>> {
     use xz2::read::XzDecoder;
     let file = File::open(path)?;
     let decoder = XzDecoder::new(file);

@@ -10,12 +10,12 @@ use std::rc::Rc;
 
 use crate::bus::AddressU24;
 use crate::cpu::Cpu;
-use crate::cpu::InstructionMeta;
+
 use crate::cpu::NativeVectorTable;
 use crate::main_bus::MainBus;
-use crate::main_bus::MainBusImpl;
+
 use crate::trace::CpuTraceLine;
-use crate::trace::Spc700TraceLine;
+
 use crate::trace::TraceLine;
 use crate::util::RingBuffer;
 
@@ -138,6 +138,10 @@ pub struct Debugger {
 
 impl Debugger {
     /// Frontend facing API
+
+    pub fn consume_trace(&mut self) -> Vec<TraceLine> {
+        self.trace.stack.drain(..).collect()
+    }
 
     pub fn cpu_trace(&self) -> impl Iterator<Item = &CpuTraceLine> {
         self.trace.iter().filter_map(|line| match line {
