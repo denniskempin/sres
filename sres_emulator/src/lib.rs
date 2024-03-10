@@ -86,7 +86,7 @@ impl System {
             }
 
             if log_enabled!(target: "cpu_state", Level::Trace) {
-                log::trace!(target: "cpu_state", "{}", CpuTraceLine::from_sres_cpu(&self.cpu));
+                log::trace!(target: "cpu_state", "{}", CpuTraceLine::from_cpu(&self.cpu));
             }
             self.cpu.step();
 

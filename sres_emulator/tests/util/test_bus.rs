@@ -10,6 +10,7 @@ use sres_emulator::bus::AddressU16;
 use sres_emulator::bus::AddressU24;
 use sres_emulator::bus::Bus;
 use sres_emulator::main_bus::MainBus;
+use sres_emulator::ppu::PpuTimer;
 use sres_emulator::spc700::Spc700Bus;
 
 /// A test implementation of the `Bus`.
@@ -19,6 +20,7 @@ use sres_emulator::spc700::Spc700Bus;
 pub struct TestBus<AddressT: Address> {
     pub memory: SparseMemory<AddressT>,
     pub cycles: Vec<Cycle<AddressT>>,
+    pub ppu_timer: PpuTimer,
 }
 
 impl<AddressT: Address> Bus<AddressT> for TestBus<AddressT> {
@@ -106,5 +108,9 @@ impl MainBus for TestBus<AddressU24> {
 
     fn consume_timer_interrupt(&mut self) -> bool {
         false
+    }
+
+    fn ppu_timer(&self) -> &PpuTimer {
+        &self.ppu_timer
     }
 }
