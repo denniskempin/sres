@@ -177,7 +177,7 @@ impl Debugger {
     }
 
     /// Internal API
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             breakpoints: vec![],
             break_reason: None,

@@ -2,22 +2,22 @@
 mod instructions;
 mod opcode_table;
 mod operands;
+mod spc700_bus;
 mod status;
 
 use std::fmt::Display;
 
 use crate::bus::Address;
 use crate::bus::AddressU16;
-use crate::bus::Bus;
 use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
 use crate::spc700::opcode_table::InstructionDef;
 pub use crate::spc700::operands::AddressMode;
 pub use crate::spc700::operands::DecodedOperand;
+pub use crate::spc700::spc700_bus::Spc700Bus;
+pub use crate::spc700::spc700_bus::Spc700BusImpl;
 pub use crate::spc700::status::Spc700StatusFlags;
 use crate::util::uint::UInt;
-
-pub trait Spc700Bus: Bus<AddressU16> {}
 
 pub struct Spc700<BusT: Spc700Bus> {
     pub opcode_table: [InstructionDef<BusT>; 256],
@@ -53,8 +53,9 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     }
 
     pub fn reset(&mut self) {
-        self.pc = AddressU16(0);
-        self.bus.peek_u16(AddressU16(0), Wrap::NoWrap);
+        self.pc = AddressU16(0xFFC0);
+        self.sp = 0xef;
+        self.status.zero = true;
     }
 
     pub fn disassembly(&self, addr: AddressU16) -> (String, AddressU16) {
@@ -122,5 +123,41 @@ impl<BusT: Spc700Bus> Display for Spc700<BusT> {
             "{} {} A:{:02X} X:{:02X} Y:{:02X} SP:{:02X} DSW:{:02X} {}",
             self.pc, disassembly, self.a, self.x, self.y, self.sp, self.dsw, self.status,
         )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::trace::Spc700TraceLine;
+
+    fn assert_state(spc700: &Spc700<impl Spc700Bus>, expected_state: &str) {
+        let actual = Spc700TraceLine::from_spc700(spc700).to_string();
+        println!("{}", actual);
+        assert_eq!(actual, expected_state);
+    }
+
+    fn assert_states(spc700: &mut Spc700<impl Spc700Bus>, expected_states: &[&str]) {
+        for expected_state in expected_states {
+            assert_state(spc700, expected_state);
+            spc700.step();
+        }
+    }
+
+    #[test]
+    fn boot_rom_test() {
+        let mut spc700 = Spc700::new(Spc700BusImpl::new(), Default::default());
+        assert_states(
+            &mut spc700,
+            &[
+                "..ffc0 mov   x, #$ef           A:00 X:00 Y:00 SP:01ef YA:0000 ......Z.",
+                "..ffc2 mov   sp, x             A:00 X:ef Y:00 SP:01ef YA:0000 N.......",
+                "..ffc3 mov   a, #$00           A:00 X:ef Y:00 SP:01ef YA:0000 N.......",
+                "..ffc5 mov   (x), a            A:00 X:ef Y:00 SP:01ef YA:0000 ......Z.",
+                "..ffc6 dec   x                 A:00 X:ef Y:00 SP:01ef YA:0000 ......Z.",
+                "..ffc7 bne   $ffc5             A:00 X:ee Y:00 SP:01ef YA:0000 N.......",
+                "..ffc5 mov   (x), a            A:00 X:ee Y:00 SP:01ef YA:0000 N.......",
+            ],
+        );
     }
 }

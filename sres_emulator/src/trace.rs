@@ -64,7 +64,7 @@ impl Spc700TraceLine {
             a: cpu.a,
             x: cpu.x,
             y: cpu.y,
-            sp: cpu.direct_page_addr(cpu.sp),
+            sp: AddressU16(0x0100 + cpu.sp as u16),
             status: cpu.status,
         }
     }

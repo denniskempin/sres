@@ -1,6 +1,7 @@
 //! Each instruction in the [opcode table](build_opcode_table) has an associated
 //!
 //! address mode, which is decoded here to handle how the operand is loaded and stored.
+use core::panic;
 use std::fmt::Display;
 
 use intbits::Bits;
@@ -29,6 +30,7 @@ pub enum Operand {
     Const(u8),
     InMemory(AddressMode),
     JumpAddress(AddressMode),
+    Relative,
     Carry,
     AbsBit,
     AbsBitInv,
@@ -45,6 +47,15 @@ impl Operand {
             Self::Const(value) => DecodedOperand::Const(*value),
             Self::InMemory(mode) => DecodedOperand::InMemory(*mode, mode.decode(cpu)),
             Self::JumpAddress(mode) => DecodedOperand::JumpAddress(*mode, mode.decode(cpu)),
+            Self::Relative => {
+                let relative = cpu.fetch_program_u8() as i8;
+                DecodedOperand::Relative(
+                    relative,
+                    cpu.pc
+                        .add(1_u16, Wrap::NoWrap)
+                        .add_signed(relative.into(), Wrap::NoWrap),
+                )
+            }
             Self::Carry => DecodedOperand::Carry,
             Self::AbsBit => {
                 let operand_data = cpu.fetch_program_u16();
@@ -80,6 +91,7 @@ impl Operand {
             Operand::Carry => 0,
             Operand::InMemory(mode) => mode.operand_size(),
             Operand::JumpAddress(mode) => mode.operand_size(),
+            Operand::Relative => 1,
             Operand::AbsBit => 2,
             Operand::AbsBitInv => 2,
             Operand::DpBit(_) => 1,
@@ -91,15 +103,24 @@ impl Operand {
             _ => unreachable!(),
         };
         let disassembly = match self {
-            Self::Immediate => format!("#${:02X}", value),
-            Self::Register(register) => register.to_string(),
-            Self::Const(value) => format!("{:02X}", value),
+            Self::Immediate => format!("#${:02x}", value),
+            Self::Register(register) => format!("{:}", register),
+            Self::Const(value) => format!("{:02x}", value),
             Self::InMemory(mode) => mode.disassembly(cpu, addr),
             Self::JumpAddress(mode) => mode.disassembly(cpu, addr),
+            Self::Relative => {
+                let relative = cpu.bus.peek_u8(addr).unwrap_or_default() as i8;
+                format!(
+                    "${:04x}",
+                    addr.add(1_u16, Wrap::NoWrap)
+                        .add_signed(relative.into(), Wrap::NoWrap)
+                        .0
+                )
+            }
             Self::Carry => "C".to_string(),
-            Self::AbsBit => format!("${:04X}.{}", value.bits(0..13), value.bits(13..16)),
-            Self::AbsBitInv => format!("/${:04X}.{}", value.bits(0..13), value.bits(13..16)),
-            Self::DpBit(bit) => format!("${:02X}.{}", value, bit),
+            Self::AbsBit => format!("${:04x}.{}", value.bits(0..13), value.bits(13..16)),
+            Self::AbsBitInv => format!("/${:04x}.{}", value.bits(0..13), value.bits(13..16)),
+            Self::DpBit(bit) => format!("${:02x}.{}", value, bit),
         };
         (disassembly, addr.add(operand_size, Wrap::NoWrap))
     }
@@ -134,6 +155,7 @@ pub enum DecodedOperand {
     Const(u8),
     InMemory(AddressMode, AddressU16),
     JumpAddress(AddressMode, AddressU16),
+    Relative(i8, AddressU16),
     Carry,
     BitInMemory(AddressU16, usize),
     BitInMemoryInv(AddressU16, usize),
@@ -163,6 +185,7 @@ impl DecodedOperand {
             }
             Self::InMemory(_, addr) => cpu.bus.cycle_read_u8(*addr),
             Self::JumpAddress(_, addr) => addr.0.low_byte(),
+            Self::Relative(_, addr) => addr.0.low_byte(),
             Self::Carry => cpu.status.into(),
             Self::BitInMemory(addr, _bit) => cpu.bus.cycle_read_u8(*addr),
             Self::BitInMemoryInv(addr, _bit) => !cpu.bus.cycle_read_u8(*addr),
@@ -186,6 +209,7 @@ impl DecodedOperand {
             }
             Self::InMemory(_, addr) => cpu.bus.cycle_write_u8(*addr, value),
             Self::JumpAddress(_, _) => panic!("read only"),
+            Self::Relative(_, addr) => panic!("read only"),
             Self::Carry => cpu.status = value.into(),
             Self::BitInMemory(addr, _bit) => {
                 cpu.bus.cycle_write_u8(*addr, value);
@@ -236,6 +260,7 @@ impl DecodedOperand {
     pub fn load_high(&self, cpu: &mut Spc700<impl Spc700Bus>) -> u8 {
         match self {
             Self::JumpAddress(_, addr) => addr.0.high_byte(),
+            Self::Relative(_, addr) => addr.0.high_byte(),
             Self::InMemory(mode, addr) => cpu.bus.cycle_read_u8(addr.add(1_u16, mode.wrap_mode())),
             Self::Register(Register::YA) => cpu.y,
             _ => panic!("Not a u16 operand"),
@@ -362,18 +387,18 @@ impl AddressMode {
         };
 
         match self {
-            Self::Dp => format!("${:02X}", value),
-            Self::DpXIdx => format!("${:02X}+X", value),
-            Self::DpYIdx => format!("${:02X}+Y", value),
-            Self::DpXIdxIndirect => format!("[${:02X}+X]", value),
-            Self::DpIndirectYIdx => format!("[${:02X}]+Y", value),
-            Self::XIndirect => "(X)".to_string(),
-            Self::YIndirect => "(Y)".to_string(),
-            Self::XIndirectAutoInc => "(X++)".to_string(),
-            Self::Abs => format!("${:04X}", value),
-            Self::AbsXIdx => format!("${:04X}+X", value),
-            Self::AbsYIdx => format!("${:04X}+Y", value),
-            Self::AbsXIdxIndirect => format!("[${:04X}+X]", value),
+            Self::Dp => format!("${:02x}", value),
+            Self::DpXIdx => format!("${:02x}+x", value),
+            Self::DpYIdx => format!("${:02x}+y", value),
+            Self::DpXIdxIndirect => format!("[${:02x}+x]", value),
+            Self::DpIndirectYIdx => format!("[${:02x}]+y", value),
+            Self::XIndirect => "(x)".to_string(),
+            Self::YIndirect => "(y)".to_string(),
+            Self::XIndirectAutoInc => "(x++)".to_string(),
+            Self::Abs => format!("${:04x}", value),
+            Self::AbsXIdx => format!("${:04x}+x", value),
+            Self::AbsYIdx => format!("${:04x}+y", value),
+            Self::AbsXIdxIndirect => format!("[${:04x}+x]", value),
         }
     }
 
@@ -427,12 +452,12 @@ pub enum Register {
 impl Display for Register {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Register::A => write!(f, "A"),
-            Register::X => write!(f, "X"),
-            Register::Y => write!(f, "Y"),
-            Register::YA => write!(f, "YA"),
-            Register::Psw => write!(f, "Psw"),
-            Register::Sp => write!(f, "Sp"),
+            Register::A => write!(f, "a"),
+            Register::X => write!(f, "x"),
+            Register::Y => write!(f, "y"),
+            Register::YA => write!(f, "ya"),
+            Register::Psw => write!(f, "psw"),
+            Register::Sp => write!(f, "sp"),
         }
     }
 }
