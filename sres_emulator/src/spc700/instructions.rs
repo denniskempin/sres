@@ -312,11 +312,11 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
 
     #[inline]
     fn branch(&mut self, offset_op: Operand, condition: bool) {
-        let offset = offset_op.decode(self).load(self) as i8;
+        let addr = AddressU16(offset_op.decode(self).load_u16(self));
         if condition {
             self.bus.cycle_io();
             self.bus.cycle_io();
-            self.pc = self.pc.add_signed(offset.into(), Wrap::NoWrap);
+            self.pc = addr.sub(1_u16, Wrap::NoWrap);
         }
     }
 
