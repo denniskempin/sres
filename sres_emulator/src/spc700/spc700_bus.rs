@@ -1,20 +1,29 @@
-use crate::bus::{AddressU16, Bus};
+use crate::bus::AddressU16;
+use crate::bus::Bus;
 
 pub trait Spc700Bus: Bus<AddressU16> {}
 
-pub struct Spc700BusImpl {}
+pub struct Spc700BusImpl {
+    pub channel_in: [u8; 4],
+    pub channel_out: [u8; 4],
+}
 
 impl Spc700BusImpl {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Self {}
+        Self {
+            channel_in: [0; 4],
+            channel_out: [0; 4],
+        }
     }
 }
 
 impl Bus<AddressU16> for Spc700BusImpl {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         match addr.0 {
-            0x0000..=0xFFBF => None,
+            0x00F4..=0x00F7 => Some(self.channel_in[addr.0 as usize - 0x00F4]),
             0xFFC0..=0xFFFF => Some(IPL_BOOT_ROM[(addr.0 - 0xFFC0) as usize]),
+            _ => None,
         }
     }
 
@@ -24,7 +33,13 @@ impl Bus<AddressU16> for Spc700BusImpl {
         self.peek_u8(addr).unwrap_or_default()
     }
 
-    fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {}
+    fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
+        #[allow(clippy::single_match)]
+        match addr.0 {
+            0x00F4..=0x00F7 => self.channel_out[addr.0 as usize - 0x00F4] = value,
+            _ => (),
+        }
+    }
 
     fn reset(&mut self) {}
 }

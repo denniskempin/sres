@@ -10,12 +10,9 @@ use std::rc::Rc;
 
 use crate::bus::AddressU24;
 use crate::cpu::Cpu;
-
 use crate::cpu::NativeVectorTable;
 use crate::main_bus::MainBus;
-
 use crate::trace::CpuTraceLine;
-
 use crate::trace::TraceLine;
 use crate::util::RingBuffer;
 
@@ -177,6 +174,7 @@ impl Debugger {
     }
 
     /// Internal API
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             breakpoints: vec![],

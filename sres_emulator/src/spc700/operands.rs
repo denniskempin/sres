@@ -209,7 +209,7 @@ impl DecodedOperand {
             }
             Self::InMemory(_, addr) => cpu.bus.cycle_write_u8(*addr, value),
             Self::JumpAddress(_, _) => panic!("read only"),
-            Self::Relative(_, addr) => panic!("read only"),
+            Self::Relative(_, _addr) => panic!("read only"),
             Self::Carry => cpu.status = value.into(),
             Self::BitInMemory(addr, _bit) => {
                 cpu.bus.cycle_write_u8(*addr, value);
@@ -387,7 +387,13 @@ impl AddressMode {
         };
 
         match self {
-            Self::Dp => format!("${:02x}", value),
+            Self::Dp => {
+                if cpu.status.direct_page {
+                    format!("$1{:02x}", value)
+                } else {
+                    format!("$0{:02x}", value)
+                }
+            }
             Self::DpXIdx => format!("${:02x}+x", value),
             Self::DpYIdx => format!("${:02x}+y", value),
             Self::DpXIdxIndirect => format!("[${:02x}+x]", value),
