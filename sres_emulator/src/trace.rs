@@ -12,7 +12,6 @@ use crate::cpu::Cpu;
 use crate::cpu::InstructionMeta;
 use crate::cpu::StatusFlags;
 use crate::main_bus::MainBus;
-
 use crate::spc700::Spc700;
 use crate::spc700::Spc700Bus;
 use crate::spc700::Spc700StatusFlags;
@@ -235,9 +234,8 @@ impl CpuTraceLine {
 mod test {
     use pretty_assertions::assert_eq;
 
-    use crate::bus::AddressU24;
-
     use super::*;
+    use crate::bus::AddressU24;
 
     static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:236 F:32";
 

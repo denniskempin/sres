@@ -16,7 +16,6 @@ use crate::debugger::DebuggerRef;
 use crate::ppu::HVTimerMode;
 use crate::ppu::Ppu;
 use crate::ppu::PpuTimer;
-use crate::spc700::Spc700;
 use crate::util::uint::U16Ext;
 
 pub trait MainBus: Bus<AddressU24> {
