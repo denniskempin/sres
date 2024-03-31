@@ -1250,7 +1250,7 @@ impl<TileDecoderT: TileDecoder> TileRow<TileDecoderT> {
         if raw_pixel == 0 {
             0
         } else {
-            raw_pixel + self.palette * TileDecoderT::NUM_COLORS
+            raw_pixel.saturating_add(self.palette.saturating_mul(TileDecoderT::NUM_COLORS))
         }
     }
 

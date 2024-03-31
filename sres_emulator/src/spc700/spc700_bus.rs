@@ -1,9 +1,13 @@
 use crate::bus::AddressU16;
 use crate::bus::Bus;
 
-pub trait Spc700Bus: Bus<AddressU16> {}
+pub trait Spc700Bus: Bus<AddressU16> {
+    fn master_cycle(&self) -> u64;
+}
 
 pub struct Spc700BusImpl {
+    pub master_cycle: u64,
+    pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
     pub channel_out: [u8; 4],
 }
@@ -12,6 +16,8 @@ impl Spc700BusImpl {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
+            master_cycle: 0,
+            ram: [0; 0x10000],
             channel_in: [0; 4],
             channel_out: [0; 4],
         }
@@ -23,28 +29,36 @@ impl Bus<AddressU16> for Spc700BusImpl {
         match addr.0 {
             0x00F4..=0x00F7 => Some(self.channel_in[addr.0 as usize - 0x00F4]),
             0xFFC0..=0xFFFF => Some(IPL_BOOT_ROM[(addr.0 - 0xFFC0) as usize]),
-            _ => None,
+            _ => Some(self.ram[addr.0 as usize]),
         }
     }
 
-    fn cycle_io(&mut self) {}
+    fn cycle_io(&mut self) {
+        self.master_cycle += 21;
+    }
 
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
+        self.master_cycle += 21;
         self.peek_u8(addr).unwrap_or_default()
     }
 
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
+        self.master_cycle += 21;
         #[allow(clippy::single_match)]
         match addr.0 {
             0x00F4..=0x00F7 => self.channel_out[addr.0 as usize - 0x00F4] = value,
-            _ => (),
+            _ => self.ram[addr.0 as usize] = value,
         }
     }
 
     fn reset(&mut self) {}
 }
 
-impl Spc700Bus for Spc700BusImpl {}
+impl Spc700Bus for Spc700BusImpl {
+    fn master_cycle(&self) -> u64 {
+        self.master_cycle
+    }
+}
 
 /// See https://github.com/gilligan/snesdev/blob/master/docs/spc700.txt
 const IPL_BOOT_ROM: [u8; 64] = [

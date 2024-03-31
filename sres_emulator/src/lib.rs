@@ -18,11 +18,7 @@ use cpu::Cpu;
 use debugger::BreakReason;
 use debugger::Debugger;
 use debugger::DebuggerRef;
-use log::log_enabled;
-use log::Level;
 use main_bus::MainBusImpl;
-
-use crate::trace::CpuTraceLine;
 
 pub enum ExecutionResult {
     Normal,
@@ -66,6 +62,7 @@ impl System {
         self.cpu.bus.debugger.enabled = true;
         self.cpu.bus.dma_controller.debugger.enabled = true;
         self.cpu.bus.ppu.debugger.enabled = true;
+        self.cpu.bus.apu.spc700.debugger.enabled = true;
     }
 
     pub fn disable_debugger(&mut self) {
@@ -74,6 +71,7 @@ impl System {
         self.cpu.bus.debugger.enabled = false;
         self.cpu.bus.dma_controller.debugger.enabled = false;
         self.cpu.bus.ppu.debugger.enabled = false;
+        self.cpu.bus.apu.spc700.debugger.enabled = false;
     }
 
     pub fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
@@ -85,10 +83,11 @@ impl System {
                 return ExecutionResult::Halt;
             }
 
-            if log_enabled!(target: "cpu_state", Level::Trace) {
-                log::trace!(target: "cpu_state", "{}", CpuTraceLine::from_cpu(&self.cpu));
-            }
             self.cpu.step();
+            self.cpu
+                .bus
+                .apu
+                .catch_up_to_master_clock(self.cpu.bus.ppu.timer.master_clock);
 
             if let Some(break_reason) = self.debugger().take_break_reason() {
                 return ExecutionResult::Break(break_reason);
