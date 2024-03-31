@@ -8,11 +8,17 @@ use std::ops::Deref;
 use std::ops::Range;
 use std::rc::Rc;
 
+use log::log_enabled;
+use log::Level;
+
 use crate::bus::AddressU24;
 use crate::cpu::Cpu;
 use crate::cpu::NativeVectorTable;
 use crate::main_bus::MainBus;
+use crate::spc700::Spc700;
+use crate::spc700::Spc700Bus;
 use crate::trace::CpuTraceLine;
+use crate::trace::Spc700TraceLine;
 use crate::trace::TraceLine;
 use crate::util::RingBuffer;
 
@@ -90,8 +96,23 @@ impl DebuggerRef {
     }
 
     pub fn before_cpu_instruction(&self, cpu: &Cpu<impl MainBus>) {
+        if log_enabled!(target: "cpu_state", Level::Trace) {
+            log::trace!(target: "cpu_state", "{}", CpuTraceLine::from_cpu(cpu));
+        }
         if self.enabled {
             self.inner.deref().borrow_mut().before_cpu_instruction(cpu);
+        }
+    }
+
+    pub fn before_spc700_instruction(&self, spc700: &Spc700<impl Spc700Bus>) {
+        if log_enabled!(target: "apu_state", Level::Trace) {
+            log::trace!(target: "apu_state", "{}", Spc700TraceLine::from_spc700(spc700));
+        }
+        if self.enabled {
+            self.inner
+                .deref()
+                .borrow_mut()
+                .before_spc700_instruction(spc700);
         }
     }
 
@@ -137,7 +158,7 @@ impl Debugger {
     /// Frontend facing API
 
     pub fn consume_trace(&mut self) -> Vec<TraceLine> {
-        self.trace.stack.drain(..).collect()
+        self.trace.stack.drain(..).rev().collect()
     }
 
     pub fn cpu_trace(&self) -> impl Iterator<Item = &CpuTraceLine> {
@@ -181,6 +202,14 @@ impl Debugger {
             break_reason: None,
             trace: RingBuffer::default(),
         }
+    }
+
+    fn before_spc700_instruction(&mut self, spc700: &Spc700<impl Spc700Bus>) {
+        if spc700.pc.0 == 0xFFFB {
+            self.break_reason = Some(BreakReason::Custom("SPC".to_string()));
+        }
+        self.trace
+            .push(TraceLine::Spc700(Spc700TraceLine::from_spc700(spc700)));
     }
 
     fn before_cpu_instruction(&mut self, cpu: &Cpu<impl MainBus>) {

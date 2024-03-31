@@ -66,7 +66,7 @@ impl MainBusImpl {
             clock_speed: 8,
             dma_controller: DmaController::new(debugger.clone()),
             ppu: Ppu::new(debugger.clone()),
-            apu: Apu::new(),
+            apu: Apu::new(debugger.clone()),
             multiplication: MultiplicationUnit::new(),
             debugger,
             nmi_enable: false,

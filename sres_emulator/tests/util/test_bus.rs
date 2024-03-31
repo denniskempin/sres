@@ -99,7 +99,11 @@ impl<AddressT: Address> Display for SparseMemory<AddressT> {
     }
 }
 
-impl Spc700Bus for TestBus<AddressU16> {}
+impl Spc700Bus for TestBus<AddressU16> {
+    fn master_cycle(&self) -> u64 {
+        0
+    }
+}
 
 impl MainBus for TestBus<AddressU24> {
     fn check_nmi_interrupt(&mut self) -> bool {

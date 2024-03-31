@@ -29,7 +29,6 @@ pub struct Spc700<BusT: Spc700Bus> {
     pub sp: u8,
     pub dsw: u8,
     pub status: Spc700StatusFlags,
-    pub master_cycle: u64,
     pub debugger: DebuggerRef,
 }
 
@@ -45,7 +44,6 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
             sp: 0,
             dsw: 0,
             status: Spc700StatusFlags::default(),
-            master_cycle: 0,
             debugger,
         };
         cpu.reset();
@@ -64,7 +62,14 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         (instruction.disassembly)(self, addr.add(1_u8, Wrap::NoWrap))
     }
 
+    pub fn catch_up_to_master_clock(&mut self, master_cycles: u64) {
+        while master_cycles > self.bus.master_cycle() {
+            self.step();
+        }
+    }
+
     pub fn step(&mut self) {
+        self.debugger.before_spc700_instruction(self);
         let opcode = self.bus.cycle_read_u8(self.pc);
         self.pc = self.pc.add(1_u8, Wrap::NoWrap);
         let instruction = &self.opcode_table[opcode as usize];
