@@ -1,6 +1,3 @@
-use std::fmt::Display;
-use std::fmt::Formatter;
-
 use eframe::CreationContext;
 use egui::ColorImage;
 use egui::Context;
@@ -17,24 +14,12 @@ use sres_emulator::System;
 
 use crate::util::EguiImageImpl;
 
-#[derive(PartialEq, Copy, Clone)]
-
+#[derive(PartialEq, Copy, Clone, strum::Display)]
 enum PpuDebugTabs {
     Background,
     Sprites,
     Vram,
     Palette,
-}
-
-impl Display for PpuDebugTabs {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PpuDebugTabs::Background => write!(f, "Background"),
-            PpuDebugTabs::Sprites => write!(f, "Sprites"),
-            PpuDebugTabs::Vram => write!(f, "Vram"),
-            PpuDebugTabs::Palette => write!(f, "Palette"),
-        }
-    }
 }
 
 pub struct PpuDebugWindow {

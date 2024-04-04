@@ -326,7 +326,7 @@ impl Display for Sprite {
     }
 }
 
-#[derive(Default, Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, Debug, Serialize, Deserialize, strum::Display)]
 pub enum SpriteSize {
     #[default]
     Size8x8,
@@ -335,20 +335,6 @@ pub enum SpriteSize {
     Size64x64,
     Size16x32,
     Size32x64,
-}
-
-impl Display for SpriteSize {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        use SpriteSize::*;
-        match self {
-            Size8x8 => write!(f, "8x8"),
-            Size16x16 => write!(f, "16x16"),
-            Size32x32 => write!(f, "32x32"),
-            Size64x64 => write!(f, "64x64"),
-            Size16x32 => write!(f, "16x32"),
-            Size32x64 => write!(f, "32x64"),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -385,7 +371,7 @@ mod tests {
 
         assert_eq!(
             oam.get_sprite(0).to_string(),
-            "Sprite 00: Tile00 16x16 from table $0000 at (119, 252) Pal0 Pri3"
+            "Sprite 00: Tile00 Size16x16 from table $0000 at (119, 252) Pal0 Pri3"
         )
     }
 }

@@ -206,8 +206,8 @@ pub fn test_ppu_timing() {
 #[test]
 pub fn test_play_noise() {
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let rom_path = root_dir.join(format!("tests/rom_tests/play_noise.sfc"));
-    let spc_rom_path = root_dir.join(format!("tests/rom_tests/play_noise.spc"));
+    let rom_path = root_dir.join("tests/rom_tests/play_noise.sfc");
+    let spc_rom_path = root_dir.join("tests/rom_tests/play_noise.spc");
 
     // Load rom and execute enough instructions to finish initialization
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
@@ -216,7 +216,7 @@ pub fn test_play_noise() {
     }
 
     // Verify the program has been loaded correctly at 0x0200 in SPC700 RAM.
-    let spc_program = std::fs::read(&spc_rom_path).unwrap();
+    let spc_program = std::fs::read(spc_rom_path).unwrap();
     let actual_program = &system.cpu.bus.apu.spc700.bus.ram[0x0200..(0x0200 + spc_program.len())];
     assert_eq!(format_memory(actual_program), format_memory(&spc_program));
 }

@@ -2,7 +2,6 @@
 //!
 //! address mode, which is decoded here to handle how the operand is loaded and stored.
 use core::panic;
-use std::fmt::Display;
 
 use intbits::Bits;
 
@@ -445,7 +444,7 @@ impl AddressMode {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, strum::Display)]
 pub enum Register {
     A,
     X,
@@ -453,17 +452,4 @@ pub enum Register {
     YA,
     Psw,
     Sp,
-}
-
-impl Display for Register {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Register::A => write!(f, "a"),
-            Register::X => write!(f, "x"),
-            Register::Y => write!(f, "y"),
-            Register::YA => write!(f, "ya"),
-            Register::Psw => write!(f, "psw"),
-            Register::Sp => write!(f, "sp"),
-        }
-    }
 }

@@ -24,6 +24,7 @@ serde = "*"
 puffin = "0.18"
 itertools = "0.10"
 serde_path_to_error = "0.1"
+strum = { version = "0.26", features = ["derive"] }
 
 [dev-dependencies]
 tempfile = "3.5"
