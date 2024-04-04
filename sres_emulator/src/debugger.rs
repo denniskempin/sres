@@ -3,7 +3,6 @@
 //! Allows internal components to notify of events during emulation (e.g. memory access),
 //! and allows the front end to set and detect breakpoints on those events.
 use std::cell::RefCell;
-use std::fmt::Display;
 use std::ops::Deref;
 use std::ops::Range;
 use std::rc::Rc;
@@ -47,7 +46,7 @@ pub enum Trigger {
 }
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Clone)]
+#[derive(Clone, strum::Display)]
 pub enum BreakReason {
     ProgramCounter(AddressU24),
     CpuMemoryRead(AddressU24),
@@ -55,25 +54,6 @@ pub enum BreakReason {
     ExecutionError(String),
     Interrupt(NativeVectorTable),
     Custom(String),
-}
-
-impl Display for BreakReason {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BreakReason::ProgramCounter(addr) => {
-                write!(f, "Program counter reached address {}", addr)
-            }
-            BreakReason::CpuMemoryRead(addr) => {
-                write!(f, "CPU memory read at address {}", addr)
-            }
-            BreakReason::CpuMemoryWrite(addr) => {
-                write!(f, "CPU memory write at address {}", addr)
-            }
-            BreakReason::Custom(msg) => msg.fmt(f),
-            BreakReason::ExecutionError(msg) => msg.fmt(f),
-            BreakReason::Interrupt(handler) => write!(f, "{} Interrupt", handler),
-        }
-    }
 }
 
 /// A wrapper around Rc<RefCell<Debugger>> to access a shared instance of the debugger.

@@ -4,8 +4,6 @@ mod oam;
 mod timer;
 mod vram;
 
-use std::fmt::Display;
-use std::fmt::Formatter;
 use std::marker::PhantomData;
 
 use intbits::Bits;
@@ -1007,7 +1005,7 @@ impl std::ops::IndexMut<(u32, u32)> for Framebuffer {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize, strum::Display)]
 pub enum BgMode {
     #[default]
     Mode0,
@@ -1020,20 +1018,6 @@ pub enum BgMode {
     Mode7,
 }
 
-impl Display for BgMode {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BgMode::Mode0 => write!(f, "Mode 0"),
-            BgMode::Mode1 => write!(f, "Mode 1"),
-            BgMode::Mode2 => write!(f, "Mode 2"),
-            BgMode::Mode3 => write!(f, "Mode 3"),
-            BgMode::Mode4 => write!(f, "Mode 4"),
-            BgMode::Mode5 => write!(f, "Mode 5"),
-            BgMode::Mode6 => write!(f, "Mode 6"),
-            BgMode::Mode7 => write!(f, "Mode 7"),
-        }
-    }
-}
 #[derive(Serialize, Deserialize, Copy, Clone)]
 pub enum ColorMathOperation {
     Add,
@@ -1096,7 +1080,7 @@ impl Background {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize, strum::Display)]
 pub enum BitDepth {
     #[default]
     Disabled,
@@ -1106,35 +1090,14 @@ pub enum BitDepth {
     Opt,
 }
 
-impl Display for BitDepth {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BitDepth::Disabled => write!(f, "Disabled"),
-            BitDepth::Bpp2 => write!(f, "2bpp"),
-            BitDepth::Bpp4 => write!(f, "4bpp"),
-            BitDepth::Bpp8 => write!(f, "8bpp"),
-            BitDepth::Opt => write!(f, "Opt"),
-        }
-    }
-}
-
-#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize, strum::Display)]
 pub enum TileSize {
     #[default]
     Size8x8,
     Size16x16,
 }
 
-impl Display for TileSize {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TileSize::Size8x8 => write!(f, "8x8"),
-            TileSize::Size16x16 => write!(f, "16x16"),
-        }
-    }
-}
-
-#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize, strum::Display)]
 pub enum TilemapSize {
     #[default]
     Size32x32,
@@ -1143,35 +1106,13 @@ pub enum TilemapSize {
     Size64x64,
 }
 
-impl Display for TilemapSize {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TilemapSize::Size32x32 => write!(f, "32x32"),
-            TilemapSize::Size64x32 => write!(f, "64x32"),
-            TilemapSize::Size32x64 => write!(f, "32x64"),
-            TilemapSize::Size64x64 => write!(f, "64x64"),
-        }
-    }
-}
-
-#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize, strum::Display)]
 pub enum BackgroundId {
     #[default]
     BG1 = 0,
     BG2 = 1,
     BG3 = 2,
     BG4 = 3,
-}
-
-impl Display for BackgroundId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BackgroundId::BG1 => write!(f, "BG1"),
-            BackgroundId::BG2 => write!(f, "BG2"),
-            BackgroundId::BG3 => write!(f, "BG3"),
-            BackgroundId::BG4 => write!(f, "BG4"),
-        }
-    }
 }
 
 pub struct Tile<TileDecoderT: TileDecoder> {

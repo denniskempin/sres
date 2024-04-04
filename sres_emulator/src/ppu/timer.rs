@@ -1,5 +1,4 @@
 //! Tracking of PPU events and timing.
-use std::fmt::Display;
 
 use crate::bus::AddressU24;
 use crate::util::uint::U16Ext;
@@ -253,23 +252,12 @@ impl Default for PpuTimer {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, strum::Display)]
 pub enum HVTimerMode {
     Off,
     TriggerH,
     TriggerV,
     TriggerHV,
-}
-
-impl Display for HVTimerMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            HVTimerMode::Off => write!(f, "Off"),
-            HVTimerMode::TriggerH => write!(f, "TriggerH"),
-            HVTimerMode::TriggerV => write!(f, "TriggerV"),
-            HVTimerMode::TriggerHV => write!(f, "TriggerHV"),
-        }
-    }
 }
 
 pub fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {

@@ -4,8 +4,6 @@ mod opcode_table;
 mod operands;
 mod status;
 
-use std::fmt::Display;
-
 use intbits::Bits;
 
 use self::opcode_table::build_opcode_table;
@@ -41,23 +39,12 @@ impl VariableLengthRegister {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, strum::Display)]
 pub enum NativeVectorTable {
     Cop = 0xFFE4,
     Break = 0xFFE6,
     Nmi = 0xFFEA,
     Irq = 0xFFEE,
-}
-
-impl Display for NativeVectorTable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            NativeVectorTable::Cop => write!(f, "Cop"),
-            NativeVectorTable::Break => write!(f, "Break"),
-            NativeVectorTable::Nmi => write!(f, "Nmi"),
-            NativeVectorTable::Irq => write!(f, "Irq"),
-        }
-    }
 }
 
 pub enum EmuVectorTable {
