@@ -13,7 +13,9 @@ pub use self::status::StatusFlags;
 use crate::bus::AddressU24;
 use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
+use crate::debugger::Event;
 use crate::main_bus::MainBus;
+use crate::trace::CpuTraceLine;
 use crate::util::uint::RegisterSize;
 use crate::util::uint::UInt;
 
@@ -39,11 +41,15 @@ impl VariableLengthRegister {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, strum::Display)]
+#[derive(Clone, Copy, PartialEq, Debug, strum::Display, strum::EnumString)]
 pub enum NativeVectorTable {
+    #[strum(serialize = "cop")]
     Cop = 0xFFE4,
+    #[strum(serialize = "break", serialize = "brk")]
     Break = 0xFFE6,
+    #[strum(serialize = "nmi")]
     Nmi = 0xFFEA,
+    #[strum(serialize = "irq")]
     Irq = 0xFFEE,
 }
 
@@ -133,7 +139,10 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
-        self.debugger.before_cpu_instruction(self);
+        if self.debugger.enabled {
+            self.debugger
+                .on_event(Event::CpuStep(CpuTraceLine::from_cpu(self)));
+        }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
 
@@ -146,7 +155,7 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     fn interrupt(&mut self, handler: NativeVectorTable) {
-        self.debugger.on_interrupt(handler);
+        self.debugger.on_event(Event::CpuInterrupt(handler));
         self.stack_push_u24(u32::from(self.pc));
         self.stack_push_u8(u8::from(self.status));
         self.status.irq_disable = true;

@@ -3,23 +3,103 @@
 //! Allows internal components to notify of events during emulation (e.g. memory access),
 //! and allows the front end to set and detect breakpoints on those events.
 use std::cell::RefCell;
-use std::ops::Deref;
+use std::fmt::Display;
 use std::ops::Range;
 use std::rc::Rc;
-
-use log::log_enabled;
-use log::Level;
+use std::str::FromStr;
 
 use crate::bus::AddressU24;
-use crate::cpu::Cpu;
 use crate::cpu::NativeVectorTable;
-use crate::main_bus::MainBus;
-use crate::spc700::Spc700;
-use crate::spc700::Spc700Bus;
 use crate::trace::CpuTraceLine;
-use crate::trace::Spc700TraceLine;
-use crate::trace::TraceLine;
 use crate::util::RingBuffer;
+
+#[derive(Clone)]
+pub enum Event {
+    CpuStep(CpuTraceLine),
+    CpuMemoryRead(AddressU24),
+    CpuMemoryWrite(AddressU24, u8),
+    ExecutionError(String),
+    CpuInterrupt(NativeVectorTable),
+}
+
+impl Display for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use Event::*;
+        match self {
+            CpuStep(cpu) => write!(f, "{}", cpu),
+            CpuMemoryRead(addr) => write!(f, "R {}", addr),
+            CpuMemoryWrite(addr, data) => write!(f, "W {} = {:X}", addr, data),
+            ExecutionError(msg) => write!(f, "Error: {}", msg),
+            CpuInterrupt(handler) => write!(f, "Interrupt {}", handler),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum EventFilter {
+    CpuProgramCounter(Range<u32>),
+    CpuInstruction(String),
+    CpuMemoryRead(Range<u32>),
+    CpuMemoryWrite(Range<u32>),
+    ExecutionError,
+    Interrupt(NativeVectorTable),
+}
+
+impl EventFilter {
+    pub fn matches(&self, event: &Event) -> bool {
+        use EventFilter::*;
+        match (self, event) {
+            (CpuProgramCounter(range), Event::CpuStep(cpu)) => {
+                range.contains(&u32::from(cpu.instruction.address))
+            }
+            (CpuInstruction(instr), Event::CpuStep(cpu)) => instr == &cpu.instruction.operation,
+            (CpuMemoryRead(range), Event::CpuMemoryRead(addr)) => range.contains(&u32::from(*addr)),
+            (CpuMemoryWrite(range), Event::CpuMemoryWrite(addr, _)) => {
+                range.contains(&u32::from(*addr))
+            }
+            (ExecutionError, Event::ExecutionError(_)) => true,
+            (Interrupt(expected_handler), Event::CpuInterrupt(handler)) => {
+                expected_handler == handler
+            }
+            _ => false,
+        }
+    }
+}
+
+impl FromStr for EventFilter {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use EventFilter::*;
+        let (key, arg) = s.split_once(' ').unwrap_or((s, ""));
+        Ok(match key.to_lowercase().as_str() {
+            "pc" => CpuProgramCounter(parse_range(arg)?),
+            "irq" => Interrupt(NativeVectorTable::from_str(arg)?),
+            "r" => CpuMemoryRead(parse_range(arg)?),
+            "w" => CpuMemoryWrite(parse_range(arg)?),
+            &_ => CpuInstruction(s.to_string()),
+        })
+    }
+}
+
+impl Display for EventFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use EventFilter::*;
+        match self {
+            CpuProgramCounter(range) => write!(f, "pc{}", format_range(range)),
+            CpuInstruction(s) => write!(f, "{}", s),
+            CpuMemoryRead(range) => write!(f, "r{}", format_range(range)),
+            CpuMemoryWrite(range) => write!(f, "w{}", format_range(range)),
+            ExecutionError => write!(f, "error"),
+            Interrupt(handler) => write!(f, "irq {}", handler),
+        }
+    }
+}
+
+pub struct BreakReason {
+    pub trigger: EventFilter,
+    pub event: Event,
+}
 
 pub enum MemoryAccess {
     Read(AddressU24),
@@ -45,17 +125,6 @@ pub enum Trigger {
     Interrupt(NativeVectorTable),
 }
 
-#[allow(clippy::enum_variant_names)]
-#[derive(Clone, strum::Display)]
-pub enum BreakReason {
-    ProgramCounter(AddressU24),
-    CpuMemoryRead(AddressU24),
-    CpuMemoryWrite(AddressU24),
-    ExecutionError(String),
-    Interrupt(NativeVectorTable),
-    Custom(String),
-}
-
 /// A wrapper around Rc<RefCell<Debugger>> to access a shared instance of the debugger.
 ///
 /// Each instance has it's own `enabled` flag to enable/disable access to the debugger
@@ -75,49 +144,9 @@ impl DebuggerRef {
         }
     }
 
-    pub fn before_cpu_instruction(&self, cpu: &Cpu<impl MainBus>) {
-        if log_enabled!(target: "cpu_state", Level::Trace) {
-            log::trace!(target: "cpu_state", "{}", CpuTraceLine::from_cpu(cpu));
-        }
+    pub fn on_event(&self, event: Event) {
         if self.enabled {
-            self.inner.deref().borrow_mut().before_cpu_instruction(cpu);
-        }
-    }
-
-    pub fn before_spc700_instruction(&self, spc700: &Spc700<impl Spc700Bus>) {
-        if log_enabled!(target: "apu_state", Level::Trace) {
-            log::trace!(target: "apu_state", "{}", Spc700TraceLine::from_spc700(spc700));
-        }
-        if self.enabled {
-            self.inner
-                .deref()
-                .borrow_mut()
-                .before_spc700_instruction(spc700);
-        }
-    }
-
-    pub fn on_interrupt(&self, handler: NativeVectorTable) {
-        if self.enabled {
-            self.inner.deref().borrow_mut().on_interrupt(handler);
-        }
-    }
-
-    pub fn on_error(&self, msg: String) {
-        log::error!("{}", msg);
-        if self.enabled {
-            self.inner.deref().borrow_mut().on_error(msg);
-        }
-    }
-
-    pub fn trigger_custom(&self, msg: String) {
-        if self.enabled {
-            self.inner.deref().borrow_mut().trigger_custom(msg);
-        }
-    }
-
-    pub fn on_cpu_memory_access(&self, access: MemoryAccess) {
-        if self.enabled {
-            self.inner.deref().borrow_mut().on_cpu_memory_access(access);
+            self.inner.borrow_mut().record_trace_event(event);
         }
     }
 }
@@ -129,21 +158,17 @@ impl Default for DebuggerRef {
 }
 
 pub struct Debugger {
-    breakpoints: Vec<Trigger>,
+    log_points: Vec<EventFilter>,
+    break_points: Vec<EventFilter>,
+    log: RingBuffer<Event, 1024>,
     break_reason: Option<BreakReason>,
-    trace: RingBuffer<TraceLine, 128>,
 }
 
 impl Debugger {
     /// Frontend facing API
-
-    pub fn consume_trace(&mut self) -> Vec<TraceLine> {
-        self.trace.stack.drain(..).rev().collect()
-    }
-
     pub fn cpu_trace(&self) -> impl Iterator<Item = &CpuTraceLine> {
-        self.trace.iter().filter_map(|line| match line {
-            TraceLine::Cpu(cpu) => Some(cpu),
+        self.log.iter().filter_map(|line| match line {
+            Event::CpuStep(cpu) => Some(cpu),
             _ => None,
         })
     }
@@ -152,25 +177,25 @@ impl Debugger {
         self.break_reason.take()
     }
 
-    pub fn has_breakpoint(&self, trigger: &Trigger) -> bool {
-        self.breakpoints.iter().any(|t| t == trigger)
+    pub fn has_break_point(&self, trigger: &EventFilter) -> bool {
+        self.break_points.iter().any(|t| t == trigger)
     }
 
-    pub fn add_breakpoint(&mut self, trigger: Trigger) {
-        if !self.has_breakpoint(&trigger) {
-            self.breakpoints.push(trigger);
+    pub fn add_break_point(&mut self, trigger: EventFilter) {
+        if !self.has_break_point(&trigger) {
+            self.break_points.push(trigger);
         }
     }
 
-    pub fn remove_breakpoint(&mut self, trigger: &Trigger) {
-        self.breakpoints.retain(|t| t != trigger)
+    pub fn remove_break_point(&mut self, trigger: &EventFilter) {
+        self.break_points.retain(|t| t != trigger)
     }
 
-    pub fn toggle_breakpoint(&mut self, trigger: Trigger) {
-        if self.has_breakpoint(&trigger) {
-            self.remove_breakpoint(&trigger)
+    pub fn toggle_break_point(&mut self, trigger: EventFilter) {
+        if self.has_break_point(&trigger) {
+            self.remove_break_point(&trigger)
         } else {
-            self.add_breakpoint(trigger)
+            self.add_break_point(trigger)
         }
     }
 
@@ -178,74 +203,113 @@ impl Debugger {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            breakpoints: vec![],
+            log_points: vec![],
+            break_points: vec![],
             break_reason: None,
-            trace: RingBuffer::default(),
+            log: RingBuffer::default(),
         }
     }
 
-    fn before_spc700_instruction(&mut self, spc700: &Spc700<impl Spc700Bus>) {
-        if spc700.pc.0 == 0xFFFB {
-            self.break_reason = Some(BreakReason::Custom("SPC".to_string()));
+    pub fn record_trace_event(&mut self, event: Event) {
+        let break_trigger = self
+            .break_points
+            .iter()
+            .find(|log_filter| log_filter.matches(&event));
+        if let Some(break_trigger) = break_trigger {
+            self.break_reason = Some(BreakReason {
+                event: event.clone(),
+                trigger: break_trigger.clone(),
+            });
         }
-        self.trace
-            .push(TraceLine::Spc700(Spc700TraceLine::from_spc700(spc700)));
+
+        if self
+            .log_points
+            .iter()
+            .any(|log_filter| log_filter.matches(&event))
+        {
+            println!("{:}", &event);
+            self.log.push(event);
+        }
+    }
+}
+
+/// Parses a hex 1234:5678 range string into a Range<u32>
+fn parse_range(s: &str) -> anyhow::Result<Range<u32>> {
+    let split = s.split_once(':');
+    if let Some((left, right)) = split {
+        let start = if left.is_empty() {
+            0
+        } else {
+            u32::from_str_radix(left, 16)?
+        };
+        let end = if right.is_empty() {
+            u32::MAX
+        } else {
+            1 + u32::from_str_radix(right, 16)?
+        };
+        Ok(Range { start, end })
+    } else if s.is_empty() {
+        Ok(Range {
+            start: 0,
+            end: u32::MAX,
+        })
+    } else {
+        let value = u32::from_str_radix(s, 16)?;
+        Ok(Range {
+            start: value,
+            end: value + 1,
+        })
+    }
+}
+
+/// Formats a Range<u32> into the same format as [parse_range]
+fn format_range(range: &Range<u32>) -> String {
+    if range.start == 0 && range.end == u32::MAX {
+        "".to_string()
+    } else if range.start + 1 == range.end {
+        format!(" {:X}", range.start)
+    } else if range.start == 0 {
+        format!(" :{:X}", range.end - 1)
+    } else if range.end == u32::MAX {
+        format!(" {:X}:", range.start)
+    } else {
+        format!(" {:X}:{:X}", range.start, range.end - 1)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_parse_range() {
+        assert_eq!(parse_range("2:6").unwrap(), 2..7);
+        assert_eq!(parse_range("2:").unwrap(), 2..u32::MAX);
+        assert_eq!(parse_range(":6").unwrap(), 0..7);
+        assert_eq!(parse_range("6").unwrap(), 6..7);
+        assert_eq!(parse_range("").unwrap(), 0..u32::MAX);
     }
 
-    fn before_cpu_instruction(&mut self, cpu: &Cpu<impl MainBus>) {
-        self.trace.push(TraceLine::Cpu(CpuTraceLine::from_cpu(cpu)));
-        for trigger in self.breakpoints.iter() {
-            if let Trigger::ProgramCounter(range) = trigger {
-                if range.contains(&u32::from(cpu.pc)) {
-                    self.break_reason = Some(BreakReason::ProgramCounter(cpu.pc));
-                }
-            }
-        }
+    #[test]
+    fn test_format_range() {
+        assert_eq!(format_range(&(0..0x10)), " :F");
+        assert_eq!(format_range(&(0x6..0x7)), " 6");
+        assert_eq!(format_range(&(0x6..0x10)), " 6:F");
+        assert_eq!(format_range(&(0..u32::MAX)), "");
     }
 
-    fn on_interrupt(&mut self, interrupt: NativeVectorTable) {
-        for trigger in &self.breakpoints {
-            if let Trigger::Interrupt(handler) = trigger {
-                if *handler == interrupt {
-                    self.break_reason = Some(BreakReason::Interrupt(interrupt));
-                }
-            }
-        }
-    }
-    fn on_error(&mut self, msg: String) {
-        //error!("{}", msg);
-        for trigger in self.breakpoints.iter() {
-            if let Trigger::ExecutionError = trigger {
-                self.break_reason = Some(BreakReason::ExecutionError(msg.clone()));
-            }
-        }
-    }
+    #[test]
+    fn test_trace_filter_format() {
+        let check_format = |filter: &str, expected: EventFilter| {
+            assert_eq!(format!("{}", expected), filter);
+            assert_eq!(filter.parse::<EventFilter>().unwrap(), expected);
+        };
 
-    /// Can be added to code during development to trigger the debugger.
-    #[allow(dead_code)]
-    fn trigger_custom(&mut self, msg: String) {
-        self.break_reason = Some(BreakReason::Custom(msg));
-    }
-
-    fn on_cpu_memory_access(&mut self, access: MemoryAccess) {
-        for trigger in self.breakpoints.iter() {
-            match trigger {
-                Trigger::CpuMemoryRead(range) => {
-                    if let MemoryAccess::Read(addr) = access {
-                        if range.contains(&u32::from(addr)) {
-                            self.break_reason = Some(BreakReason::CpuMemoryRead(addr));
-                        }
-                    }
-                }
-                Trigger::CpuMemoryWrite(range) => {
-                    if let MemoryAccess::Write(addr, _) = access {
-                        if range.contains(&u32::from(addr)) {
-                            self.break_reason = Some(BreakReason::CpuMemoryWrite(addr));
-                        }
-                    }
-                }
-                _ => (),
-            }
-        }
+        use EventFilter::*;
+        check_format("pc 0", CpuProgramCounter(0..1));
+        check_format("jmp", CpuInstruction("jmp".to_string()));
+        check_format("irq nmi", Interrupt(NativeVectorTable::Nmi));
+        check_format("r 10:1F", CpuMemoryRead(0x10..0x20));
+        check_format("w", CpuMemoryWrite(0..u32::MAX));
     }
 }

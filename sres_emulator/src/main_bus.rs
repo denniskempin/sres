@@ -13,6 +13,7 @@ use crate::bus::Bus;
 use crate::cartridge::Cartridge;
 use crate::cartridge::MappingMode;
 use crate::debugger::DebuggerRef;
+use crate::debugger::Event;
 use crate::ppu::HVTimerMode;
 use crate::ppu::Ppu;
 use crate::ppu::PpuTimer;
@@ -102,8 +103,7 @@ impl MainBusImpl {
     }
 
     pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
-        self.debugger
-            .on_cpu_memory_access(crate::debugger::MemoryAccess::Read(addr));
+        self.debugger.on_event(Event::CpuMemoryRead(addr));
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset],
             MemoryBlock::Rom(offset) => self.rom[offset],
@@ -124,14 +124,18 @@ impl MainBusImpl {
                 0x421A => self.joy2.low_byte(),
                 0x421B => self.joy2.high_byte(),
                 _ => {
-                    self.debugger
-                        .on_error(format!("Read from unimplemented register {}", addr));
+                    self.debugger.on_event(Event::ExecutionError(format!(
+                        "Read from unimplemented register {}",
+                        addr
+                    )));
                     0
                 }
             },
             MemoryBlock::Unmapped => {
-                self.debugger
-                    .on_error(format!("Read from unmapped memory region {}", addr));
+                self.debugger.on_event(Event::ExecutionError(format!(
+                    "Read from unmapped memory region {}",
+                    addr
+                )));
                 0
             }
         }
@@ -139,9 +143,7 @@ impl MainBusImpl {
 
     #[allow(clippy::single_match)]
     fn bus_write(&mut self, addr: AddressU24, value: u8) {
-        self.debugger
-            .on_cpu_memory_access(crate::debugger::MemoryAccess::Write(addr, value));
-
+        self.debugger.on_event(Event::CpuMemoryWrite(addr, value));
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
             MemoryBlock::Rom(offset) => self.rom[offset] = value,
@@ -154,15 +156,17 @@ impl MainBusImpl {
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
                 0x4207..=0x420A => self.ppu.timer.bus_write(addr, value),
                 _ => {
-                    self.debugger.on_error(format!(
+                    self.debugger.on_event(Event::ExecutionError(format!(
                         "Write to unimplemented register {} = {}",
                         addr, value
-                    ));
+                    )));
                 }
             },
             MemoryBlock::Unmapped => {
-                self.debugger
-                    .on_error(format!("Write to unmapped region {}", addr));
+                self.debugger.on_event(Event::ExecutionError(format!(
+                    "Write to unmapped region {}",
+                    addr
+                )));
             }
         }
     }

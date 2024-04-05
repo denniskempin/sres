@@ -69,7 +69,6 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     }
 
     pub fn step(&mut self) {
-        self.debugger.before_spc700_instruction(self);
         let opcode = self.bus.cycle_read_u8(self.pc);
         self.pc = self.pc.add(1_u8, Wrap::NoWrap);
         let instruction = &self.opcode_table[opcode as usize];
