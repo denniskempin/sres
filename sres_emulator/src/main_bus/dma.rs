@@ -10,6 +10,7 @@ use crate::bus::Address;
 use crate::bus::AddressU24;
 use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
+use crate::debugger::Event;
 use crate::util::uint::U16Ext;
 use crate::util::uint::U8Ext;
 
@@ -105,7 +106,7 @@ impl DmaController {
             Some(value) => value,
             None => {
                 self.debugger
-                    .on_error(format!("Invalid read from {}", addr));
+                    .on_event(Event::ExecutionError(format!("Invalid read from {}", addr)));
                 0
             }
         }
@@ -148,12 +149,14 @@ impl DmaController {
                     0x6 => self.write_dasnh(channel, value),
                     0x7 => log::warn!("HDMA not implemented."),
                     _ => {
-                        self.debugger.on_error(format!("Invalid write to {}", addr));
+                        self.debugger
+                            .on_event(Event::ExecutionError(format!("Invalid write to {}", addr)));
                     }
                 }
             }
             _ => {
-                self.debugger.on_error(format!("Invalid write to {}", addr));
+                self.debugger
+                    .on_event(Event::ExecutionError(format!("Invalid write to {}", addr)));
             }
         }
     }
