@@ -1,5 +1,6 @@
 //! Utility extensions for unsigned integers and generic traits to allow abstraction over
 //! multiple types of unsigned integers.
+use std::fmt::UpperHex;
 use std::ops::BitXor;
 use std::ops::Shl;
 
@@ -27,7 +28,15 @@ pub trait UIntTruncate {
 }
 
 pub trait UInt:
-    PrimInt + OverflowingSub + OverflowingAdd + BitXor + WrappingAdd + WrappingSub + Shl + UIntTruncate
+    PrimInt
+    + OverflowingSub
+    + OverflowingAdd
+    + BitXor
+    + WrappingAdd
+    + WrappingSub
+    + Shl
+    + UIntTruncate
+    + UpperHex
 {
     const N_BITS: usize;
     const N_BYTES: usize;

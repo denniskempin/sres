@@ -14,7 +14,7 @@ impl Apu {
     #[allow(clippy::new_without_default)]
     pub fn new(debugger: DebuggerRef) -> Self {
         Self {
-            spc700: Spc700::new(Spc700BusImpl::new(), debugger),
+            spc700: Spc700::new(Spc700BusImpl::new(debugger.clone()), debugger),
         }
     }
 

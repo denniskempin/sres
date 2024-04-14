@@ -17,6 +17,7 @@ use egui::Ui;
 use itertools::Itertools;
 use ppu::PpuDebugWindow;
 use sres_emulator::bus::Address;
+use sres_emulator::bus::AddressU16;
 use sres_emulator::bus::AddressU24;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::Wrap;
@@ -272,6 +273,7 @@ pub enum InternalLink {
     None,
     CpuMemory(AddressU24),
     CpuProgramCounter(AddressU24),
+    Spc700ProgramCounter(AddressU16),
 }
 
 struct LogViewer {
@@ -323,6 +325,16 @@ impl LogViewer {
                     ui.label("Other");
                     log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x4016..0x4400));
                     log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x4016..0x4400));
+                });
+
+                ui.horizontal(|ui| {
+                    log_point_button(ui, "SPC700", EventFilter::Spc700ProgramCounter(0..u16::MAX));
+                    ui.label("Bus");
+                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0..u16::MAX));
+                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0..u16::MAX));
+                    ui.label("Reg");
+                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f0..0x0100));
+                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f0..0x0100));
                 });
 
                 let num_rows = debugger.log.len();

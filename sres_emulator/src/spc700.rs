@@ -11,12 +11,14 @@ use crate::bus::Address;
 use crate::bus::AddressU16;
 use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
+use crate::debugger::Event;
 use crate::spc700::opcode_table::InstructionDef;
 pub use crate::spc700::operands::AddressMode;
 pub use crate::spc700::operands::DecodedOperand;
 pub use crate::spc700::spc700_bus::Spc700Bus;
 pub use crate::spc700::spc700_bus::Spc700BusImpl;
 pub use crate::spc700::status::Spc700StatusFlags;
+use crate::trace::Spc700TraceLine;
 use crate::util::uint::UInt;
 
 pub struct Spc700<BusT: Spc700Bus> {
@@ -69,6 +71,11 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     }
 
     pub fn step(&mut self) {
+        if self.debugger.enabled {
+            self.debugger
+                .on_event(Event::Spc700Step(Spc700TraceLine::from_spc700(self)));
+        }
+
         let opcode = self.bus.cycle_read_u8(self.pc);
         self.pc = self.pc.add(1_u8, Wrap::NoWrap);
         let instruction = &self.opcode_table[opcode as usize];
@@ -155,7 +162,7 @@ mod test {
 
     #[test]
     fn boot_rom_transfer_test() {
-        let mut spc700 = Spc700::new(Spc700BusImpl::new(), Default::default());
+        let mut spc700 = Spc700::new(Spc700BusImpl::new(Default::default()), Default::default());
         assert_states(&mut spc700, INIT_TRACE);
 
         // Init done signal is 0xaabb on port 0-1
