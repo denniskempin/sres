@@ -302,9 +302,13 @@ impl LogViewer {
                     }
                 };
 
+                let text_style = egui::TextStyle::Monospace;
+                let style = ui.style_mut();
+                style.override_text_style = Some(text_style.clone());
                 ui.horizontal(|ui| {
-                    log_point_button(ui, "CPU", EventFilter::CpuProgramCounter(0..u32::MAX));
-                    log_point_button(ui, "IRQ", EventFilter::Interrupt(None));
+                    ui.label("CPU:     ");
+                    log_point_button(ui, "Step", EventFilter::CpuProgramCounter(0..u32::MAX));
+                    log_point_button(ui, "Irq", EventFilter::Interrupt(None));
                     log_point_button(ui, "Err", EventFilter::ExecutionError);
                     ui.label("Bus");
                     log_point_button(ui, "R", EventFilter::CpuMemoryRead(0..u32::MAX));
@@ -312,7 +316,7 @@ impl LogViewer {
                 });
 
                 ui.horizontal(|ui| {
-                    ui.label("MMIO:");
+                    ui.label("CPU MMIO:");
                     ui.label("PPU");
                     log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2100..0x2140));
                     log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2100..0x2140));
@@ -328,20 +332,33 @@ impl LogViewer {
                 });
 
                 ui.horizontal(|ui| {
-                    log_point_button(ui, "SPC700", EventFilter::Spc700ProgramCounter(0..u16::MAX));
+                    ui.label("SPC:     ");
+                    log_point_button(ui, "Step", EventFilter::Spc700ProgramCounter(0..u16::MAX));
                     ui.label("Bus");
                     log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0..u16::MAX));
                     log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0..u16::MAX));
-                    ui.label("Reg");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f0..0x0100));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f0..0x0100));
                 });
 
+                ui.horizontal(|ui| {
+                    ui.label("SPC MMIO:");
+                    ui.label("Ctrl");
+                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f1..0x00f2));
+                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f1..0x00f2));
+                    ui.label("CPU");
+                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f4..0x00f8));
+                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f4..0x00f8));
+                    ui.label("DSP");
+                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f2..0x00f4));
+                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f2..0x00f4));
+                    ui.label("Timer");
+                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00fa..0x0100));
+                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00fa..0x0100));
+                });
+
+                ui.separator();
+
                 let num_rows = debugger.log.len();
-                let text_style = egui::TextStyle::Monospace;
                 let row_height = ui.text_style_height(&text_style);
-                let style = ui.style_mut();
-                style.override_font_id = Some(text_style.resolve(style));
 
                 ScrollArea::vertical()
                     .auto_shrink(false)

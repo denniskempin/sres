@@ -21,12 +21,12 @@ use crate::util::RingBuffer;
 #[derive(Clone)]
 pub enum Event {
     CpuStep(CpuTraceLine),
-    CpuMemoryRead(AddressU24),
+    CpuMemoryRead(AddressU24, u8),
     CpuMemoryWrite(AddressU24, u8),
     ExecutionError(String),
     CpuInterrupt(NativeVectorTable),
     Spc700Step(Spc700TraceLine),
-    Spc700MemoryRead(AddressU16),
+    Spc700MemoryRead(AddressU16, u8),
     Spc700MemoryWrite(AddressU16, u8),
 }
 
@@ -35,12 +35,12 @@ impl Display for Event {
         use Event::*;
         match self {
             CpuStep(cpu) => write!(f, "{}", cpu),
-            CpuMemoryRead(addr) => write!(f, "R {}", addr),
+            CpuMemoryRead(addr, value) => write!(f, "R {} = {:X}", addr, value),
             CpuMemoryWrite(addr, data) => write!(f, "W {} = {:X}", addr, data),
             ExecutionError(msg) => write!(f, "Error: {}", msg),
             CpuInterrupt(handler) => write!(f, "Interrupt {}", handler),
             Spc700Step(spc) => write!(f, "{}", spc),
-            Spc700MemoryRead(addr) => write!(f, "S-R {}", addr),
+            Spc700MemoryRead(addr, value) => write!(f, "S-R {} = {:X}", addr, value),
             Spc700MemoryWrite(addr, data) => write!(f, "S-W {} = {:X}", addr, data),
         }
     }
@@ -67,7 +67,9 @@ impl EventFilter {
                 range.contains(&u32::from(cpu.instruction.address))
             }
             (CpuInstruction(instr), Event::CpuStep(cpu)) => instr == &cpu.instruction.operation,
-            (CpuMemoryRead(range), Event::CpuMemoryRead(addr)) => range.contains(&u32::from(*addr)),
+            (CpuMemoryRead(range), Event::CpuMemoryRead(addr, _)) => {
+                range.contains(&u32::from(*addr))
+            }
             (CpuMemoryWrite(range), Event::CpuMemoryWrite(addr, _)) => {
                 range.contains(&u32::from(*addr))
             }
@@ -80,7 +82,7 @@ impl EventFilter {
                 }
             }
             (Spc700ProgramCounter(range), Event::Spc700Step(spc)) => range.contains(&spc.pc.0),
-            (Spc700MemoryRead(range), Event::Spc700MemoryRead(addr)) => range.contains(&addr.0),
+            (Spc700MemoryRead(range), Event::Spc700MemoryRead(addr, _)) => range.contains(&addr.0),
             (Spc700MemoryWrite(range), Event::Spc700MemoryWrite(addr, _)) => {
                 range.contains(&addr.0)
             }
@@ -105,6 +107,7 @@ impl FromStr for EventFilter {
             }),
             "r" => CpuMemoryRead(parse_range(arg)?),
             "w" => CpuMemoryWrite(parse_range(arg)?),
+            "s-pc" => Spc700ProgramCounter(parse_range(arg)?),
             &_ => CpuInstruction(s.to_string()),
         })
     }
@@ -292,30 +295,31 @@ impl Debugger {
 }
 
 /// Parses a hex 1234:5678 range string into a Range<u32>
-fn parse_range(s: &str) -> anyhow::Result<Range<u32>> {
+fn parse_range<T: PrimInt + UpperHex>(s: &str) -> anyhow::Result<Range<T>> {
     let split = s.split_once(':');
     if let Some((left, right)) = split {
         let start = if left.is_empty() {
-            0
+            T::zero()
         } else {
-            u32::from_str_radix(left, 16)?
+            T::from_str_radix(left, 16).map_err(|_| anyhow::anyhow!("Invalid range"))?
+            // TODO: better error message
         };
         let end = if right.is_empty() {
-            u32::MAX
+            T::max_value()
         } else {
-            1 + u32::from_str_radix(right, 16)?
+            T::one() + T::from_str_radix(right, 16).map_err(|_| anyhow::anyhow!("Invalid range"))?
         };
         Ok(Range { start, end })
     } else if s.is_empty() {
         Ok(Range {
-            start: 0,
-            end: u32::MAX,
+            start: T::zero(),
+            end: T::max_value(),
         })
     } else {
-        let value = u32::from_str_radix(s, 16)?;
+        let value = T::from_str_radix(s, 16).map_err(|_| anyhow::anyhow!("Invalid range"))?;
         Ok(Range {
             start: value,
-            end: value + 1,
+            end: value + T::one(),
         })
     }
 }
