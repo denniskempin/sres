@@ -1,11 +1,14 @@
 use crate::bus::AddressU16;
 use crate::bus::Bus;
+use crate::debugger::DebuggerRef;
+use crate::debugger::Event;
 
 pub trait Spc700Bus: Bus<AddressU16> {
     fn master_cycle(&self) -> u64;
 }
 
 pub struct Spc700BusImpl {
+    pub debugger: DebuggerRef,
     pub master_cycle: u64,
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
@@ -14,8 +17,9 @@ pub struct Spc700BusImpl {
 
 impl Spc700BusImpl {
     #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub fn new(debugger: DebuggerRef) -> Self {
         Self {
+            debugger,
             master_cycle: 0,
             ram: [0; 0x10000],
             channel_in: [0; 4],
@@ -38,11 +42,16 @@ impl Bus<AddressU16> for Spc700BusImpl {
     }
 
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
+        self.debugger.on_event(Event::Spc700MemoryRead(addr));
+
         self.master_cycle += 21;
         self.peek_u8(addr).unwrap_or_default()
     }
 
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
+        self.debugger
+            .on_event(Event::Spc700MemoryWrite(addr, value));
+
         self.master_cycle += 21;
         #[allow(clippy::single_match)]
         match addr.0 {

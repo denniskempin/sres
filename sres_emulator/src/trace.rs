@@ -44,7 +44,7 @@ impl Display for TraceLine {
 }
 
 // Representation of the state of [Spc700] in the same format as logged by BSNES.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Spc700TraceLine {
     pub pc: AddressU16,
     pub instruction: String,

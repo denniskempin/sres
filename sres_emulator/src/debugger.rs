@@ -4,13 +4,18 @@
 //! and allows the front end to set and detect breakpoints on those events.
 use std::cell::RefCell;
 use std::fmt::Display;
+use std::fmt::UpperHex;
 use std::ops::Range;
 use std::rc::Rc;
 use std::str::FromStr;
 
+use num_traits::PrimInt;
+
+use crate::bus::AddressU16;
 use crate::bus::AddressU24;
 use crate::cpu::NativeVectorTable;
 use crate::trace::CpuTraceLine;
+use crate::trace::Spc700TraceLine;
 use crate::util::RingBuffer;
 
 #[derive(Clone)]
@@ -20,6 +25,9 @@ pub enum Event {
     CpuMemoryWrite(AddressU24, u8),
     ExecutionError(String),
     CpuInterrupt(NativeVectorTable),
+    Spc700Step(Spc700TraceLine),
+    Spc700MemoryRead(AddressU16),
+    Spc700MemoryWrite(AddressU16, u8),
 }
 
 impl Display for Event {
@@ -31,6 +39,9 @@ impl Display for Event {
             CpuMemoryWrite(addr, data) => write!(f, "W {} = {:X}", addr, data),
             ExecutionError(msg) => write!(f, "Error: {}", msg),
             CpuInterrupt(handler) => write!(f, "Interrupt {}", handler),
+            Spc700Step(spc) => write!(f, "{}", spc),
+            Spc700MemoryRead(addr) => write!(f, "S-R {}", addr),
+            Spc700MemoryWrite(addr, data) => write!(f, "S-W {} = {:X}", addr, data),
         }
     }
 }
@@ -43,6 +54,9 @@ pub enum EventFilter {
     CpuMemoryWrite(Range<u32>),
     ExecutionError,
     Interrupt(Option<NativeVectorTable>),
+    Spc700ProgramCounter(Range<u16>),
+    Spc700MemoryRead(Range<u16>),
+    Spc700MemoryWrite(Range<u16>),
 }
 
 impl EventFilter {
@@ -65,6 +79,12 @@ impl EventFilter {
                     true
                 }
             }
+            (Spc700ProgramCounter(range), Event::Spc700Step(spc)) => range.contains(&spc.pc.0),
+            (Spc700MemoryRead(range), Event::Spc700MemoryRead(addr)) => range.contains(&addr.0),
+            (Spc700MemoryWrite(range), Event::Spc700MemoryWrite(addr, _)) => {
+                range.contains(&addr.0)
+            }
+
             _ => false,
         }
     }
@@ -106,6 +126,9 @@ impl Display for EventFilter {
                     write!(f, "irq")
                 }
             }
+            Spc700ProgramCounter(range) => write!(f, "spc-pc{}", format_range(range)),
+            Spc700MemoryRead(range) => write!(f, "spc-r{}", format_range(range)),
+            Spc700MemoryWrite(range) => write!(f, "spc-w{}", format_range(range)),
         }
     }
 }
@@ -297,18 +320,18 @@ fn parse_range(s: &str) -> anyhow::Result<Range<u32>> {
     }
 }
 
-/// Formats a Range<u32> into the same format as [parse_range]
-fn format_range(range: &Range<u32>) -> String {
-    if range.start == 0 && range.end == u32::MAX {
+/// Formats a Range<UInt> into the same format as [parse_range]
+fn format_range<T: PrimInt + UpperHex>(range: &Range<T>) -> String {
+    if range.start == T::zero() && range.end == T::max_value() {
         "".to_string()
-    } else if range.start + 1 == range.end {
+    } else if range.start + T::one() == range.end {
         format!(" {:X}", range.start)
-    } else if range.start == 0 {
-        format!(" :{:X}", range.end - 1)
-    } else if range.end == u32::MAX {
+    } else if range.start == T::zero() {
+        format!(" :{:X}", range.end - T::one())
+    } else if range.end == T::max_value() {
         format!(" {:X}:", range.start)
     } else {
-        format!(" {:X}:{:X}", range.start, range.end - 1)
+        format!(" {:X}:{:X}", range.start, range.end - T::one())
     }
 }
 
