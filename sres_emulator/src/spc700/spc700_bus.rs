@@ -13,6 +13,7 @@ pub struct Spc700BusImpl {
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
     pub channel_out: [u8; 4],
+    pub timer: [u8; 3],
 }
 
 impl Spc700BusImpl {
@@ -24,6 +25,7 @@ impl Spc700BusImpl {
             ram: [0; 0x10000],
             channel_in: [0; 4],
             channel_out: [0; 4],
+            timer: [0x0F; 3],
         }
     }
 }
@@ -32,6 +34,7 @@ impl Bus<AddressU16> for Spc700BusImpl {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         match addr.0 {
             0x00F4..=0x00F7 => Some(self.channel_in[addr.0 as usize - 0x00F4]),
+            0x00FD..=0x00FF => Some(self.timer[addr.0 as usize - 0x00FD]),
             0xFFC0..=0xFFFF => Some(IPL_BOOT_ROM[(addr.0 - 0xFFC0) as usize]),
             _ => Some(self.ram[addr.0 as usize]),
         }
@@ -42,10 +45,10 @@ impl Bus<AddressU16> for Spc700BusImpl {
     }
 
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
-        self.debugger.on_event(Event::Spc700MemoryRead(addr));
-
         self.master_cycle += 21;
-        self.peek_u8(addr).unwrap_or_default()
+        let value = self.peek_u8(addr).unwrap_or_default();
+        self.debugger.on_event(Event::Spc700MemoryRead(addr, value));
+        value
     }
 
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {

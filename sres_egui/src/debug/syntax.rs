@@ -12,10 +12,11 @@ use super::InternalLink;
 pub fn log_line(ui: &mut Ui, event: &Event, selected: &mut InternalLink) {
     ui.horizontal(|ui| {
         match event {
-            Event::CpuMemoryRead(addr) => {
+            Event::CpuMemoryRead(addr, value) => {
                 label_cpu(ui);
                 label_read(ui, "R");
                 label_cpu_addr(ui, *addr, selected);
+                label_normal(ui, format!("= {:02X}", value));
             }
             Event::CpuMemoryWrite(addr, value) => {
                 label_cpu(ui);
@@ -37,10 +38,11 @@ pub fn log_line(ui: &mut Ui, event: &Event, selected: &mut InternalLink) {
             Event::Spc700Step(state) => {
                 spc700_log_line(ui, state, selected);
             }
-            Event::Spc700MemoryRead(addr) => {
+            Event::Spc700MemoryRead(addr, value) => {
                 label_spc(ui);
                 label_read(ui, "R");
                 label_addr(ui, addr.to_string());
+                label_normal(ui, format!("= {:02X}", value));
             }
             Event::Spc700MemoryWrite(addr, value) => {
                 label_spc(ui);

@@ -103,8 +103,7 @@ impl MainBusImpl {
     }
 
     pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
-        self.debugger.on_event(Event::CpuMemoryRead(addr));
-        match self.memory_map(addr) {
+        let value = match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset],
             MemoryBlock::Rom(offset) => self.rom[offset],
             MemoryBlock::Sram(offset) => self.sram[offset],
@@ -138,7 +137,9 @@ impl MainBusImpl {
                 )));
                 0
             }
-        }
+        };
+        self.debugger.on_event(Event::CpuMemoryRead(addr, value));
+        value
     }
 
     #[allow(clippy::single_match)]
