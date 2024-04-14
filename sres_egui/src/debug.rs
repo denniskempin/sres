@@ -1,5 +1,6 @@
 mod cpu;
 mod ppu;
+mod syntax;
 
 use std::cell::RefMut;
 use std::fmt::Debug;
@@ -20,10 +21,12 @@ use sres_emulator::bus::AddressU24;
 use sres_emulator::bus::Bus;
 use sres_emulator::bus::Wrap;
 use sres_emulator::debugger::Debugger;
+use sres_emulator::debugger::EventFilter;
 use sres_emulator::util::RingBuffer;
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
 
+use self::syntax::log_line;
 use crate::util::Instant;
 
 struct MemoryViewer {
@@ -96,6 +99,8 @@ pub struct DebugUi {
     ppu_debug: PpuDebugWindow,
     memory_viewer: MemoryViewer,
     past_emulation_times: RingBuffer<Duration, 60>,
+    log_viewer: LogViewer,
+    selected_memory_location: InternalLink,
     pub show_profiler: bool,
 }
 
@@ -107,7 +112,9 @@ impl DebugUi {
             ppu_debug: PpuDebugWindow::new(cc),
             memory_viewer: MemoryViewer::new("CPU Bus"),
             show_profiler: false,
+            log_viewer: LogViewer::new(),
             past_emulation_times: RingBuffer::default(),
+            selected_memory_location: InternalLink::None,
         }
     }
 
@@ -183,6 +190,8 @@ impl DebugUi {
         if self.show_profiler && !puffin_egui::profiler_window(ctx) {
             self.show_profiler = false;
         }
+        self.log_viewer
+            .show(ctx, emulator, &mut self.selected_memory_location);
     }
 
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
@@ -207,6 +216,9 @@ impl DebugUi {
             }
             if ui.button("Profiler").clicked() {
                 self.show_profiler = !self.show_profiler;
+            }
+            if ui.button("Log Viewer").clicked() {
+                self.log_viewer.is_open = !self.log_viewer.is_open;
             }
         });
     }
@@ -254,4 +266,86 @@ impl Alert {
 
 pub fn breakpoints_widget(ui: &mut Ui, mut _debugger: RefMut<'_, Debugger>) {
     ui.horizontal_wrapped(|_ui| {});
+}
+
+pub enum InternalLink {
+    None,
+    CpuMemory(AddressU24),
+    CpuProgramCounter(AddressU24),
+}
+
+struct LogViewer {
+    is_open: bool,
+}
+
+impl LogViewer {
+    pub fn new() -> Self {
+        Self { is_open: false }
+    }
+
+    pub fn show(&mut self, ctx: &Context, emulator: &System, selected: &mut InternalLink) {
+        egui::Window::new("Log Viewer")
+            .open(&mut self.is_open)
+            .show(ctx, |ui| {
+                let mut debugger = emulator.debugger();
+                let mut log_point_button = |ui: &mut Ui, label: &str, filter: EventFilter| {
+                    if ui
+                        .add(
+                            egui::Button::new(label)
+                                .selected(debugger.log_points.contains(&filter)),
+                        )
+                        .clicked()
+                    {
+                        debugger.toggle_log_point(filter);
+                    }
+                };
+
+                ui.horizontal(|ui| {
+                    log_point_button(ui, "CPU", EventFilter::CpuProgramCounter(0..u32::MAX));
+                    log_point_button(ui, "IRQ", EventFilter::Interrupt(None));
+                    log_point_button(ui, "Err", EventFilter::ExecutionError);
+                    ui.label("Bus");
+                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0..u32::MAX));
+                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0..u32::MAX));
+                });
+
+                ui.horizontal(|ui| {
+                    ui.label("MMIO:");
+                    ui.label("PPU");
+                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2100..0x2140));
+                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2100..0x2140));
+                    ui.label("APU");
+                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2140..0x2144));
+                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2140..0x2144));
+                    ui.label("WRAM");
+                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2180..0x2184));
+                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2180..0x2184));
+                    ui.label("Other");
+                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x4016..0x4400));
+                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x4016..0x4400));
+                });
+
+                let num_rows = debugger.log.len();
+                let text_style = egui::TextStyle::Monospace;
+                let row_height = ui.text_style_height(&text_style);
+                let style = ui.style_mut();
+                style.override_font_id = Some(text_style.resolve(style));
+
+                ScrollArea::vertical()
+                    .auto_shrink(false)
+                    .stick_to_bottom(true)
+                    .show_rows(ui, row_height, num_rows, |ui, row_range| {
+                        for row in debugger
+                            .log
+                            .stack
+                            .iter()
+                            .rev()
+                            .skip(row_range.start)
+                            .take(row_range.end - row_range.start)
+                        {
+                            log_line(ui, row, selected);
+                        }
+                    });
+            });
+    }
 }

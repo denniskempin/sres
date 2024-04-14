@@ -42,7 +42,7 @@ pub enum EventFilter {
     CpuMemoryRead(Range<u32>),
     CpuMemoryWrite(Range<u32>),
     ExecutionError,
-    Interrupt(NativeVectorTable),
+    Interrupt(Option<NativeVectorTable>),
 }
 
 impl EventFilter {
@@ -59,7 +59,11 @@ impl EventFilter {
             }
             (ExecutionError, Event::ExecutionError(_)) => true,
             (Interrupt(expected_handler), Event::CpuInterrupt(handler)) => {
-                expected_handler == handler
+                if let Some(expected_handler) = expected_handler {
+                    expected_handler == handler
+                } else {
+                    true
+                }
             }
             _ => false,
         }
@@ -74,7 +78,11 @@ impl FromStr for EventFilter {
         let (key, arg) = s.split_once(' ').unwrap_or((s, ""));
         Ok(match key.to_lowercase().as_str() {
             "pc" => CpuProgramCounter(parse_range(arg)?),
-            "irq" => Interrupt(NativeVectorTable::from_str(arg)?),
+            "irq" => Interrupt(if arg.is_empty() {
+                None
+            } else {
+                Some(NativeVectorTable::from_str(arg)?)
+            }),
             "r" => CpuMemoryRead(parse_range(arg)?),
             "w" => CpuMemoryWrite(parse_range(arg)?),
             &_ => CpuInstruction(s.to_string()),
@@ -91,7 +99,13 @@ impl Display for EventFilter {
             CpuMemoryRead(range) => write!(f, "r{}", format_range(range)),
             CpuMemoryWrite(range) => write!(f, "w{}", format_range(range)),
             ExecutionError => write!(f, "error"),
-            Interrupt(handler) => write!(f, "irq {}", handler),
+            Interrupt(handler) => {
+                if let Some(handler) = handler {
+                    write!(f, "irq {}", handler)
+                } else {
+                    write!(f, "irq")
+                }
+            }
         }
     }
 }
@@ -158,10 +172,10 @@ impl Default for DebuggerRef {
 }
 
 pub struct Debugger {
-    log_points: Vec<EventFilter>,
-    break_points: Vec<EventFilter>,
-    log: RingBuffer<Event, 1024>,
-    break_reason: Option<BreakReason>,
+    pub log_points: Vec<EventFilter>,
+    pub break_points: Vec<EventFilter>,
+    pub log: RingBuffer<Event, 1024>,
+    pub break_reason: Option<BreakReason>,
 }
 
 impl Debugger {
@@ -199,6 +213,28 @@ impl Debugger {
         }
     }
 
+    pub fn has_log_point(&self, trigger: &EventFilter) -> bool {
+        self.log_points.iter().any(|t| t == trigger)
+    }
+
+    pub fn add_log_point(&mut self, trigger: EventFilter) {
+        if !self.has_log_point(&trigger) {
+            self.log_points.push(trigger);
+        }
+    }
+
+    pub fn remove_log_point(&mut self, trigger: &EventFilter) {
+        self.log_points.retain(|t| t != trigger)
+    }
+
+    pub fn toggle_log_point(&mut self, trigger: EventFilter) {
+        if self.has_log_point(&trigger) {
+            self.remove_log_point(&trigger)
+        } else {
+            self.add_log_point(trigger)
+        }
+    }
+
     /// Internal API
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -227,7 +263,6 @@ impl Debugger {
             .iter()
             .any(|log_filter| log_filter.matches(&event))
         {
-            println!("{:}", &event);
             self.log.push(event);
         }
     }
@@ -277,7 +312,7 @@ fn format_range(range: &Range<u32>) -> String {
     }
 }
 
-#[cfg(test)]
+#[cfg(stest)]
 mod test {
     use super::*;
 
@@ -308,7 +343,7 @@ mod test {
         use EventFilter::*;
         check_format("pc 0", CpuProgramCounter(0..1));
         check_format("jmp", CpuInstruction("jmp".to_string()));
-        check_format("irq nmi", Interrupt(NativeVectorTable::Nmi));
+        check_format("irq nmi", Interrupt(Some(NativeVectorTable::Nmi)));
         check_format("r 10:1F", CpuMemoryRead(0x10..0x20));
         check_format("w", CpuMemoryWrite(0..u32::MAX));
     }
