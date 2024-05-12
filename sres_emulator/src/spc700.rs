@@ -2,6 +2,7 @@
 mod instructions;
 mod opcode_table;
 mod operands;
+pub mod s_dsp;
 mod spc700_bus;
 mod status;
 

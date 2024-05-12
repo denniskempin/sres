@@ -18,6 +18,7 @@ use cpu::Cpu;
 use debugger::BreakReason;
 use debugger::Debugger;
 use debugger::DebuggerRef;
+use debugger::EventFilter;
 use main_bus::MainBusImpl;
 
 pub enum ExecutionResult {
@@ -112,6 +113,33 @@ impl System {
     pub fn execute_frames(&mut self, count: u64) -> ExecutionResult {
         let target_frame = self.cpu.bus.ppu.timer.f + count;
         self.execute_until(|cpu| cpu.bus.ppu.timer.f >= target_frame)
+    }
+
+    pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {
+        self.enable_debugger();
+        self.debugger().add_break_point(event.clone());
+        let result = loop {
+            if self.cpu.halt {
+                break ExecutionResult::Halt;
+            }
+
+            self.cpu.step();
+            self.cpu
+                .bus
+                .apu
+                .catch_up_to_master_clock(self.cpu.bus.ppu.timer.master_clock);
+
+            if let Some(break_reason) = self.debugger().take_break_reason() {
+                if break_reason.trigger == event {
+                    break ExecutionResult::Normal;
+                } else {
+                    break ExecutionResult::Break(break_reason);
+                }
+            }
+        };
+        self.debugger().remove_break_point(&event);
+
+        result
     }
 
     pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {

@@ -302,6 +302,8 @@ pub trait U16Ext {
     fn high_byte(self) -> u8;
     fn set_low_byte(&mut self, low: u8);
     fn set_high_byte(&mut self, high: u8);
+    fn with_low_byte(self, low: u8) -> u16;
+    fn with_high_byte(self, high: u8) -> u16;
 }
 
 impl U16Ext for u16 {
@@ -324,6 +326,16 @@ impl U16Ext for u16 {
     fn set_high_byte(&mut self, high: u8) {
         *self = (*self & 0x00FF) | ((high as u16) << 8);
     }
+
+    #[inline]
+    fn with_low_byte(self, low: u8) -> u16 {
+        (self & 0xFF00) | (low as u16)
+    }
+
+    #[inline]
+    fn with_high_byte(self, high: u8) -> u16 {
+        (self & 0x00FF) | ((high as u16) << 8)
+    }
 }
 
 pub trait U8Ext {
@@ -331,6 +343,8 @@ pub trait U8Ext {
     fn high_nibble(self) -> u8;
     fn set_low_nibble(&mut self, low: u8);
     fn set_high_nibble(&mut self, high: u8);
+    fn with_low_nibble(self, low: u8) -> u8;
+    fn with_high_nibble(self, high: u8) -> u8;
 }
 
 impl U8Ext for u8 {
@@ -352,6 +366,16 @@ impl U8Ext for u8 {
     #[inline]
     fn set_high_nibble(&mut self, high: u8) {
         *self = *self & 0x0f | (high & 0x0f) << 4;
+    }
+
+    #[inline]
+    fn with_low_nibble(self, low: u8) -> u8 {
+        (self & 0xf0) | (low & 0x0f)
+    }
+
+    #[inline]
+    fn with_high_nibble(self, high: u8) -> u8 {
+        ((high & 0x0f) << 4) | (self & 0x0f)
     }
 }
 

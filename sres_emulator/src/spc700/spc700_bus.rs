@@ -1,3 +1,6 @@
+use intbits::Bits;
+
+use super::s_dsp::SDsp;
 use crate::bus::AddressU16;
 use crate::bus::Bus;
 use crate::debugger::DebuggerRef;
@@ -14,6 +17,9 @@ pub struct Spc700BusImpl {
     pub channel_in: [u8; 4],
     pub channel_out: [u8; 4],
     pub timer: [u8; 3],
+    pub dsp_register_select: u8,
+    pub dsp_register_readonly: bool,
+    pub dsp: SDsp,
 }
 
 impl Spc700BusImpl {
@@ -26,6 +32,9 @@ impl Spc700BusImpl {
             channel_in: [0; 4],
             channel_out: [0; 4],
             timer: [0x0F; 3],
+            dsp_register_readonly: false,
+            dsp_register_select: 0,
+            dsp: Default::default(),
         }
     }
 }
@@ -33,6 +42,8 @@ impl Spc700BusImpl {
 impl Bus<AddressU16> for Spc700BusImpl {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         match addr.0 {
+            0x00F2 => Some(self.dsp_register_select.bits(0..=6)),
+            0x00F3 => Some(self.dsp.read_register(self.dsp_register_select)),
             0x00F4..=0x00F7 => Some(self.channel_in[addr.0 as usize - 0x00F4]),
             0x00FD..=0x00FF => Some(self.timer[addr.0 as usize - 0x00FD]),
             0xFFC0..=0xFFFF => Some(IPL_BOOT_ROM[(addr.0 - 0xFFC0) as usize]),
@@ -58,6 +69,16 @@ impl Bus<AddressU16> for Spc700BusImpl {
         self.master_cycle += 21;
         #[allow(clippy::single_match)]
         match addr.0 {
+            0x00F2 => {
+                self.dsp_register_readonly = value.bit(7);
+                self.dsp_register_select = value.bits(0..=6);
+            }
+            0x00F3 => {
+                if self.dsp_register_readonly {
+                    return;
+                }
+                self.dsp.write_register(self.dsp_register_select, value);
+            }
             0x00F4..=0x00F7 => self.channel_out[addr.0 as usize - 0x00F4] = value,
             _ => self.ram[addr.0 as usize] = value,
         }
