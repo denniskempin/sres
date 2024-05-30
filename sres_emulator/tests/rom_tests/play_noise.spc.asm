@@ -68,4 +68,4 @@ Loop:
   WDSP(DSP_KON,%00000001) // Play Voice 0
   SPCWaitSHIFTMS(240,2) // Wait 240*4 ms
 
-  jmp Loop
+  jmp p
