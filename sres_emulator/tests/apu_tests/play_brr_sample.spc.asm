@@ -1,16 +1,18 @@
-// SNES SPC700 Play Noise Demo (SPC Code) by krom (Peter Lemon):
+// SNES SPC700 Play BRR Sample Demo (SPC Code) by krom (Peter Lemon):
 arch snes.smp
-output "play_noise.spc", create
+output "play_brr_sample.spc", create
 
 macro seek(variable offset) { // Set SPC700 Memory Map
   origin (offset - SPCRAM)
   base offset
 }
 
-include "lib/snes_spc700.inc" // Include SPC700 Definitions & Macros
+include "../asm_lib/snes_spc700.inc" // Include SPC700 Definitions & Macros
 
 seek(SPCRAM); Start:
   SPC_INIT() // Run SPC700 Initialisation Routine
+
+  WDSP(DSP_DIR,sampleDIR >> 8) // Sample Directory Offset
 
   WDSP(DSP_KOFF,$00) // Reset Key Off Flags
   WDSP(DSP_MVOLL,63) // Master Volume Left
@@ -20,7 +22,6 @@ seek(SPCRAM); Start:
   WDSP(DSP_ESA,$88)  // Echo Source Address
   WDSP(DSP_EDL,5)    // Echo Delay
   WDSP(DSP_EON,%00000001) // Echo On Flags
-  WDSP(DSP_NON,%00000001) // Noise On Flags
   WDSP(DSP_FLG,0)    // Enable Echo Buffer Writes
   WDSP(DSP_EFB,80)   // Echo Feedback
   WDSP(DSP_FIR0,127) // Echo FIR Filter Coefficient 0
@@ -37,35 +38,19 @@ seek(SPCRAM); Start:
 SongStart:
   WDSP(DSP_V0VOLL,127)        // Voice 0: Volume Left
   WDSP(DSP_V0VOLR,127)        // Voice 0: Volume Right
+  WDSP(DSP_V0PITCHL,$00)      // Voice 0: Pitch (Lower Byte)
+  WDSP(DSP_V0PITCHH,$10)      // Voice 0: Pitch (Upper Byte)
+  WDSP(DSP_V0SRCN,0)          // Voice 0: Sample
+  WDSP(DSP_V0ADSR1,%11111010) // Voice 0: ADSR1
+  WDSP(DSP_V0ADSR2,%11100000) // Voice 0: ADSR2
   WDSP(DSP_V0GAIN,127)        // Voice 0: Gain
+  WDSP(DSP_KON,%00000001) // Play Voice 0
 
 Loop:
-// Kick
-  WDSP(DSP_FLG,14)   // Enable Echo Buffer Writes, Noise Frequency = 14Hz
-  WDSP(DSP_V0ADSR1,%10001110) // Voice 0: ADSR1
-  WDSP(DSP_V0ADSR2,%11110110) // Voice 0: ADSR2
-  WDSP(DSP_KON,%00000001) // Play Voice 0
-  SPCWaitSHIFTMS(240,1) // Wait 240*2 ms
+  jmp Loop
 
-// Hi-Hat Closed
-  WDSP(DSP_FLG,30)   // Enable Echo Buffer Writes, Noise Frequency = 16kHz
-  WDSP(DSP_V0ADSR1,%10101111) // Voice 0: ADSR1
-  WDSP(DSP_V0ADSR2,%11111100) // Voice 0: ADSR2
-  WDSP(DSP_KON,%00000001) // Play Voice 0
-  SPCWaitMS(240) // Wait 240 ms
+seek($0300); sampleDIR:
+  dw BRRSample, BRRSample + ((2032 / 16) * 9) // BRR Sample Offset, Loop Point
 
-// Hi-Hat Open
-  WDSP(DSP_FLG,30)   // Enable Echo Buffer Writes, Noise Frequency = 16kHz
-  WDSP(DSP_V0ADSR1,%10001100) // Voice 0: ADSR1
-  WDSP(DSP_V0ADSR2,%10011100) // Voice 0: ADSR2
-  WDSP(DSP_KON,%00000001) // Play Voice 0
-  SPCWaitMS(240) // Wait 240 ms
-
-// Snare
-  WDSP(DSP_FLG,29)   // Enable Echo Buffer Writes, Noise Frequency = 8kHz
-  WDSP(DSP_V0ADSR1,%11111010) // Voice 0: ADSR1
-  WDSP(DSP_V0ADSR2,%11111000) // Voice 0: ADSR2
-  WDSP(DSP_KON,%00000001) // Play Voice 0
-  SPCWaitSHIFTMS(240,2) // Wait 240*4 ms
-
-  jmp p
+seek($0400) // Sample Data
+  insert BRRSample, "play_brr_sample.brr"
