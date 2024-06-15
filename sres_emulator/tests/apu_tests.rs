@@ -2,9 +2,8 @@
 
 use std::path::PathBuf;
 
-use bilge::arbitrary_int::u3;
-use bilge::arbitrary_int::u4;
-use bilge::arbitrary_int::u5;
+use bilge::prelude::*;
+use itertools::Itertools;
 use pretty_assertions::assert_eq;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::debugger::EventFilter;

@@ -35,6 +35,7 @@ serde_json = "*"
 xz2 = "0.1"
 image = { version = "0.24", features = ["png"] }
 bincode = "1.3"
+hound = "3.5"
 
 [[bench]]
 name = "rom_benches"
