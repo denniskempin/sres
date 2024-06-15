@@ -1,4 +1,5 @@
 //! Implementation of the SPC700 CPU.
+mod brr;
 mod instructions;
 mod opcode_table;
 mod operands;
