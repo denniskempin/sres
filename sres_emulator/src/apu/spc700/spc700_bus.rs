@@ -1,6 +1,6 @@
 use intbits::Bits;
 
-use super::s_dsp::SDsp;
+use crate::apu::s_dsp::SDsp;
 use crate::bus::AddressU16;
 use crate::bus::Bus;
 use crate::debugger::DebuggerRef;

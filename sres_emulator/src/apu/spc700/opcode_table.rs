@@ -1,6 +1,6 @@
+use crate::apu::spc700::Spc700;
+use crate::apu::spc700::Spc700Bus;
 use crate::bus::AddressU16;
-use crate::spc700::Spc700;
-use crate::spc700::Spc700Bus;
 
 /// An entry in the opcode table
 pub struct InstructionDef<BusT: Spc700Bus> {
@@ -57,9 +57,9 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
         disassembly: |_, instruction_addr| ("ill".to_string(), instruction_addr),
     });
 
-    use crate::spc700::operands::AddressMode::*;
-    use crate::spc700::operands::Operand::*;
-    use crate::spc700::operands::Register::*;
+    use crate::apu::spc700::operands::AddressMode::*;
+    use crate::apu::spc700::operands::Operand::*;
+    use crate::apu::spc700::operands::Register::*;
     opcodes[0x00] = instruction!(nop);
     opcodes[0x01] = instruction!(tcall, Const(0));
     opcodes[0x02] = instruction!(set1, DpBit(0));

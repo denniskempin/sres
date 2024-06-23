@@ -7,14 +7,14 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 
+use crate::apu::spc700::Spc700;
+use crate::apu::spc700::Spc700Bus;
+use crate::apu::spc700::Spc700StatusFlags;
 use crate::bus::AddressU16;
 use crate::cpu::Cpu;
 use crate::cpu::InstructionMeta;
 use crate::cpu::StatusFlags;
 use crate::main_bus::MainBus;
-use crate::spc700::Spc700;
-use crate::spc700::Spc700Bus;
-use crate::spc700::Spc700StatusFlags;
 
 #[allow(dead_code)]
 pub enum TraceLine {

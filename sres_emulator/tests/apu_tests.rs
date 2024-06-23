@@ -4,11 +4,11 @@ use std::path::PathBuf;
 
 use bilge::prelude::*;
 use pretty_assertions::assert_eq;
+use sres_emulator::apu::s_dsp::Adsr1;
+use sres_emulator::apu::s_dsp::Adsr2;
+use sres_emulator::apu::s_dsp::Voice;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::debugger::EventFilter;
-use sres_emulator::spc700::s_dsp::Adsr1;
-use sres_emulator::spc700::s_dsp::Adsr2;
-use sres_emulator::spc700::s_dsp::Voice;
 use sres_emulator::util::memory::format_memory;
 use sres_emulator::System;
 

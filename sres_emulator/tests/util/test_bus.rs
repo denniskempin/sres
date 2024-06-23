@@ -5,13 +5,13 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use itertools::Itertools;
+use sres_emulator::apu::spc700::Spc700Bus;
 use sres_emulator::bus::Address;
 use sres_emulator::bus::AddressU16;
 use sres_emulator::bus::AddressU24;
 use sres_emulator::bus::Bus;
 use sres_emulator::main_bus::MainBus;
 use sres_emulator::ppu::PpuTimer;
-use sres_emulator::spc700::Spc700Bus;
 
 /// A test implementation of the `Bus`.
 ///

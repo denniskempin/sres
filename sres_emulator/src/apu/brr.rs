@@ -227,8 +227,8 @@ mod tests {
 
     pub fn test_brr_decode(filename: &str) {
         let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let brr_path = root_dir.join(format!("src/spc700/brr/{filename}.brr"));
-        let wav_path = root_dir.join(format!("src/spc700/brr/{filename}.wav"));
+        let brr_path = root_dir.join(format!("src/apu/brr/{filename}.brr"));
+        let wav_path = root_dir.join(format!("src/apu/brr/{filename}.wav"));
         let brr_data = std::fs::read(brr_path).unwrap();
 
         let spec = hound::WavSpec {
