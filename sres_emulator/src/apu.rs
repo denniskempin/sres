@@ -1,10 +1,14 @@
 //! Dummy implementation of the audio processing unit.
+mod brr;
+pub mod s_dsp;
+pub mod spc700;
+
 use log::debug;
 
+use crate::apu::spc700::Spc700;
+use crate::apu::spc700::Spc700BusImpl;
 use crate::bus::AddressU24;
 use crate::debugger::DebuggerRef;
-use crate::spc700::Spc700;
-use crate::spc700::Spc700BusImpl;
 
 pub struct Apu {
     pub spc700: Spc700<Spc700BusImpl>,

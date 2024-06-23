@@ -5,11 +5,11 @@ use core::panic;
 
 use intbits::Bits;
 
+use crate::apu::spc700::Spc700;
+use crate::apu::spc700::Spc700Bus;
 use crate::bus::Address;
 use crate::bus::AddressU16;
 use crate::bus::Wrap;
-use crate::spc700::Spc700;
-use crate::spc700::Spc700Bus;
 use crate::util::uint::U16Ext;
 
 /// Each instruction is defined by it's opcode and a variable number of bytes to descibe the

@@ -1,25 +1,23 @@
 //! Implementation of the SPC700 CPU.
-mod brr;
 mod instructions;
 mod opcode_table;
 mod operands;
-pub mod s_dsp;
 mod spc700_bus;
 mod status;
 
 use std::fmt::Display;
 
+use crate::apu::spc700::opcode_table::InstructionDef;
+pub use crate::apu::spc700::operands::AddressMode;
+pub use crate::apu::spc700::operands::DecodedOperand;
+pub use crate::apu::spc700::spc700_bus::Spc700Bus;
+pub use crate::apu::spc700::spc700_bus::Spc700BusImpl;
+pub use crate::apu::spc700::status::Spc700StatusFlags;
 use crate::bus::Address;
 use crate::bus::AddressU16;
 use crate::bus::Wrap;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
-use crate::spc700::opcode_table::InstructionDef;
-pub use crate::spc700::operands::AddressMode;
-pub use crate::spc700::operands::DecodedOperand;
-pub use crate::spc700::spc700_bus::Spc700Bus;
-pub use crate::spc700::spc700_bus::Spc700BusImpl;
-pub use crate::spc700::status::Spc700StatusFlags;
 use crate::trace::Spc700TraceLine;
 use crate::util::uint::UInt;
 

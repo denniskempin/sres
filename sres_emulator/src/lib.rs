@@ -6,7 +6,6 @@ pub mod cpu;
 pub mod debugger;
 pub mod main_bus;
 pub mod ppu;
-pub mod spc700;
 pub mod trace;
 pub mod util;
 
