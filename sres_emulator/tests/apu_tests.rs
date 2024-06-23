@@ -3,7 +3,6 @@
 use std::path::PathBuf;
 
 use bilge::prelude::*;
-use itertools::Itertools;
 use pretty_assertions::assert_eq;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::debugger::EventFilter;
