@@ -2,24 +2,27 @@
 mod instructions;
 mod opcode_table;
 mod operands;
-mod spc700_bus;
 mod status;
 
 use std::fmt::Display;
 
-use crate::apu::spc700::opcode_table::InstructionDef;
-pub use crate::apu::spc700::operands::AddressMode;
-pub use crate::apu::spc700::operands::DecodedOperand;
-pub use crate::apu::spc700::spc700_bus::Spc700Bus;
-pub use crate::apu::spc700::spc700_bus::Spc700BusImpl;
-pub use crate::apu::spc700::status::Spc700StatusFlags;
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
 use crate::common::address::Wrap;
+use crate::common::bus::Bus;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
 use crate::trace::Spc700TraceLine;
 use crate::util::uint::UInt;
+
+use self::opcode_table::InstructionDef;
+pub use self::operands::AddressMode;
+pub use self::operands::DecodedOperand;
+pub use self::status::Spc700StatusFlags;
+
+pub trait Spc700Bus: Bus<AddressU16> {
+    fn master_cycle(&self) -> u64;
+}
 
 pub struct Spc700<BusT: Spc700Bus> {
     pub opcode_table: [InstructionDef<BusT>; 256],
@@ -142,6 +145,7 @@ mod test {
     use std::str::FromStr;
 
     use super::*;
+    use crate::components::apu::apu_bus::ApuBus;
     use crate::trace::Spc700TraceLine;
 
     fn assert_state(spc700: &Spc700<impl Spc700Bus>, expected_state: &str) {
@@ -162,7 +166,7 @@ mod test {
 
     #[test]
     fn boot_rom_transfer_test() {
-        let mut spc700 = Spc700::new(Spc700BusImpl::new(Default::default()), Default::default());
+        let mut spc700 = Spc700::new(ApuBus::new(Default::default()), Default::default());
         assert_states(&mut spc700, INIT_TRACE);
 
         // Init done signal is 0xaabb on port 0-1

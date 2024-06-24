@@ -1,16 +1,14 @@
 use intbits::Bits;
 
-use crate::apu::s_dsp::SDsp;
-use crate::common::bus::Bus;
 use crate::common::address::AddressU16;
+use crate::common::bus::Bus;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
 
-pub trait Spc700Bus: Bus<AddressU16> {
-    fn master_cycle(&self) -> u64;
-}
+use super::s_dsp::SDsp;
+use super::spc700::Spc700Bus;
 
-pub struct Spc700BusImpl {
+pub struct ApuBus {
     pub debugger: DebuggerRef,
     pub master_cycle: u64,
     pub ram: [u8; 0x10000],
@@ -22,7 +20,7 @@ pub struct Spc700BusImpl {
     pub dsp: SDsp,
 }
 
-impl Spc700BusImpl {
+impl ApuBus {
     #[allow(clippy::new_without_default)]
     pub fn new(debugger: DebuggerRef) -> Self {
         Self {
@@ -39,7 +37,7 @@ impl Spc700BusImpl {
     }
 }
 
-impl Bus<AddressU16> for Spc700BusImpl {
+impl Bus<AddressU16> for ApuBus {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         match addr.0 {
             0x00F2 => Some(self.dsp_register_select.bits(0..=6)),
@@ -87,7 +85,7 @@ impl Bus<AddressU16> for Spc700BusImpl {
     fn reset(&mut self) {}
 }
 
-impl Spc700Bus for Spc700BusImpl {
+impl Spc700Bus for ApuBus {
     fn master_cycle(&self) -> u64 {
         self.master_cycle
     }
