@@ -10,8 +10,8 @@ use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
-use crate::bus::AddressU24;
-use crate::bus::Wrap;
+use crate::common::address::AddressU24;
+use crate::common::address::Wrap;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
 use crate::main_bus::MainBus;
@@ -236,11 +236,11 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use super::*;
-    use crate::bus::Address;
-    use crate::bus::AddressU24;
-    use crate::bus::Bus;
-    use crate::bus::Wrap;
     use crate::cartridge::Cartridge;
+    use crate::common::address::Address;
+    use crate::common::address::AddressU24;
+    use crate::common::address::Wrap;
+    use crate::common::bus::Bus;
     use crate::debugger::DebuggerRef;
     use crate::main_bus::MainBusImpl;
     use crate::System;

@@ -1,5 +1,5 @@
 //! Implementation of multiplication registers
-use crate::bus::AddressU24;
+use crate::common::address::AddressU24;
 use crate::util::uint::U16Ext;
 
 pub struct MultiplicationUnit {

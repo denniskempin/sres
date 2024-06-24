@@ -7,7 +7,7 @@ use log::debug;
 
 use crate::apu::spc700::Spc700;
 use crate::apu::spc700::Spc700BusImpl;
-use crate::bus::AddressU24;
+use crate::common::address::AddressU24;
 use crate::debugger::DebuggerRef;
 
 pub struct Apu {

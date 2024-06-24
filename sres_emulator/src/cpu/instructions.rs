@@ -5,9 +5,9 @@
 //!
 //! Some functions are implemented for u8 and u16 using generics. This allows the opcode table
 //! to use the same implementation for operating on both u8 and u16 sized registers.
-use crate::bus::Address;
-use crate::bus::AddressU24;
-use crate::bus::Wrap;
+use crate::common::address::Address;
+use crate::common::address::AddressU24;
+use crate::common::address::Wrap;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
 use crate::cpu::status::StatusFlags;
