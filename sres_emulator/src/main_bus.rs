@@ -8,10 +8,10 @@ use log::trace;
 
 use self::multiplication::MultiplicationUnit;
 use crate::apu::Apu;
-use crate::bus::AddressU24;
-use crate::bus::Bus;
 use crate::cartridge::Cartridge;
 use crate::cartridge::MappingMode;
+use crate::common::bus::Bus;
+use crate::common::address::AddressU24;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
 use crate::ppu::HVTimerMode;

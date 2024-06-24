@@ -6,10 +6,10 @@ use std::fmt::Formatter;
 
 use itertools::Itertools;
 use sres_emulator::apu::spc700::Spc700Bus;
-use sres_emulator::bus::Address;
-use sres_emulator::bus::AddressU16;
-use sres_emulator::bus::AddressU24;
-use sres_emulator::bus::Bus;
+use sres_emulator::common::address::Address;
+use sres_emulator::common::address::AddressU16;
+use sres_emulator::common::address::AddressU24;
+use sres_emulator::common::bus::Bus;
 use sres_emulator::main_bus::MainBus;
 use sres_emulator::ppu::PpuTimer;
 

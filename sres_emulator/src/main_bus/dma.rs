@@ -6,9 +6,9 @@ use log::info;
 use log::warn;
 use packed_struct::prelude::*;
 
-use crate::bus::Address;
-use crate::bus::AddressU24;
-use crate::bus::Wrap;
+use crate::common::address::Address;
+use crate::common::address::AddressU24;
+use crate::common::address::Wrap;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
 use crate::util::uint::U16Ext;

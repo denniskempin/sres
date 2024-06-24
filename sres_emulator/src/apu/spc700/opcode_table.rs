@@ -1,6 +1,6 @@
 use crate::apu::spc700::Spc700;
 use crate::apu::spc700::Spc700Bus;
-use crate::bus::AddressU16;
+use crate::common::address::AddressU16;
 
 /// An entry in the opcode table
 pub struct InstructionDef<BusT: Spc700Bus> {

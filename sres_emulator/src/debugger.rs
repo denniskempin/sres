@@ -11,8 +11,8 @@ use std::str::FromStr;
 
 use num_traits::PrimInt;
 
-use crate::bus::AddressU16;
-use crate::bus::AddressU24;
+use crate::common::address::AddressU16;
+use crate::common::address::AddressU24;
 use crate::cpu::NativeVectorTable;
 use crate::trace::CpuTraceLine;
 use crate::trace::Spc700TraceLine;

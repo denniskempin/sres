@@ -4,9 +4,9 @@
 //! the compiler specifically for that combination of instruction and address mode.
 //!
 //! To reduce repetitive code, macros are used to build those unique functions.
-use crate::bus::Address;
-use crate::bus::AddressU24;
-use crate::bus::Wrap;
+use crate::common::address::Address;
+use crate::common::address::AddressU24;
+use crate::common::address::Wrap;
 use crate::cpu::operands::AccessMode;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;

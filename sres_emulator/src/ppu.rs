@@ -18,7 +18,7 @@ pub use self::timer::HVTimerMode;
 pub use self::timer::PpuTimer;
 use self::vram::Vram;
 pub use self::vram::VramAddr;
-use crate::bus::AddressU24;
+use crate::common::address::AddressU24;
 use crate::debugger::DebuggerRef;
 use crate::util::image::Image;
 use crate::util::image::Rgb15;

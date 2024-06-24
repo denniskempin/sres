@@ -1,6 +1,6 @@
 //! Tracking of PPU events and timing.
 
-use crate::bus::AddressU24;
+use crate::common::address::AddressU24;
 use crate::util::uint::U16Ext;
 use crate::util::uint::UInt;
 use crate::util::EdgeDetector;

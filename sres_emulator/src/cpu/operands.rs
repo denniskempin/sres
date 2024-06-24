@@ -2,9 +2,9 @@
 //!
 //! Each instruction in the [opcode table](build_opcode_table) has an associated
 //! address mode, which is decoded here to handle how the operand is loaded and stored.
-use crate::bus::Address;
-use crate::bus::AddressU24;
-use crate::bus::Wrap;
+use crate::common::address::Address;
+use crate::common::address::AddressU24;
+use crate::common::address::Wrap;
 use crate::cpu::Cpu;
 use crate::cpu::STACK_BASE;
 use crate::main_bus::MainBus;

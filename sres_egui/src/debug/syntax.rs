@@ -1,8 +1,8 @@
 use egui::Color32;
 use egui::RichText;
 use egui::Ui;
-use sres_emulator::bus::AddressU16;
-use sres_emulator::bus::AddressU24;
+use sres_emulator::common::address::AddressU16;
+use sres_emulator::common::address::AddressU24;
 use sres_emulator::debugger::Event;
 
 use super::InternalLink;

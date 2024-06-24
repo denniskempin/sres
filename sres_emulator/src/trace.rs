@@ -10,7 +10,7 @@ use anyhow::Result;
 use crate::apu::spc700::Spc700;
 use crate::apu::spc700::Spc700Bus;
 use crate::apu::spc700::Spc700StatusFlags;
-use crate::bus::AddressU16;
+use crate::common::address::AddressU16;
 use crate::cpu::Cpu;
 use crate::cpu::InstructionMeta;
 use crate::cpu::StatusFlags;
@@ -235,7 +235,7 @@ mod test {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::bus::AddressU24;
+    use crate::common::address::AddressU24;
 
     static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:236 F:32";
 
