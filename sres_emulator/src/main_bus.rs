@@ -7,11 +7,11 @@ use intbits::Bits;
 use log::trace;
 
 use self::multiplication::MultiplicationUnit;
-use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::cartridge::MappingMode;
-use crate::common::bus::Bus;
 use crate::common::address::AddressU24;
+use crate::common::bus::Bus;
+use crate::components::apu::Apu;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
 use crate::ppu::HVTimerMode;

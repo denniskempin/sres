@@ -7,10 +7,10 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 
-use crate::apu::spc700::Spc700;
-use crate::apu::spc700::Spc700Bus;
-use crate::apu::spc700::Spc700StatusFlags;
 use crate::common::address::AddressU16;
+use crate::components::apu::Spc700;
+use crate::components::apu::Spc700Bus;
+use crate::components::apu::Spc700StatusFlags;
 use crate::cpu::Cpu;
 use crate::cpu::InstructionMeta;
 use crate::cpu::StatusFlags;

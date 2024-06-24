@@ -1,24 +1,31 @@
 //! Dummy implementation of the audio processing unit.
+mod apu_bus;
 mod brr;
-pub mod s_dsp;
-pub mod spc700;
+mod s_dsp;
+mod spc700;
 
 use log::debug;
 
-use crate::apu::spc700::Spc700;
-use crate::apu::spc700::Spc700BusImpl;
 use crate::common::address::AddressU24;
 use crate::debugger::DebuggerRef;
 
+pub use self::apu_bus::ApuBus;
+pub use self::s_dsp::Adsr1;
+pub use self::s_dsp::Adsr2;
+pub use self::s_dsp::Voice;
+pub use self::spc700::Spc700;
+pub use self::spc700::Spc700Bus;
+pub use self::spc700::Spc700StatusFlags;
+
 pub struct Apu {
-    pub spc700: Spc700<Spc700BusImpl>,
+    pub spc700: Spc700<ApuBus>,
 }
 
 impl Apu {
     #[allow(clippy::new_without_default)]
     pub fn new(debugger: DebuggerRef) -> Self {
         Self {
-            spc700: Spc700::new(Spc700BusImpl::new(debugger.clone()), debugger),
+            spc700: Spc700::new(ApuBus::new(debugger.clone()), debugger),
         }
     }
 

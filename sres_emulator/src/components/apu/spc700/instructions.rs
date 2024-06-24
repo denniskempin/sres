@@ -1,17 +1,18 @@
 use intbits::Bits;
 
-use super::operands::Operand;
-use super::AddressMode;
-use super::DecodedOperand;
-use super::Spc700StatusFlags;
-use crate::apu::spc700::Spc700;
-use crate::apu::spc700::Spc700Bus;
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
 use crate::common::address::Wrap;
 use crate::util::uint::U16Ext;
 use crate::util::uint::U8Ext;
 use crate::util::uint::UInt;
+
+use super::operands::Operand;
+use super::AddressMode;
+use super::DecodedOperand;
+use super::Spc700;
+use super::Spc700Bus;
+use super::Spc700StatusFlags;
 
 impl<BusT: Spc700Bus> Spc700<BusT> {
     ////////////////////////////////////////////////////////////////////////////////

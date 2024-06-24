@@ -1,6 +1,6 @@
-pub mod apu;
 pub mod cartridge;
 pub mod common;
+pub mod components;
 pub mod controller;
 pub mod cpu;
 pub mod debugger;
