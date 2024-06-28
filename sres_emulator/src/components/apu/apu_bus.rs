@@ -2,11 +2,11 @@ use intbits::Bits;
 
 use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
+use crate::components::spc700::Spc700Bus;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
 
 use super::s_dsp::SDsp;
-use super::spc700::Spc700Bus;
 
 pub struct ApuBus {
     pub debugger: DebuggerRef,

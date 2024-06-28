@@ -7,7 +7,7 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 
-use crate::components::apu::Spc700TraceLine;
+use crate::components::spc700::Spc700TraceLine;
 use crate::cpu::Cpu;
 use crate::cpu::InstructionMeta;
 use crate::cpu::StatusFlags;

@@ -5,13 +5,13 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 
 use itertools::Itertools;
-use sres_emulator::common::address::Address;
-use sres_emulator::common::address::AddressU16;
-use sres_emulator::common::address::AddressU24;
-use sres_emulator::common::bus::Bus;
-use sres_emulator::components::spc700::Spc700Bus;
-use sres_emulator::main_bus::MainBus;
-use sres_emulator::ppu::PpuTimer;
+
+use crate::common::address::Address;
+use crate::common::address::AddressU16;
+use crate::common::address::AddressU24;
+use crate::common::bus::Bus;
+use crate::main_bus::MainBus;
+use crate::ppu::PpuTimer;
 
 /// A test implementation of the `Bus`.
 ///
@@ -96,12 +96,6 @@ impl<AddressT: Address> Display for SparseMemory<AddressT> {
             writeln!(f, "{}: {:02X}", addr, value)?;
         }
         Ok(())
-    }
-}
-
-impl Spc700Bus for TestBus<AddressU16> {
-    fn master_cycle(&self) -> u64 {
-        0
     }
 }
 
