@@ -6,6 +6,8 @@ pub mod cpu;
 pub mod debugger;
 pub mod main_bus;
 pub mod ppu;
+#[cfg(test)]
+mod test_util;
 pub mod trace;
 pub mod util;
 

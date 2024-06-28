@@ -58,9 +58,9 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
         disassembly: |_, instruction_addr| ("ill".to_string(), instruction_addr),
     });
 
-    use crate::components::apu::spc700::operands::AddressMode::*;
-    use crate::components::apu::spc700::operands::Operand::*;
-    use crate::components::apu::spc700::operands::Register::*;
+    use super::operands::AddressMode::*;
+    use super::operands::Operand::*;
+    use super::operands::Register::*;
     opcodes[0x00] = instruction!(nop);
     opcodes[0x01] = instruction!(tcall, Const(0));
     opcodes[0x02] = instruction!(set1, DpBit(0));

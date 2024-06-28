@@ -2,7 +2,6 @@
 //
 // The data provides thousands of test cases with initial CPU state and expected CPU state after
 // executing one instruction.
-mod util;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -15,15 +14,18 @@ use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use sres_emulator::common::address::AddressU16;
-use sres_emulator::common::bus::Bus;
-use sres_emulator::components::apu::Spc700;
-use sres_emulator::components::apu::Spc700StatusFlags;
-use sres_emulator::debugger::DebuggerRef;
-use sres_emulator::util::logging;
-use util::test_bus::Cycle;
-use util::test_bus::TestBus;
 use xz2::read::XzDecoder;
+
+use crate::common::address::AddressU16;
+use crate::common::bus::Bus;
+use crate::debugger::DebuggerRef;
+use crate::test_util::test_bus::Cycle;
+use crate::test_util::test_bus::TestBus;
+use crate::util::logging;
+
+use super::Spc700;
+use super::Spc700Bus;
+use super::Spc700StatusFlags;
 
 #[rustfmt::skip]
 const SKIP_OPCODES: &[u8] = &[];
@@ -124,7 +126,7 @@ pub fn test_spc700_opcodes_fx() {
 fn run_tomharte_test(test_name: &str) {
     logging::test_init(false);
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let json_path = root_dir.join(format!("tests/tomharte_spc700/{test_name}.json.xz"));
+    let json_path = root_dir.join(format!("src/components/spc700/test/{test_name}.json.xz"));
     let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
 
     for test_case in TestCase::from_xz_file(&json_path) {
@@ -261,5 +263,11 @@ impl TestCase {
                 }
             })
             .collect()
+    }
+}
+
+impl Spc700Bus for TestBus<AddressU16> {
+    fn master_cycle(&self) -> u64 {
+        0
     }
 }
