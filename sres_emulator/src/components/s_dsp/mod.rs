@@ -1,3 +1,5 @@
+mod brr;
+
 use std::fmt::Display;
 
 use bilge::prelude::*;
@@ -7,11 +9,15 @@ use crate::util::uint::U16Ext;
 use crate::util::uint::U8Ext;
 
 pub struct SDsp {
-    pub raw: [u8; 128],
-    pub voices: [Voice; 8],
+    raw: [u8; 128],
+    voices: [Voice; 8],
 }
 
 impl SDsp {
+    pub fn debug(&self) -> SDspDebug<'_> {
+        SDspDebug(self)
+    }
+
     pub fn read_register(&self, reg: u8) -> u8 {
         match reg.low_nibble() {
             0x0..=0x9 => self.voices[reg.high_nibble() as usize].read_register(reg.low_nibble()),
@@ -29,6 +35,14 @@ impl SDsp {
     }
 }
 
+pub struct SDspDebug<'a>(&'a SDsp);
+
+impl SDspDebug<'_> {
+    pub fn voice(&self, voice: usize) -> String {
+        self.0.voices[voice].to_string()
+    }
+}
+
 impl Default for SDsp {
     fn default() -> Self {
         Self {
@@ -41,24 +55,24 @@ impl Default for SDsp {
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Voice {
     /// VOL (L): $X0 - SVVV VVVV - Left channel volume, signed.
-    pub vol_l: i8,
+    vol_l: i8,
     /// VOL (R): $X1 - SVVV VVVV - Right channel volume, signed.
-    pub vol_r: i8,
+    vol_r: i8,
     /// P (L)   $X2 - LLLL LLLL - Low 8 bits of sample pitch.
     /// P (H) - $X3 - --HH HHHH - High 6 bits of sample pitch.
-    pub pitch: u16,
+    pitch: u16,
     /// SCRN: $X4 SSSS SSSS Selects a sample source entry from the directory
-    pub sample_source: u8,
+    sample_source: u8,
     /// ADSR (1): $X5 - EDDD AAAA - ADSR enable (E), decay rate (D), attack rate (A).
-    pub adsr1: Adsr1,
+    adsr1: Adsr1,
     /// ADSR (2): $X6 - SSSR RRRR - Sustain level (S), release rate (R).
-    pub adsr2: Adsr2,
+    adsr2: Adsr2,
     /// GAIN: $X7 - 0VVV VVVV or 1MMV VVVV - Mode (M), value (V).
-    pub gain: Gain,
+    gain: Gain,
     /// ENVX: $X8 - 0VVV VVVV - Reads current 7-bit value of ADSR/GAIN envelope.
-    pub envx: u8,
+    envx: u8,
     /// OUTX - $X9 - SVVV VVVV - Reads signed 8-bit value of current sample wave multiplied by ENVX, before applying VOL.
-    pub outx: i8,
+    outx: i8,
 }
 
 impl Display for Voice {
@@ -121,24 +135,24 @@ impl Voice {
 
 #[bitsize(8)]
 #[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-pub struct Adsr1 {
-    pub attack_rate: u4,
-    pub decay_rate: u3,
-    pub enable: bool,
+struct Adsr1 {
+    attack_rate: u4,
+    decay_rate: u3,
+    enable: bool,
 }
 
 #[bitsize(8)]
 #[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-pub struct Adsr2 {
-    pub release_rate: u5,
-    pub sustain_level: u3,
+struct Adsr2 {
+    release_rate: u5,
+    sustain_level: u3,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Gain(u8);
 
 impl Gain {
-    pub fn mode(&self) -> GainMode {
+    fn mode(&self) -> GainMode {
         if self.0.bit(0) {
             let rate = self.0.bits(0..5);
             match self.0.bits(5..7) {
@@ -154,7 +168,7 @@ impl Gain {
     }
 }
 
-pub enum GainMode {
+enum GainMode {
     Fixed(u8),
     LinearDecay(u8),
     ExponentialDecay(u8),

@@ -1,7 +1,5 @@
 //! Dummy implementation of the audio processing unit.
 mod apu_bus;
-mod brr;
-mod s_dsp;
 
 use log::debug;
 
@@ -10,6 +8,8 @@ use crate::debugger::DebuggerRef;
 
 use self::apu_bus::ApuBus;
 use crate::components::spc700::Spc700;
+
+use super::s_dsp::{SDsp, SDspDebug};
 
 pub struct Apu {
     spc700: Spc700<ApuBus>,
@@ -29,7 +29,7 @@ impl Apu {
     }
 
     pub fn debug(&self) -> ApuDebug<'_> {
-        ApuDebug::new(self)
+        ApuDebug(self)
     }
 
     pub fn catch_up_to_master_clock(&mut self, master_clock: u64) {
@@ -68,21 +68,15 @@ impl Apu {
     }
 }
 
-pub struct ApuDebug<'a> {
-    apu: &'a Apu,
-}
+pub struct ApuDebug<'a>(&'a Apu);
 
 impl<'a> ApuDebug<'a> {
-    fn new(apu: &'a Apu) -> Self {
-        Self { apu }
-    }
-
-    pub fn voice(&self, idx: usize) -> String {
-        self.apu.spc700.bus.dsp.voices[idx].to_string()
+    pub fn dsp(self) -> SDspDebug<'a> {
+        self.0.spc700.bus.dsp.debug()
     }
 
     pub fn ram(&self) -> &[u8] {
-        &self.apu.spc700.bus.ram
+        &self.0.spc700.bus.ram
     }
 }
 

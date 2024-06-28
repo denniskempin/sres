@@ -15,6 +15,7 @@ use std::cell::RefMut;
 use std::ops::Deref;
 
 use cartridge::Cartridge;
+use components::apu::ApuDebug;
 use cpu::Cpu;
 use debugger::BreakReason;
 use debugger::Debugger;
@@ -37,6 +38,10 @@ impl System {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self::with_cartridge(&Cartridge::default())
+    }
+
+    pub fn debug(&self) -> SystemDebug<'_> {
+        SystemDebug(self)
     }
 
     pub fn debugger(&self) -> RefMut<'_, Debugger> {
@@ -144,5 +149,13 @@ impl System {
     pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {
         // TODO: Implement frame skip/doubling if not running at 60fps
         self.execute_frames(1)
+    }
+}
+
+pub struct SystemDebug<'a>(&'a System);
+
+impl<'a> SystemDebug<'a> {
+    pub fn apu(self) -> ApuDebug<'a> {
+        self.0.cpu.bus.apu.debug()
     }
 }

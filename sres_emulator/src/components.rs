@@ -8,4 +8,5 @@
 //! - Do not use super to refer to outer modules
 
 pub mod apu;
+pub mod s_dsp;
 pub mod spc700;
