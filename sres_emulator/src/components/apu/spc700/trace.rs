@@ -5,9 +5,8 @@ use std::str::FromStr;
 
 use crate::common::address::AddressU16;
 
-use super::spc700::Spc700;
-use super::spc700::Spc700Bus;
-use super::spc700::Spc700StatusFlags;
+use super::Spc700;
+use super::Spc700Bus;
 
 // Representation of the state of [Spc700] in the same format as logged by BSNES.
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -18,7 +17,7 @@ pub struct Spc700TraceLine {
     pub x: u8,
     pub y: u8,
     pub sp: AddressU16,
-    pub status: Spc700StatusFlags,
+    pub status: String,
 }
 
 impl Spc700TraceLine {
@@ -30,7 +29,7 @@ impl Spc700TraceLine {
             x: cpu.x,
             y: cpu.y,
             sp: AddressU16(0x0100 + cpu.sp as u16),
-            status: cpu.status,
+            status: cpu.status.to_string(),
         }
     }
 }
@@ -50,7 +49,7 @@ impl FromStr for Spc700TraceLine {
             x: u8::from_str_radix(&s[38..40], 16).with_context(|| "x")?,
             y: u8::from_str_radix(&s[43..45], 16).with_context(|| "y")?,
             sp: AddressU16(u16::from_str_radix(&s[49..53], 16).with_context(|| "y")?),
-            status: s[62..70].trim().parse().with_context(|| "status")?,
+            status: s[62..70].to_string(),
         })
     }
 }
@@ -89,16 +88,7 @@ mod tests {
             x: 0xcc,
             y: 0xf9,
             sp: AddressU16(0x01ef),
-            status: Spc700StatusFlags {
-                carry: true,
-                zero: true,
-                irq_enable: false,
-                half_carry: false,
-                break_command: false,
-                direct_page: false,
-                overflow: false,
-                negative: true,
-            },
+            status: "N.....ZC".to_string(),
         }
     }
 

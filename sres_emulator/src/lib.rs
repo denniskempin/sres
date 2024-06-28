@@ -62,8 +62,7 @@ impl System {
         self.cpu.bus.debugger.enabled = true;
         self.cpu.bus.dma_controller.debugger.enabled = true;
         self.cpu.bus.ppu.debugger.enabled = true;
-        self.cpu.bus.apu.spc700.debugger.enabled = true;
-        self.cpu.bus.apu.spc700.bus.debugger.enabled = true;
+        self.cpu.bus.apu.enable_debugger(true);
     }
 
     pub fn disable_debugger(&mut self) {
@@ -72,8 +71,7 @@ impl System {
         self.cpu.bus.debugger.enabled = false;
         self.cpu.bus.dma_controller.debugger.enabled = false;
         self.cpu.bus.ppu.debugger.enabled = false;
-        self.cpu.bus.apu.spc700.debugger.enabled = false;
-        self.cpu.bus.apu.spc700.bus.debugger.enabled = false;
+        self.cpu.bus.apu.enable_debugger(false);
     }
 
     pub fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
