@@ -3,6 +3,7 @@ mod instructions;
 mod opcode_table;
 mod operands;
 mod status;
+mod trace;
 
 use std::fmt::Display;
 
@@ -18,7 +19,7 @@ use self::opcode_table::InstructionDef;
 pub use self::operands::AddressMode;
 pub use self::operands::DecodedOperand;
 pub use self::status::Spc700StatusFlags;
-use super::spc700_trace::Spc700TraceLine;
+pub use self::trace::Spc700TraceLine;
 
 pub trait Spc700Bus: Bus<AddressU16> {
     fn master_cycle(&self) -> u64;

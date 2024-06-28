@@ -40,7 +40,8 @@ pub fn test_play_noise() {
 
     // Verify the program has been loaded correctly at 0x0200 in SPC700 RAM.
     let spc_program = std::fs::read(spc_rom_path).unwrap();
-    let actual_program = &system.cpu.bus.apu.spc700.bus.ram[0x0200..(0x0200 + spc_program.len())];
+    let debug = system.cpu.bus.apu.debug();
+    let actual_program = &debug.ram()[0x0200..(0x0200 + spc_program.len())];
     assert_eq!(format_memory(actual_program), format_memory(&spc_program));
 
     // Run until "Kick" info has been written into Voice 0

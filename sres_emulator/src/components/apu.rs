@@ -3,7 +3,6 @@ mod apu_bus;
 mod brr;
 mod s_dsp;
 mod spc700;
-mod spc700_trace;
 
 use log::debug;
 
@@ -14,10 +13,10 @@ use self::apu_bus::ApuBus;
 pub use self::spc700::Spc700;
 pub use self::spc700::Spc700Bus;
 pub use self::spc700::Spc700StatusFlags;
-pub use self::spc700_trace::Spc700TraceLine;
+pub use self::spc700::Spc700TraceLine;
 
 pub struct Apu {
-    pub spc700: Spc700<ApuBus>,
+    spc700: Spc700<ApuBus>,
 }
 
 impl Apu {
@@ -26,6 +25,11 @@ impl Apu {
         Self {
             spc700: Spc700::new(ApuBus::new(debugger.clone()), debugger),
         }
+    }
+
+    pub fn enable_debugger(&mut self, enabled: bool) {
+        self.spc700.debugger.enabled = enabled;
+        self.spc700.bus.debugger.enabled = enabled;
     }
 
     pub fn debug(&self) -> ApuDebug<'_> {
@@ -79,5 +83,9 @@ impl<'a> ApuDebug<'a> {
 
     pub fn voice(&self, idx: usize) -> String {
         self.apu.spc700.bus.dsp.voices[idx].to_string()
+    }
+
+    pub fn ram(&self) -> &[u8] {
+        &self.apu.spc700.bus.ram
     }
 }
