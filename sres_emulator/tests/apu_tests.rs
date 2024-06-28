@@ -2,12 +2,9 @@
 
 use std::path::PathBuf;
 
-use bilge::prelude::*;
 use pretty_assertions::assert_eq;
 use sres_emulator::cartridge::Cartridge;
-use sres_emulator::components::apu::Adsr1;
-use sres_emulator::components::apu::Adsr2;
-use sres_emulator::components::apu::Voice;
+
 use sres_emulator::debugger::EventFilter;
 use sres_emulator::util::memory::format_memory;
 use sres_emulator::System;
@@ -22,19 +19,11 @@ pub fn test_play_brr_sample() {
 
     // Run until spc reaches infinite loop of the program.
     system.debug_until(EventFilter::Spc700ProgramCounter(0x02e9..0x02ea));
-    let actual_voice0 = system.cpu.bus.apu.spc700.bus.dsp.voices[0];
-    let expected_voice0 = Voice {
-        vol_l: 127,
-        vol_r: 127,
-        pitch: 0x1000,
-        sample_source: 0,
-        adsr1: Adsr1::new(u4::new(10), u3::new(7), true),
-        adsr2: Adsr2::new(u5::new(0), u3::new(7)),
-        gain: 127,
-        envx: 0,
-        outx: 0,
-    };
-    assert_eq!(actual_voice0, expected_voice0);
+
+    assert_eq!(
+        system.cpu.bus.apu.debug().voice(0),
+        "vol:127/127 pitch:4096 adsr:(10,7,7,0) src:$00 env:0 out:0".to_string()
+    );
 }
 
 #[test]
@@ -56,17 +45,9 @@ pub fn test_play_noise() {
 
     // Run until "Kick" info has been written into Voice 0
     system.debug_until(EventFilter::Spc700ProgramCounter(0x02dd..0x02de));
-    let actual_voice0 = system.cpu.bus.apu.spc700.bus.dsp.voices[0];
-    let expected_voice0 = Voice {
-        vol_l: 127,
-        vol_r: 127,
-        pitch: 0,
-        sample_source: 0,
-        adsr1: Adsr1::new(u4::new(0b1110), u3::new(0), true),
-        adsr2: Adsr2::new(u5::new(0b10110), u3::new(0b111)),
-        gain: 127,
-        envx: 0,
-        outx: 0,
-    };
-    assert_eq!(actual_voice0, expected_voice0);
+
+    assert_eq!(
+        system.cpu.bus.apu.debug().voice(0),
+        "vol:127/127 pitch:0 adsr:(14,0,7,22) src:$00 env:0 out:0".to_string()
+    );
 }

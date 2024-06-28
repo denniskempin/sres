@@ -13,9 +13,9 @@ use num_traits::PrimInt;
 
 use crate::common::address::AddressU16;
 use crate::common::address::AddressU24;
+use crate::components::apu::Spc700TraceLine;
 use crate::cpu::NativeVectorTable;
 use crate::trace::CpuTraceLine;
-use crate::trace::Spc700TraceLine;
 use crate::util::RingBuffer;
 
 #[derive(Clone)]

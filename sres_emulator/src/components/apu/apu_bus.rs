@@ -20,6 +20,20 @@ pub struct ApuBus {
     pub dsp: SDsp,
 }
 
+struct ApuDebug<'a> {
+    bus: &'a ApuBus,
+}
+
+impl<'a> ApuDebug<'a> {
+    fn new(bus: &'a ApuBus) -> Self {
+        Self { bus }
+    }
+
+    fn voice(&self, idx: usize) -> String {
+        "".to_string()
+    }
+}
+
 impl ApuBus {
     #[allow(clippy::new_without_default)]
     pub fn new(debugger: DebuggerRef) -> Self {

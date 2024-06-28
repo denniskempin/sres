@@ -133,7 +133,7 @@ fn cpu_log_line(
 
 fn spc700_log_line(
     ui: &mut Ui,
-    state: &sres_emulator::trace::Spc700TraceLine,
+    state: &sres_emulator::components::apu::Spc700TraceLine,
     selected: &mut InternalLink,
 ) {
     label_spc(ui);
