@@ -21,7 +21,7 @@ pub fn test_play_brr_sample() {
     system.debug_until(EventFilter::Spc700ProgramCounter(0x02e9..0x02ea));
 
     assert_eq!(
-        system.cpu.bus.apu.debug().voice(0),
+        system.cpu.bus.apu.debug().dsp().voice(0),
         "vol:127/127 pitch:4096 adsr:(10,7,7,0) src:$00 env:0 out:0".to_string()
     );
 }
@@ -48,7 +48,7 @@ pub fn test_play_noise() {
     system.debug_until(EventFilter::Spc700ProgramCounter(0x02dd..0x02de));
 
     assert_eq!(
-        system.cpu.bus.apu.debug().voice(0),
+        system.debug().apu().dsp().voice(0),
         "vol:127/127 pitch:0 adsr:(14,0,7,22) src:$00 env:0 out:0".to_string()
     );
 }
