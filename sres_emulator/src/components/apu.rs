@@ -3,19 +3,18 @@ mod apu_bus;
 mod brr;
 mod s_dsp;
 mod spc700;
+mod spc700_trace;
 
 use log::debug;
 
 use crate::common::address::AddressU24;
 use crate::debugger::DebuggerRef;
 
-pub use self::apu_bus::ApuBus;
-pub use self::s_dsp::Adsr1;
-pub use self::s_dsp::Adsr2;
-pub use self::s_dsp::Voice;
+use self::apu_bus::ApuBus;
 pub use self::spc700::Spc700;
 pub use self::spc700::Spc700Bus;
 pub use self::spc700::Spc700StatusFlags;
+pub use self::spc700_trace::Spc700TraceLine;
 
 pub struct Apu {
     pub spc700: Spc700<ApuBus>,
@@ -27,6 +26,10 @@ impl Apu {
         Self {
             spc700: Spc700::new(ApuBus::new(debugger.clone()), debugger),
         }
+    }
+
+    pub fn debug(&self) -> ApuDebug<'_> {
+        ApuDebug::new(self)
     }
 
     pub fn catch_up_to_master_clock(&mut self, master_clock: u64) {
@@ -62,5 +65,19 @@ impl Apu {
         let value = self.spc700.bus.channel_out[channel_id];
         debug!("APUIO[{:04X}] reads {:02X}", addr.offset, value);
         value
+    }
+}
+
+pub struct ApuDebug<'a> {
+    apu: &'a Apu,
+}
+
+impl<'a> ApuDebug<'a> {
+    fn new(apu: &'a Apu) -> Self {
+        Self { apu }
+    }
+
+    pub fn voice(&self, idx: usize) -> String {
+        self.apu.spc700.bus.dsp.voices[idx].to_string()
     }
 }

@@ -12,13 +12,13 @@ use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
-use crate::trace::Spc700TraceLine;
 use crate::util::uint::UInt;
 
 use self::opcode_table::InstructionDef;
 pub use self::operands::AddressMode;
 pub use self::operands::DecodedOperand;
 pub use self::status::Spc700StatusFlags;
+use super::spc700_trace::Spc700TraceLine;
 
 pub trait Spc700Bus: Bus<AddressU16> {
     fn master_cycle(&self) -> u64;
@@ -146,7 +146,7 @@ mod test {
 
     use super::*;
     use crate::components::apu::apu_bus::ApuBus;
-    use crate::trace::Spc700TraceLine;
+    use crate::components::apu::Spc700TraceLine;
 
     fn assert_state(spc700: &Spc700<impl Spc700Bus>, expected_state: &str) {
         let mut actual = Spc700TraceLine::from_spc700(spc700);
