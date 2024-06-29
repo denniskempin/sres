@@ -115,7 +115,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         u16::from_le_bytes([self.stack_pop_u8(), self.stack_pop_u8()])
     }
 
-    pub fn direct_page_addr(&self, offset: u8) -> AddressU16 {
+    fn direct_page_addr(&self, offset: u8) -> AddressU16 {
         AddressU16::new_direct_page(if self.status.direct_page { 1 } else { 0 }, offset)
     }
 

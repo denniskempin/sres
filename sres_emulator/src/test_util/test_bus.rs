@@ -7,7 +7,6 @@ use std::fmt::Formatter;
 use itertools::Itertools;
 
 use crate::common::address::Address;
-use crate::common::address::AddressU16;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
 use crate::main_bus::MainBus;
