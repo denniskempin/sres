@@ -21,9 +21,9 @@ use sres_emulator::common::address::AddressU16;
 use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::address::Wrap;
 use sres_emulator::common::bus::Bus;
+use sres_emulator::common::util::RingBuffer;
 use sres_emulator::debugger::Debugger;
 use sres_emulator::debugger::EventFilter;
-use sres_emulator::util::RingBuffer;
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
 

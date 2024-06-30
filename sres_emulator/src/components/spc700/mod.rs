@@ -13,9 +13,9 @@ use crate::common::address::Address;
 use crate::common::address::AddressU16;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
+use crate::common::uint::UInt;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
-use crate::util::uint::UInt;
 
 use self::opcode_table::InstructionDef;
 use self::operands::AddressMode;

@@ -8,6 +8,7 @@
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
+use crate::common::uint::UInt;
 use crate::cpu::operands::AddressMode;
 use crate::cpu::operands::Operand;
 use crate::cpu::status::StatusFlags;
@@ -15,7 +16,6 @@ use crate::cpu::Cpu;
 use crate::cpu::EmuVectorTable;
 use crate::cpu::NativeVectorTable;
 use crate::main_bus::MainBus;
-use crate::util::uint::UInt;
 
 pub fn nop(cpu: &mut Cpu<impl MainBus>) {
     cpu.bus.cycle_io();

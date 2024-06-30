@@ -3,9 +3,9 @@ use intbits::Bits;
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
 use crate::common::address::Wrap;
-use crate::util::uint::U16Ext;
-use crate::util::uint::U8Ext;
-use crate::util::uint::UInt;
+use crate::common::uint::U16Ext;
+use crate::common::uint::U8Ext;
+use crate::common::uint::UInt;
 
 use super::operands::Operand;
 use super::AddressMode;

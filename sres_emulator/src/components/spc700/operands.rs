@@ -8,7 +8,7 @@ use intbits::Bits;
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
 use crate::common::address::Wrap;
-use crate::util::uint::U16Ext;
+use crate::common::uint::U16Ext;
 
 use super::Spc700;
 use super::Spc700Bus;

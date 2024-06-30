@@ -18,10 +18,10 @@ use xz2::read::XzDecoder;
 
 use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
+use crate::common::logging;
 use crate::common::test_bus::Cycle;
 use crate::common::test_bus::TestBus;
 use crate::debugger::DebuggerRef;
-use crate::util::logging;
 
 use super::Spc700;
 use super::Spc700Bus;

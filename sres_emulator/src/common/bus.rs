@@ -2,8 +2,8 @@
 
 use crate::common::address::Address;
 use crate::common::address::Wrap;
-use crate::util::uint::RegisterSize;
-use crate::util::uint::UInt;
+use crate::common::uint::RegisterSize;
+use crate::common::uint::UInt;
 
 /// Generic trait shared by all bus implementations.
 pub trait Bus<AddressT: Address> {

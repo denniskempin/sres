@@ -6,7 +6,7 @@ use intbits::Bits;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::util::uint::U16Ext;
+use crate::common::uint::U16Ext;
 
 pub struct Vram {
     pub memory: Vec<u16>,

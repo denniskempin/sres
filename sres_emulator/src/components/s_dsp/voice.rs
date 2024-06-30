@@ -3,7 +3,7 @@ use std::fmt::Display;
 use bilge::prelude::*;
 use intbits::Bits;
 
-use crate::util::uint::U16Ext;
+use crate::common::uint::U16Ext;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Voice {
