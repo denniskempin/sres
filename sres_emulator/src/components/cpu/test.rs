@@ -2,7 +2,6 @@
 //!
 //! The data provides thousands of test cases with initial CPU state and expected CPU state after
 //! executing one instruction.
-mod util;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -15,15 +14,17 @@ use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use sres_emulator::common::address::AddressU24;
-use sres_emulator::common::bus::Bus;
-use sres_emulator::common::debugger::DebuggerRef;
-use sres_emulator::common::logging;
-use sres_emulator::components::cpu::Cpu;
-use sres_emulator::components::cpu::StatusFlags;
-use util::test_bus::Cycle;
-use util::test_bus::TestBus;
 use xz2::read::XzDecoder;
+
+use crate::common::address::AddressU24;
+use crate::common::bus::Bus;
+use crate::common::debugger::DebuggerRef;
+use crate::common::logging;
+use crate::common::test_bus::Cycle;
+use crate::common::test_bus::TestBus;
+
+use super::Cpu;
+use super::StatusFlags;
 
 const SKIP_OPCODES: &[u8] = &[
     0x44, // MVP test cases seem to follow a very different implementation
@@ -114,7 +115,7 @@ pub fn test_opcodes_fx() {
 fn run_tomharte_test(test_name: &str) {
     logging::test_init(false);
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let json_path = root_dir.join(format!("tests/tomharte_cpu/{test_name}.json.xz"));
+    let json_path = root_dir.join(format!("src/components/cpu/test/{test_name}.json.xz"));
     let mut failed_opcodes: HashMap<u8, u32> = HashMap::new();
 
     for test_case in TestCase::from_xz_file(&json_path) {
