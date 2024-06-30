@@ -5,7 +5,7 @@
 //!
 //! To ensure they remain independent and provide a clean API, the following rules are applied:
 //! - Components cannot depend on one another
-//! - Components can only import code from common/ or util/
+//! - Components can only import code from common/
 //! - Keep exported types and functionality to a minimum
 //! - All modules inside a component must be private
 //! - Use self/super to refer to inner modules

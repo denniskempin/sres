@@ -12,10 +12,10 @@ pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
+use crate::common::debugger::DebuggerRef;
+use crate::common::debugger::Event;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
-use crate::debugger::DebuggerRef;
-use crate::debugger::Event;
 use crate::main_bus::MainBus;
 use crate::trace::CpuTraceLine;
 
@@ -241,7 +241,7 @@ mod tests {
     use crate::common::address::AddressU24;
     use crate::common::address::Wrap;
     use crate::common::bus::Bus;
-    use crate::debugger::DebuggerRef;
+    use crate::common::debugger::DebuggerRef;
     use crate::main_bus::MainBusImpl;
     use crate::System;
 

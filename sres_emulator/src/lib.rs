@@ -4,21 +4,20 @@ pub mod common;
 pub mod components;
 pub mod controller;
 pub mod cpu;
-pub mod debugger;
 pub mod main_bus;
 pub mod trace;
 
 use std::cell::RefMut;
 use std::ops::Deref;
 
-use apu::ApuDebug;
-use cartridge::Cartridge;
-use cpu::Cpu;
-use debugger::BreakReason;
-use debugger::Debugger;
-use debugger::DebuggerRef;
-use debugger::EventFilter;
-use main_bus::MainBusImpl;
+use crate::apu::ApuDebug;
+use crate::cartridge::Cartridge;
+use crate::common::debugger::BreakReason;
+use crate::common::debugger::Debugger;
+use crate::common::debugger::DebuggerRef;
+use crate::common::debugger::EventFilter;
+use crate::cpu::Cpu;
+use crate::main_bus::MainBusImpl;
 
 pub enum ExecutionResult {
     Normal,

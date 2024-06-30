@@ -2,6 +2,7 @@
 
 pub mod address;
 pub mod bus;
+pub mod debugger;
 pub mod image;
 pub mod logging;
 pub mod memory;

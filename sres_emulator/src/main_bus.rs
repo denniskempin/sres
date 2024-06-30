@@ -12,12 +12,12 @@ use crate::cartridge::Cartridge;
 use crate::cartridge::MappingMode;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
+use crate::common::debugger::DebuggerRef;
+use crate::common::debugger::Event;
 use crate::common::uint::U16Ext;
 use crate::components::ppu::HVTimerMode;
 use crate::components::ppu::Ppu;
 use crate::components::ppu::PpuTimer;
-use crate::debugger::DebuggerRef;
-use crate::debugger::Event;
 
 pub trait MainBus: Bus<AddressU24> {
     fn check_nmi_interrupt(&mut self) -> bool;
