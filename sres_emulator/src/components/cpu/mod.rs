@@ -3,21 +3,32 @@ mod instructions;
 mod opcode_table;
 mod operands;
 mod status;
+mod trace;
 
 use intbits::Bits;
+
+use crate::common::address::AddressU24;
+use crate::common::address::Wrap;
+use crate::common::bus::Bus;
+use crate::common::debugger::DebuggerRef;
+use crate::common::debugger::Event;
+use crate::common::uint::RegisterSize;
+use crate::common::uint::UInt;
+
+// TODO: Breaks layering requirements
+use crate::components::ppu::PpuTimer;
 
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
-use crate::common::address::AddressU24;
-use crate::common::address::Wrap;
-use crate::common::debugger::DebuggerRef;
-use crate::common::debugger::Event;
-use crate::common::uint::RegisterSize;
-use crate::common::uint::UInt;
-use crate::main_bus::MainBus;
-use crate::trace::CpuTraceLine;
+pub use self::trace::CpuTraceLine;
+
+pub trait MainBus: Bus<AddressU24> {
+    fn check_nmi_interrupt(&mut self) -> bool;
+    fn consume_timer_interrupt(&mut self) -> bool;
+    fn ppu_timer(&self) -> &PpuTimer;
+}
 
 #[derive(Default)]
 pub struct VariableLengthRegister {

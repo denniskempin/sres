@@ -3,7 +3,6 @@ pub mod cartridge;
 pub mod common;
 pub mod components;
 pub mod controller;
-pub mod cpu;
 pub mod main_bus;
 pub mod trace;
 
@@ -16,7 +15,7 @@ use crate::common::debugger::BreakReason;
 use crate::common::debugger::Debugger;
 use crate::common::debugger::DebuggerRef;
 use crate::common::debugger::EventFilter;
-use crate::cpu::Cpu;
+use crate::components::cpu::Cpu;
 use crate::main_bus::MainBusImpl;
 
 pub enum ExecutionResult {

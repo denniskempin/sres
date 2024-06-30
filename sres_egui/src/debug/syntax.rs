@@ -3,7 +3,7 @@ use egui::RichText;
 use egui::Ui;
 use sres_emulator::common::address::AddressU16;
 use sres_emulator::common::address::AddressU24;
-use sres_emulator::debugger::Event;
+use sres_emulator::common::debugger::Event;
 
 use super::InternalLink;
 
@@ -56,7 +56,7 @@ pub fn log_line(ui: &mut Ui, event: &Event, selected: &mut InternalLink) {
 
 fn cpu_log_line(
     ui: &mut Ui,
-    state: &sres_emulator::trace::CpuTraceLine,
+    state: &sres_emulator::components::cpu::CpuTraceLine,
     selected: &mut InternalLink,
 ) {
     label_cpu_pc(ui, state.instruction.address, selected);
