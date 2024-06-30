@@ -339,7 +339,7 @@ fn format_range<T: PrimInt + UpperHex>(range: &Range<T>) -> String {
     }
 }
 
-#[cfg(stest)]
+#[cfg(test)]
 mod test {
     use super::*;
 

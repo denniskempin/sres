@@ -6,9 +6,9 @@ mod test;
 use log::debug;
 
 use crate::common::address::AddressU24;
+use crate::common::debugger::DebuggerRef;
 use crate::components::s_dsp::SDspDebug;
 use crate::components::spc700::Spc700;
-use crate::debugger::DebuggerRef;
 
 use self::apu_bus::ApuBus;
 
