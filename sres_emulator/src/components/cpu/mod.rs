@@ -3,6 +3,8 @@ mod instructions;
 mod opcode_table;
 mod operands;
 mod status;
+#[cfg(test)]
+mod test;
 
 use intbits::Bits;
 
