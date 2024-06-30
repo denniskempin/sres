@@ -4,7 +4,6 @@ pub mod common;
 pub mod components;
 pub mod controller;
 pub mod main_bus;
-pub mod trace;
 
 use std::cell::RefMut;
 use std::ops::Deref;

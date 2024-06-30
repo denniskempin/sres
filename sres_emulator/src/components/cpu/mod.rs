@@ -3,7 +3,6 @@ mod instructions;
 mod opcode_table;
 mod operands;
 mod status;
-mod trace;
 
 use intbits::Bits;
 
@@ -12,6 +11,7 @@ use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::debugger::DebuggerRef;
 use crate::common::debugger::Event;
+use crate::common::trace::CpuTraceLine;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
 
@@ -22,7 +22,6 @@ use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
-pub use self::trace::CpuTraceLine;
 
 pub trait MainBus: Bus<AddressU24> {
     fn check_nmi_interrupt(&mut self) -> bool;
@@ -113,6 +112,24 @@ impl<BusT: MainBus> Cpu<BusT> {
         cpu
     }
 
+    pub fn trace(&self) -> CpuTraceLine {
+        let (instruction, _) = self.load_instruction_meta(self.pc);
+        let ppu_timer = self.bus.ppu_timer();
+        CpuTraceLine {
+            instruction,
+            a: self.a.value,
+            x: self.x.value,
+            y: self.y.value,
+            s: self.s,
+            d: self.d,
+            db: self.db,
+            status: self.status,
+            v: ppu_timer.v,
+            h: ppu_timer.h_counter,
+            f: ppu_timer.f,
+        }
+    }
+
     /// Return the instruction meta data for the instruction at the given address
     pub fn load_instruction_meta(&self, addr: AddressU24) -> (InstructionMeta, AddressU24) {
         let opcode = self.bus.peek_u8(addr).unwrap_or_default();
@@ -151,8 +168,7 @@ impl<BusT: MainBus> Cpu<BusT> {
 
     pub fn step(&mut self) {
         if self.debugger.enabled {
-            self.debugger
-                .on_event(Event::CpuStep(CpuTraceLine::from_cpu(self)));
+            self.debugger.on_event(Event::CpuStep(self.trace()));
         }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);

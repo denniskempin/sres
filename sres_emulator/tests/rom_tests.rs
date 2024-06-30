@@ -15,8 +15,8 @@ use sres_emulator::common::address::Wrap;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::logging;
 use sres_emulator::common::memory::format_memory;
+use sres_emulator::common::trace::CpuTraceLine;
 use sres_emulator::components::cpu::Cpu;
-use sres_emulator::components::cpu::CpuTraceLine;
 use sres_emulator::main_bus::MainBusImpl;
 use sres_emulator::System;
 
@@ -71,9 +71,9 @@ pub fn test_nmi_sub_cycle_accuracy() {
         }
 
         // Execute `bit $4210` instruction
-        println!("before: {}", CpuTraceLine::from_cpu(cpu));
+        println!("before: {}", cpu.trace());
         cpu.step();
-        println!("after: {}", CpuTraceLine::from_cpu(cpu));
+        println!("after: {}", cpu.trace());
 
         // If the NMI bit is set, the negative status bit will be true.
         assert_eq!(cpu.status.negative, *expected_nmi);
@@ -217,7 +217,7 @@ fn run_rom_test(test_name: &str) {
     system.cpu.reset();
 
     for (line_num, expected_line) in trace_log_from_xz_file(&trace_path).unwrap().enumerate() {
-        let actual_line = CpuTraceLine::from_cpu(&system.cpu);
+        let actual_line = system.cpu.trace();
         assert_cpu_trace_eq(line_num, expected_line.unwrap(), actual_line);
         system.execute_one_instruction();
     }
