@@ -426,6 +426,21 @@ fn hirom_memory_map(addr: AddressU24) -> MemoryBlock {
 }
 
 #[cfg(test)]
+impl MainBus for crate::common::test_bus::TestBus<AddressU24> {
+    fn check_nmi_interrupt(&mut self) -> bool {
+        false
+    }
+
+    fn consume_timer_interrupt(&mut self) -> bool {
+        false
+    }
+
+    fn ppu_timer(&self) -> &PpuTimer {
+        &self.ppu_timer
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use std::path::Path;
     use std::path::PathBuf;

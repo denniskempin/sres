@@ -6,10 +6,9 @@ use std::fmt::Formatter;
 
 use itertools::Itertools;
 
-use crate::common::address::Address;
-use crate::common::address::AddressU24;
-use crate::common::bus::Bus;
-use crate::main_bus::MainBus;
+use super::address::Address;
+use super::bus::Bus;
+// TODO: This breaks the layering requirements
 use crate::ppu::PpuTimer;
 
 /// A test implementation of the `Bus`.
@@ -95,19 +94,5 @@ impl<AddressT: Address> Display for SparseMemory<AddressT> {
             writeln!(f, "{}: {:02X}", addr, value)?;
         }
         Ok(())
-    }
-}
-
-impl MainBus for TestBus<AddressU24> {
-    fn check_nmi_interrupt(&mut self) -> bool {
-        false
-    }
-
-    fn consume_timer_interrupt(&mut self) -> bool {
-        false
-    }
-
-    fn ppu_timer(&self) -> &PpuTimer {
-        &self.ppu_timer
     }
 }

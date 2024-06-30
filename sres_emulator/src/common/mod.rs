@@ -2,3 +2,5 @@
 
 pub mod address;
 pub mod bus;
+#[cfg(test)]
+pub mod test_bus;
