@@ -5,11 +5,11 @@ use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
 use egui::Vec2;
-use sres_emulator::ppu::Background;
-use sres_emulator::ppu::BackgroundId;
-use sres_emulator::ppu::BitDepth;
-use sres_emulator::ppu::Ppu;
-use sres_emulator::ppu::VramAddr;
+use sres_emulator::components::ppu::Background;
+use sres_emulator::components::ppu::BackgroundId;
+use sres_emulator::components::ppu::BitDepth;
+use sres_emulator::components::ppu::Ppu;
+use sres_emulator::components::ppu::VramAddr;
 use sres_emulator::System;
 
 use crate::util::EguiImageImpl;

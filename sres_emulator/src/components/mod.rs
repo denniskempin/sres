@@ -11,5 +11,6 @@
 //! - Use self/super to refer to inner modules
 //! - Do not use super to refer to outer modules
 
+pub mod ppu;
 pub mod s_dsp;
 pub mod spc700;

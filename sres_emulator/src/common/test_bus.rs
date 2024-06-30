@@ -9,7 +9,7 @@ use itertools::Itertools;
 use super::address::Address;
 use super::bus::Bus;
 // TODO: This breaks the layering requirements
-use crate::ppu::PpuTimer;
+use crate::components::ppu::PpuTimer;
 
 /// A test implementation of the `Bus`.
 ///

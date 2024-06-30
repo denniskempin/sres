@@ -10,6 +10,14 @@ use intbits::Bits;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::common::address::AddressU24;
+use crate::common::image::Image;
+use crate::common::image::Rgb15;
+use crate::common::uint::U16Ext;
+use crate::common::uint::U32Ext;
+use crate::common::uint::U8Ext;
+use crate::debugger::DebuggerRef;
+
 use self::cgram::CgRam;
 use self::oam::Oam;
 pub use self::oam::SpriteSize;
@@ -18,13 +26,6 @@ pub use self::timer::HVTimerMode;
 pub use self::timer::PpuTimer;
 use self::vram::Vram;
 pub use self::vram::VramAddr;
-use crate::common::address::AddressU24;
-use crate::common::image::Image;
-use crate::common::image::Rgb15;
-use crate::common::uint::U16Ext;
-use crate::common::uint::U32Ext;
-use crate::common::uint::U8Ext;
-use crate::debugger::DebuggerRef;
 
 pub struct Ppu {
     pub disabled: bool,
