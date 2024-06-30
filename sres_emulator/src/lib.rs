@@ -1,3 +1,4 @@
+pub mod apu;
 pub mod cartridge;
 pub mod common;
 pub mod components;
@@ -14,8 +15,8 @@ pub mod util;
 use std::cell::RefMut;
 use std::ops::Deref;
 
+use apu::ApuDebug;
 use cartridge::Cartridge;
-use components::apu::ApuDebug;
 use cpu::Cpu;
 use debugger::BreakReason;
 use debugger::Debugger;
