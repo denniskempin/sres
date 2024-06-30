@@ -13,11 +13,11 @@ use pretty_assertions::assert_eq;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::common::address::Wrap;
 use sres_emulator::common::bus::Bus;
+use sres_emulator::common::logging;
+use sres_emulator::common::memory::format_memory;
 use sres_emulator::cpu::Cpu;
 use sres_emulator::main_bus::MainBusImpl;
 use sres_emulator::trace::CpuTraceLine;
-use sres_emulator::util::logging;
-use sres_emulator::util::memory::format_memory;
 use sres_emulator::System;
 
 #[test]

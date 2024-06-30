@@ -9,10 +9,10 @@ use packed_struct::prelude::*;
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
+use crate::common::uint::U16Ext;
+use crate::common::uint::U8Ext;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
-use crate::util::uint::U16Ext;
-use crate::util::uint::U8Ext;
 
 pub struct DmaController {
     dma_channels: [DmaChannel; 8],

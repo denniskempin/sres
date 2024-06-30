@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use argh::FromArgs;
 use sres_egui::EmulatorApp;
 use sres_emulator::cartridge::Cartridge;
-use sres_emulator::util::logging;
+use sres_emulator::common::logging;
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_subscriber::prelude::*;
 

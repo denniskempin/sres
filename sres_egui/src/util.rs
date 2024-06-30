@@ -12,8 +12,8 @@ use std::time::Duration;
 use egui::Color32;
 use egui::ColorImage;
 use egui::ImageData;
-use sres_emulator::util::image::Image;
-use sres_emulator::util::image::Rgba32;
+use sres_emulator::common::image::Image;
+use sres_emulator::common::image::Rgba32;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 

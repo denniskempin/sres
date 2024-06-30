@@ -1,7 +1,7 @@
 mod brr;
 mod voice;
 
-use crate::util::uint::U8Ext;
+use crate::common::uint::U8Ext;
 
 use self::voice::Voice;
 

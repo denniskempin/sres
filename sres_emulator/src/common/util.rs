@@ -1,9 +1,4 @@
 //! General utility functions and types.
-pub mod image;
-pub mod logging;
-pub mod memory;
-pub mod uint;
-
 use std::collections::vec_deque::Iter;
 use std::collections::VecDeque;
 

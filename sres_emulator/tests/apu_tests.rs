@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use pretty_assertions::assert_eq;
 use sres_emulator::cartridge::Cartridge;
 
+use sres_emulator::common::memory::format_memory;
 use sres_emulator::debugger::EventFilter;
-use sres_emulator::util::memory::format_memory;
 use sres_emulator::System;
 
 #[test]

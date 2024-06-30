@@ -1,9 +1,9 @@
 //! Tracking of PPU events and timing.
 
 use crate::common::address::AddressU24;
-use crate::util::uint::U16Ext;
-use crate::util::uint::UInt;
-use crate::util::EdgeDetector;
+use crate::common::uint::U16Ext;
+use crate::common::uint::UInt;
+use crate::common::util::EdgeDetector;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PpuTimer {

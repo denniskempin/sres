@@ -12,12 +12,12 @@ pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
+use crate::common::uint::RegisterSize;
+use crate::common::uint::UInt;
 use crate::debugger::DebuggerRef;
 use crate::debugger::Event;
 use crate::main_bus::MainBus;
 use crate::trace::CpuTraceLine;
-use crate::util::uint::RegisterSize;
-use crate::util::uint::UInt;
 
 #[derive(Default)]
 pub struct VariableLengthRegister {

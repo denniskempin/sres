@@ -1,6 +1,6 @@
 //! Implementation of multiplication registers
 use crate::common::address::AddressU24;
-use crate::util::uint::U16Ext;
+use crate::common::uint::U16Ext;
 
 pub struct MultiplicationUnit {
     pub mul_a: u8,

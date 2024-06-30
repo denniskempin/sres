@@ -3,9 +3,9 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::hash::Hash;
 
-use crate::util::uint::U16Ext;
-use crate::util::uint::U32Ext;
-use crate::util::uint::UIntTruncate;
+use crate::common::uint::U16Ext;
+use crate::common::uint::U32Ext;
+use crate::common::uint::UIntTruncate;
 
 /// Address types enforce that the wrapping behavior for each calculation is explicitly specified.
 pub trait Address: Eq + Hash + Display + Ord + Copy + Clone {

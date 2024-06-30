@@ -13,10 +13,10 @@ use num_traits::PrimInt;
 
 use crate::common::address::AddressU16;
 use crate::common::address::AddressU24;
+use crate::common::util::RingBuffer;
 use crate::components::spc700::Spc700TraceLine;
 use crate::cpu::NativeVectorTable;
 use crate::trace::CpuTraceLine;
-use crate::util::RingBuffer;
 
 #[derive(Clone)]
 pub enum Event {
