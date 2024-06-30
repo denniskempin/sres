@@ -6,7 +6,7 @@ use intbits::Bits;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::ppu::vram::VramAddr;
+use super::vram::VramAddr;
 
 pub struct Oam {
     pub memory: Vec<u8>,

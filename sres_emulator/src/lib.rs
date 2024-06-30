@@ -6,7 +6,6 @@ pub mod controller;
 pub mod cpu;
 pub mod debugger;
 pub mod main_bus;
-pub mod ppu;
 pub mod trace;
 
 use std::cell::RefMut;

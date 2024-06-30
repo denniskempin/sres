@@ -17,15 +17,15 @@ use sres_emulator::common::image::Image;
 use sres_emulator::common::image::Rgb15;
 use sres_emulator::common::image::Rgba32;
 use sres_emulator::common::logging;
+use sres_emulator::components::ppu::Background;
+use sres_emulator::components::ppu::BackgroundId;
+use sres_emulator::components::ppu::BgMode;
+use sres_emulator::components::ppu::BitDepth;
+use sres_emulator::components::ppu::ColorMathOperation;
+use sres_emulator::components::ppu::Ppu;
+use sres_emulator::components::ppu::SpriteSize;
+use sres_emulator::components::ppu::VramAddr;
 use sres_emulator::debugger::DebuggerRef;
-use sres_emulator::ppu::Background;
-use sres_emulator::ppu::BackgroundId;
-use sres_emulator::ppu::BgMode;
-use sres_emulator::ppu::BitDepth;
-use sres_emulator::ppu::ColorMathOperation;
-use sres_emulator::ppu::Ppu;
-use sres_emulator::ppu::SpriteSize;
-use sres_emulator::ppu::VramAddr;
 use sres_emulator::System;
 
 #[test]
