@@ -20,7 +20,6 @@ use sres_emulator::common::bus::Bus;
 use sres_emulator::common::debugger::DebuggerRef;
 use sres_emulator::common::logging;
 use sres_emulator::components::cpu::Cpu;
-use sres_emulator::components::cpu::CpuTraceLine;
 use sres_emulator::components::cpu::StatusFlags;
 use util::test_bus::Cycle;
 use util::test_bus::TestBus;
@@ -132,8 +131,7 @@ fn run_tomharte_test(test_name: &str) {
         actual_state.step();
 
         // Compare before asserting to print additional information on failures
-        let state_matches =
-            CpuTraceLine::from_cpu(&actual_state) == CpuTraceLine::from_cpu(&expected_state);
+        let state_matches = &actual_state.trace() == &expected_state.trace();
         let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
         // Only compare cycle count. No need to be perfectly accurate with the order.
         let cycles_match = actual_state.bus.cycles.len() == test_case.cycles().len();
@@ -149,13 +147,13 @@ fn run_tomharte_test(test_name: &str) {
         println!(
             "Case {:2X}: {}",
             opcode,
-            CpuTraceLine::from_cpu(&test_case.initial.create_cpu())
+            &test_case.initial.create_cpu().trace()
         );
         println!(
             "Result: {}",
             StrComparison::new(
-                &CpuTraceLine::from_cpu(&actual_state).to_string(),
-                &CpuTraceLine::from_cpu(&expected_state).to_string()
+                &actual_state.trace().to_string(),
+                &expected_state.trace().to_string()
             )
         );
         println!(

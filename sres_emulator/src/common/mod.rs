@@ -8,5 +8,6 @@ pub mod logging;
 pub mod memory;
 #[cfg(test)]
 pub mod test_bus;
+pub mod trace;
 pub mod uint;
 pub mod util;

@@ -5,7 +5,6 @@ mod operands;
 mod status;
 #[cfg(test)]
 mod test;
-mod trace;
 
 use std::fmt::Display;
 
@@ -15,13 +14,13 @@ use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::debugger::DebuggerRef;
 use crate::common::debugger::Event;
+use crate::common::trace::Spc700TraceLine;
 use crate::common::uint::UInt;
 
 use self::opcode_table::InstructionDef;
 use self::operands::AddressMode;
 use self::operands::DecodedOperand;
 use self::status::Spc700StatusFlags;
-pub use self::trace::Spc700TraceLine;
 
 pub trait Spc700Bus: Bus<AddressU16> {
     fn master_cycle(&self) -> u64;
@@ -58,6 +57,18 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         cpu
     }
 
+    pub fn trace(&self) -> Spc700TraceLine {
+        Spc700TraceLine {
+            pc: self.pc,
+            instruction: self.disassembly(self.pc).0,
+            a: self.a,
+            x: self.x,
+            y: self.y,
+            sp: AddressU16(0x0100 + self.sp as u16),
+            status: self.status.to_string(),
+        }
+    }
+
     pub fn reset(&mut self) {
         self.pc = AddressU16(0xFFC0);
         self.sp = 0xef;
@@ -78,8 +89,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
 
     pub fn step(&mut self) {
         if self.debugger.enabled {
-            self.debugger
-                .on_event(Event::Spc700Step(Spc700TraceLine::from_spc700(self)));
+            self.debugger.on_event(Event::Spc700Step(self.trace()));
         }
 
         let opcode = self.bus.cycle_read_u8(self.pc);
