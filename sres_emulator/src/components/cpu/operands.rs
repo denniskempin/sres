@@ -7,9 +7,9 @@ use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
 use crate::common::uint::U16Ext;
 use crate::common::uint::UInt;
-use crate::cpu::Cpu;
-use crate::cpu::STACK_BASE;
-use crate::main_bus::MainBus;
+use crate::components::cpu::Cpu;
+use crate::components::cpu::MainBus;
+use crate::components::cpu::STACK_BASE;
 
 /// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]

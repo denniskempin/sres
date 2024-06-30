@@ -15,15 +15,10 @@ use crate::common::bus::Bus;
 use crate::common::debugger::DebuggerRef;
 use crate::common::debugger::Event;
 use crate::common::uint::U16Ext;
+use crate::components::cpu::MainBus;
 use crate::components::ppu::HVTimerMode;
 use crate::components::ppu::Ppu;
 use crate::components::ppu::PpuTimer;
-
-pub trait MainBus: Bus<AddressU24> {
-    fn check_nmi_interrupt(&mut self) -> bool;
-    fn consume_timer_interrupt(&mut self) -> bool;
-    fn ppu_timer(&self) -> &PpuTimer;
-}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum MemoryBlock {

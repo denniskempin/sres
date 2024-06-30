@@ -13,6 +13,7 @@ use image::RgbaImage;
 use serde::Deserialize;
 use serde::Serialize;
 use sres_emulator::cartridge::Cartridge;
+use sres_emulator::common::debugger::DebuggerRef;
 use sres_emulator::common::image::Image;
 use sres_emulator::common::image::Rgb15;
 use sres_emulator::common::image::Rgba32;
@@ -25,7 +26,6 @@ use sres_emulator::components::ppu::ColorMathOperation;
 use sres_emulator::components::ppu::Ppu;
 use sres_emulator::components::ppu::SpriteSize;
 use sres_emulator::components::ppu::VramAddr;
-use sres_emulator::debugger::DebuggerRef;
 use sres_emulator::System;
 
 #[test]

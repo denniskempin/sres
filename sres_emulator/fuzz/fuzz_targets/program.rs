@@ -1,9 +1,9 @@
 //! Simple fuzzer that executes random programs on the emulator.
 #![no_main]
 
+use crate::components::cpu::Cpu;
 use libfuzzer_sys::fuzz_target;
 use sres_emulator::bus::SresBus;
-use sres_emulator::cpu::Cpu;
 
 fuzz_target!(|data: &[u8]| {
     // Load a random program into the emulator.

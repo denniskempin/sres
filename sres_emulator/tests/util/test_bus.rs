@@ -9,9 +9,9 @@ use sres_emulator::common::address::Address;
 use sres_emulator::common::address::AddressU16;
 use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::bus::Bus;
+use sres_emulator::components::cpu::MainBus;
 use sres_emulator::components::ppu::PpuTimer;
 use sres_emulator::components::spc700::Spc700Bus;
-use sres_emulator::main_bus::MainBus;
 
 /// A test implementation of the `Bus`.
 ///

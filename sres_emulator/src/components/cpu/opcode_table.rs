@@ -7,11 +7,11 @@
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
-use crate::cpu::operands::AccessMode;
-use crate::cpu::operands::AddressMode;
-use crate::cpu::operands::Operand;
-use crate::cpu::Cpu;
-use crate::main_bus::MainBus;
+use crate::components::cpu::operands::AccessMode;
+use crate::components::cpu::operands::AddressMode;
+use crate::components::cpu::operands::Operand;
+use crate::components::cpu::Cpu;
+use crate::components::cpu::MainBus;
 
 /// Metadata about a decoded instruction. Used to generate disassembly.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]

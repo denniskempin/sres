@@ -9,13 +9,13 @@ use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
 use crate::common::uint::UInt;
-use crate::cpu::operands::AddressMode;
-use crate::cpu::operands::Operand;
-use crate::cpu::status::StatusFlags;
-use crate::cpu::Cpu;
-use crate::cpu::EmuVectorTable;
-use crate::cpu::NativeVectorTable;
-use crate::main_bus::MainBus;
+use crate::components::cpu::operands::AddressMode;
+use crate::components::cpu::operands::Operand;
+use crate::components::cpu::status::StatusFlags;
+use crate::components::cpu::Cpu;
+use crate::components::cpu::EmuVectorTable;
+use crate::components::cpu::MainBus;
+use crate::components::cpu::NativeVectorTable;
 
 pub fn nop(cpu: &mut Cpu<impl MainBus>) {
     cpu.bus.cycle_io();

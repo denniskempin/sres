@@ -2,7 +2,7 @@ use egui::Button;
 use egui::Color32;
 use egui::RichText;
 use egui::Ui;
-use sres_emulator::cpu::InstructionMeta;
+use sres_emulator::components::cpu::InstructionMeta;
 use sres_emulator::System;
 
 use crate::debug::DebugCommand;
