@@ -10,8 +10,10 @@ fn assert_state(spc700: &Spc700<impl Spc700Bus>, expected_state: &str) {
     let mut actual = spc700.trace();
     let mut expected = Spc700TraceLine::from_str(expected_state).unwrap();
     println!("{}", actual);
-    actual.instruction = String::new();
-    expected.instruction = String::new();
+    actual.instruction.operation = String::new();
+    expected.instruction.operation = String::new();
+    actual.instruction.operand_str = None;
+    expected.instruction.operand_str = None;
     assert_eq!(actual.to_string(), expected.to_string());
 }
 

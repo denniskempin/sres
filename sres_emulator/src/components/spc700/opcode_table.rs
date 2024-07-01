@@ -1,4 +1,7 @@
+use crate::common::address::Address;
 use crate::common::address::AddressU16;
+use crate::common::address::InstructionMeta;
+use crate::common::address::Wrap;
 
 use super::Spc700;
 use super::Spc700Bus;
@@ -9,7 +12,7 @@ pub struct InstructionDef<BusT: Spc700Bus> {
     pub execute: fn(&mut Spc700<BusT>),
 
     /// Return metadata about this instruction. Can be used on an immutable CPU.
-    pub disassembly: fn(&Spc700<BusT>, AddressU16) -> (String, AddressU16),
+    pub disassembly: fn(&Spc700<BusT>, AddressU16) -> (InstructionMeta<AddressU16>, AddressU16),
 }
 
 pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
@@ -18,20 +21,41 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
         ($method: ident) => {
             InstructionDef::<BusT> {
                 execute: |cpu| {
+                    cpu.pc = cpu.pc.add(1_u8, Wrap::NoWrap);
                     cpu.$method();
                 },
-                disassembly: |_, operand_addr| (stringify!($method).to_string(), operand_addr),
+                disassembly: |_, instruction_addr| {
+                    (
+                        InstructionMeta {
+                            address: instruction_addr,
+                            operation: stringify!($method).to_string(),
+                            operand_str: None,
+                            effective_addr: None,
+                        },
+                        instruction_addr.add(1_u8, Wrap::NoWrap),
+                    )
+                },
             }
         };
         // Single operand instruction
         ($method: ident, $operand_def: expr) => {
             InstructionDef::<BusT> {
                 execute: |cpu| {
+                    cpu.pc = cpu.pc.add(1_u8, Wrap::NoWrap);
                     cpu.$method($operand_def);
                 },
-                disassembly: |cpu, operand_addr| {
-                    let (operand, next_addr) = $operand_def.disassembly(cpu, operand_addr);
-                    (format!("{:5} {}", stringify!($method), operand), next_addr)
+                disassembly: |cpu, instruction_addr| {
+                    let (operand, next_addr) =
+                        $operand_def.disassembly(cpu, instruction_addr.add(1_u8, Wrap::NoWrap));
+                    (
+                        InstructionMeta {
+                            address: instruction_addr,
+                            operation: stringify!($method).to_string(),
+                            operand_str: Some(operand),
+                            effective_addr: None,
+                        },
+                        next_addr,
+                    )
                 },
             }
         };
@@ -39,13 +63,20 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
         ($method: ident, $left_def: expr, $right_def: expr) => {
             InstructionDef::<BusT> {
                 execute: |cpu| {
+                    cpu.pc = cpu.pc.add(1_u8, Wrap::NoWrap);
                     cpu.$method($left_def, $right_def);
                 },
-                disassembly: |cpu, operand_addr| {
-                    let (right, next_addr) = $right_def.disassembly(cpu, operand_addr);
+                disassembly: |cpu, instruction_addr| {
+                    let (right, next_addr) =
+                        $right_def.disassembly(cpu, instruction_addr.add(1_u8, Wrap::NoWrap));
                     let (left, next_addr) = $left_def.disassembly(cpu, next_addr);
                     (
-                        format!("{:5} {}, {}", stringify!($method), left, right),
+                        InstructionMeta {
+                            address: instruction_addr,
+                            operation: stringify!($method).to_string(),
+                            operand_str: Some(format!("{}, {}", left, right)),
+                            effective_addr: None,
+                        },
                         next_addr,
                     )
                 },
@@ -55,7 +86,17 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
 
     let mut opcodes = [(); 256].map(|_| InstructionDef::<BusT> {
         execute: |_| {},
-        disassembly: |_, instruction_addr| ("ill".to_string(), instruction_addr),
+        disassembly: |_, instruction_addr| {
+            (
+                InstructionMeta {
+                    address: instruction_addr,
+                    operation: "ill".to_string(),
+                    operand_str: None,
+                    effective_addr: None,
+                },
+                instruction_addr.add(1_u8, Wrap::NoWrap),
+            )
+        },
     });
 
     use super::operands::AddressMode::*;

@@ -6,10 +6,9 @@ mod status;
 #[cfg(test)]
 mod test;
 
-use std::fmt::Display;
-
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
+use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::debugger::DebuggerRef;
@@ -35,7 +34,6 @@ pub struct Spc700<BusT: Spc700Bus> {
     y: u8,
     x: u8,
     sp: u8,
-    dsw: u8,
     status: Spc700StatusFlags,
 }
 
@@ -49,7 +47,6 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
             x: 0,
             y: 0,
             sp: 0,
-            dsw: 0,
             status: Spc700StatusFlags::default(),
             debugger,
         };
@@ -59,7 +56,6 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
 
     pub fn trace(&self) -> Spc700TraceLine {
         Spc700TraceLine {
-            pc: self.pc,
             instruction: self.disassembly(self.pc).0,
             a: self.a,
             x: self.x,
@@ -75,10 +71,10 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.status.zero = true;
     }
 
-    pub fn disassembly(&self, addr: AddressU16) -> (String, AddressU16) {
+    pub fn disassembly(&self, addr: AddressU16) -> (InstructionMeta<AddressU16>, AddressU16) {
         let opcode = self.bus.peek_u8(addr).unwrap_or_default();
         let instruction = &self.opcode_table[opcode as usize];
-        (instruction.disassembly)(self, addr.add(1_u8, Wrap::NoWrap))
+        (instruction.disassembly)(self, addr)
     }
 
     pub fn catch_up_to_master_clock(&mut self, master_cycles: u64) {
@@ -93,7 +89,6 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         }
 
         let opcode = self.bus.cycle_read_u8(self.pc);
-        self.pc = self.pc.add(1_u8, Wrap::NoWrap);
         let instruction = &self.opcode_table[opcode as usize];
         (instruction.execute)(self);
     }
@@ -139,16 +134,5 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         let value = self.bus.cycle_read_u16(self.pc, Wrap::NoWrap);
         self.pc = self.pc.add(2_u8, Wrap::NoWrap);
         value
-    }
-}
-
-impl<BusT: Spc700Bus> Display for Spc700<BusT> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (disassembly, _) = self.disassembly(self.pc);
-        write!(
-            f,
-            "{} {} A:{:02X} X:{:02X} Y:{:02X} SP:{:02X} DSW:{:02X} {}",
-            self.pc, disassembly, self.a, self.x, self.y, self.sp, self.dsw, self.status,
-        )
     }
 }

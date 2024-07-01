@@ -137,9 +137,16 @@ fn spc700_log_line(
     selected: &mut InternalLink,
 ) {
     label_spc(ui);
-    label_spc700_pc(ui, state.pc, selected);
+    label_spc700_pc(ui, state.instruction.address, selected);
     label_normal(ui, " ");
-    label_strong(ui, format!("{:<16}", state.instruction));
+    label_strong(ui, format!("{:<5}", state.instruction.operation));
+    label_strong(
+        ui,
+        format!(
+            "{:<11}",
+            state.instruction.operand_str.as_deref().unwrap_or("")
+        ),
+    );
     label_strong(ui, "A");
     label_normal(ui, format!("{:02X}", state.a));
     label_strong(ui, "X");
