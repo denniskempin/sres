@@ -125,7 +125,7 @@ impl<BusT: MainBus> Cpu<BusT> {
             s: self.s,
             d: self.d,
             db: self.db,
-            status: self.status,
+            status: self.status.format_string(self.emulation_mode),
             v: ppu_timer.v,
             h: ppu_timer.h_counter,
             f: ppu_timer.f,

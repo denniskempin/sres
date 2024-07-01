@@ -85,50 +85,7 @@ fn cpu_log_line(
     label_normal(ui, format!("{:04X}", state.d));
     label_strong(ui, "DB");
     label_normal(ui, format!("{:02X}", state.db));
-    label_strong(ui, String::from(state.status)).on_hover_ui(|ui| {
-        ui.vertical(|ui| {
-            if state.status.negative {
-                label_strong(ui, "Negative");
-            } else {
-                label_normal(ui, "Negative");
-            }
-            if state.status.overflow {
-                label_strong(ui, "Overflow");
-            } else {
-                label_normal(ui, "Overflow");
-            }
-            if state.status.accumulator_register_size {
-                label_strong(ui, "A 8-bit");
-            } else {
-                label_normal(ui, "A 16-bit");
-            }
-            if state.status.index_register_size_or_break {
-                label_strong(ui, "XY 8-bit");
-            } else {
-                label_normal(ui, "XY 16-bit");
-            }
-            if state.status.decimal {
-                label_strong(ui, "Decimal");
-            } else {
-                label_normal(ui, "Decimal");
-            }
-            if state.status.irq_disable {
-                label_strong(ui, "IRQ Disable");
-            } else {
-                label_normal(ui, "IRQ Enable");
-            }
-            if state.status.zero {
-                label_strong(ui, "Zero");
-            } else {
-                label_normal(ui, "Zero");
-            }
-            if state.status.carry {
-                label_strong(ui, "Carry");
-            } else {
-                label_normal(ui, "Carry");
-            }
-        });
-    });
+    label_strong(ui, state.status.clone());
 }
 
 fn spc700_log_line(
