@@ -2,7 +2,8 @@ use egui::Button;
 use egui::Color32;
 use egui::RichText;
 use egui::Ui;
-use sres_emulator::components::cpu::InstructionMeta;
+use sres_emulator::common::address::Address;
+use sres_emulator::common::address::InstructionMeta;
 use sres_emulator::System;
 
 use crate::debug::DebugCommand;
@@ -38,7 +39,11 @@ pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
     }
 }
 
-fn disassembly_line(ui: &mut Ui, meta: InstructionMeta, current: bool) {
+fn disassembly_line<AddressT: Address>(
+    ui: &mut Ui,
+    meta: InstructionMeta<AddressT>,
+    current: bool,
+) {
     ui.horizontal(|ui| {
         let addr_str = if current {
             format!("> {:}", meta.address)

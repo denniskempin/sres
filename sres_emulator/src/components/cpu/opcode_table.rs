@@ -6,6 +6,7 @@
 //! To reduce repetitive code, macros are used to build those unique functions.
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
+use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::components::cpu::operands::AccessMode;
 use crate::components::cpu::operands::AddressMode;
@@ -13,22 +14,13 @@ use crate::components::cpu::operands::Operand;
 use crate::components::cpu::Cpu;
 use crate::components::cpu::MainBus;
 
-/// Metadata about a decoded instruction. Used to generate disassembly.
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub struct InstructionMeta {
-    pub address: AddressU24,
-    pub operation: String,
-    pub operand_str: Option<String>,
-    pub effective_addr: Option<AddressU24>,
-}
-
 /// An entry in the opcode table
 pub struct Instruction<BusT: MainBus> {
     /// Execute the instruction on the provided CPU.
     pub execute: fn(&mut Cpu<BusT>),
 
     /// Return metadata about this instruction. Can be used on an immutable CPU.
-    pub meta: fn(&Cpu<BusT>, AddressU24) -> (InstructionMeta, AddressU24),
+    pub meta: fn(&Cpu<BusT>, AddressU24) -> (InstructionMeta<AddressU24>, AddressU24),
 }
 
 /// Some instructions have a variable size depending on the size of a register. Used to add that

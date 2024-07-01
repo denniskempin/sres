@@ -9,6 +9,7 @@ mod test;
 use intbits::Bits;
 
 use crate::common::address::AddressU24;
+use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::debugger::DebuggerRef;
@@ -22,7 +23,6 @@ use crate::components::ppu::PpuTimer;
 
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
-pub use self::opcode_table::InstructionMeta;
 pub use self::status::StatusFlags;
 
 pub trait MainBus: Bus<AddressU24> {
@@ -133,12 +133,18 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     /// Return the instruction meta data for the instruction at the given address
-    pub fn load_instruction_meta(&self, addr: AddressU24) -> (InstructionMeta, AddressU24) {
+    pub fn load_instruction_meta(
+        &self,
+        addr: AddressU24,
+    ) -> (InstructionMeta<AddressU24>, AddressU24) {
         let opcode = self.bus.peek_u8(addr).unwrap_or_default();
         (self.instruction_table[opcode as usize].meta)(self, addr)
     }
 
-    pub fn peek_next_operations(&self, count: usize) -> impl Iterator<Item = InstructionMeta> + '_ {
+    pub fn peek_next_operations(
+        &self,
+        count: usize,
+    ) -> impl Iterator<Item = InstructionMeta<AddressU24>> + '_ {
         let mut pc = self.pc;
         (0..count).map(move |_| {
             let (meta, new_pc) = self.load_instruction_meta(pc);

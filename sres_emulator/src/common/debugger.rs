@@ -83,7 +83,9 @@ impl EventFilter {
                     true
                 }
             }
-            (Spc700ProgramCounter(range), Event::Spc700Step(spc)) => range.contains(&spc.pc.0),
+            (Spc700ProgramCounter(range), Event::Spc700Step(spc)) => {
+                range.contains(&spc.instruction.address.0)
+            }
             (Spc700MemoryRead(range), Event::Spc700MemoryRead(addr, _)) => range.contains(&addr.0),
             (Spc700MemoryWrite(range), Event::Spc700MemoryWrite(addr, _)) => {
                 range.contains(&addr.0)
