@@ -9,9 +9,6 @@ use anyhow::Result;
 
 use crate::common::address::AddressU16;
 
-// TODO: Breaks layering rules
-use crate::components::cpu::StatusFlags;
-
 use super::address::AddressU24;
 use super::address::InstructionMeta;
 
@@ -53,7 +50,7 @@ pub struct CpuTraceLine {
     pub s: u16,
     pub d: u16,
     pub db: u8,
-    pub status: StatusFlags,
+    pub status: String,
     pub v: u64,
     pub h: u64,
     pub f: u64,
@@ -79,7 +76,7 @@ impl Display for CpuTraceLine {
             self.s,
             self.d,
             self.db,
-            &String::from(self.status),
+            self.status,
             self.v,
             self.h,
             self.f,
@@ -228,16 +225,7 @@ mod tests {
             s: 0x1ff3,
             d: 0x0000,
             db: 0x00,
-            status: StatusFlags {
-                negative: false,
-                overflow: true,
-                accumulator_register_size: true,
-                index_register_size_or_break: false,
-                decimal: false,
-                irq_disable: true,
-                zero: true,
-                carry: true,
-            },
+            status: ".VM..IZC".to_string(),
             v: 261,
             h: 236,
             f: 32,
