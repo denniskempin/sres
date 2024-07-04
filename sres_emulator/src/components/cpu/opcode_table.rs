@@ -8,11 +8,12 @@ use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
-use crate::components::cpu::operands::AccessMode;
-use crate::components::cpu::operands::AddressMode;
-use crate::components::cpu::operands::Operand;
-use crate::components::cpu::Cpu;
-use crate::components::cpu::MainBus;
+
+use super::operands::AccessMode;
+use super::operands::AddressMode;
+use super::operands::Operand;
+use super::Cpu;
+use super::MainBus;
 
 /// An entry in the opcode table
 pub struct Instruction<BusT: MainBus> {
