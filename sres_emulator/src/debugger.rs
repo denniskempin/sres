@@ -5,17 +5,11 @@
 
 use std::fmt::Display;
 use std::fmt::UpperHex;
-
 use std::ops::Range;
-
 use std::str::FromStr;
-
 use std::sync::atomic::Ordering;
 
-
 use num_traits::PrimInt;
-
-
 
 use crate::common::address::AddressU24;
 use crate::common::constants::NativeVectorTable;
@@ -23,29 +17,9 @@ use crate::common::debug_events::ApuEvent;
 use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollector;
-
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::trace::CpuTraceLine;
-
 use crate::common::util::RingBuffer;
-
-/*
-impl Display for Event {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use Event::*;
-        match self {
-            CpuStep(cpu) => write!(f, "{}", cpu),
-            CpuMemoryRead(addr, value) => write!(f, "R {} = {:X}", addr, value),
-            CpuMemoryWrite(addr, data) => write!(f, "W {} = {:X}", addr, data),
-            ExecutionError(msg) => write!(f, "Error: {}", msg),
-            CpuInterrupt(handler) => write!(f, "Interrupt {}", handler),
-            Spc700Step(spc) => write!(f, "{}", spc),
-            Spc700MemoryRead(addr, value) => write!(f, "S-R {} = {:X}", addr, value),
-            Spc700MemoryWrite(addr, data) => write!(f, "S-W {} = {:X}", addr, data),
-        }
-    }
-}
-*/
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum EventFilter {
