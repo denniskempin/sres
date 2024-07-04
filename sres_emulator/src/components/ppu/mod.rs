@@ -13,8 +13,6 @@ use serde::Serialize;
 use self::cgram::CgRam;
 use self::oam::Oam;
 pub use self::oam::SpriteSize;
-pub use self::timer::fvh_to_master_clock;
-pub use self::timer::HVTimerMode;
 pub use self::timer::PpuTimer;
 use self::vram::Vram;
 pub use self::vram::VramAddr;

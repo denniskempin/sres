@@ -162,7 +162,8 @@ impl DebugUi {
             }
             DebugCommand::RunToNmi => {
                 self.command = None;
-                emulator.execute_until(|cpu| cpu.bus.nmi_interrupt && !cpu.status.irq_disable)
+                emulator
+                    .execute_until(|cpu| cpu.bus.ppu.timer.nmi_interrupt && !cpu.status.irq_disable)
             }
         }
     }

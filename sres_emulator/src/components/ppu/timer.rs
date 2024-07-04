@@ -1,9 +1,10 @@
 //! Tracking of PPU events and timing.
 
+use intbits::Bits;
+
 use crate::common::address::AddressU24;
 use crate::common::constants::ClockInfo;
 use crate::common::uint::U16Ext;
-use crate::common::uint::UInt;
 use crate::common::util::EdgeDetector;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -21,6 +22,9 @@ pub struct PpuTimer {
     timer_interrupt: bool,
     h_timer_target: u16,
     v_timer_target: u16,
+    nmi_enable: bool,
+    pub nmi_flag: bool,
+    pub nmi_interrupt: bool,
 }
 
 impl PpuTimer {
@@ -47,6 +51,7 @@ impl PpuTimer {
 
     pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
+            0x4210 => self.peek_rdnmi(),
             0x4211 => self.peek_timeup(),
             0x4212 => self.peek_hvbjoy(),
             _ => unreachable!(),
@@ -55,6 +60,7 @@ impl PpuTimer {
 
     pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
+            0x4210 => self.read_rdnmi(),
             0x4211 => self.read_timeup(),
             0x4212 => self.read_hvbjoy(),
             _ => unreachable!(),
@@ -62,7 +68,9 @@ impl PpuTimer {
     }
 
     pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
+        println!("{}", addr);
         match addr.offset {
+            0x4200 => self.write_nmitimen(value),
             0x4207 => self.write_htimel(value),
             0x4208 => self.write_htimeh(value),
             0x4209 => self.write_vtimel(value),
@@ -79,12 +87,79 @@ impl PpuTimer {
             self.tick_master_clock(64);
         }
         self.tick_master_clock(master_cycles);
+
+        if self.vblank_detector.consume_rise() {
+            if self.nmi_enable {
+                self.nmi_interrupt = true;
+            }
+            self.nmi_flag = true;
+        }
+
+        if self.vblank_detector.consume_fall() {
+            self.nmi_flag = false;
+        }
     }
 
     pub fn consume_timer_interrupt(&mut self) -> bool {
         let timer_interrupt = self.timer_interrupt;
         self.timer_interrupt = false;
         timer_interrupt
+    }
+
+    pub fn consume_nmi_interrupt(&mut self) -> bool {
+        let value = self.nmi_interrupt;
+        self.nmi_interrupt = false;
+        value
+    }
+
+    /// Register $4200: NMITIMEN - NMI, Timer and IRQ Enable/Flag
+    /// 7  bit  0
+    /// ---- ----
+    /// N.VH ...J
+    /// | ||    |
+    /// | ||    +- Joypad auto-read enable
+    /// | ++------ H/V timer IRQ:
+    /// |           00 = Disable timer
+    /// |           01 = IRQ when H counter == HTIME
+    /// |           10 = IRQ when V counter == VTIME and H counter == 0
+    /// |           11 = IRQ when V counter == VTIME and H counter == HTIME
+    /// +--------- Vblank NMI enable
+    fn write_nmitimen(&mut self, value: u8) {
+        self.nmi_enable = value.bit(7);
+        self.timer_mode = match value.bits(4..=5) {
+            0b00 => HVTimerMode::Off,
+            0b01 => HVTimerMode::TriggerH,
+            0b10 => HVTimerMode::TriggerV,
+            0b11 => HVTimerMode::TriggerHV,
+            _ => unreachable!(),
+        };
+    }
+
+    /// Register $4210: RDNMI - Read NMI Flag
+    /// 7  bit  0
+    /// ---- ----
+    /// Nxxx VVVV
+    /// |||| ||||
+    /// |||| ++++- CPU version
+    /// |+++------ (Open bus)
+    /// +--------- Vblank flag
+    fn read_rdnmi(&mut self) -> u8 {
+        let value = self.peek_rdnmi().unwrap();
+        if self.nmi_flag {
+            // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
+            if !(self.v == 225 && self.h_counter <= 2) {
+                self.nmi_flag = false;
+            }
+        }
+        value
+    }
+
+    fn peek_rdnmi(&self) -> Option<u8> {
+        if self.nmi_flag {
+            Some(0b1111_0010)
+        } else {
+            Some(0b0111_0010)
+        }
     }
 
     /// TIMEUP - Timer flag ($4211 read)
@@ -258,6 +333,9 @@ impl Default for PpuTimer {
             h_timer_target: 0x1FF,
             v_timer_target: 0x1FF,
             timer_mode: HVTimerMode::Off,
+            nmi_enable: false,
+            nmi_flag: false,
+            nmi_interrupt: false,
         }
     }
 }
@@ -295,26 +373,26 @@ pub fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
     (f, v, h_counter)
 }
 
-pub fn fvh_to_master_clock(f: u64, v: u64, h: u64) -> u64 {
-    let f_cycles = if f % 2 == 0 {
-        f * 357366
-    } else {
-        f * 357366 + 2
-    };
-
-    let odd_frame = f % 2 == 1;
-    let v_cycles = if odd_frame && v > 240 {
-        v * 1364 - 4
-    } else {
-        v * 1364
-    };
-
-    f_cycles + v_cycles + h
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    pub fn fvh_to_master_clock(f: u64, v: u64, h: u64) -> u64 {
+        let f_cycles = if f % 2 == 0 {
+            f * 357366
+        } else {
+            f * 357366 + 2
+        };
+
+        let odd_frame = f % 2 == 1;
+        let v_cycles = if odd_frame && v > 240 {
+            v * 1364 - 4
+        } else {
+            v * 1364
+        };
+
+        f_cycles + v_cycles + h
+    }
 
     #[test]
     fn test_fvh_master_clock_conversion() {

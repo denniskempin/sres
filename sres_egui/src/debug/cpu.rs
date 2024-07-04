@@ -25,7 +25,7 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
     });
     ui.label(format!("Cycle: {}", cpu.bus.ppu.timer.master_clock));
     ui.label(format!("PC: {:}", cpu.pc));
-    ui.label(format!("NMI: {:}", cpu.bus.nmi_interrupt));
+    ui.label(format!("NMI: {:}", cpu.bus.ppu.timer.nmi_interrupt));
 }
 
 pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {

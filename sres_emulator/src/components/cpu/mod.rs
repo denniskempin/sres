@@ -27,7 +27,7 @@ use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
 
 pub trait MainBus: Bus<AddressU24> {
-    fn check_nmi_interrupt(&mut self) -> bool;
+    fn consume_nmi_interrupt(&mut self) -> bool;
     fn consume_timer_interrupt(&mut self) -> bool;
     fn clock_info(&self) -> ClockInfo;
 }
@@ -171,7 +171,7 @@ impl<BusT: MainBus> Cpu<BusT> {
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
 
-        if self.bus.check_nmi_interrupt() {
+        if self.bus.consume_nmi_interrupt() {
             self.interrupt(NativeVectorTable::Nmi);
         }
         if !self.status.irq_disable && self.bus.consume_timer_interrupt() {
