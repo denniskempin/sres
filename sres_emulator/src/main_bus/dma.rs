@@ -9,8 +9,8 @@ use packed_struct::prelude::*;
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
-use crate::common::debugger::DebuggerRef;
-use crate::common::debugger::Event;
+use crate::common::debug_events::DebugEvent;
+use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U8Ext;
 
@@ -18,16 +18,16 @@ pub struct DmaController {
     dma_channels: [DmaChannel; 8],
     dma_pending: u8,
     dma_active: bool,
-    pub debugger: DebuggerRef,
+    debug_event_collector: DebugEventCollectorRef,
 }
 
 impl DmaController {
-    pub fn new(debugger: DebuggerRef) -> Self {
+    pub fn new(debug_event_collector: DebugEventCollectorRef) -> Self {
         Self {
             dma_channels: Default::default(),
             dma_pending: 0,
             dma_active: false,
-            debugger,
+            debug_event_collector,
         }
     }
     pub fn update_state(&mut self) {
@@ -105,8 +105,8 @@ impl DmaController {
         match self.bus_peek(addr) {
             Some(value) => value,
             None => {
-                self.debugger
-                    .on_event(Event::ExecutionError(format!("Invalid read from {}", addr)));
+                self.debug_event_collector
+                    .collect_event(DebugEvent::Error(format!("Invalid read from {}", addr)));
                 0
             }
         }
@@ -149,14 +149,14 @@ impl DmaController {
                     0x6 => self.write_dasnh(channel, value),
                     0x7 => log::warn!("HDMA not implemented."),
                     _ => {
-                        self.debugger
-                            .on_event(Event::ExecutionError(format!("Invalid write to {}", addr)));
+                        self.debug_event_collector
+                            .collect_event(DebugEvent::Error(format!("Invalid write to {}", addr)));
                     }
                 }
             }
             _ => {
-                self.debugger
-                    .on_event(Event::ExecutionError(format!("Invalid write to {}", addr)));
+                self.debug_event_collector
+                    .collect_event(DebugEvent::Error(format!("Invalid write to {}", addr)));
             }
         }
     }

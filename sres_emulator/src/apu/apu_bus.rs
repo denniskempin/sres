@@ -2,13 +2,18 @@ use intbits::Bits;
 
 use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
-use crate::common::debugger::DebuggerRef;
-use crate::common::debugger::Event;
+use crate::common::debug_events::{ApuEvent, DebugEventCollectorRef};
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
 
+#[derive(Clone)]
+pub enum ApuBusEvent {
+    Read(AddressU16, u8),
+    Write(AddressU16, u8),
+}
+
 pub struct ApuBus {
-    pub debugger: DebuggerRef,
+    pub debug_event_collector: DebugEventCollectorRef,
     pub master_cycle: u64,
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
@@ -21,9 +26,9 @@ pub struct ApuBus {
 
 impl ApuBus {
     #[allow(clippy::new_without_default)]
-    pub fn new(debugger: DebuggerRef) -> Self {
+    pub fn new(debug_event_collector: DebugEventCollectorRef) -> Self {
         Self {
-            debugger,
+            debug_event_collector,
             master_cycle: 0,
             ram: [0; 0x10000],
             channel_in: [0; 4],
@@ -55,13 +60,14 @@ impl Bus<AddressU16> for ApuBus {
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
         self.master_cycle += 21;
         let value = self.peek_u8(addr).unwrap_or_default();
-        self.debugger.on_event(Event::Spc700MemoryRead(addr, value));
+        self.debug_event_collector
+            .collect_apu_event(ApuEvent::Read(addr, value));
         value
     }
 
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
-        self.debugger
-            .on_event(Event::Spc700MemoryWrite(addr, value));
+        self.debug_event_collector
+            .collect_apu_event(ApuEvent::Write(addr, value));
 
         self.master_cycle += 21;
         #[allow(clippy::single_match)]

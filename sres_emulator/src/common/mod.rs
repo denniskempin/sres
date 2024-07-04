@@ -2,7 +2,8 @@
 
 pub mod address;
 pub mod bus;
-pub mod debugger;
+pub mod constants;
+pub mod debug_events;
 pub mod image;
 pub mod logging;
 pub mod memory;

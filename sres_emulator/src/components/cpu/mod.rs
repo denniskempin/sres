@@ -6,14 +6,19 @@ mod status;
 #[cfg(test)]
 mod test;
 
+use std::sync::atomic::Ordering;
+
 use intbits::Bits;
+
 
 use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
-use crate::common::debugger::DebuggerRef;
-use crate::common::debugger::Event;
+use crate::common::constants::NativeVectorTable;
+use crate::common::debug_events::CpuEvent;
+use crate::common::debug_events::DebugEventCollectorRef;
+use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::trace::CpuTraceLine;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
@@ -53,18 +58,6 @@ impl VariableLengthRegister {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, strum::Display, strum::EnumString)]
-pub enum NativeVectorTable {
-    #[strum(serialize = "cop")]
-    Cop = 0xFFE4,
-    #[strum(serialize = "break", serialize = "brk")]
-    Break = 0xFFE6,
-    #[strum(serialize = "nmi")]
-    Nmi = 0xFFEA,
-    #[strum(serialize = "irq")]
-    Irq = 0xFFEE,
-}
-
 pub enum EmuVectorTable {
     Cop = 0xFFF4,
     Break = 0xFFF6,
@@ -87,13 +80,13 @@ pub struct Cpu<BusT: MainBus> {
     pub master_cycle: u64,
     pub halt: bool,
     instruction_table: [Instruction<BusT>; 256],
-    pub debugger: DebuggerRef,
+    pub debug_event_collector: DebugEventCollectorRef,
 }
 
 const STACK_BASE: u16 = 0;
 
 impl<BusT: MainBus> Cpu<BusT> {
-    pub fn new(bus: BusT, debugger: DebuggerRef) -> Self {
+    pub fn new(bus: BusT, debug_event_collector: DebugEventCollectorRef) -> Self {
         let mut cpu = Self {
             bus,
             a: Default::default(),
@@ -108,7 +101,7 @@ impl<BusT: MainBus> Cpu<BusT> {
             master_cycle: 0,
             halt: false,
             instruction_table: build_opcode_table(),
-            debugger,
+            debug_event_collector,
         };
         cpu.reset();
         cpu
@@ -175,8 +168,9 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
-        if self.debugger.enabled {
-            self.debugger.on_event(Event::CpuStep(self.trace()));
+        if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
+            self.debug_event_collector
+                .collect_cpu_event(CpuEvent::Step(self.trace()));
         }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
@@ -190,7 +184,8 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     fn interrupt(&mut self, handler: NativeVectorTable) {
-        self.debugger.on_event(Event::CpuInterrupt(handler));
+        self.debug_event_collector
+            .collect_cpu_event(CpuEvent::Interrupt(handler));
         self.stack_push_u24(u32::from(self.pc));
         self.stack_push_u8(u8::from(self.status));
         self.status.irq_disable = true;
@@ -271,12 +266,14 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use super::*;
-    use crate::cartridge::Cartridge;
     use crate::common::address::Address;
     use crate::common::address::AddressU24;
     use crate::common::address::Wrap;
     use crate::common::bus::Bus;
-    use crate::common::debugger::DebuggerRef;
+    use crate::common::debug_events::dummy_collector;
+
+    // TODO: This breaks layering rules
+    use crate::cartridge::Cartridge;
     use crate::main_bus::MainBusImpl;
     use crate::System;
 
@@ -299,11 +296,10 @@ mod tests {
 
     fn cpu_with_program(code: &str) -> Cpu<MainBusImpl> {
         let assembled = assemble(code);
-        let debugger = DebuggerRef::new();
         // TODO: Use a test bus instead of SresBus/System
         let mut cpu = Cpu::new(
-            MainBusImpl::new(&Cartridge::with_program(&assembled), debugger.clone()),
-            debugger,
+            MainBusImpl::new(&Cartridge::with_program(&assembled), dummy_collector()),
+            dummy_collector(),
         );
         cpu.pc = AddressU24::new(0, 0x8000);
         cpu

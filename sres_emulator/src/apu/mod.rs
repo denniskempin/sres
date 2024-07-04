@@ -6,11 +6,12 @@ mod test;
 use log::debug;
 
 use crate::common::address::AddressU24;
-use crate::common::debugger::DebuggerRef;
+use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDspDebug;
 use crate::components::spc700::Spc700;
 
 use self::apu_bus::ApuBus;
+pub use self::apu_bus::ApuBusEvent;
 
 pub struct Apu {
     spc700: Spc700<ApuBus>,
@@ -18,15 +19,13 @@ pub struct Apu {
 
 impl Apu {
     #[allow(clippy::new_without_default)]
-    pub fn new(debugger: DebuggerRef) -> Self {
+    pub fn new(debug_event_collector: DebugEventCollectorRef) -> Self {
         Self {
-            spc700: Spc700::new(ApuBus::new(debugger.clone()), debugger),
+            spc700: Spc700::new(
+                ApuBus::new(debug_event_collector.clone()),
+                debug_event_collector,
+            ),
         }
-    }
-
-    pub fn enable_debugger(&mut self, enabled: bool) {
-        self.spc700.debugger.enabled = enabled;
-        self.spc700.bus.debugger.enabled = enabled;
     }
 
     pub fn debug(&self) -> ApuDebug<'_> {

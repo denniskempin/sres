@@ -2,36 +2,34 @@
 //!
 //! Allows internal components to notify of events during emulation (e.g. memory access),
 //! and allows the front end to set and detect breakpoints on those events.
-use std::cell::RefCell;
+
 use std::fmt::Display;
 use std::fmt::UpperHex;
+
 use std::ops::Range;
-use std::rc::Rc;
+
 use std::str::FromStr;
+
+use std::sync::atomic::Ordering;
+
 
 use num_traits::PrimInt;
 
-use crate::common::address::AddressU16;
+
+
 use crate::common::address::AddressU24;
+use crate::common::constants::NativeVectorTable;
+use crate::common::debug_events::ApuEvent;
+use crate::common::debug_events::CpuEvent;
+use crate::common::debug_events::DebugEvent;
+use crate::common::debug_events::DebugEventCollector;
+
+use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::trace::CpuTraceLine;
-use crate::common::trace::Spc700TraceLine;
+
 use crate::common::util::RingBuffer;
 
-// TODO: Breaks layering requirements
-use crate::components::cpu::NativeVectorTable;
-
-#[derive(Clone)]
-pub enum Event {
-    CpuStep(CpuTraceLine),
-    CpuMemoryRead(AddressU24, u8),
-    CpuMemoryWrite(AddressU24, u8),
-    ExecutionError(String),
-    CpuInterrupt(NativeVectorTable),
-    Spc700Step(Spc700TraceLine),
-    Spc700MemoryRead(AddressU16, u8),
-    Spc700MemoryWrite(AddressU16, u8),
-}
-
+/*
 impl Display for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Event::*;
@@ -47,6 +45,7 @@ impl Display for Event {
         }
     }
 }
+*/
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum EventFilter {
@@ -62,34 +61,35 @@ pub enum EventFilter {
 }
 
 impl EventFilter {
-    pub fn matches(&self, event: &Event) -> bool {
+    pub fn matches(&self, event: &DebugEvent) -> bool {
+        use DebugEvent::*;
         use EventFilter::*;
         match (self, event) {
-            (CpuProgramCounter(range), Event::CpuStep(cpu)) => {
+            (CpuProgramCounter(range), Cpu(CpuEvent::Step(cpu))) => {
                 range.contains(&u32::from(cpu.instruction.address))
             }
-            (CpuInstruction(instr), Event::CpuStep(cpu)) => instr == &cpu.instruction.operation,
-            (CpuMemoryRead(range), Event::CpuMemoryRead(addr, _)) => {
+            (CpuInstruction(instr), Cpu(CpuEvent::Step(cpu))) => {
+                instr == &cpu.instruction.operation
+            }
+            (CpuMemoryRead(range), Cpu(CpuEvent::Read(addr, _))) => {
                 range.contains(&u32::from(*addr))
             }
-            (CpuMemoryWrite(range), Event::CpuMemoryWrite(addr, _)) => {
+            (CpuMemoryWrite(range), Cpu(CpuEvent::Write(addr, _))) => {
                 range.contains(&u32::from(*addr))
             }
-            (ExecutionError, Event::ExecutionError(_)) => true,
-            (Interrupt(expected_handler), Event::CpuInterrupt(handler)) => {
+            (ExecutionError, Error(_)) => true,
+            (Interrupt(expected_handler), Cpu(CpuEvent::Interrupt(handler))) => {
                 if let Some(expected_handler) = expected_handler {
                     expected_handler == handler
                 } else {
                     true
                 }
             }
-            (Spc700ProgramCounter(range), Event::Spc700Step(spc)) => {
+            (Spc700ProgramCounter(range), Apu(ApuEvent::Step(spc))) => {
                 range.contains(&spc.instruction.address.0)
             }
-            (Spc700MemoryRead(range), Event::Spc700MemoryRead(addr, _)) => range.contains(&addr.0),
-            (Spc700MemoryWrite(range), Event::Spc700MemoryWrite(addr, _)) => {
-                range.contains(&addr.0)
-            }
+            (Spc700MemoryRead(range), Apu(ApuEvent::Read(addr, _))) => range.contains(&addr.0),
+            (Spc700MemoryWrite(range), Apu(ApuEvent::Write(addr, _))) => range.contains(&addr.0),
 
             _ => false,
         }
@@ -142,7 +142,7 @@ impl Display for EventFilter {
 
 pub struct BreakReason {
     pub trigger: EventFilter,
-    pub event: Event,
+    pub event: DebugEvent,
 }
 
 pub enum MemoryAccess {
@@ -169,50 +169,33 @@ pub enum Trigger {
     Interrupt(NativeVectorTable),
 }
 
-/// A wrapper around Rc<RefCell<Debugger>> to access a shared instance of the debugger.
-///
-/// Each instance has it's own `enabled` flag to enable/disable access to the debugger
-/// and default to sensible no-op behavior. This prevents frequent access to the
-/// Rc<RefCell<>> when the debugger is disabled.
-#[derive(Clone)]
-pub struct DebuggerRef {
-    pub enabled: bool,
-    pub inner: Rc<RefCell<Debugger>>,
-}
-
-impl DebuggerRef {
-    pub fn new() -> Self {
-        Self {
-            inner: Rc::new(RefCell::new(Debugger::new())),
-            enabled: false,
-        }
-    }
-
-    pub fn on_event(&self, event: Event) {
-        if self.enabled {
-            self.inner.borrow_mut().record_trace_event(event);
-        }
-    }
-}
-
-impl Default for DebuggerRef {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 pub struct Debugger {
     pub log_points: Vec<EventFilter>,
     pub break_points: Vec<EventFilter>,
-    pub log: RingBuffer<Event, 1024>,
+    pub log: RingBuffer<DebugEvent, 1024>,
     pub break_reason: Option<BreakReason>,
+    pub enabled: bool,
 }
 
 impl Debugger {
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub fn enable(&mut self) {
+        self.enabled = true;
+        DEBUG_EVENTS_ENABLED.store(true, Ordering::Relaxed);
+    }
+
+    pub fn disable(&mut self) {
+        self.enabled = false;
+        DEBUG_EVENTS_ENABLED.store(false, Ordering::Relaxed);
+    }
+
     /// Frontend facing API
     pub fn cpu_trace(&self) -> impl Iterator<Item = &CpuTraceLine> {
         self.log.iter().filter_map(|line| match line {
-            Event::CpuStep(cpu) => Some(cpu),
+            DebugEvent::Cpu(CpuEvent::Step(cpu)) => Some(cpu),
             _ => None,
         })
     }
@@ -273,10 +256,13 @@ impl Debugger {
             break_points: vec![],
             break_reason: None,
             log: RingBuffer::default(),
+            enabled: false,
         }
     }
+}
 
-    pub fn record_trace_event(&mut self, event: Event) {
+impl DebugEventCollector for Debugger {
+    fn collect_event(&mut self, event: DebugEvent) {
         let break_trigger = self
             .break_points
             .iter()
@@ -345,6 +331,8 @@ fn format_range<T: PrimInt + UpperHex>(range: &Range<T>) -> String {
 
 #[cfg(test)]
 mod test {
+    use crate::common::constants::NativeVectorTable;
+
     use super::*;
 
     #[test]
