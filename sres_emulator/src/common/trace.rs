@@ -8,9 +8,8 @@ use anyhow::Context;
 use anyhow::Result;
 
 use crate::common::address::AddressU16;
-
-use super::address::AddressU24;
-use super::address::InstructionMeta;
+use crate::common::address::AddressU24;
+use crate::common::address::InstructionMeta;
 
 #[allow(dead_code)]
 pub enum TraceLine {

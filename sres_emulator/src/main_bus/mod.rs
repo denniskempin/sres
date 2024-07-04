@@ -6,12 +6,12 @@ use dma::DmaController;
 use intbits::Bits;
 use log::trace;
 
-use self::multiplication::MultiplicationUnit;
 use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::cartridge::MappingMode;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
+use crate::common::constants::ClockInfo;
 use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
@@ -19,7 +19,8 @@ use crate::common::uint::U16Ext;
 use crate::components::cpu::MainBus;
 use crate::components::ppu::HVTimerMode;
 use crate::components::ppu::Ppu;
-use crate::components::ppu::PpuTimer;
+
+use self::multiplication::MultiplicationUnit;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum MemoryBlock {
@@ -312,8 +313,8 @@ impl MainBus for MainBusImpl {
         self.ppu.timer.consume_timer_interrupt()
     }
 
-    fn ppu_timer(&self) -> &PpuTimer {
-        &self.ppu.timer
+    fn clock_info(&self) -> ClockInfo {
+        self.ppu.timer.clock_info()
     }
 }
 
@@ -438,8 +439,8 @@ impl MainBus for crate::common::test_bus::TestBus<AddressU24> {
         false
     }
 
-    fn ppu_timer(&self) -> &PpuTimer {
-        &self.ppu_timer
+    fn clock_info(&self) -> ClockInfo {
+        ClockInfo::default()
     }
 }
 

@@ -10,11 +10,11 @@ use std::sync::atomic::Ordering;
 
 use intbits::Bits;
 
-
 use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
+use crate::common::constants::ClockInfo;
 use crate::common::constants::NativeVectorTable;
 use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
@@ -23,9 +23,6 @@ use crate::common::trace::CpuTraceLine;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
 
-// TODO: Breaks layering requirements
-use crate::components::ppu::PpuTimer;
-
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 pub use self::status::StatusFlags;
@@ -33,7 +30,7 @@ pub use self::status::StatusFlags;
 pub trait MainBus: Bus<AddressU24> {
     fn check_nmi_interrupt(&mut self) -> bool;
     fn consume_timer_interrupt(&mut self) -> bool;
-    fn ppu_timer(&self) -> &PpuTimer;
+    fn clock_info(&self) -> ClockInfo;
 }
 
 #[derive(Default)]
@@ -109,7 +106,7 @@ impl<BusT: MainBus> Cpu<BusT> {
 
     pub fn trace(&self) -> CpuTraceLine {
         let (instruction, _) = self.load_instruction_meta(self.pc);
-        let ppu_timer = self.bus.ppu_timer();
+        let clock_info = self.bus.clock_info();
         CpuTraceLine {
             instruction,
             a: self.a.value,
@@ -119,9 +116,9 @@ impl<BusT: MainBus> Cpu<BusT> {
             d: self.d,
             db: self.db,
             status: self.status.format_string(self.emulation_mode),
-            v: ppu_timer.v,
-            h: ppu_timer.h_counter,
-            f: ppu_timer.f,
+            v: clock_info.v,
+            h: clock_info.h_counter,
+            f: clock_info.f,
         }
     }
 
