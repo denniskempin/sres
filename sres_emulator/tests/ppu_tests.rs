@@ -13,7 +13,6 @@ use image::RgbaImage;
 use serde::Deserialize;
 use serde::Serialize;
 use sres_emulator::cartridge::Cartridge;
-use sres_emulator::common::debugger::DebuggerRef;
 use sres_emulator::common::image::Image;
 use sres_emulator::common::image::Rgb15;
 use sres_emulator::common::image::Rgba32;
@@ -300,7 +299,7 @@ impl PpuSnapshot {
     }
 
     pub fn restore(self) -> Ppu {
-        let mut ppu = Ppu::new(DebuggerRef::default());
+        let mut ppu = Ppu::new();
         ppu.vram.memory = self.vram;
         ppu.cgram.memory = self.cgram;
         ppu.bgmode = self.bgmode;

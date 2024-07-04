@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use crate::common::debug_events::dummy_collector;
 use crate::common::trace::Spc700TraceLine;
 use crate::components::spc700::Spc700;
 use crate::components::spc700::Spc700Bus;
@@ -26,7 +27,7 @@ fn assert_states(spc700: &mut Spc700<impl Spc700Bus>, expected_states: &[&str]) 
 
 #[test]
 fn boot_rom_transfer_test() {
-    let mut spc700 = Spc700::new(ApuBus::new(Default::default()), Default::default());
+    let mut spc700 = Spc700::new(ApuBus::new(dummy_collector()), dummy_collector());
     assert_states(&mut spc700, INIT_TRACE);
 
     // Init done signal is 0xaabb on port 0-1

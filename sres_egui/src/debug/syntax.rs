@@ -3,48 +3,51 @@ use egui::RichText;
 use egui::Ui;
 use sres_emulator::common::address::AddressU16;
 use sres_emulator::common::address::AddressU24;
-use sres_emulator::common::debugger::Event;
+use sres_emulator::common::debug_events::ApuEvent;
+use sres_emulator::common::debug_events::CpuEvent;
+use sres_emulator::common::debug_events::DebugEvent;
 
 use super::InternalLink;
 
 /// Widget to display a single log line with syntax highlighting, hover info and the ability
 /// to click addresses.
-pub fn log_line(ui: &mut Ui, event: &Event, selected: &mut InternalLink) {
+pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
+    use DebugEvent::*;
     ui.horizontal(|ui| {
         match event {
-            Event::CpuMemoryRead(addr, value) => {
+            Cpu(CpuEvent::Read(addr, value)) => {
                 label_cpu(ui);
                 label_read(ui, "R");
                 label_cpu_addr(ui, *addr, selected);
                 label_normal(ui, format!("= {:02X}", value));
             }
-            Event::CpuMemoryWrite(addr, value) => {
+            Cpu(CpuEvent::Write(addr, value)) => {
                 label_cpu(ui);
                 label_write(ui, "W");
                 label_cpu_addr(ui, *addr, selected);
                 label_normal(ui, format!("= {:02X}", value));
             }
-            Event::CpuInterrupt(interrupt) => {
+            Cpu(CpuEvent::Interrupt(interrupt)) => {
                 label_cpu(ui);
                 label_normal(ui, format!("IRQ: {:?}", interrupt));
             }
-            Event::ExecutionError(reason) => {
+            Error(reason) => {
                 label_error(ui, format!("Error: {:?}", reason));
             }
-            Event::CpuStep(state) => {
+            Cpu(CpuEvent::Step(state)) => {
                 label_cpu(ui);
                 cpu_log_line(ui, state, selected);
             }
-            Event::Spc700Step(state) => {
+            Apu(ApuEvent::Step(state)) => {
                 spc700_log_line(ui, state, selected);
             }
-            Event::Spc700MemoryRead(addr, value) => {
+            Apu(ApuEvent::Read(addr, value)) => {
                 label_spc(ui);
                 label_read(ui, "R");
                 label_addr(ui, addr.to_string());
                 label_normal(ui, format!("= {:02X}", value));
             }
-            Event::Spc700MemoryWrite(addr, value) => {
+            Apu(ApuEvent::Write(addr, value)) => {
                 label_spc(ui);
                 label_write(ui, "W");
                 label_addr(ui, addr.to_string());
@@ -113,7 +116,7 @@ fn spc700_log_line(
     label_strong(ui, "SP");
     label_normal(ui, format!("{:02X}", state.sp.0));
     label_strong(ui, "P");
-    label_normal(ui, format!("{}", state.status));
+    label_normal(ui, state.status.to_string());
 }
 
 fn label_addr(ui: &mut Ui, text: impl Into<String>) -> egui::Response {

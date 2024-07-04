@@ -72,7 +72,7 @@ impl EmulatorApp {
 
     fn load_cartridge(&mut self, cartridge: Cartridge) {
         self.emulator = System::with_cartridge(&cartridge);
-        self.emulator.enable_debugger();
+        self.emulator.debugger().enable();
         self.loaded_cartridge = Some(cartridge);
     }
 
@@ -144,10 +144,10 @@ impl EmulatorApp {
                 ui.label(format!("{:.2}ms", avg_duration * 1000.0));
 
                 if ui.button("Debug").clicked() {
-                    if self.emulator.is_debugger_enabled() {
-                        self.emulator.disable_debugger()
+                    if self.emulator.debugger().enabled() {
+                        self.emulator.debugger().disable()
                     } else {
-                        self.emulator.enable_debugger()
+                        self.emulator.debugger().enable()
                     }
                 }
                 if self.input_recording_active {
@@ -212,7 +212,7 @@ impl eframe::App for EmulatorApp {
         let (stable_dt, unstable_dt) =
             ctx.input(|input| (input.stable_dt as f64, input.unstable_dt as f64));
 
-        if !self.emulator.is_debugger_enabled() {
+        if !self.emulator.debugger().enabled() {
             puffin::set_scopes_on(false);
             self.emulator.execute_for_duration(stable_dt);
         } else {
@@ -236,7 +236,7 @@ impl eframe::App for EmulatorApp {
             self.main_display(ui);
         });
 
-        if self.emulator.is_debugger_enabled() {
+        if self.emulator.debugger().enabled() {
             self.debug_ui.modals(ctx, &mut self.emulator);
         }
 

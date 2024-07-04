@@ -3,18 +3,22 @@ pub mod cartridge;
 pub mod common;
 pub mod components;
 pub mod controller;
+pub mod debugger;
 pub mod main_bus;
 
+use std::cell::RefCell;
 use std::cell::RefMut;
 use std::ops::Deref;
+use std::rc::Rc;
+
+use common::debug_events::DebugEventCollectorRef;
 
 use crate::apu::ApuDebug;
 use crate::cartridge::Cartridge;
-use crate::common::debugger::BreakReason;
-use crate::common::debugger::Debugger;
-use crate::common::debugger::DebuggerRef;
-use crate::common::debugger::EventFilter;
 use crate::components::cpu::Cpu;
+use crate::debugger::BreakReason;
+use crate::debugger::Debugger;
+use crate::debugger::EventFilter;
 use crate::main_bus::MainBusImpl;
 
 pub enum ExecutionResult {
@@ -25,7 +29,7 @@ pub enum ExecutionResult {
 
 pub struct System {
     pub cpu: Cpu<MainBusImpl>,
-    debugger: DebuggerRef,
+    debugger: Rc<RefCell<Debugger>>,
 }
 
 impl System {
@@ -39,40 +43,18 @@ impl System {
     }
 
     pub fn debugger(&self) -> RefMut<'_, Debugger> {
-        self.debugger.inner.deref().borrow_mut()
+        self.debugger.deref().borrow_mut()
     }
 
     pub fn with_cartridge(cartridge: &Cartridge) -> Self {
-        let debugger = DebuggerRef::new();
+        let debugger = Rc::new(RefCell::new(Debugger::new()));
         Self {
             cpu: Cpu::new(
-                MainBusImpl::new(cartridge, debugger.clone()),
-                debugger.clone(),
+                MainBusImpl::new(cartridge, DebugEventCollectorRef(debugger.clone())),
+                DebugEventCollectorRef(debugger.clone()),
             ),
             debugger,
         }
-    }
-
-    pub fn is_debugger_enabled(&self) -> bool {
-        self.debugger.enabled
-    }
-
-    pub fn enable_debugger(&mut self) {
-        self.debugger.enabled = true;
-        self.cpu.debugger.enabled = true;
-        self.cpu.bus.debugger.enabled = true;
-        self.cpu.bus.dma_controller.debugger.enabled = true;
-        self.cpu.bus.ppu.debugger.enabled = true;
-        self.cpu.bus.apu.enable_debugger(true);
-    }
-
-    pub fn disable_debugger(&mut self) {
-        self.debugger.enabled = false;
-        self.cpu.debugger.enabled = false;
-        self.cpu.bus.debugger.enabled = false;
-        self.cpu.bus.dma_controller.debugger.enabled = false;
-        self.cpu.bus.ppu.debugger.enabled = false;
-        self.cpu.bus.apu.enable_debugger(false);
     }
 
     pub fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
@@ -114,7 +96,7 @@ impl System {
     }
 
     pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {
-        self.enable_debugger();
+        self.debugger().enable();
         self.debugger().add_break_point(event.clone());
         let result = loop {
             if self.cpu.halt {

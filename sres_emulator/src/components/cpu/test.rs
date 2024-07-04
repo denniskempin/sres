@@ -18,7 +18,7 @@ use xz2::read::XzDecoder;
 
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
-use crate::common::debugger::DebuggerRef;
+use crate::common::debug_events::dummy_collector;
 use crate::common::logging;
 use crate::common::test_bus::Cycle;
 use crate::common::test_bus::TestBus;
@@ -132,7 +132,7 @@ fn run_tomharte_test(test_name: &str) {
         actual_state.step();
 
         // Compare before asserting to print additional information on failures
-        let state_matches = &actual_state.trace() == &expected_state.trace();
+        let state_matches = actual_state.trace() == expected_state.trace();
         let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
         // Only compare cycle count. No need to be perfectly accurate with the order.
         let cycles_match = actual_state.bus.cycles.len() == test_case.cycles().len();
@@ -203,7 +203,7 @@ impl TestCpuState {
         for (addr, value) in &self.ram {
             bus.memory.set(AddressU24::from(*addr), *value);
         }
-        let mut cpu = Cpu::new(bus, DebuggerRef::new());
+        let mut cpu = Cpu::new(bus, dummy_collector());
         cpu.pc = AddressU24 {
             bank: self.pbr,
             offset: self.pc,

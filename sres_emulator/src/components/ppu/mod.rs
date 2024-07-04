@@ -11,7 +11,6 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::common::address::AddressU24;
-use crate::common::debugger::DebuggerRef;
 use crate::common::image::Image;
 use crate::common::image::Rgb15;
 use crate::common::uint::U16Ext;
@@ -59,7 +58,6 @@ pub struct Ppu {
     pub v_counter_latch: bool,
 
     pub headless: bool,
-    pub debugger: DebuggerRef,
 }
 
 #[derive(Copy, Clone, PartialEq)]
@@ -70,7 +68,7 @@ enum Layer {
 
 impl Ppu {
     #[allow(clippy::new_without_default)]
-    pub fn new(debugger: DebuggerRef) -> Self {
+    pub fn new() -> Self {
         Self {
             disabled: false,
             timer: PpuTimer::default(),
@@ -97,7 +95,6 @@ impl Ppu {
             v_counter_latch: false,
             fixed_color: Rgb15::default(),
             headless: false,
-            debugger,
         }
     }
 
