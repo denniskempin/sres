@@ -6,10 +6,8 @@ use std::fmt::Formatter;
 
 use itertools::Itertools;
 
-use super::address::Address;
-use super::bus::Bus;
-// TODO: This breaks the layering requirements
-use crate::components::ppu::PpuTimer;
+use crate::common::address::Address;
+use crate::common::bus::Bus;
 
 /// A test implementation of the `Bus`.
 ///
@@ -18,7 +16,6 @@ use crate::components::ppu::PpuTimer;
 pub struct TestBus<AddressT: Address> {
     pub memory: SparseMemory<AddressT>,
     pub cycles: Vec<Cycle<AddressT>>,
-    pub ppu_timer: PpuTimer,
 }
 
 impl<AddressT: Address> Bus<AddressT> for TestBus<AddressT> {

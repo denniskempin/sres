@@ -4,12 +4,11 @@ use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::atomic::AtomicBool;
 
+use crate::common::address::AddressU16;
 use crate::common::address::AddressU24;
+use crate::common::constants::NativeVectorTable;
 use crate::common::trace::CpuTraceLine;
 use crate::common::trace::Spc700TraceLine;
-
-use super::address::AddressU16;
-use super::constants::NativeVectorTable;
 
 pub static DEBUG_EVENTS_ENABLED: AtomicBool = AtomicBool::new(false);
 

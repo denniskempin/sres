@@ -1,6 +1,7 @@
 //! Tracking of PPU events and timing.
 
 use crate::common::address::AddressU24;
+use crate::common::constants::ClockInfo;
 use crate::common::uint::U16Ext;
 use crate::common::uint::UInt;
 use crate::common::util::EdgeDetector;
@@ -11,18 +12,27 @@ pub struct PpuTimer {
     pub v: u64,
     pub h_counter: u64,
     pub f: u64,
-    pub dram_refresh_position: u64,
     pub vblank_detector: EdgeDetector,
     pub hv_timer_detector: EdgeDetector,
-
-    pub timer_flag: bool,
-    pub timer_interrupt: bool,
-    pub h_timer_target: u16,
-    pub v_timer_target: u16,
     pub timer_mode: HVTimerMode,
+
+    dram_refresh_position: u64,
+    timer_flag: bool,
+    timer_interrupt: bool,
+    h_timer_target: u16,
+    v_timer_target: u16,
 }
 
 impl PpuTimer {
+    pub fn clock_info(&self) -> ClockInfo {
+        ClockInfo {
+            master_clock: self.master_clock,
+            v: self.v,
+            h_counter: self.h_counter,
+            f: self.f,
+        }
+    }
+
     pub fn from_master_clock(master_clock: u64) -> Self {
         let (f, v, h) = master_clock_to_fvh(master_clock);
 
