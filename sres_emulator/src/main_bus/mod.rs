@@ -6,6 +6,7 @@ use dma::DmaController;
 use intbits::Bits;
 use log::trace;
 
+use self::multiplication::MultiplicationUnit;
 use crate::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::cartridge::MappingMode;
@@ -19,8 +20,6 @@ use crate::common::uint::U16Ext;
 use crate::components::cpu::MainBus;
 use crate::components::ppu::HVTimerMode;
 use crate::components::ppu::Ppu;
-
-use self::multiplication::MultiplicationUnit;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum MemoryBlock {

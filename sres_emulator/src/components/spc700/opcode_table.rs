@@ -1,10 +1,9 @@
+use super::Spc700;
+use super::Spc700Bus;
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
 use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
-
-use super::Spc700;
-use super::Spc700Bus;
 
 /// An entry in the opcode table
 pub struct InstructionDef<BusT: Spc700Bus> {

@@ -13,7 +13,9 @@ pub struct BRRDecoder {
 
 impl BRRDecoder {
     pub fn decode<'a>(&'a mut self, addr: u8, ram: &[u8]) -> &'a Vec<i16> {
-        self.cache.entry(addr).or_insert_with(|| decode_brr(&ram[(addr as usize)..]).unwrap());
+        self.cache
+            .entry(addr)
+            .or_insert_with(|| decode_brr(&ram[(addr as usize)..]).unwrap());
         &self.cache[&addr]
     }
 }

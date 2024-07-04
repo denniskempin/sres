@@ -5,11 +5,6 @@
 //!
 //! Some functions are implemented for u8 and u16 using generics. This allows the opcode table
 //! to use the same implementation for operating on both u8 and u16 sized registers.
-use crate::common::address::Address;
-use crate::common::address::AddressU24;
-use crate::common::address::Wrap;
-use crate::common::uint::UInt;
-
 use super::operands::AddressMode;
 use super::operands::Operand;
 use super::status::StatusFlags;
@@ -17,6 +12,10 @@ use super::Cpu;
 use super::EmuVectorTable;
 use super::MainBus;
 use super::NativeVectorTable;
+use crate::common::address::Address;
+use crate::common::address::AddressU24;
+use crate::common::address::Wrap;
+use crate::common::uint::UInt;
 
 pub fn nop(cpu: &mut Cpu<impl MainBus>) {
     cpu.bus.cycle_io();

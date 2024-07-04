@@ -2,7 +2,8 @@ use intbits::Bits;
 
 use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
-use crate::common::debug_events::{ApuEvent, DebugEventCollectorRef};
+use crate::common::debug_events::ApuEvent;
+use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
 
