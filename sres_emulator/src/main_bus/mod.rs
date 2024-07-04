@@ -3,7 +3,6 @@ mod dma;
 mod multiplication;
 
 use dma::DmaController;
-use intbits::Bits;
 use log::trace;
 
 use self::multiplication::MultiplicationUnit;
@@ -18,7 +17,6 @@ use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U16Ext;
 use crate::components::cpu::MainBus;
-use crate::components::ppu::HVTimerMode;
 use crate::components::ppu::Ppu;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -41,10 +39,6 @@ pub struct MainBusImpl {
     pub ppu: Ppu,
     pub apu: Apu,
     pub multiplication: MultiplicationUnit,
-    pub nmi_enable: bool,
-    pub nmi_flag: bool,
-    pub nmi_interrupt: bool,
-    pub nmi_signaled: bool,
     pub joy1: u16,
     pub joy2: u16,
     pub mapping_mode: MappingMode,
@@ -67,10 +61,6 @@ impl MainBusImpl {
             apu: Apu::new(debug_event_collector.clone()),
             multiplication: MultiplicationUnit::new(),
             debug_event_collector,
-            nmi_enable: false,
-            nmi_interrupt: false,
-            nmi_flag: false,
-            nmi_signaled: false,
             joy1: 0,
             joy2: 0,
             mapping_mode: cartridge.mapping_mode,
@@ -86,8 +76,7 @@ impl MainBusImpl {
                 0x2100..=0x213F => self.ppu.bus_peek(addr),
                 0x2140..=0x217F => self.apu.bus_peek(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
-                0x4210 => Some(self.peek_rdnmi()),
-                0x4211..=0x4212 => self.ppu.timer.bus_peek(addr),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.timer.bus_peek(addr),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
                 0x4218 => Some(self.joy1.low_byte()),
                 0x4219 => Some(self.joy1.high_byte()),
@@ -108,8 +97,7 @@ impl MainBusImpl {
                 0x2100..=0x213F => self.ppu.bus_read(addr),
                 0x2140..=0x217F => self.apu.bus_read(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
-                0x4210 => self.read_rdnmi(),
-                0x4211..=0x4212 => self.ppu.timer.bus_read(addr),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.timer.bus_read(addr),
                 0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4016..=0x4017 => {
                     log::warn!("Serial Joypad not implemented");
@@ -153,10 +141,9 @@ impl MainBusImpl {
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.bus_write(addr, value),
                 0x2140..=0x217F => self.apu.bus_write(addr, value),
-                0x4200 => self.write_nmitimen(value),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
-                0x4207..=0x420A => self.ppu.timer.bus_write(addr, value),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.timer.bus_write(addr, value),
                 _ => {
                     self.debug_event_collector
                         .collect_event(DebugEvent::Error(format!(
@@ -184,69 +171,8 @@ impl MainBusImpl {
         }
     }
 
-    /// Register $4200: NMITIMEN - NMI, Timer and IRQ Enable/Flag
-    /// 7  bit  0
-    /// ---- ----
-    /// N.VH ...J
-    /// | ||    |
-    /// | ||    +- Joypad auto-read enable
-    /// | ++------ H/V timer IRQ:
-    /// |           00 = Disable timer
-    /// |           01 = IRQ when H counter == HTIME
-    /// |           10 = IRQ when V counter == VTIME and H counter == 0
-    /// |           11 = IRQ when V counter == VTIME and H counter == HTIME
-    /// +--------- Vblank NMI enable
-    fn write_nmitimen(&mut self, value: u8) {
-        self.nmi_enable = value.bit(7);
-        self.ppu.timer.timer_mode = match value.bits(4..=5) {
-            0b00 => HVTimerMode::Off,
-            0b01 => HVTimerMode::TriggerH,
-            0b10 => HVTimerMode::TriggerV,
-            0b11 => HVTimerMode::TriggerHV,
-            _ => unreachable!(),
-        };
-    }
-
-    /// Register $4210: RDNMI - Read NMI Flag
-    /// 7  bit  0
-    /// ---- ----
-    /// Nxxx VVVV
-    /// |||| ||||
-    /// |||| ++++- CPU version
-    /// |+++------ (Open bus)
-    /// +--------- Vblank flag
-    fn read_rdnmi(&mut self) -> u8 {
-        let value = self.peek_rdnmi();
-        if self.nmi_flag {
-            // Fake NMI hold, do not reset nmi flag for the first 2 cyles.
-            if !(self.ppu.timer.v == 225 && self.ppu.timer.h_counter <= 2) {
-                self.nmi_flag = false;
-            }
-        }
-        value
-    }
-
-    fn peek_rdnmi(&self) -> u8 {
-        if self.nmi_flag {
-            0b1111_0010
-        } else {
-            0b0111_0010
-        }
-    }
-
     fn advance_master_clock(&mut self, cycles: u64) {
         self.ppu.advance_master_clock(cycles);
-
-        if self.ppu.timer.vblank_detector.consume_rise() {
-            if self.nmi_enable {
-                self.nmi_interrupt = true;
-            }
-            self.nmi_flag = true;
-        }
-
-        if self.ppu.timer.vblank_detector.consume_fall() {
-            self.nmi_flag = false;
-        }
 
         if let Some((transfers, duration)) = self
             .dma_controller
@@ -302,10 +228,8 @@ impl Bus<AddressU24> for MainBusImpl {
 }
 
 impl MainBus for MainBusImpl {
-    fn check_nmi_interrupt(&mut self) -> bool {
-        let value = self.nmi_interrupt;
-        self.nmi_interrupt = false;
-        value
+    fn consume_nmi_interrupt(&mut self) -> bool {
+        self.ppu.timer.consume_nmi_interrupt()
     }
 
     fn consume_timer_interrupt(&mut self) -> bool {
@@ -430,7 +354,7 @@ fn hirom_memory_map(addr: AddressU24) -> MemoryBlock {
 
 #[cfg(test)]
 impl MainBus for crate::common::test_bus::TestBus<AddressU24> {
-    fn check_nmi_interrupt(&mut self) -> bool {
+    fn consume_nmi_interrupt(&mut self) -> bool {
         false
     }
 

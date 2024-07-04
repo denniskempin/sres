@@ -78,7 +78,7 @@ pub fn test_nmi_sub_cycle_accuracy() {
         // If the NMI bit is set, the negative status bit will be true.
         assert_eq!(cpu.status.negative, *expected_nmi);
         // For the first 4 cycles NMI will remain high, so the internal nmi_flag will still be set.
-        assert_eq!(cpu.bus.nmi_flag, *expected_internal_nmi);
+        assert_eq!(cpu.bus.ppu.timer.nmi_flag, *expected_internal_nmi);
     }
 }
 
