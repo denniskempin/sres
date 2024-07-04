@@ -8,6 +8,10 @@ mod test;
 
 use std::sync::atomic::Ordering;
 
+use self::opcode_table::InstructionDef;
+use self::operands::AddressMode;
+use self::operands::DecodedOperand;
+use self::status::Spc700StatusFlags;
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
 use crate::common::address::InstructionMeta;
@@ -18,11 +22,6 @@ use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::trace::Spc700TraceLine;
 use crate::common::uint::UInt;
-
-use self::opcode_table::InstructionDef;
-use self::operands::AddressMode;
-use self::operands::DecodedOperand;
-use self::status::Spc700StatusFlags;
 
 pub trait Spc700Bus: Bus<AddressU16> {
     fn master_cycle(&self) -> u64;

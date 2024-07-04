@@ -1,9 +1,8 @@
 mod brr;
 mod voice;
 
-use crate::common::uint::U8Ext;
-
 use self::voice::Voice;
+use crate::common::uint::U8Ext;
 
 pub struct SDsp {
     raw: [u8; 128],

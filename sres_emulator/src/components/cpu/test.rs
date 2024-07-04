@@ -16,15 +16,14 @@ use serde::Deserialize;
 use serde::Serialize;
 use xz2::read::XzDecoder;
 
+use super::Cpu;
+use super::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
 use crate::common::debug_events::dummy_collector;
 use crate::common::logging;
 use crate::common::test_bus::Cycle;
 use crate::common::test_bus::TestBus;
-
-use super::Cpu;
-use super::StatusFlags;
 
 const SKIP_OPCODES: &[u8] = &[
     0x44, // MVP test cases seem to follow a very different implementation

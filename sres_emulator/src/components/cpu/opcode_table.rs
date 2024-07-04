@@ -4,16 +4,15 @@
 //! the compiler specifically for that combination of instruction and address mode.
 //!
 //! To reduce repetitive code, macros are used to build those unique functions.
-use crate::common::address::Address;
-use crate::common::address::AddressU24;
-use crate::common::address::InstructionMeta;
-use crate::common::address::Wrap;
-
 use super::operands::AccessMode;
 use super::operands::AddressMode;
 use super::operands::Operand;
 use super::Cpu;
 use super::MainBus;
+use crate::common::address::Address;
+use crate::common::address::AddressU24;
+use crate::common::address::InstructionMeta;
+use crate::common::address::Wrap;
 
 /// An entry in the opcode table
 pub struct Instruction<BusT: MainBus> {

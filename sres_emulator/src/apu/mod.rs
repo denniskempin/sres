@@ -5,13 +5,12 @@ mod test;
 
 use log::debug;
 
+use self::apu_bus::ApuBus;
+pub use self::apu_bus::ApuBusEvent;
 use crate::common::address::AddressU24;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDspDebug;
 use crate::components::spc700::Spc700;
-
-use self::apu_bus::ApuBus;
-pub use self::apu_bus::ApuBusEvent;
 
 pub struct Apu {
     spc700: Spc700<ApuBus>,

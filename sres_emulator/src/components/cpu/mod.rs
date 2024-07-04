@@ -10,6 +10,9 @@ use std::sync::atomic::Ordering;
 
 use intbits::Bits;
 
+use self::opcode_table::build_opcode_table;
+use self::opcode_table::Instruction;
+pub use self::status::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
@@ -22,10 +25,6 @@ use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::trace::CpuTraceLine;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
-
-use self::opcode_table::build_opcode_table;
-use self::opcode_table::Instruction;
-pub use self::status::StatusFlags;
 
 pub trait MainBus: Bus<AddressU24> {
     fn check_nmi_interrupt(&mut self) -> bool;

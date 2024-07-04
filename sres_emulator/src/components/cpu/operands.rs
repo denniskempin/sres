@@ -2,15 +2,14 @@
 //!
 //! Each instruction in the [opcode table](build_opcode_table) has an associated
 //! address mode, which is decoded here to handle how the operand is loaded and stored.
+use super::Cpu;
+use super::MainBus;
+use super::STACK_BASE;
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
 use crate::common::uint::U16Ext;
 use crate::common::uint::UInt;
-
-use super::Cpu;
-use super::MainBus;
-use super::STACK_BASE;
 
 /// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]

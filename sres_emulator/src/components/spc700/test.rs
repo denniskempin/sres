@@ -16,16 +16,15 @@ use serde::Deserialize;
 use serde::Serialize;
 use xz2::read::XzDecoder;
 
+use super::Spc700;
+use super::Spc700Bus;
+use super::Spc700StatusFlags;
 use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
 use crate::common::debug_events::dummy_collector;
 use crate::common::logging;
 use crate::common::test_bus::Cycle;
 use crate::common::test_bus::TestBus;
-
-use super::Spc700;
-use super::Spc700Bus;
-use super::Spc700StatusFlags;
 
 #[rustfmt::skip]
 const SKIP_OPCODES: &[u8] = &[];

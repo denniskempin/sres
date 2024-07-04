@@ -305,9 +305,8 @@ fn format_range<T: PrimInt + UpperHex>(range: &Range<T>) -> String {
 
 #[cfg(test)]
 mod test {
-    use crate::common::constants::NativeVectorTable;
-
     use super::*;
+    use crate::common::constants::NativeVectorTable;
 
     #[test]
     fn test_parse_range() {
