@@ -88,7 +88,7 @@ fn cpu_log_line(
     label_normal(ui, format!("{:04X}", state.d));
     label_strong(ui, "DB");
     label_normal(ui, format!("{:02X}", state.db));
-    label_strong(ui, state.status.clone());
+    label_strong(ui, state.status.to_string());
 }
 
 fn spc700_log_line(

@@ -62,7 +62,7 @@ impl System {
         F: Fn(&Cpu<MainBusImpl>) -> bool,
     {
         loop {
-            if self.cpu.halt {
+            if self.cpu.halted() {
                 return ExecutionResult::Halt;
             }
 
@@ -87,7 +87,7 @@ impl System {
     }
 
     pub fn execute_until_halt(&mut self) -> ExecutionResult {
-        self.execute_until(|cpu| cpu.halt)
+        self.execute_until(|cpu| cpu.halted())
     }
 
     pub fn execute_frames(&mut self, count: u64) -> ExecutionResult {
@@ -99,7 +99,7 @@ impl System {
         self.debugger().enable();
         self.debugger().add_break_point(event.clone());
         let result = loop {
-            if self.cpu.halt {
+            if self.cpu.halted() {
                 break ExecutionResult::Halt;
             }
 

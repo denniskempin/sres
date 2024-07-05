@@ -76,7 +76,7 @@ pub fn test_nmi_sub_cycle_accuracy() {
         println!("after: {}", cpu.trace());
 
         // If the NMI bit is set, the negative status bit will be true.
-        assert_eq!(cpu.status.negative, *expected_nmi);
+        assert_eq!(cpu.trace().status.negative, *expected_nmi);
         // For the first 4 cycles NMI will remain high, so the internal nmi_flag will still be set.
         assert_eq!(cpu.bus.ppu.timer.nmi_flag, *expected_internal_nmi);
     }
@@ -319,7 +319,7 @@ fn run_test_rom(test_name: &str) -> Cpu<MainBusImpl> {
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.cpu.reset();
 
-    while !system.cpu.halt {
+    while !system.cpu.halted() {
         system.cpu.step();
     }
     system.cpu

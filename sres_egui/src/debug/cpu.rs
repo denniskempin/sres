@@ -9,23 +9,29 @@ use sres_emulator::System;
 use crate::debug::DebugCommand;
 
 pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
-    let cpu = &emulator.cpu;
+    let trace = &emulator.cpu.trace();
 
     ui.label(RichText::new("CPU").strong());
     ui.horizontal(|ui| {
-        ui.label(format!("A {:04X}", cpu.a.value));
+        ui.label(format!("A {:04X}", trace.a));
         ui.separator();
-        ui.label(format!("X {:04X}", cpu.x.value));
+        ui.label(format!("X {:04X}", trace.x));
         ui.separator();
-        ui.label(format!("Y {:04X}", cpu.y.value));
+        ui.label(format!("Y {:04X}", trace.y));
     });
     ui.horizontal(|ui| {
         ui.label("Status:");
-        ui.label(cpu.status.format_string(cpu.emulation_mode));
+        ui.label(trace.status.to_string());
     });
-    ui.label(format!("Cycle: {}", cpu.bus.ppu.timer.master_clock));
-    ui.label(format!("PC: {:}", cpu.pc));
-    ui.label(format!("NMI: {:}", cpu.bus.ppu.timer.nmi_interrupt));
+    ui.label(format!(
+        "Cycle: {}",
+        emulator.cpu.bus.ppu.timer.master_clock
+    ));
+    ui.label(format!("PC: {:}", trace.instruction.address));
+    ui.label(format!(
+        "NMI: {:}",
+        emulator.cpu.bus.ppu.timer.nmi_interrupt
+    ));
 }
 
 pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
@@ -103,9 +109,6 @@ pub fn debug_controls_widget(
             .clicked()
         {
             on_new_command(Some(DebugCommand::StepScanlines(1)));
-        }
-        if ui.add_enabled(paused, Button::new("To NMI")).clicked() {
-            on_new_command(Some(DebugCommand::RunToNmi));
         }
     });
 }
