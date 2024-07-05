@@ -270,6 +270,7 @@ pub fn breakpoints_widget(ui: &mut Ui, mut _debugger: RefMut<'_, Debugger>) {
     ui.horizontal_wrapped(|_ui| {});
 }
 
+#[allow(dead_code)]
 pub enum InternalLink {
     None,
     CpuMemory(AddressU24),
