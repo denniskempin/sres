@@ -4,7 +4,7 @@ use std::sync::Mutex;
 use std::sync::Once;
 
 use colored::*;
-use env_logger::filter::Filter;
+use env_logger::Logger;
 use log::LevelFilter;
 use log::Log;
 use log::Record;
@@ -22,15 +22,15 @@ static TRACE_CONTEXT_LINES: usize = 20;
 struct SresLogger {
     /// Contains the last `TRACE_CONTEXT_LINES` of trace-level logs.
     trace_logs: Mutex<VecDeque<String>>,
-    filter: Filter,
+    logger: Logger,
 }
 
 impl SresLogger {
-    pub fn new(filter: Filter) -> Self {
-        log::set_max_level(filter.filter());
+    pub fn new(logger: Logger) -> Self {
+        log::set_max_level(logger.filter());
         Self {
             trace_logs: Mutex::new(VecDeque::new()),
-            filter,
+            logger,
         }
     }
 
@@ -57,11 +57,11 @@ impl SresLogger {
 
 impl Log for SresLogger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        self.filter.enabled(metadata)
+        self.logger.enabled(metadata)
     }
 
     fn log(&self, record: &Record) {
-        if !self.filter.matches(record) {
+        if !self.logger.matches(record) {
             return;
         }
         let record_str = self.format_record(record);
@@ -88,9 +88,7 @@ impl Log for SresLogger {
 pub fn init() {
     ONCE_INIT.call_once(|| {
         let filter_config = std::env::var("SRES_LOG").unwrap_or("error".to_string());
-        let filter = env_logger::filter::Builder::new()
-            .parse(&filter_config)
-            .build();
+        let filter = env_logger::builder().parse_filters(&filter_config).build();
         log::set_boxed_logger(Box::new(SresLogger::new(filter))).unwrap();
     });
 }
@@ -105,9 +103,7 @@ pub fn test_init(verbose: bool) {
             }
             .to_string(),
         );
-        let filter = env_logger::filter::Builder::new()
-            .parse(&filter_config)
-            .build();
+        let filter = env_logger::builder().parse_filters(&filter_config).build();
         log::set_boxed_logger(Box::new(SresLogger::new(filter))).unwrap();
     });
 }

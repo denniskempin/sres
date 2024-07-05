@@ -1,4 +1,5 @@
 //! SNES BRR sample decoding
+#![allow(dead_code)]
 
 use core::fmt;
 use std::collections::HashMap;

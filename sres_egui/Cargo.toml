@@ -11,13 +11,13 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "1.0"
 argh = "0.1"
-eframe = "0.24"
-egui = "0.24"
+eframe = "0.27"
+egui = "0.27"
 sres_emulator = { path = "../sres_emulator" }
 tracing = "0.1"
 itertools = "*"
-puffin = "0.18"
-puffin_egui = "0.24"
+puffin = "0.19"
+puffin_egui = "0.27"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 strum = { version = "0.26", features = ["derive"] }
@@ -27,13 +27,13 @@ tracing-chrome = "0.7"
 tracing-subscriber = "0.3"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-base64 = "0.21"
+base64 = "0.22"
 console_error_panic_hook = "0.1"
 tracing-wasm = "0.2"
 wasm-bindgen-futures = "0.4"
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Storage"] }
-puffin = { version = "0.18", features = ["web"] }
+puffin = { version = "0.19", features = ["web"] }
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ['-O4']
