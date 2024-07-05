@@ -12,7 +12,7 @@ use intbits::Bits;
 
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
-pub use self::status::StatusFlags;
+use self::status::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
@@ -22,61 +22,25 @@ use crate::common::constants::NativeVectorTable;
 use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
+use crate::common::trace::CpuStatusFlags;
 use crate::common::trace::CpuTraceLine;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
 
-pub trait MainBus: Bus<AddressU24> {
-    fn consume_nmi_interrupt(&mut self) -> bool;
-    fn consume_timer_interrupt(&mut self) -> bool;
-    fn clock_info(&self) -> ClockInfo;
-}
-
-#[derive(Default)]
-pub struct VariableLengthRegister {
-    pub value: u16,
-}
-
-impl VariableLengthRegister {
-    fn set<T: UInt>(&mut self, value: T) {
-        match T::SIZE {
-            RegisterSize::U8 => {
-                self.value.set_bits(0..8, value.to_u8() as u16);
-            }
-            RegisterSize::U16 => {
-                self.value = value.to_u16();
-            }
-        }
-    }
-
-    fn get<T: UInt>(&self) -> T {
-        T::from_u16(self.value)
-    }
-}
-
-pub enum EmuVectorTable {
-    Cop = 0xFFF4,
-    Break = 0xFFF6,
-    Nmi = 0xFFFA,
-    Reset = 0xFFFC,
-    Irq = 0xFFFE,
-}
-
 pub struct Cpu<BusT: MainBus> {
     pub bus: BusT,
-    pub pc: AddressU24,
-    pub a: VariableLengthRegister,
-    pub x: VariableLengthRegister,
-    pub y: VariableLengthRegister,
-    pub s: u16,
-    pub d: u16,
-    pub db: u8,
-    pub status: StatusFlags,
-    pub emulation_mode: bool,
-    pub master_cycle: u64,
-    pub halt: bool,
+    pc: AddressU24,
+    a: VariableLengthRegister,
+    x: VariableLengthRegister,
+    y: VariableLengthRegister,
+    s: u16,
+    d: u16,
+    db: u8,
+    status: StatusFlags,
+    emulation_mode: bool,
+    halt: bool,
     instruction_table: [Instruction<BusT>; 256],
-    pub debug_event_collector: DebugEventCollectorRef,
+    debug_event_collector: DebugEventCollectorRef,
 }
 
 const STACK_BASE: u16 = 0;
@@ -94,7 +58,6 @@ impl<BusT: MainBus> Cpu<BusT> {
             status: StatusFlags::default(),
             pc: AddressU24::default(),
             emulation_mode: true,
-            master_cycle: 0,
             halt: false,
             instruction_table: build_opcode_table(),
             debug_event_collector,
@@ -114,11 +77,24 @@ impl<BusT: MainBus> Cpu<BusT> {
             s: self.s,
             d: self.d,
             db: self.db,
-            status: self.status.format_string(self.emulation_mode),
+            status: CpuStatusFlags {
+                negative: self.status.negative,
+                overflow: self.status.overflow,
+                accumulator_register_size: self.status.accumulator_register_size,
+                index_register_size_or_break: self.status.index_register_size_or_break,
+                decimal: self.status.decimal,
+                irq_disable: self.status.irq_disable,
+                zero: self.status.zero,
+                carry: self.status.carry,
+            },
             v: clock_info.v,
             h: clock_info.h_counter,
             f: clock_info.f,
         }
+    }
+
+    pub fn halted(&self) -> bool {
+        self.halt
     }
 
     /// Return the instruction meta data for the instruction at the given address
@@ -140,13 +116,6 @@ impl<BusT: MainBus> Cpu<BusT> {
             pc = new_pc;
             meta
         })
-    }
-
-    fn update_register_sizes(&mut self) {
-        if self.status.index_register_size_or_break {
-            self.x.value = self.x.get::<u8>() as u16;
-            self.y.value = self.y.get::<u8>() as u16;
-        }
     }
 
     pub fn reset(&mut self) {
@@ -176,6 +145,13 @@ impl<BusT: MainBus> Cpu<BusT> {
         }
         if !self.status.irq_disable && self.bus.consume_timer_interrupt() {
             self.interrupt(NativeVectorTable::Irq);
+        }
+    }
+
+    fn update_register_sizes(&mut self) {
+        if self.status.index_register_size_or_break {
+            self.x.value = self.x.get::<u8>() as u16;
+            self.y.value = self.y.get::<u8>() as u16;
         }
     }
 
@@ -250,6 +226,43 @@ impl<BusT: MainBus> Cpu<BusT> {
         self.status.negative = value.bit(T::N_BITS - 1);
         self.status.zero = value.is_zero();
     }
+}
+
+pub trait MainBus: Bus<AddressU24> {
+    fn consume_nmi_interrupt(&mut self) -> bool;
+    fn consume_timer_interrupt(&mut self) -> bool;
+    fn clock_info(&self) -> ClockInfo;
+}
+
+#[derive(Default)]
+struct VariableLengthRegister {
+    value: u16,
+}
+
+impl VariableLengthRegister {
+    fn set<T: UInt>(&mut self, value: T) {
+        match T::SIZE {
+            RegisterSize::U8 => {
+                self.value.set_bits(0..8, value.to_u8() as u16);
+            }
+            RegisterSize::U16 => {
+                self.value = value.to_u16();
+            }
+        }
+    }
+
+    fn get<T: UInt>(&self) -> T {
+        T::from_u16(self.value)
+    }
+}
+
+#[allow(dead_code)]
+enum EmuVectorTable {
+    Cop = 0xFFF4,
+    Break = 0xFFF6,
+    Nmi = 0xFFFA,
+    Reset = 0xFFFC,
+    Irq = 0xFFFE,
 }
 
 #[cfg(test)]

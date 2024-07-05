@@ -160,11 +160,6 @@ impl DebugUi {
                 };
                 emulator.execute_until(|_| true)
             }
-            DebugCommand::RunToNmi => {
-                self.command = None;
-                emulator
-                    .execute_until(|cpu| cpu.bus.ppu.timer.nmi_interrupt && !cpu.status.irq_disable)
-            }
         }
     }
 
@@ -242,7 +237,6 @@ pub enum DebugCommand {
     StepFrames(u32),
     StepInstructions(u32),
     StepScanlines(u32),
-    RunToNmi,
 }
 
 #[derive(Default)]

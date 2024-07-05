@@ -2,8 +2,10 @@
 //!
 //! Also a useful, compact format for debugging emulator execution.
 use std::fmt::Display;
+use std::fmt::Write;
 use std::str::FromStr;
 
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 
@@ -49,7 +51,7 @@ pub struct CpuTraceLine {
     pub s: u16,
     pub d: u16,
     pub db: u8,
-    pub status: String,
+    pub status: CpuStatusFlags,
     pub v: u64,
     pub h: u64,
     pub f: u64,
@@ -140,6 +142,61 @@ impl FromStr for CpuTraceLine {
     }
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CpuStatusFlags {
+    pub negative: bool,
+    pub overflow: bool,
+    pub accumulator_register_size: bool,
+    pub index_register_size_or_break: bool,
+    pub decimal: bool,
+    pub irq_disable: bool,
+    pub zero: bool,
+    pub carry: bool,
+}
+
+impl Display for CpuStatusFlags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char(if self.negative { 'N' } else { '.' })?;
+        f.write_char(if self.overflow { 'V' } else { '.' })?;
+        f.write_char(if self.accumulator_register_size {
+            'M'
+        } else {
+            '.'
+        })?;
+        f.write_char(if self.index_register_size_or_break {
+            'X'
+        } else {
+            '.'
+        })?;
+        f.write_char(if self.decimal { 'D' } else { '.' })?;
+        f.write_char(if self.irq_disable { 'I' } else { '.' })?;
+        f.write_char(if self.zero { 'Z' } else { '.' })?;
+        f.write_char(if self.carry { 'C' } else { '.' })?;
+        Ok(())
+    }
+}
+
+impl FromStr for CpuStatusFlags {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 8 {
+            bail!("StatusFlags string must be 8 characters long");
+        }
+        let mut chars = s.chars();
+        Ok(CpuStatusFlags {
+            negative: chars.next().unwrap() != '.',
+            overflow: chars.next().unwrap() != '.',
+            accumulator_register_size: chars.next().unwrap() != '.',
+            index_register_size_or_break: chars.next().unwrap() != '.',
+            decimal: chars.next().unwrap() != '.',
+            irq_disable: chars.next().unwrap() != '.',
+            zero: chars.next().unwrap() != '.',
+            carry: chars.next().unwrap() != '.',
+        })
+    }
+}
+
 // Representation of the state of [Spc700] in the same format as logged by BSNES.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Spc700TraceLine {
@@ -224,7 +281,7 @@ mod tests {
             s: 0x1ff3,
             d: 0x0000,
             db: 0x00,
-            status: ".VM..IZC".to_string(),
+            status: ".VM..IZC".parse().unwrap(),
             v: 261,
             h: 236,
             f: 32,
