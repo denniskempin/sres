@@ -9,7 +9,7 @@ use sres_emulator::System;
 use crate::debug::DebugCommand;
 
 pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
-    let trace = &emulator.cpu.trace();
+    let trace = &emulator.cpu.state();
 
     ui.label(RichText::new("CPU").strong());
     ui.horizontal(|ui| {

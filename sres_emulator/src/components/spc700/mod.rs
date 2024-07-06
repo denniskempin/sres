@@ -56,7 +56,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         cpu
     }
 
-    pub fn trace(&self) -> Spc700State {
+    pub fn state(&self) -> Spc700State {
         Spc700State {
             instruction: self.disassembly(self.pc).0,
             a: self.a,
@@ -88,7 +88,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     pub fn step(&mut self) {
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.debug_event_collector
-                .collect_apu_event(ApuEvent::Step(self.trace()));
+                .collect_apu_event(ApuEvent::Step(self.state()));
         }
 
         let opcode = self.bus.cycle_read_u8(self.pc);

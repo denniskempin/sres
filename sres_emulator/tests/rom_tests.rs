@@ -71,12 +71,12 @@ pub fn test_nmi_sub_cycle_accuracy() {
         }
 
         // Execute `bit $4210` instruction
-        println!("before: {}", cpu.trace());
+        println!("before: {}", cpu.state());
         cpu.step();
-        println!("after: {}", cpu.trace());
+        println!("after: {}", cpu.state());
 
         // If the NMI bit is set, the negative status bit will be true.
-        assert_eq!(cpu.trace().status.negative, *expected_nmi);
+        assert_eq!(cpu.state().status.negative, *expected_nmi);
         // For the first 4 cycles NMI will remain high, so the internal nmi_flag will still be set.
         assert_eq!(cpu.bus.ppu.timer.nmi_flag, *expected_internal_nmi);
     }
@@ -217,7 +217,7 @@ fn run_rom_test(test_name: &str) {
     system.cpu.reset();
 
     for (line_num, expected_line) in trace_log_from_xz_file(&trace_path).unwrap().enumerate() {
-        let actual_line = system.cpu.trace();
+        let actual_line = system.cpu.state();
         assert_cpu_trace_eq(line_num, expected_line.unwrap(), actual_line);
         system.execute_one_instruction();
     }

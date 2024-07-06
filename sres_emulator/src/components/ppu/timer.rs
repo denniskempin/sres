@@ -38,13 +38,13 @@ impl PpuTimer {
     }
 
     pub fn from_master_clock(master_clock: u64) -> Self {
-        let (f, v, h) = master_clock_to_fvh(master_clock);
+        let clock = ClockInfo::from_master_clock(master_clock);
 
         Self {
             master_clock,
-            v,
-            h_counter: h,
-            f,
+            v: clock.v,
+            h_counter: clock.h_counter,
+            f: clock.f,
             ..Default::default()
         }
     }
@@ -348,60 +348,9 @@ pub enum HVTimerMode {
     TriggerHV,
 }
 
-pub fn master_clock_to_fvh(master_clock: u64) -> (u64, u64, u64) {
-    let double_frame_length = 357368 + 357364;
-    let double_frames = master_clock / double_frame_length;
-    let mut f_remainder = master_clock % double_frame_length;
-    let mut f = double_frames * 2;
-    let odd_frame = f_remainder >= 357368;
-    if odd_frame {
-        f += 1;
-        f_remainder -= 357368;
-    }
-
-    let v = if odd_frame && f_remainder >= 1364 * 240 {
-        (f_remainder + 4) / 1364
-    } else {
-        f_remainder / 1364
-    };
-
-    let h_counter = if odd_frame && f_remainder >= 1364 * 240 + 1360 {
-        (f_remainder + 4) % 1364
-    } else {
-        f_remainder % 1364
-    };
-    (f, v, h_counter)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    pub fn fvh_to_master_clock(f: u64, v: u64, h: u64) -> u64 {
-        let f_cycles = if f % 2 == 0 {
-            f * 357366
-        } else {
-            f * 357366 + 2
-        };
-
-        let odd_frame = f % 2 == 1;
-        let v_cycles = if odd_frame && v > 240 {
-            v * 1364 - 4
-        } else {
-            v * 1364
-        };
-
-        f_cycles + v_cycles + h
-    }
-
-    #[test]
-    fn test_fvh_master_clock_conversion() {
-        for master_clock in 0..=10000000 {
-            let (f, v, h) = master_clock_to_fvh(master_clock);
-            let actual_master_clock = fvh_to_master_clock(f, v, h);
-            assert_eq!(master_clock, actual_master_clock);
-        }
-    }
 
     /// Log of (v, h) from bsnes executing nop's. 14 master cycles between each step.
     #[rustfmt::skip]
