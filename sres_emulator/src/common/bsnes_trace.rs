@@ -21,7 +21,7 @@ impl Display for CpuState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} {} V:{:03} H:{:03} F:{:02}",
+            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} {} V:{:03} H:{:04} F:{:02}",
             u32::from(self.instruction.address),
             self.instruction.operation,
             self.instruction.operand_str.as_deref().unwrap_or_default(),
@@ -59,7 +59,9 @@ impl FromStr for CpuState {
 
         // BSNES can output h in clocks instead of pixels. This will require an additional character
         // for H: and shifts F: by one index.
-        let is_hcounter = s[94..=95].trim() == "F:";
+        if s[94..=95].trim() != "F:" {
+            bail!("Trace format using h lines instead of h dots.");
+        }
         let operand_str = s[11..21].trim().to_string();
         Ok(CpuState {
             instruction: InstructionMeta {
@@ -93,10 +95,8 @@ impl FromStr for CpuState {
             db: u8::from_str_radix(&s[69..71], 16).with_context(|| "db")?,
             status: s[72..80].trim().parse().with_context(|| "status")?,
             v: u64::from_str(s[83..86].trim()).with_context(|| "v")?,
-            h: u64::from_str(s[89..(if is_hcounter { 94 } else { 93 })].trim())
-                .with_context(|| "h")?,
-            f: u64::from_str(s[(if is_hcounter { 96 } else { 95 })..].trim())
-                .with_context(|| "f")?,
+            h: u64::from_str(s[89..94].trim()).with_context(|| "h")?,
+            f: u64::from_str(s[96..].trim()).with_context(|| "f")?,
         })
     }
 }
@@ -195,7 +195,7 @@ mod tests {
     use super::*;
     use crate::common::address::AddressU24;
 
-    static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:236 F:32";
+    static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:0236 F:32";
 
     fn example_trace() -> CpuState {
         CpuState {
