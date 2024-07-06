@@ -9,7 +9,7 @@ use sres_emulator::System;
 use crate::debug::DebugCommand;
 
 pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
-    let trace = &emulator.cpu.state();
+    let trace = &emulator.cpu.debug().state();
 
     ui.label(RichText::new("CPU").strong());
     ui.horizontal(|ui| {
@@ -40,7 +40,7 @@ pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
     for trace_line in emulator.debugger().cpu_trace().skip(100) {
         disassembly_line(ui, trace_line.instruction.clone(), false);
     }
-    for (idx, meta) in emulator.cpu.peek_next_operations(20).enumerate() {
+    for (idx, meta) in emulator.cpu.debug().peek_next_operations(20).enumerate() {
         disassembly_line(ui, meta, idx == 0);
     }
 }

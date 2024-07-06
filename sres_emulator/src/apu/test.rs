@@ -7,7 +7,7 @@ use crate::components::spc700::Spc700;
 use crate::components::spc700::Spc700Bus;
 
 fn assert_state(spc700: &Spc700<impl Spc700Bus>, expected_state: &str) {
-    let mut actual = spc700.state();
+    let mut actual = spc700.debug().state();
     let mut expected = Spc700State::from_str(expected_state).unwrap();
     println!("{}", actual);
     actual.instruction.operation = String::new();
