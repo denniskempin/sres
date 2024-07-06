@@ -29,7 +29,7 @@ pub trait Spc700Bus: Bus<AddressU16> {
 
 pub struct Spc700<BusT: Spc700Bus> {
     pub bus: BusT,
-    pub debug_event_collector: DebugEventCollectorRef,
+    debug_event_collector: DebugEventCollectorRef,
     opcode_table: [InstructionDef<BusT>; 256],
     pc: AddressU16,
     a: u8,
@@ -56,27 +56,14 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         cpu
     }
 
-    pub fn state(&self) -> Spc700State {
-        Spc700State {
-            instruction: self.disassembly(self.pc).0,
-            a: self.a,
-            x: self.x,
-            y: self.y,
-            sp: AddressU16(0x0100 + self.sp as u16),
-            status: self.status.to_string(),
-        }
+    pub fn debug(&self) -> Spc700Debug<'_, BusT> {
+        Spc700Debug(self)
     }
 
     pub fn reset(&mut self) {
         self.pc = AddressU16(0xFFC0);
         self.sp = 0xef;
         self.status.zero = true;
-    }
-
-    pub fn disassembly(&self, addr: AddressU16) -> (InstructionMeta<AddressU16>, AddressU16) {
-        let opcode = self.bus.peek_u8(addr).unwrap_or_default();
-        let instruction = &self.opcode_table[opcode as usize];
-        (instruction.disassembly)(self, addr)
     }
 
     pub fn catch_up_to_master_clock(&mut self, master_cycles: u64) {
@@ -88,7 +75,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     pub fn step(&mut self) {
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.debug_event_collector
-                .collect_apu_event(ApuEvent::Step(self.state()));
+                .collect_apu_event(ApuEvent::Step(self.debug().state()));
         }
 
         let opcode = self.bus.cycle_read_u8(self.pc);
@@ -137,5 +124,26 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         let value = self.bus.cycle_read_u16(self.pc, Wrap::NoWrap);
         self.pc = self.pc.add(2_u8, Wrap::NoWrap);
         value
+    }
+}
+
+pub struct Spc700Debug<'a, BusT: Spc700Bus>(&'a Spc700<BusT>);
+
+impl<'a, BusT: Spc700Bus> Spc700Debug<'a, BusT> {
+    pub fn state(&self) -> Spc700State {
+        Spc700State {
+            instruction: self.disassembly(self.0.pc).0,
+            a: self.0.a,
+            x: self.0.x,
+            y: self.0.y,
+            sp: AddressU16(0x0100 + self.0.sp as u16),
+            status: self.0.status.to_string(),
+        }
+    }
+
+    pub fn disassembly(&self, addr: AddressU16) -> (InstructionMeta<AddressU16>, AddressU16) {
+        let opcode = self.0.bus.peek_u8(addr).unwrap_or_default();
+        let instruction = &self.0.opcode_table[opcode as usize];
+        (instruction.disassembly)(self.0, addr)
     }
 }

@@ -66,53 +66,8 @@ impl<BusT: MainBus> Cpu<BusT> {
         cpu
     }
 
-    pub fn state(&self) -> CpuState {
-        let (instruction, _) = self.load_instruction_meta(self.pc);
-        CpuState {
-            instruction,
-            a: self.a.value,
-            x: self.x.value,
-            y: self.y.value,
-            s: self.s,
-            d: self.d,
-            db: self.db,
-            status: CpuStatusFlags {
-                negative: self.status.negative,
-                overflow: self.status.overflow,
-                accumulator_register_size: self.status.accumulator_register_size,
-                index_register_size_or_break: self.status.index_register_size_or_break,
-                decimal: self.status.decimal,
-                irq_disable: self.status.irq_disable,
-                zero: self.status.zero,
-                carry: self.status.carry,
-            },
-            clock: self.bus.clock_info(),
-        }
-    }
-
     pub fn halted(&self) -> bool {
         self.halt
-    }
-
-    /// Return the instruction meta data for the instruction at the given address
-    pub fn load_instruction_meta(
-        &self,
-        addr: AddressU24,
-    ) -> (InstructionMeta<AddressU24>, AddressU24) {
-        let opcode = self.bus.peek_u8(addr).unwrap_or_default();
-        (self.instruction_table[opcode as usize].meta)(self, addr)
-    }
-
-    pub fn peek_next_operations(
-        &self,
-        count: usize,
-    ) -> impl Iterator<Item = InstructionMeta<AddressU24>> + '_ {
-        let mut pc = self.pc;
-        (0..count).map(move |_| {
-            let (meta, new_pc) = self.load_instruction_meta(pc);
-            pc = new_pc;
-            meta
-        })
     }
 
     pub fn reset(&mut self) {
@@ -132,7 +87,7 @@ impl<BusT: MainBus> Cpu<BusT> {
     pub fn step(&mut self) {
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.debug_event_collector
-                .collect_cpu_event(CpuEvent::Step(self.state()));
+                .collect_cpu_event(CpuEvent::Step(self.debug().state()));
         }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
@@ -143,6 +98,10 @@ impl<BusT: MainBus> Cpu<BusT> {
         if !self.status.irq_disable && self.bus.consume_timer_interrupt() {
             self.interrupt(NativeVectorTable::Irq);
         }
+    }
+
+    pub fn debug(&self) -> CpuDebug<'_, BusT> {
+        CpuDebug(self)
     }
 
     fn update_register_sizes(&mut self) {
@@ -260,6 +219,55 @@ enum EmuVectorTable {
     Nmi = 0xFFFA,
     Reset = 0xFFFC,
     Irq = 0xFFFE,
+}
+
+pub struct CpuDebug<'a, BusT: MainBus>(&'a Cpu<BusT>);
+
+impl<'a, BusT: MainBus> CpuDebug<'a, BusT> {
+    pub fn state(&self) -> CpuState {
+        let (instruction, _) = self.load_instruction_meta(self.0.pc);
+        CpuState {
+            instruction,
+            a: self.0.a.value,
+            x: self.0.x.value,
+            y: self.0.y.value,
+            s: self.0.s,
+            d: self.0.d,
+            db: self.0.db,
+            status: CpuStatusFlags {
+                negative: self.0.status.negative,
+                overflow: self.0.status.overflow,
+                accumulator_register_size: self.0.status.accumulator_register_size,
+                index_register_size_or_break: self.0.status.index_register_size_or_break,
+                decimal: self.0.status.decimal,
+                irq_disable: self.0.status.irq_disable,
+                zero: self.0.status.zero,
+                carry: self.0.status.carry,
+            },
+            clock: self.0.bus.clock_info(),
+        }
+    }
+
+    /// Return the instruction meta data for the instruction at the given address
+    pub fn load_instruction_meta(
+        &self,
+        addr: AddressU24,
+    ) -> (InstructionMeta<AddressU24>, AddressU24) {
+        let opcode = self.0.bus.peek_u8(addr).unwrap_or_default();
+        (self.0.instruction_table[opcode as usize].meta)(self.0, addr)
+    }
+
+    pub fn peek_next_operations(
+        &self,
+        count: usize,
+    ) -> impl Iterator<Item = InstructionMeta<AddressU24>> + '_ {
+        let mut pc = self.0.pc;
+        (0..count).map(move |_| {
+            let (meta, new_pc) = self.load_instruction_meta(pc);
+            pc = new_pc;
+            meta
+        })
+    }
 }
 
 #[cfg(test)]

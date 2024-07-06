@@ -142,7 +142,8 @@ fn run_tomharte_test(test_name: &str) {
         actual_state.step();
 
         // Compare before asserting to print additional information on failures
-        let state_matches = actual_state.state().to_string() == expected_state.state().to_string();
+        let state_matches =
+            actual_state.debug().state().to_string() == expected_state.debug().state().to_string();
         let memory_matches = actual_state.bus.memory == expected_state.bus.memory;
         let cycles_match = if IGNORE_CYCLE_DETAILS.contains(&opcode) {
             actual_state.bus.cycles.len() == test_case.cycles().len()
@@ -161,13 +162,13 @@ fn run_tomharte_test(test_name: &str) {
         println!(
             "Case {:02X}: {}",
             opcode,
-            test_case.initial.create_spc700().state()
+            test_case.initial.create_spc700().debug().state()
         );
         println!(
             "Result: {}",
             StrComparison::new(
-                &actual_state.state().to_string(),
-                &expected_state.state().to_string()
+                &actual_state.debug().state().to_string(),
+                &expected_state.debug().state().to_string()
             )
         );
         println!(
