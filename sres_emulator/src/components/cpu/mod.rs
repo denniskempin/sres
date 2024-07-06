@@ -66,9 +66,8 @@ impl<BusT: MainBus> Cpu<BusT> {
         cpu
     }
 
-    pub fn trace(&self) -> CpuState {
+    pub fn state(&self) -> CpuState {
         let (instruction, _) = self.load_instruction_meta(self.pc);
-        let clock_info = self.bus.clock_info();
         CpuState {
             instruction,
             a: self.a.value,
@@ -87,9 +86,7 @@ impl<BusT: MainBus> Cpu<BusT> {
                 zero: self.status.zero,
                 carry: self.status.carry,
             },
-            v: clock_info.v,
-            h: clock_info.h_counter,
-            f: clock_info.f,
+            clock: self.bus.clock_info(),
         }
     }
 
@@ -135,7 +132,7 @@ impl<BusT: MainBus> Cpu<BusT> {
     pub fn step(&mut self) {
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.debug_event_collector
-                .collect_cpu_event(CpuEvent::Step(self.trace()));
+                .collect_cpu_event(CpuEvent::Step(self.state()));
         }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);

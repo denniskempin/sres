@@ -11,6 +11,7 @@ use anyhow::Result;
 
 use crate::common::address::AddressU16;
 
+use super::system::ClockInfo;
 use super::system::CpuState;
 use super::system::CpuStatusFlags;
 use super::system::InstructionMeta;
@@ -37,9 +38,9 @@ impl Display for CpuState {
             self.d,
             self.db,
             self.status,
-            self.v,
-            self.h,
-            self.f,
+            self.clock.v,
+            self.clock.h_counter,
+            self.clock.f,
         )
     }
 }
@@ -94,9 +95,11 @@ impl FromStr for CpuState {
             d: u16::from_str_radix(&s[61..65], 16).with_context(|| "d")?,
             db: u8::from_str_radix(&s[69..71], 16).with_context(|| "db")?,
             status: s[72..80].trim().parse().with_context(|| "status")?,
-            v: u64::from_str(s[83..86].trim()).with_context(|| "v")?,
-            h: u64::from_str(s[89..94].trim()).with_context(|| "h")?,
-            f: u64::from_str(s[96..].trim()).with_context(|| "f")?,
+            clock: ClockInfo::from_vhf(
+                u64::from_str(s[83..86].trim()).with_context(|| "v")?,
+                u64::from_str(s[89..94].trim()).with_context(|| "h")?,
+                u64::from_str(s[96..].trim()).with_context(|| "f")?,
+            ),
         })
     }
 }
@@ -218,9 +221,12 @@ mod tests {
             d: 0x0000,
             db: 0x00,
             status: ".VM..IZC".parse().unwrap(),
-            v: 261,
-            h: 236,
-            f: 32,
+            clock: ClockInfo {
+                master_clock: 11791952,
+                v: 261,
+                h_counter: 236,
+                f: 32,
+            },
         }
     }
 
