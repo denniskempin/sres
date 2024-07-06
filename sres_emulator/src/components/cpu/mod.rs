@@ -14,16 +14,16 @@ use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
 use self::status::StatusFlags;
 use crate::common::address::AddressU24;
-use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
-use crate::common::constants::ClockInfo;
-use crate::common::constants::NativeVectorTable;
 use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
-use crate::common::trace::CpuStatusFlags;
-use crate::common::trace::CpuTraceLine;
+use crate::common::system::ClockInfo;
+use crate::common::system::CpuState;
+use crate::common::system::CpuStatusFlags;
+use crate::common::system::InstructionMeta;
+use crate::common::system::NativeVectorTable;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
 
@@ -66,10 +66,10 @@ impl<BusT: MainBus> Cpu<BusT> {
         cpu
     }
 
-    pub fn trace(&self) -> CpuTraceLine {
+    pub fn trace(&self) -> CpuState {
         let (instruction, _) = self.load_instruction_meta(self.pc);
         let clock_info = self.bus.clock_info();
-        CpuTraceLine {
+        CpuState {
             instruction,
             a: self.a.value,
             x: self.x.value,

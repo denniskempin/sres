@@ -12,6 +12,7 @@ pub trait Bus<AddressT: Address> {
     fn cycle_read_u8(&mut self, addr: AddressT) -> u8;
     fn cycle_write_u8(&mut self, addr: AddressT, value: u8);
     fn reset(&mut self);
+
     #[inline]
     fn cycle_read_u16(&mut self, addr: AddressT, wrap: Wrap) -> u16 {
         u16::from_le_bytes([

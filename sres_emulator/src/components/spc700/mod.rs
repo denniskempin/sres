@@ -14,13 +14,13 @@ use self::operands::DecodedOperand;
 use self::status::Spc700StatusFlags;
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
-use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::debug_events::ApuEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
-use crate::common::trace::Spc700TraceLine;
+use crate::common::system::InstructionMeta;
+use crate::common::system::Spc700State;
 use crate::common::uint::UInt;
 
 pub trait Spc700Bus: Bus<AddressU16> {
@@ -56,8 +56,8 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         cpu
     }
 
-    pub fn trace(&self) -> Spc700TraceLine {
-        Spc700TraceLine {
+    pub fn trace(&self) -> Spc700State {
+        Spc700State {
             instruction: self.disassembly(self.pc).0,
             a: self.a,
             x: self.x,

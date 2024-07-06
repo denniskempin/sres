@@ -6,9 +6,9 @@ use std::sync::atomic::AtomicBool;
 
 use crate::common::address::AddressU16;
 use crate::common::address::AddressU24;
-use crate::common::constants::NativeVectorTable;
-use crate::common::trace::CpuTraceLine;
-use crate::common::trace::Spc700TraceLine;
+use crate::common::system::CpuState;
+use crate::common::system::NativeVectorTable;
+use crate::common::system::Spc700State;
 
 pub static DEBUG_EVENTS_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -21,7 +21,7 @@ pub enum DebugEvent {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CpuEvent {
-    Step(CpuTraceLine),
+    Step(CpuState),
     Interrupt(NativeVectorTable),
     Read(AddressU24, u8),
     Write(AddressU24, u8),
@@ -29,7 +29,7 @@ pub enum CpuEvent {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ApuEvent {
-    Step(Spc700TraceLine),
+    Step(Spc700State),
     Read(AddressU16, u8),
     Write(AddressU16, u8),
 }

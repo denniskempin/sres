@@ -14,8 +14,8 @@ use sres_emulator::cartridge::Cartridge;
 use sres_emulator::common::address::Wrap;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::logging;
-use sres_emulator::common::memory::format_memory;
-use sres_emulator::common::trace::CpuTraceLine;
+use sres_emulator::common::system::CpuState;
+use sres_emulator::common::util::format_memory;
 use sres_emulator::components::cpu::Cpu;
 use sres_emulator::main_bus::MainBusImpl;
 use sres_emulator::System;
@@ -223,7 +223,7 @@ fn run_rom_test(test_name: &str) {
     }
 }
 
-fn assert_cpu_trace_eq(i: usize, mut expected: CpuTraceLine, mut actual: CpuTraceLine) {
+fn assert_cpu_trace_eq(i: usize, mut expected: CpuState, mut actual: CpuState) {
     // Disassembly for branch instructions prints the absolute operand address, not the
     // relative address.
     if expected.instruction.operation.starts_with('b') && expected.instruction.operation != "bit" {
@@ -325,7 +325,7 @@ fn run_test_rom(test_name: &str) -> Cpu<MainBusImpl> {
     system.cpu
 }
 
-pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<CpuTraceLine>>> {
+pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<CpuState>>> {
     use xz2::read::XzDecoder;
     let file = File::open(path)?;
     let decoder = XzDecoder::new(file);

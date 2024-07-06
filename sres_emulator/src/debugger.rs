@@ -12,13 +12,13 @@ use std::sync::atomic::Ordering;
 use num_traits::PrimInt;
 
 use crate::common::address::AddressU24;
-use crate::common::constants::NativeVectorTable;
 use crate::common::debug_events::ApuEvent;
 use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollector;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
-use crate::common::trace::CpuTraceLine;
+use crate::common::system::CpuState;
+use crate::common::system::NativeVectorTable;
 use crate::common::util::RingBuffer;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -167,7 +167,7 @@ impl Debugger {
     }
 
     /// Frontend facing API
-    pub fn cpu_trace(&self) -> impl Iterator<Item = &CpuTraceLine> {
+    pub fn cpu_trace(&self) -> impl Iterator<Item = &CpuState> {
         self.log.iter().filter_map(|line| match line {
             DebugEvent::Cpu(CpuEvent::Step(cpu)) => Some(cpu),
             _ => None,
@@ -306,7 +306,7 @@ fn format_range<T: PrimInt + UpperHex>(range: &Range<T>) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::common::constants::NativeVectorTable;
+    use crate::common::system::NativeVectorTable;
 
     #[test]
     fn test_parse_range() {

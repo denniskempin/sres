@@ -10,54 +10,13 @@ use anyhow::Context;
 use anyhow::Result;
 
 use crate::common::address::AddressU16;
-use crate::common::address::AddressU24;
-use crate::common::address::InstructionMeta;
 
-#[allow(dead_code)]
-pub enum TraceLine {
-    Cpu(CpuTraceLine),
-    Spc700(Spc700TraceLine),
-}
+use super::system::CpuState;
+use super::system::CpuStatusFlags;
+use super::system::InstructionMeta;
+use super::system::Spc700State;
 
-impl FromStr for TraceLine {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        if s.starts_with("..") {
-            Ok(TraceLine::Spc700(s.parse()?))
-        } else {
-            Ok(TraceLine::Cpu(s.parse()?))
-        }
-    }
-}
-
-impl Display for TraceLine {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TraceLine::Cpu(line) => write!(f, "{}", line),
-            TraceLine::Spc700(line) => write!(f, "{}", line),
-        }
-    }
-}
-
-/// Represents a snapshot of the current state of the system.
-/// Can be formatted and parsed in the BSNES trace format to allow comparison to BSNES.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct CpuTraceLine {
-    pub instruction: InstructionMeta<AddressU24>,
-    pub a: u16,
-    pub x: u16,
-    pub y: u16,
-    pub s: u16,
-    pub d: u16,
-    pub db: u8,
-    pub status: CpuStatusFlags,
-    pub v: u64,
-    pub h: u64,
-    pub f: u64,
-}
-
-impl Display for CpuTraceLine {
+impl Display for CpuState {
     /// Format a trace object into a BSNES trace line
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -85,7 +44,7 @@ impl Display for CpuTraceLine {
     }
 }
 
-impl FromStr for CpuTraceLine {
+impl FromStr for CpuState {
     type Err = anyhow::Error;
 
     /// Parse a BSNES trace line into a Trace object
@@ -102,7 +61,7 @@ impl FromStr for CpuTraceLine {
         // for H: and shifts F: by one index.
         let is_hcounter = s[94..=95].trim() == "F:";
         let operand_str = s[11..21].trim().to_string();
-        Ok(CpuTraceLine {
+        Ok(CpuState {
             instruction: InstructionMeta {
                 address: u32::from_str_radix(&s[0..6], 16)
                     .with_context(|| "pc")?
@@ -140,18 +99,6 @@ impl FromStr for CpuTraceLine {
                 .with_context(|| "f")?,
         })
     }
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct CpuStatusFlags {
-    pub negative: bool,
-    pub overflow: bool,
-    pub accumulator_register_size: bool,
-    pub index_register_size_or_break: bool,
-    pub decimal: bool,
-    pub irq_disable: bool,
-    pub zero: bool,
-    pub carry: bool,
 }
 
 impl Display for CpuStatusFlags {
@@ -197,18 +144,7 @@ impl FromStr for CpuStatusFlags {
     }
 }
 
-// Representation of the state of [Spc700] in the same format as logged by BSNES.
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct Spc700TraceLine {
-    pub instruction: InstructionMeta<AddressU16>,
-    pub a: u8,
-    pub x: u8,
-    pub y: u8,
-    pub sp: AddressU16,
-    pub status: String,
-}
-
-impl FromStr for Spc700TraceLine {
+impl FromStr for Spc700State {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self> {
@@ -232,7 +168,7 @@ impl FromStr for Spc700TraceLine {
     }
 }
 
-impl Display for Spc700TraceLine {
+impl Display for Spc700State {
     /// Format a trace object into a BSNES trace line
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -261,8 +197,8 @@ mod tests {
 
     static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:236 F:32";
 
-    fn example_trace() -> CpuTraceLine {
-        CpuTraceLine {
+    fn example_trace() -> CpuState {
+        CpuState {
             instruction: InstructionMeta {
                 address: AddressU24 {
                     bank: 0,
@@ -291,7 +227,7 @@ mod tests {
     #[test]
     pub fn test_from_str() {
         assert_eq!(
-            EXAMPLE_BSNES_TRACE.parse::<CpuTraceLine>().unwrap(),
+            EXAMPLE_BSNES_TRACE.parse::<CpuState>().unwrap(),
             example_trace()
         );
     }
@@ -304,8 +240,8 @@ mod tests {
     static EXAMPLE_SPC700_TRACE: &str =
         r"..ffe2 mov   ($000)+y, a       A:8f X:cc Y:f9 SP:01ef YA:f98f N.....ZC";
 
-    fn example_spc700_trace() -> Spc700TraceLine {
-        Spc700TraceLine {
+    fn example_spc700_trace() -> Spc700State {
+        Spc700State {
             instruction: InstructionMeta {
                 address: AddressU16(0xffe2),
                 operation: "mov".to_string(),
@@ -323,7 +259,7 @@ mod tests {
     #[test]
     pub fn test_spc700_from_str() {
         assert_eq!(
-            EXAMPLE_SPC700_TRACE.parse::<Spc700TraceLine>().unwrap(),
+            EXAMPLE_SPC700_TRACE.parse::<Spc700State>().unwrap(),
             example_spc700_trace()
         );
     }

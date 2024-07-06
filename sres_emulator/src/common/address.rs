@@ -160,12 +160,3 @@ impl Display for AddressU16 {
         write!(f, "${:04X}", self.0)
     }
 }
-
-/// Metadata about a decoded instruction. Used to generate disassembly.
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub struct InstructionMeta<AddressT: Address> {
-    pub address: AddressT,
-    pub operation: String,
-    pub operand_str: Option<String>,
-    pub effective_addr: Option<AddressT>,
-}

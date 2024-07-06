@@ -3,7 +3,7 @@
 use intbits::Bits;
 
 use crate::common::address::AddressU24;
-use crate::common::constants::ClockInfo;
+use crate::common::system::ClockInfo;
 use crate::common::uint::U16Ext;
 use crate::common::util::EdgeDetector;
 

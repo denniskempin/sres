@@ -3,7 +3,7 @@ use egui::Color32;
 use egui::RichText;
 use egui::Ui;
 use sres_emulator::common::address::Address;
-use sres_emulator::common::address::InstructionMeta;
+use sres_emulator::common::system::InstructionMeta;
 use sres_emulator::System;
 
 use crate::debug::DebugCommand;

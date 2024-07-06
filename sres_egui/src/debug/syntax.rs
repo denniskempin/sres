@@ -59,7 +59,7 @@ pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
 
 fn cpu_log_line(
     ui: &mut Ui,
-    state: &sres_emulator::common::trace::CpuTraceLine,
+    state: &sres_emulator::common::system::CpuState,
     selected: &mut InternalLink,
 ) {
     label_cpu_pc(ui, state.instruction.address, selected);
@@ -93,7 +93,7 @@ fn cpu_log_line(
 
 fn spc700_log_line(
     ui: &mut Ui,
-    state: &sres_emulator::common::trace::Spc700TraceLine,
+    state: &sres_emulator::common::system::Spc700State,
     selected: &mut InternalLink,
 ) {
     label_spc(ui);
