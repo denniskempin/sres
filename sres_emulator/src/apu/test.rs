@@ -2,13 +2,13 @@ use std::str::FromStr;
 
 use super::apu_bus::ApuBus;
 use crate::common::debug_events::dummy_collector;
-use crate::common::trace::Spc700TraceLine;
+use crate::common::system::Spc700State;
 use crate::components::spc700::Spc700;
 use crate::components::spc700::Spc700Bus;
 
 fn assert_state(spc700: &Spc700<impl Spc700Bus>, expected_state: &str) {
     let mut actual = spc700.trace();
-    let mut expected = Spc700TraceLine::from_str(expected_state).unwrap();
+    let mut expected = Spc700State::from_str(expected_state).unwrap();
     println!("{}", actual);
     actual.instruction.operation = String::new();
     expected.instruction.operation = String::new();

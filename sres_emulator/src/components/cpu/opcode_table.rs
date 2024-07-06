@@ -11,8 +11,8 @@ use super::Cpu;
 use super::MainBus;
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
-use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
+use crate::common::system::InstructionMeta;
 
 /// An entry in the opcode table
 pub struct Instruction<BusT: MainBus> {

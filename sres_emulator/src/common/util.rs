@@ -1,6 +1,8 @@
 //! General utility functions and types.
 use std::collections::vec_deque::Iter;
 use std::collections::VecDeque;
+use std::io::BufWriter;
+use std::io::Write;
 
 #[derive(Clone)]
 pub struct RingBuffer<T, const N: usize> {
@@ -81,4 +83,30 @@ impl Default for EdgeDetector {
     fn default() -> Self {
         Self::new()
     }
+}
+
+pub fn format_memory(memory: &[u8]) -> String {
+    let mut writer = BufWriter::new(Vec::new());
+    for chunks in memory.chunks(16) {
+        for chunk in chunks {
+            write!(&mut writer, "{:02X} ", *chunk).unwrap();
+        }
+        writeln!(&mut writer).unwrap();
+    }
+
+    let bytes = writer.into_inner().unwrap();
+    String::from_utf8(bytes).unwrap()
+}
+
+pub fn format_memory_u16(memory: &[u16]) -> String {
+    let mut writer = BufWriter::new(Vec::new());
+    for chunks in memory.chunks(16) {
+        for chunk in chunks {
+            write!(&mut writer, "{:04X} ", *chunk).unwrap();
+        }
+        writeln!(&mut writer).unwrap();
+    }
+
+    let bytes = writer.into_inner().unwrap();
+    String::from_utf8(bytes).unwrap()
 }
