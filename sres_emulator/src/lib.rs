@@ -12,6 +12,7 @@ use std::ops::Deref;
 use std::rc::Rc;
 
 use common::debug_events::DebugEventCollectorRef;
+use components::cpu::MainBus;
 
 use crate::apu::ApuDebug;
 use crate::cartridge::Cartridge;
@@ -70,7 +71,7 @@ impl System {
             self.cpu
                 .bus
                 .apu
-                .catch_up_to_master_clock(self.cpu.bus.ppu.timer.master_clock);
+                .catch_up_to_master_clock(self.cpu.bus.clock_info().master_clock);
 
             if let Some(break_reason) = self.debugger().take_break_reason() {
                 return ExecutionResult::Break(break_reason);
@@ -91,8 +92,8 @@ impl System {
     }
 
     pub fn execute_frames(&mut self, count: u64) -> ExecutionResult {
-        let target_frame = self.cpu.bus.ppu.timer.f + count;
-        self.execute_until(|cpu| cpu.bus.ppu.timer.f >= target_frame)
+        let target_frame = self.cpu.bus.clock_info().f + count;
+        self.execute_until(|cpu| cpu.bus.clock_info().f >= target_frame)
     }
 
     pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {
@@ -107,7 +108,7 @@ impl System {
             self.cpu
                 .bus
                 .apu
-                .catch_up_to_master_clock(self.cpu.bus.ppu.timer.master_clock);
+                .catch_up_to_master_clock(self.cpu.bus.clock_info().master_clock);
 
             if let Some(break_reason) = self.debugger().take_break_reason() {
                 if break_reason.trigger == event {

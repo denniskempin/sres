@@ -13,46 +13,48 @@ use serde::Serialize;
 use self::cgram::CgRam;
 use self::oam::Oam;
 pub use self::oam::SpriteSize;
+// Public to allow for access in benches
 pub use self::timer::PpuTimer;
 use self::vram::Vram;
 pub use self::vram::VramAddr;
 use crate::common::address::AddressU24;
 use crate::common::image::Image;
 use crate::common::image::Rgb15;
+use crate::common::system::ClockInfo;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U32Ext;
 use crate::common::uint::U8Ext;
 
 pub struct Ppu {
-    pub disabled: bool,
-    pub timer: PpuTimer,
+    timer: PpuTimer,
+    disabled: bool,
     pub vram: Vram,
     pub bgmode: BgMode,
     pub bg3_priority: bool,
     pub backgrounds: [Background; 4],
 
-    pub framebuffer: Framebuffer,
+    framebuffer: Framebuffer,
     pub cgram: CgRam,
     pub oam: Oam,
-    pub last_drawn_scanline: u64,
+    last_drawn_scanline: u64,
 
-    pub bgofs_latch: u8,
-    pub bghofs_latch: u8,
+    bgofs_latch: u8,
+    bghofs_latch: u8,
 
     pub color_math_backdrop_enabled: bool,
     pub color_math_operation: ColorMathOperation,
     pub color_math_half: bool,
     pub fixed_color: Rgb15,
 
-    pub mode7_latch: u8,
-    pub m7a_mul: i16,
-    pub m7b_mul: i8,
+    mode7_latch: u8,
+    m7a_mul: i16,
+    m7b_mul: i8,
 
-    pub counter_latch: bool,
-    pub h_counter: u16,
-    pub h_counter_latch: bool,
-    pub v_counter: u16,
-    pub v_counter_latch: bool,
+    counter_latch: bool,
+    h_counter: u16,
+    h_counter_latch: bool,
+    v_counter: u16,
+    v_counter_latch: bool,
 
     pub headless: bool,
 }
@@ -95,6 +97,10 @@ impl Ppu {
         }
     }
 
+    pub fn clock_info(&self) -> ClockInfo {
+        self.timer.clock_info()
+    }
+
     pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
             0x2138 => self.oam.read_oamdataread(),
@@ -107,6 +113,7 @@ impl Ppu {
             0x213D => self.read_opvct(),
             0x213E => self.peek_stat77(),
             0x213F => self.read_stat78(),
+            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.timer.bus_read(addr),
             _ => {
                 log::warn!("PPU: Unhandled read from {:04X}", addr.offset);
                 0
@@ -126,6 +133,7 @@ impl Ppu {
             0x213D => Some(self.peek_opvct()),
             0x213E => Some(self.peek_stat77()),
             0x213F => Some(self.peek_stat78()),
+            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.timer.bus_peek(addr),
             _ => None,
         }
     }
@@ -156,6 +164,7 @@ impl Ppu {
             0x2132 => self.write_coldata(value),
             0x211B => self.write_m7a(value),
             0x211C => self.write_m7b(value),
+            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.timer.bus_write(addr, value),
             _ => log::warn!(
                 "PPU: Unhandled write to {:04X} = {:02X}",
                 addr.offset,
@@ -169,12 +178,20 @@ impl Ppu {
         if self.disabled {
             return;
         }
-        if self.timer.v != self.last_drawn_scanline {
+        if self.clock_info().v != self.last_drawn_scanline {
             if !self.headless {
-                self.draw_scanline(self.timer.v as u32);
+                self.draw_scanline(self.clock_info().v as u32);
             }
-            self.last_drawn_scanline = self.timer.v;
+            self.last_drawn_scanline = self.clock_info().v;
         }
+    }
+
+    pub fn consume_nmi_interrupt(&mut self) -> bool {
+        self.timer.consume_nmi_interrupt()
+    }
+
+    pub fn consume_timer_interrupt(&mut self) -> bool {
+        self.timer.consume_timer_interrupt()
     }
 
     pub fn reset(&mut self) {
@@ -572,7 +589,7 @@ impl Ppu {
     /// On write: BGnHOFS = (value << 8) | (bgofs_latch & ~7) | (bghofs_latch & 7)
     ///           bgofs_latch = value
     ///           bghofs_latch = value
-    pub fn write_bgnhofs(&mut self, addr: AddressU24, value: u8) {
+    fn write_bgnhofs(&mut self, addr: AddressU24, value: u8) {
         let bg_id = ((addr.offset - 0x210D) / 2) as usize;
         self.backgrounds[bg_id].h_offset = ((value as u32) << 8)
             | ((self.bgofs_latch as u32) & !7)
@@ -592,7 +609,7 @@ impl Ppu {
     ///           bgofs_latch = value
     ///
     /// Note: BG1VOFS uses the same address as M7VOFS
-    pub fn write_bgnvofs(&mut self, addr: AddressU24, value: u8) {
+    fn write_bgnvofs(&mut self, addr: AddressU24, value: u8) {
         let bg_id = ((addr.offset - 0x210E) / 2) as usize;
         self.backgrounds[bg_id].v_offset = ((value as u32) << 8) | (self.bgofs_latch as u32);
         self.bgofs_latch = value;
@@ -608,7 +625,7 @@ impl Ppu {
     ///    | |+--- Enable BG3 on main screen
     ///    | +---- Enable BG4 on main screen
     ///    +------ Enable OBJ on main screen
-    pub fn write_tm(&mut self, value: u8) {
+    fn write_tm(&mut self, value: u8) {
         for i in 0..4 {
             self.backgrounds[i].main_enabled = value.bit(i);
         }
@@ -625,7 +642,7 @@ impl Ppu {
     ///    | |+--- Enable BG3 on subscreen
     ///    | +---- Enable BG4 on subscreen
     ///    +------ Enable OBJ on subscreen
-    pub fn write_ts(&mut self, value: u8) {
+    fn write_ts(&mut self, value: u8) {
         for i in 0..4 {
             self.backgrounds[i].subscreen_enabled = value.bit(i);
         }
@@ -645,7 +662,7 @@ impl Ppu {
     /// ||+------- Backdrop color math enable
     /// |+-------- Half color math
     /// +--------- Operator type (0 = add, 1 = subtract)
-    pub fn write_cdadsub(&mut self, value: u8) {
+    fn write_cdadsub(&mut self, value: u8) {
         for i in 0..4 {
             self.backgrounds[i].color_math_enabled = value.bit(i);
         }
@@ -667,7 +684,7 @@ impl Ppu {
     /// ||+------- Write color value to blue channel
     /// |+-------- Write color value to green channel
     /// +--------- Write color value to red channel
-    pub fn write_coldata(&mut self, value: u8) {
+    fn write_coldata(&mut self, value: u8) {
         let color_value = value.bits(0..=4);
         if value.bit(7) {
             self.fixed_color.set_b(color_value);
@@ -690,7 +707,7 @@ impl Ppu {
     ///
     /// On write: M7A = (value << 8) | mode7_latch
     ///           mode7_latch = value
-    pub fn write_m7a(&mut self, value: u8) {
+    fn write_m7a(&mut self, value: u8) {
         self.m7a_mul = (((value as u16) << 8) | self.mode7_latch as u16) as i16;
         self.mode7_latch = value;
     }
@@ -705,7 +722,7 @@ impl Ppu {
     ///
     /// On write: M7B = (value << 8) | mode7_latch
     ///           mode7_latch = value
-    pub fn write_m7b(&mut self, value: u8) {
+    fn write_m7b(&mut self, value: u8) {
         self.m7b_mul = value as i8;
         self.mode7_latch = value;
     }
@@ -718,7 +735,7 @@ impl Ppu {
     /// HHHH HHHH   MMMM MMMM   LLLL LLLL
     /// |||| ||||   |||| ||||   |||| ||||
     /// ++++-++++---++++-++++---++++-++++- 24-bit multiplication result (signed)
-    pub fn read_mpy(&self, addr: AddressU24) -> u8 {
+    fn read_mpy(&self, addr: AddressU24) -> u8 {
         let mpy = (self.m7a_mul as i32 * self.m7b_mul as i32) as u32;
         match addr.offset {
             0x2134 => mpy.low_word().low_byte(),
@@ -736,16 +753,16 @@ impl Ppu {
     /// ++++-++++- Open bus
     ///
     /// On read: counter_latch = 1
-    pub fn read_shvl(&mut self) -> u8 {
+    fn read_shvl(&mut self) -> u8 {
         if !self.counter_latch {
-            self.h_counter = self.timer.hdot() as u16;
-            self.v_counter = self.timer.v as u16;
+            self.h_counter = self.clock_info().hdot() as u16;
+            self.v_counter = self.clock_info().v as u16;
         }
         self.counter_latch = true;
         0
     }
 
-    pub fn peek_shvl(&self) -> u8 {
+    fn peek_shvl(&self) -> u8 {
         0
     }
 
@@ -760,7 +777,7 @@ impl Ppu {
     /// On read: If ophct_byte == 0, value = OPHCT.low
     ///          If ophct_byte == 1, value = OPHCT.high
     ///          ophct_byte = ~ophct_byte
-    pub fn read_ophct(&mut self) -> u8 {
+    fn read_ophct(&mut self) -> u8 {
         if self.h_counter_latch {
             self.h_counter_latch = false;
             self.h_counter.high_byte()
@@ -770,7 +787,7 @@ impl Ppu {
         }
     }
 
-    pub fn peek_ophct(&self) -> u8 {
+    fn peek_ophct(&self) -> u8 {
         if self.h_counter_latch {
             self.h_counter.high_byte()
         } else {
@@ -789,7 +806,7 @@ impl Ppu {
     /// On read: If opvct_byte == 0, value = OPVCT.low
     ///          If opvct_byte == 1, value = OPVCT.high
     ///          opvct_byte = ~opvct_byte
-    pub fn read_opvct(&mut self) -> u8 {
+    fn read_opvct(&mut self) -> u8 {
         if self.v_counter_latch {
             self.v_counter_latch = false;
             self.v_counter.high_byte()
@@ -799,7 +816,7 @@ impl Ppu {
         }
     }
 
-    pub fn peek_opvct(&self) -> u8 {
+    fn peek_opvct(&self) -> u8 {
         if self.v_counter_latch {
             self.v_counter.high_byte()
         } else {
@@ -817,7 +834,7 @@ impl Ppu {
     /// ||+------- Master/slave mode (PPU1 pin 25)
     /// |+-------- Range over flag (sprite tile overflow)
     /// +--------- Time over flag (sprite overflow)
-    pub fn peek_stat77(&self) -> u8 {
+    fn peek_stat77(&self) -> u8 {
         log::warn!("STAT77 not implemented");
         0
     }
@@ -836,14 +853,14 @@ impl Ppu {
     /// On read: counter_latch = 0
     ///          ophct_byte = 0
     ///          opvct_byte = 0
-    pub fn read_stat78(&mut self) -> u8 {
+    fn read_stat78(&mut self) -> u8 {
         self.counter_latch = false;
         self.h_counter_latch = false;
         self.v_counter_latch = false;
         self.peek_stat78()
     }
 
-    pub fn peek_stat78(&self) -> u8 {
+    fn peek_stat78(&self) -> u8 {
         log::warn!("STAT78 not implemented");
         0
     }
@@ -965,18 +982,14 @@ impl Ppu {
     }
 }
 
-pub struct Framebuffer(Vec<Rgb15>);
+struct Framebuffer(Vec<Rgb15>);
 
 impl Framebuffer {
-    pub fn iter(&self) -> impl Iterator<Item = (u32, u32, &Rgb15)> {
+    fn iter(&self) -> impl Iterator<Item = (u32, u32, &Rgb15)> {
         self.0
             .iter()
             .enumerate()
             .map(|(idx, pixel)| (idx as u32 % 256, idx as u32 / 256, pixel))
-    }
-
-    pub fn row_mut(&mut self, y: u32) -> &mut [Rgb15] {
-        &mut self.0[(y as usize * 256)..((y as usize + 1) * 256)]
     }
 }
 
