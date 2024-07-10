@@ -72,7 +72,11 @@ impl PpuDebugWindow {
 }
 
 pub fn ppu_status_widget(ui: &mut Ui, ppu: &Ppu) {
-    ui.label(format!("V, H: ({}, {})", ppu.timer.v, ppu.timer.hdot()));
+    ui.label(format!(
+        "V, H: ({}, {})",
+        ppu.clock_info().v,
+        ppu.clock_info().hdot()
+    ));
 }
 
 struct PpuBackgroundWidget {

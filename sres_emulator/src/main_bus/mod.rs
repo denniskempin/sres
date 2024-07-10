@@ -76,7 +76,7 @@ impl MainBusImpl {
                 0x2100..=0x213F => self.ppu.bus_peek(addr),
                 0x2140..=0x217F => self.apu.bus_peek(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.timer.bus_peek(addr),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.bus_peek(addr),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
                 0x4218 => Some(self.joy1.low_byte()),
                 0x4219 => Some(self.joy1.high_byte()),
@@ -97,7 +97,7 @@ impl MainBusImpl {
                 0x2100..=0x213F => self.ppu.bus_read(addr),
                 0x2140..=0x217F => self.apu.bus_read(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.timer.bus_read(addr),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.bus_read(addr),
                 0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4016..=0x4017 => {
                     log::warn!("Serial Joypad not implemented");
@@ -143,7 +143,7 @@ impl MainBusImpl {
                 0x2140..=0x217F => self.apu.bus_write(addr, value),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.timer.bus_write(addr, value),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.bus_write(addr, value),
                 _ => {
                     self.debug_event_collector
                         .collect_event(DebugEvent::Error(format!(
@@ -176,7 +176,7 @@ impl MainBusImpl {
 
         if let Some((transfers, duration)) = self
             .dma_controller
-            .pending_transfers(self.ppu.timer.master_clock, self.clock_speed)
+            .pending_transfers(self.clock_info().master_clock, self.clock_speed)
         {
             self.ppu.advance_master_clock(duration);
             for (source, destination) in transfers {
@@ -229,15 +229,15 @@ impl Bus<AddressU24> for MainBusImpl {
 
 impl MainBus for MainBusImpl {
     fn consume_nmi_interrupt(&mut self) -> bool {
-        self.ppu.timer.consume_nmi_interrupt()
+        self.ppu.consume_nmi_interrupt()
     }
 
     fn consume_timer_interrupt(&mut self) -> bool {
-        self.ppu.timer.consume_timer_interrupt()
+        self.ppu.consume_timer_interrupt()
     }
 
     fn clock_info(&self) -> ClockInfo {
-        self.ppu.timer.clock_info()
+        self.ppu.clock_info()
     }
 }
 

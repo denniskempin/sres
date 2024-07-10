@@ -110,7 +110,7 @@ impl EmulatorApp {
         if self.input_recording_active && joy1.to_u16() != self.input_recording_last {
             self.input_recording_last = joy1.to_u16();
             self.input_recording
-                .insert(self.emulator.cpu.bus.ppu.timer.f, joy1.to_u16());
+                .insert(self.emulator.cpu.bus.ppu.clock_info().f, joy1.to_u16());
         }
         self.emulator.cpu.bus.joy1 = joy1.to_u16();
     }

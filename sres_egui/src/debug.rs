@@ -149,8 +149,8 @@ impl DebugUi {
                     None
                 };
 
-                let current_scanline = emulator.cpu.bus.ppu.timer.v;
-                emulator.execute_until(|cpu| cpu.bus.ppu.timer.v > current_scanline)
+                let current_scanline = emulator.cpu.bus.ppu.clock_info().v;
+                emulator.execute_until(|cpu| cpu.bus.ppu.clock_info().v > current_scanline)
             }
             DebugCommand::StepInstructions(n) => {
                 self.command = if n > 1 {

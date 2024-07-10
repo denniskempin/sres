@@ -9,13 +9,13 @@ use crate::common::util::EdgeDetector;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PpuTimer {
-    pub master_clock: u64,
-    pub v: u64,
-    pub h_counter: u64,
-    pub f: u64,
-    pub vblank_detector: EdgeDetector,
-    pub hv_timer_detector: EdgeDetector,
-    pub timer_mode: HVTimerMode,
+    master_clock: u64,
+    v: u64,
+    h_counter: u64,
+    f: u64,
+    vblank_detector: EdgeDetector,
+    hv_timer_detector: EdgeDetector,
+    timer_mode: HVTimerMode,
 
     dram_refresh_position: u64,
     timer_flag: bool,
@@ -23,8 +23,8 @@ pub struct PpuTimer {
     h_timer_target: u16,
     v_timer_target: u16,
     nmi_enable: bool,
-    pub nmi_flag: bool,
-    pub nmi_interrupt: bool,
+    nmi_flag: bool,
+    nmi_interrupt: bool,
 }
 
 impl PpuTimer {
@@ -68,7 +68,6 @@ impl PpuTimer {
     }
 
     pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
-        println!("{}", addr);
         match addr.offset {
             0x4200 => self.write_nmitimen(value),
             0x4207 => self.write_htimel(value),
@@ -341,7 +340,7 @@ impl Default for PpuTimer {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, strum::Display)]
-pub enum HVTimerMode {
+enum HVTimerMode {
     Off,
     TriggerH,
     TriggerV,
@@ -475,5 +474,61 @@ mod tests {
         assert_eq!(timer.v, 2);
         assert_eq!(timer.bus_read(0x4211.into()), 0x00);
         assert!(!timer.consume_timer_interrupt());
+    }
+
+    #[test]
+    fn test_nmi_sub_cycle_accuracy() {
+        static TEST_CASES: &[(u64, u64, bool, bool)] = &[
+            // The `bit $4210` instruction is often used to check the NMI signal, to wait for VSYNC.
+            // This makes the instruction very sensitive to sub-cpu-cycle timing, as the result will
+            // depend on when exactly the signal is read.
+            //
+            // The list below is the result of `bit $4210` executed at various points in the frame. This
+            // matches the behavior of BSNES.
+            //
+            // Starting 1334, the bit instruction will end after NMI and the internal NMI flag will
+            // be set after the instruction is executed.
+            //
+            // Starting 1340, NMI will be high by the time the bit instruction reads the state. Usually
+            // reads from $4210 will reset the NMI flag, but not for the first 4 cycles.
+            //
+            // (V, H, nmi returned by `bit`, internal nmi flag)
+            (224, 1330, false, false),
+            (224, 1332, false, false),
+            (224, 1334, false, true),
+            (224, 1336, false, true),
+            (224, 1338, false, true),
+            (224, 1340, true, true),
+            (224, 1342, true, true),
+            (224, 1344, true, false),
+            (224, 1346, true, false),
+            (224, 1348, true, false),
+            (224, 1350, true, false),
+            (224, 1352, true, false),
+            (224, 1354, true, false),
+            (224, 1356, true, false),
+            (224, 1358, true, false),
+            (224, 1360, true, false),
+            (224, 1362, true, false),
+            (225, 0, true, false),
+        ];
+        for (v, h, expected_nmi, expected_internal_nmi) in TEST_CASES {
+            let mut timer = PpuTimer {
+                v: *v,
+                h_counter: *h,
+                ..Default::default()
+            };
+
+            // The bit instruction will read the register after 24 clock cycles, with 6 more cycles executed after the
+            // read.
+            timer.advance_master_clock(24);
+            let nmi = timer.bus_read(AddressU24::new(0, 0x4210)).bit(7);
+            timer.advance_master_clock(6);
+
+            // If the NMI bit is set, the negative status bit will be true.
+            assert_eq!(nmi, *expected_nmi);
+            // For the first 4 cycles NMI will remain high, so the internal nmi_flag will still be set.
+            assert_eq!(timer.nmi_flag, *expected_internal_nmi);
+        }
     }
 }

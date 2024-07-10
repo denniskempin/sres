@@ -25,13 +25,9 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
     });
     ui.label(format!(
         "Cycle: {}",
-        emulator.cpu.bus.ppu.timer.master_clock
+        emulator.cpu.bus.ppu.clock_info().master_clock
     ));
     ui.label(format!("PC: {:}", trace.instruction.address));
-    ui.label(format!(
-        "NMI: {:}",
-        emulator.cpu.bus.ppu.timer.nmi_interrupt
-    ));
 }
 
 pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
