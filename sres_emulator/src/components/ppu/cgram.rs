@@ -1,8 +1,12 @@
 //! Implementation of the CGRAM containing color palette data.
+use bitcode::Decode;
+use bitcode::Encode;
+
 use crate::common::image::Image;
 use crate::common::image::Rgb15;
 use crate::common::uint::U16Ext;
 
+#[derive(Encode, Decode)]
 pub struct CgRam {
     /// Contains the contents of CGRAM translated into RGBA values for more efficient rendering.
     pub memory: Vec<Rgb15>,

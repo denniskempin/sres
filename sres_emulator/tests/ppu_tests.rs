@@ -5,13 +5,13 @@
 //!
 //! Some tests will use snapshots of the PPU state to run testing in isolation of the CPU
 //! behavior and in absence of ROM files.
+use bitcode::Decode;
+use bitcode::Encode;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 
 use image::RgbaImage;
-use serde::Deserialize;
-use serde::Serialize;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::common::image::Image;
 use sres_emulator::common::image::Rgb15;
@@ -249,7 +249,7 @@ impl Image for TestImageImpl {
 
 /// Snapshot of PPU data. Can be saved from a running emulator session and then restored later
 /// for testing PPU rendering in isolation of other emulator components.
-#[derive(Serialize, Deserialize)]
+#[derive(Encode, Decode)]
 struct PpuSnapshot {
     vram: Vec<u16>,
     cgram: Vec<Rgb15>,
@@ -271,57 +271,57 @@ struct PpuSnapshot {
 impl PpuSnapshot {
     pub fn snapshot(ppu: &Ppu) -> Self {
         PpuSnapshot {
-            vram: ppu.vram.memory.clone(),
-            cgram: ppu.cgram.memory.clone(),
-            bgmode: ppu.bgmode,
-            bg3_priority: ppu.bg3_priority,
+            vram: ppu.state.vram.memory.clone(),
+            cgram: ppu.state.cgram.memory.clone(),
+            bgmode: ppu.state.bgmode,
+            bg3_priority: ppu.state.bg3_priority,
             backgrounds: [
-                ppu.backgrounds[0],
-                ppu.backgrounds[1],
-                ppu.backgrounds[2],
-                ppu.backgrounds[3],
+                ppu.state.backgrounds[0],
+                ppu.state.backgrounds[1],
+                ppu.state.backgrounds[2],
+                ppu.state.backgrounds[3],
             ],
-            oam: ppu.oam.memory.clone(),
-            oam_main_enabled: ppu.oam.main_enabled,
-            oam_sub_enabled: ppu.oam.sub_enabled,
-            oam_color_math_enabled: ppu.oam.color_math_enabled,
-            sprite_sizes: ppu.oam.sprite_sizes,
-            nametables: ppu.oam.nametables,
-            color_math_backdrop_enabled: ppu.color_math_backdrop_enabled,
-            color_math_operation: ppu.color_math_operation,
-            color_math_half: ppu.color_math_half,
-            fixed_color: ppu.fixed_color,
+            oam: ppu.state.oam.memory.clone(),
+            oam_main_enabled: ppu.state.oam.main_enabled,
+            oam_sub_enabled: ppu.state.oam.sub_enabled,
+            oam_color_math_enabled: ppu.state.oam.color_math_enabled,
+            sprite_sizes: ppu.state.oam.sprite_sizes,
+            nametables: ppu.state.oam.nametables,
+            color_math_backdrop_enabled: ppu.state.color_math_backdrop_enabled,
+            color_math_operation: ppu.state.color_math_operation,
+            color_math_half: ppu.state.color_math_half,
+            fixed_color: ppu.state.fixed_color,
         }
     }
 
     pub fn write_to_file(&self, path: &Path) {
-        bincode::serialize_into(std::fs::File::create(path).unwrap(), self).unwrap();
+        std::fs::write(path, &bitcode::encode(self)).unwrap();
     }
 
     pub fn restore(self) -> Ppu {
         let mut ppu = Ppu::new();
-        ppu.vram.memory = self.vram;
-        ppu.cgram.memory = self.cgram;
-        ppu.bgmode = self.bgmode;
-        ppu.bg3_priority = self.bg3_priority;
-        ppu.backgrounds[0] = self.backgrounds[0];
-        ppu.backgrounds[1] = self.backgrounds[1];
-        ppu.backgrounds[2] = self.backgrounds[2];
-        ppu.backgrounds[3] = self.backgrounds[3];
-        ppu.oam.memory = self.oam;
-        ppu.oam.sprite_sizes = self.sprite_sizes;
-        ppu.oam.nametables = self.nametables;
-        ppu.oam.main_enabled = self.oam_main_enabled;
-        ppu.oam.sub_enabled = self.oam_sub_enabled;
-        ppu.oam.color_math_enabled = self.oam_color_math_enabled;
-        ppu.color_math_backdrop_enabled = self.color_math_backdrop_enabled;
-        ppu.color_math_operation = self.color_math_operation;
-        ppu.color_math_half = self.color_math_half;
-        ppu.fixed_color = self.fixed_color;
+        ppu.state.vram.memory = self.vram;
+        ppu.state.cgram.memory = self.cgram;
+        ppu.state.bgmode = self.bgmode;
+        ppu.state.bg3_priority = self.bg3_priority;
+        ppu.state.backgrounds[0] = self.backgrounds[0];
+        ppu.state.backgrounds[1] = self.backgrounds[1];
+        ppu.state.backgrounds[2] = self.backgrounds[2];
+        ppu.state.backgrounds[3] = self.backgrounds[3];
+        ppu.state.oam.memory = self.oam;
+        ppu.state.oam.sprite_sizes = self.sprite_sizes;
+        ppu.state.oam.nametables = self.nametables;
+        ppu.state.oam.main_enabled = self.oam_main_enabled;
+        ppu.state.oam.sub_enabled = self.oam_sub_enabled;
+        ppu.state.oam.color_math_enabled = self.oam_color_math_enabled;
+        ppu.state.color_math_backdrop_enabled = self.color_math_backdrop_enabled;
+        ppu.state.color_math_operation = self.color_math_operation;
+        ppu.state.color_math_half = self.color_math_half;
+        ppu.state.fixed_color = self.fixed_color;
         ppu
     }
 
     pub fn read_from_file(path: &Path) -> Self {
-        bincode::deserialize_from(std::fs::File::open(path).unwrap()).unwrap()
+        bitcode::decode(&std::fs::read(path).unwrap()).unwrap()
     }
 }

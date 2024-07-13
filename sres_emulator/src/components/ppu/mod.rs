@@ -6,9 +6,9 @@ mod vram;
 
 use std::marker::PhantomData;
 
+use bitcode::Decode;
+use bitcode::Encode;
 use intbits::Bits;
-use serde::Deserialize;
-use serde::Serialize;
 
 use self::cgram::CgRam;
 use self::oam::Oam;
@@ -28,6 +28,12 @@ use crate::common::uint::U8Ext;
 pub struct Ppu {
     timer: PpuTimer,
     disabled: bool,
+    pub headless: bool,
+    pub state: PpuState,
+}
+
+#[derive(Encode, Decode)]
+pub struct PpuState {
     pub vram: Vram,
     pub bgmode: BgMode,
     pub bg3_priority: bool,
@@ -55,22 +61,11 @@ pub struct Ppu {
     h_counter_latch: bool,
     v_counter: u16,
     v_counter_latch: bool,
-
-    pub headless: bool,
 }
 
-#[derive(Copy, Clone, PartialEq)]
-enum Layer {
-    Background(BackgroundId, bool),
-    Object(u8),
-}
-
-impl Ppu {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+impl Default for PpuState {
+    fn default() -> Self {
         Self {
-            disabled: false,
-            timer: PpuTimer::default(),
             vram: Vram::new(),
             bgmode: BgMode::Mode0,
             bg3_priority: false,
@@ -93,7 +88,24 @@ impl Ppu {
             v_counter: 0,
             v_counter_latch: false,
             fixed_color: Rgb15::default(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+enum Layer {
+    Background(BackgroundId, bool),
+    Object(u8),
+}
+
+impl Ppu {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self {
+            disabled: false,
+            timer: PpuTimer::default(),
             headless: false,
+            state: PpuState::default(),
         }
     }
 
@@ -103,10 +115,10 @@ impl Ppu {
 
     pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
-            0x2138 => self.oam.read_oamdataread(),
-            0x2139 => self.vram.read_vmdatalread(),
-            0x213A => self.vram.read_vmdatahread(),
-            0x213B => self.cgram.read_cgdataread(),
+            0x2138 => self.state.oam.read_oamdataread(),
+            0x2139 => self.state.vram.read_vmdatalread(),
+            0x213A => self.state.vram.read_vmdatahread(),
+            0x213B => self.state.cgram.read_cgdataread(),
             0x2134..=0x2136 => self.read_mpy(addr),
             0x2137 => self.read_shvl(),
             0x213C => self.read_ophct(),
@@ -123,10 +135,10 @@ impl Ppu {
 
     pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
-            0x2138 => Some(self.oam.peek_oamdataread()),
-            0x2139 => Some(self.vram.peek_vmdatalread()),
-            0x213A => Some(self.vram.peek_vmdatahread()),
-            0x213B => Some(self.cgram.peek_cgdataread()),
+            0x2138 => Some(self.state.oam.peek_oamdataread()),
+            0x2139 => Some(self.state.vram.peek_vmdatalread()),
+            0x213A => Some(self.state.vram.peek_vmdatahread()),
+            0x213B => Some(self.state.cgram.peek_cgdataread()),
             0x2134..=0x2136 => Some(self.read_mpy(addr)),
             0x2137 => Some(self.peek_shvl()),
             0x213C => Some(self.peek_ophct()),
@@ -141,23 +153,23 @@ impl Ppu {
     pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
         match addr.offset {
             0x2100 => self.write_inidisp(value),
-            0x2101 => self.oam.write_objsel(value),
-            0x2102 => self.oam.write_oamaddl(value),
-            0x2103 => self.oam.write_oamaddh(value),
-            0x2104 => self.oam.write_oamdata(value),
+            0x2101 => self.state.oam.write_objsel(value),
+            0x2102 => self.state.oam.write_oamaddl(value),
+            0x2103 => self.state.oam.write_oamaddh(value),
+            0x2104 => self.state.oam.write_oamdata(value),
             0x2105 => self.write_bgmode(value),
             0x2107..=0x210A => self.write_bgnsc(addr, value),
             0x210B => self.write_bg12nba(value),
             0x210C => self.write_bg34nba(value),
             0x210D | 0x210F | 0x2111 | 0x2113 => self.write_bgnhofs(addr, value),
             0x210E | 0x2110 | 0x2112 | 0x2114 => self.write_bgnvofs(addr, value),
-            0x2115 => self.vram.write_vmain(value),
-            0x2116 => self.vram.write_vmaddl(value),
-            0x2117 => self.vram.write_vmaddh(value),
-            0x2118 => self.vram.write_vmdatal(value),
-            0x2119 => self.vram.write_vmdatah(value),
-            0x2121 => self.cgram.write_cgadd(value),
-            0x2122 => self.cgram.write_cgdata(value),
+            0x2115 => self.state.vram.write_vmain(value),
+            0x2116 => self.state.vram.write_vmaddl(value),
+            0x2117 => self.state.vram.write_vmaddh(value),
+            0x2118 => self.state.vram.write_vmdatal(value),
+            0x2119 => self.state.vram.write_vmdatah(value),
+            0x2121 => self.state.cgram.write_cgadd(value),
+            0x2122 => self.state.cgram.write_cgdata(value),
             0x212C => self.write_tm(value),
             0x212D => self.write_ts(value),
             0x2131 => self.write_cdadsub(value),
@@ -178,11 +190,11 @@ impl Ppu {
         if self.disabled {
             return;
         }
-        if self.clock_info().v != self.last_drawn_scanline {
+        if self.clock_info().v != self.state.last_drawn_scanline {
             if !self.headless {
                 self.draw_scanline(self.clock_info().v as u32);
             }
-            self.last_drawn_scanline = self.clock_info().v;
+            self.state.last_drawn_scanline = self.clock_info().v;
         }
     }
 
@@ -195,13 +207,13 @@ impl Ppu {
     }
 
     pub fn reset(&mut self) {
-        self.last_drawn_scanline = 0;
+        self.state.last_drawn_scanline = 0;
         self.timer = PpuTimer::default();
     }
 
     pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {
         let mut image = ImageT::new(256, 224);
-        for (x, y, pixel) in self.framebuffer.iter() {
+        for (x, y, pixel) in self.state.framebuffer.iter() {
             image.set_pixel((x, y), (*pixel).into());
         }
         image
@@ -224,11 +236,11 @@ impl Ppu {
         self.decode_obj(screen_y, &mut obj_data);
 
         // Render sub screen first, it'll be used for blending while rendering the main screen.
-        let mut raw_sub = [self.fixed_color; 256];
+        let mut raw_sub = [self.state.fixed_color; 256];
         for layer in layers.iter().rev() {
             match layer {
                 Layer::Background(id, layer_priority) => {
-                    let bg = self.backgrounds[*id as usize];
+                    let bg = self.state.backgrounds[*id as usize];
                     if bg.bit_depth == BitDepth::Disabled || !bg.subscreen_enabled {
                         continue;
                     }
@@ -237,12 +249,12 @@ impl Ppu {
                             continue;
                         }
                         if *pixel > 0 {
-                            raw_sub[x] = self.cgram[bg.palette_addr + pixel];
+                            raw_sub[x] = self.state.cgram[bg.palette_addr + pixel];
                         }
                     }
                 }
                 Layer::Object(layer_priority) => {
-                    if !self.oam.sub_enabled {
+                    if !self.state.oam.sub_enabled {
                         continue;
                     }
                     for (x, (pixel, priority)) in obj_data.iter().enumerate() {
@@ -250,7 +262,7 @@ impl Ppu {
                             continue;
                         }
                         if *pixel > 0 {
-                            raw_sub[x] = self.cgram[*pixel];
+                            raw_sub[x] = self.state.cgram[*pixel];
                         }
                     }
                 }
@@ -258,7 +270,7 @@ impl Ppu {
         }
 
         // Pre-invert subscreen so we don't have to branch for each pixel
-        let sub = match self.color_math_operation {
+        let sub = match self.state.color_math_operation {
             ColorMathOperation::Add => {
                 raw_sub.map(|pixel| (pixel.r() as i16, pixel.g() as i16, pixel.b() as i16))
             }
@@ -270,19 +282,19 @@ impl Ppu {
                 )
             }),
         };
-        let div_factor = if self.color_math_half { 2 } else { 1 };
+        let div_factor = if self.state.color_math_half { 2 } else { 1 };
 
         // Render main screen
-        let mut scanline = if self.color_math_backdrop_enabled {
-            sub.map(|pixel| (self.cgram[0] + pixel) / div_factor)
+        let mut scanline = if self.state.color_math_backdrop_enabled {
+            sub.map(|pixel| (self.state.cgram[0] + pixel) / div_factor)
         } else {
-            [self.cgram[0]; 256]
+            [self.state.cgram[0]; 256]
         };
 
         for layer in layers.iter().rev() {
             match layer {
                 Layer::Background(id, layer_priority) => {
-                    let bg = self.backgrounds[*id as usize];
+                    let bg = self.state.backgrounds[*id as usize];
                     if bg.bit_depth == BitDepth::Disabled || !bg.main_enabled {
                         continue;
                     }
@@ -292,8 +304,8 @@ impl Ppu {
                                 continue;
                             }
                             if *pixel > 0 {
-                                scanline[x] =
-                                    (self.cgram[bg.palette_addr + pixel] + sub[x]) / div_factor;
+                                scanline[x] = (self.state.cgram[bg.palette_addr + pixel] + sub[x])
+                                    / div_factor;
                             }
                         }
                     } else {
@@ -302,13 +314,13 @@ impl Ppu {
                                 continue;
                             }
                             if *pixel > 0 {
-                                scanline[x] = self.cgram[bg.palette_addr + pixel];
+                                scanline[x] = self.state.cgram[bg.palette_addr + pixel];
                             }
                         }
                     }
                 }
                 Layer::Object(layer_priority) => {
-                    if !self.oam.main_enabled {
+                    if !self.state.oam.main_enabled {
                         continue;
                     }
                     for (x, (pixel, priority)) in obj_data.iter().enumerate() {
@@ -316,14 +328,14 @@ impl Ppu {
                             continue;
                         }
                         if *pixel > 0 {
-                            scanline[x] = self.cgram[*pixel];
+                            scanline[x] = self.state.cgram[*pixel];
                         }
                     }
                 }
             }
         }
         for x in 0..256 {
-            self.framebuffer[(x, screen_y)] = scanline[x as usize];
+            self.state.framebuffer[(x, screen_y)] = scanline[x as usize];
         }
     }
 
@@ -360,7 +372,7 @@ impl Ppu {
         const H3: Layer = Background(BG3, true);
         const H4: Layer = Background(BG4, true);
 
-        match self.bgmode {
+        match self.state.bgmode {
             BgMode::Mode0 => {
                 self.decode_bg::<Bpp2Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
                 self.decode_bg::<Bpp2Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
@@ -372,7 +384,7 @@ impl Ppu {
                 self.decode_bg::<Bpp4Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
                 self.decode_bg::<Bpp4Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
                 self.decode_bg::<Bpp2Decoder>(screen_y, BG3, &mut (*bg_data)[2]);
-                if self.bg3_priority {
+                if self.state.bg3_priority {
                     &[H3, S3, H1, H2, S2, L1, L2, S1, S0, L3]
                 } else {
                     &[S3, H1, H2, S2, L1, L2, S1, H3, S0, L3]
@@ -393,7 +405,7 @@ impl Ppu {
                 self.decode_bg::<Bpp2Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
                 &[S3, H1, S2, H2, S1, L1, S0, L2]
             }
-            _ => panic!("Unsupported BG mode: {}", self.bgmode),
+            _ => panic!("Unsupported BG mode: {}", self.state.bgmode),
         }
     }
 
@@ -403,7 +415,7 @@ impl Ppu {
         background_id: BackgroundId,
         data: &mut [(u8, bool); 256],
     ) {
-        let bg = self.backgrounds[background_id as usize];
+        let bg = self.state.backgrounds[background_id as usize];
         if bg.bit_depth == BitDepth::Disabled || !(bg.main_enabled || bg.subscreen_enabled) {
             return;
         }
@@ -412,14 +424,14 @@ impl Ppu {
         for screen_x in 0..256 {
             let x = screen_x + bg.h_offset;
 
-            let tile = bg.get_tile::<TileDecoderT>(x / 8, y / 8, &self.vram);
-            let pixel = tile.row(y % 8, &self.vram).pixel(x % 8);
+            let tile = bg.get_tile::<TileDecoderT>(x / 8, y / 8, &self.state.vram);
+            let pixel = tile.row(y % 8, &self.state.vram).pixel(x % 8);
             data[screen_x as usize] = (pixel, tile.priority);
         }
     }
 
     fn decode_obj(&self, screen_y: u32, obj_data: &mut [(u8, u8); 256]) {
-        let sprites = self.oam.get_all_sprites_on_scanline(screen_y);
+        let sprites = self.state.oam.get_all_sprites_on_scanline(screen_y);
         for (sprite, row) in sprites {
             let row_coarse = row / 8;
             let row_fine = row % 8;
@@ -448,7 +460,7 @@ impl Ppu {
                     sprite.hflip,
                     sprite.vflip,
                 );
-                for (fine_x, pixel) in tile.row(row_fine, &self.vram).pixels() {
+                for (fine_x, pixel) in tile.row(row_fine, &self.state.vram).pixels() {
                     if sprite.x + coarse_x * 8 + fine_x >= 256 {
                         continue;
                     }
@@ -485,7 +497,7 @@ impl Ppu {
     /// |+-------- BG3 character size (0 = 8x8, 1 = 16x16)
     /// +--------- BG4 character size (0 = 8x8, 1 = 16x16)
     fn write_bgmode(&mut self, value: u8) {
-        self.bgmode = match value.bits(0..=2) {
+        self.state.bgmode = match value.bits(0..=2) {
             0 => BgMode::Mode0,
             1 => BgMode::Mode1,
             2 => BgMode::Mode2,
@@ -496,10 +508,10 @@ impl Ppu {
             7 => BgMode::Mode7,
             _ => unreachable!(),
         };
-        self.bg3_priority = value.bit(3);
+        self.state.bg3_priority = value.bit(3);
 
         use BitDepth::*;
-        let bit_depths = match self.bgmode {
+        let bit_depths = match self.state.bgmode {
             BgMode::Mode0 => (Bpp2, Bpp2, Bpp2, Bpp2),
             BgMode::Mode1 => (Bpp4, Bpp4, Bpp2, Disabled),
             BgMode::Mode2 => (Bpp4, Bpp4, Opt, Disabled),
@@ -509,19 +521,19 @@ impl Ppu {
             BgMode::Mode6 => (Bpp4, Disabled, Opt, Disabled),
             BgMode::Mode7 => (Bpp8, Disabled, Disabled, Disabled),
         };
-        self.backgrounds[0].bit_depth = bit_depths.0;
-        self.backgrounds[1].bit_depth = bit_depths.1;
-        self.backgrounds[2].bit_depth = bit_depths.2;
-        self.backgrounds[3].bit_depth = bit_depths.3;
+        self.state.backgrounds[0].bit_depth = bit_depths.0;
+        self.state.backgrounds[1].bit_depth = bit_depths.1;
+        self.state.backgrounds[2].bit_depth = bit_depths.2;
+        self.state.backgrounds[3].bit_depth = bit_depths.3;
 
-        let palette_addr = match self.bgmode {
+        let palette_addr = match self.state.bgmode {
             BgMode::Mode0 => (0, 32, 64, 96),
             _ => (0, 0, 0, 0),
         };
-        self.backgrounds[0].palette_addr = palette_addr.0;
-        self.backgrounds[1].palette_addr = palette_addr.1;
-        self.backgrounds[2].palette_addr = palette_addr.2;
-        self.backgrounds[3].palette_addr = palette_addr.3;
+        self.state.backgrounds[0].palette_addr = palette_addr.0;
+        self.state.backgrounds[1].palette_addr = palette_addr.1;
+        self.state.backgrounds[2].palette_addr = palette_addr.2;
+        self.state.backgrounds[3].palette_addr = palette_addr.3;
 
         fn to_tile_size(value: bool) -> TileSize {
             if value {
@@ -531,7 +543,7 @@ impl Ppu {
             }
         }
         for i in 0..4 {
-            self.backgrounds[i].tile_size = to_tile_size(value.bit(4 + i));
+            self.state.backgrounds[i].tile_size = to_tile_size(value.bit(4 + i));
         }
     }
 
@@ -545,8 +557,8 @@ impl Ppu {
     /// ++++-++--- Tilemap VRAM address (word address = AAAAAA << 10)
     fn write_bgnsc(&mut self, addr: AddressU24, value: u8) {
         let bg_id = (addr.offset - 0x2107) as usize;
-        self.backgrounds[bg_id].tilemap_addr = VramAddr((value.bits(2..=7) as u16) << 10);
-        self.backgrounds[bg_id].tilemap_size = match value.bits(0..=1) {
+        self.state.backgrounds[bg_id].tilemap_addr = VramAddr((value.bits(2..=7) as u16) << 10);
+        self.state.backgrounds[bg_id].tilemap_size = match value.bits(0..=1) {
             0 => TilemapSize::Size32x32,
             1 => TilemapSize::Size64x32,
             2 => TilemapSize::Size32x64,
@@ -563,8 +575,8 @@ impl Ppu {
     /// |||| ++++- BG1 CHR word base address (word address = AAAA << 12)
     /// ++++------ BG2 CHR word base address (word address = BBBB << 12)
     fn write_bg12nba(&mut self, value: u8) {
-        self.backgrounds[0].tileset_addr = VramAddr((value.low_nibble() as u16) << 12);
-        self.backgrounds[1].tileset_addr = VramAddr((value.high_nibble() as u16) << 12);
+        self.state.backgrounds[0].tileset_addr = VramAddr((value.low_nibble() as u16) << 12);
+        self.state.backgrounds[1].tileset_addr = VramAddr((value.high_nibble() as u16) << 12);
     }
 
     /// Register 210C: BG34NBA - Tileset base address for BG3 and BG4
@@ -575,8 +587,8 @@ impl Ppu {
     /// |||| ++++- BG3 CHR word base address (word address = CCCC << 12)
     /// ++++------ BG4 CHR word base address (word address = DDDD << 12)
     fn write_bg34nba(&mut self, value: u8) {
-        self.backgrounds[2].tileset_addr = VramAddr((value.low_nibble() as u16) << 12);
-        self.backgrounds[3].tileset_addr = VramAddr((value.high_nibble() as u16) << 12);
+        self.state.backgrounds[2].tileset_addr = VramAddr((value.low_nibble() as u16) << 12);
+        self.state.backgrounds[3].tileset_addr = VramAddr((value.high_nibble() as u16) << 12);
     }
 
     /// Register 210D, 210F, 2111, 2113: BGNHOFS - Background N horizontal scroll
@@ -591,11 +603,11 @@ impl Ppu {
     ///           bghofs_latch = value
     fn write_bgnhofs(&mut self, addr: AddressU24, value: u8) {
         let bg_id = ((addr.offset - 0x210D) / 2) as usize;
-        self.backgrounds[bg_id].h_offset = ((value as u32) << 8)
-            | ((self.bgofs_latch as u32) & !7)
-            | ((self.bghofs_latch as u32) & 7);
-        self.bgofs_latch = value;
-        self.bghofs_latch = value;
+        self.state.backgrounds[bg_id].h_offset = ((value as u32) << 8)
+            | ((self.state.bgofs_latch as u32) & !7)
+            | ((self.state.bghofs_latch as u32) & 7);
+        self.state.bgofs_latch = value;
+        self.state.bghofs_latch = value;
     }
 
     /// Register 210E, 2110, 2112, 2114: BGNVOFS - Background N vertical scroll
@@ -611,8 +623,9 @@ impl Ppu {
     /// Note: BG1VOFS uses the same address as M7VOFS
     fn write_bgnvofs(&mut self, addr: AddressU24, value: u8) {
         let bg_id = ((addr.offset - 0x210E) / 2) as usize;
-        self.backgrounds[bg_id].v_offset = ((value as u32) << 8) | (self.bgofs_latch as u32);
-        self.bgofs_latch = value;
+        self.state.backgrounds[bg_id].v_offset =
+            ((value as u32) << 8) | (self.state.bgofs_latch as u32);
+        self.state.bgofs_latch = value;
     }
 
     /// Register 212C: TM - Main screen layer enable
@@ -627,9 +640,9 @@ impl Ppu {
     ///    +------ Enable OBJ on main screen
     fn write_tm(&mut self, value: u8) {
         for i in 0..4 {
-            self.backgrounds[i].main_enabled = value.bit(i);
+            self.state.backgrounds[i].main_enabled = value.bit(i);
         }
-        self.oam.main_enabled = value.bit(4);
+        self.state.oam.main_enabled = value.bit(4);
     }
 
     /// Register 212D: TS - Subscreen layer enable
@@ -644,9 +657,9 @@ impl Ppu {
     ///    +------ Enable OBJ on subscreen
     fn write_ts(&mut self, value: u8) {
         for i in 0..4 {
-            self.backgrounds[i].subscreen_enabled = value.bit(i);
+            self.state.backgrounds[i].subscreen_enabled = value.bit(i);
         }
-        self.oam.sub_enabled = value.bit(4);
+        self.state.oam.sub_enabled = value.bit(4);
     }
 
     /// Register 2131: CGADSUB - Color math control
@@ -664,12 +677,12 @@ impl Ppu {
     /// +--------- Operator type (0 = add, 1 = subtract)
     fn write_cdadsub(&mut self, value: u8) {
         for i in 0..4 {
-            self.backgrounds[i].color_math_enabled = value.bit(i);
+            self.state.backgrounds[i].color_math_enabled = value.bit(i);
         }
-        self.oam.color_math_enabled = value.bit(4);
-        self.color_math_backdrop_enabled = value.bit(5);
-        self.color_math_half = value.bit(6);
-        self.color_math_operation = match value.bit(7) {
+        self.state.oam.color_math_enabled = value.bit(4);
+        self.state.color_math_backdrop_enabled = value.bit(5);
+        self.state.color_math_half = value.bit(6);
+        self.state.color_math_operation = match value.bit(7) {
             false => ColorMathOperation::Add,
             true => ColorMathOperation::Subtract,
         };
@@ -687,13 +700,13 @@ impl Ppu {
     fn write_coldata(&mut self, value: u8) {
         let color_value = value.bits(0..=4);
         if value.bit(7) {
-            self.fixed_color.set_b(color_value);
+            self.state.fixed_color.set_b(color_value);
         }
         if value.bit(6) {
-            self.fixed_color.set_g(color_value);
+            self.state.fixed_color.set_g(color_value);
         }
         if value.bit(5) {
-            self.fixed_color.set_r(color_value);
+            self.state.fixed_color.set_r(color_value);
         }
     }
 
@@ -708,8 +721,8 @@ impl Ppu {
     /// On write: M7A = (value << 8) | mode7_latch
     ///           mode7_latch = value
     fn write_m7a(&mut self, value: u8) {
-        self.m7a_mul = (((value as u16) << 8) | self.mode7_latch as u16) as i16;
-        self.mode7_latch = value;
+        self.state.m7a_mul = (((value as u16) << 8) | self.state.mode7_latch as u16) as i16;
+        self.state.mode7_latch = value;
     }
 
     /// Register 211C: M7A - Mode 7 Matrix B
@@ -723,8 +736,8 @@ impl Ppu {
     /// On write: M7B = (value << 8) | mode7_latch
     ///           mode7_latch = value
     fn write_m7b(&mut self, value: u8) {
-        self.m7b_mul = value as i8;
-        self.mode7_latch = value;
+        self.state.m7b_mul = value as i8;
+        self.state.mode7_latch = value;
     }
 
     /// Register 2134-6: MPYL/M/H - 24 Bit Multipliction result
@@ -736,7 +749,7 @@ impl Ppu {
     /// |||| ||||   |||| ||||   |||| ||||
     /// ++++-++++---++++-++++---++++-++++- 24-bit multiplication result (signed)
     fn read_mpy(&self, addr: AddressU24) -> u8 {
-        let mpy = (self.m7a_mul as i32 * self.m7b_mul as i32) as u32;
+        let mpy = (self.state.m7a_mul as i32 * self.state.m7b_mul as i32) as u32;
         match addr.offset {
             0x2134 => mpy.low_word().low_byte(),
             0x2135 => mpy.low_word().high_byte(),
@@ -754,11 +767,11 @@ impl Ppu {
     ///
     /// On read: counter_latch = 1
     fn read_shvl(&mut self) -> u8 {
-        if !self.counter_latch {
-            self.h_counter = self.clock_info().hdot() as u16;
-            self.v_counter = self.clock_info().v as u16;
+        if !self.state.counter_latch {
+            self.state.h_counter = self.clock_info().hdot() as u16;
+            self.state.v_counter = self.clock_info().v as u16;
         }
-        self.counter_latch = true;
+        self.state.counter_latch = true;
         0
     }
 
@@ -778,20 +791,20 @@ impl Ppu {
     ///          If ophct_byte == 1, value = OPHCT.high
     ///          ophct_byte = ~ophct_byte
     fn read_ophct(&mut self) -> u8 {
-        if self.h_counter_latch {
-            self.h_counter_latch = false;
-            self.h_counter.high_byte()
+        if self.state.h_counter_latch {
+            self.state.h_counter_latch = false;
+            self.state.h_counter.high_byte()
         } else {
-            self.h_counter_latch = true;
-            self.h_counter.low_byte()
+            self.state.h_counter_latch = true;
+            self.state.h_counter.low_byte()
         }
     }
 
     fn peek_ophct(&self) -> u8 {
-        if self.h_counter_latch {
-            self.h_counter.high_byte()
+        if self.state.h_counter_latch {
+            self.state.h_counter.high_byte()
         } else {
-            self.h_counter.low_byte()
+            self.state.h_counter.low_byte()
         }
     }
 
@@ -807,20 +820,20 @@ impl Ppu {
     ///          If opvct_byte == 1, value = OPVCT.high
     ///          opvct_byte = ~opvct_byte
     fn read_opvct(&mut self) -> u8 {
-        if self.v_counter_latch {
-            self.v_counter_latch = false;
-            self.v_counter.high_byte()
+        if self.state.v_counter_latch {
+            self.state.v_counter_latch = false;
+            self.state.v_counter.high_byte()
         } else {
-            self.v_counter_latch = true;
-            self.v_counter.low_byte()
+            self.state.v_counter_latch = true;
+            self.state.v_counter.low_byte()
         }
     }
 
     fn peek_opvct(&self) -> u8 {
-        if self.v_counter_latch {
-            self.v_counter.high_byte()
+        if self.state.v_counter_latch {
+            self.state.v_counter.high_byte()
         } else {
-            self.v_counter.low_byte()
+            self.state.v_counter.low_byte()
         }
     }
 
@@ -854,9 +867,9 @@ impl Ppu {
     ///          ophct_byte = 0
     ///          opvct_byte = 0
     fn read_stat78(&mut self) -> u8 {
-        self.counter_latch = false;
-        self.h_counter_latch = false;
-        self.v_counter_latch = false;
+        self.state.counter_latch = false;
+        self.state.h_counter_latch = false;
+        self.state.v_counter_latch = false;
         self.peek_stat78()
     }
 
@@ -900,9 +913,9 @@ impl Ppu {
             for coarse_y in 0..num_rows {
                 let tile_idx = coarse_y * 16 + coarse_x;
                 let tile = Tile::<TileDecoderT>::from_tileset_index(addr, tile_idx, false, false);
-                for (row_idx, row) in tile.rows(&self.vram) {
+                for (row_idx, row) in tile.rows(&self.state.vram) {
                     for (col_idx, pixel) in row.pixels() {
-                        let color = self.cgram[palette_addr + pixel];
+                        let color = self.state.cgram[palette_addr + pixel];
                         image.set_pixel(
                             (coarse_x * 8 + col_idx, coarse_y * 8 + row_idx),
                             color.into(),
@@ -914,7 +927,7 @@ impl Ppu {
     }
 
     pub fn debug_render_background<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
-        let background = &self.backgrounds[background_id as usize];
+        let background = &self.state.backgrounds[background_id as usize];
         let mut image = ImageT::new(
             background.coarse_width() * 8,
             background.coarse_height() * 8,
@@ -941,10 +954,11 @@ impl Ppu {
     ) {
         for coarse_y in 0..background.coarse_height() {
             for coarse_x in 0..background.coarse_width() {
-                let tile = background.get_tile::<TileDecoderT>(coarse_x, coarse_y, &self.vram);
-                for (fine_y, row) in tile.rows(&self.vram) {
+                let tile =
+                    background.get_tile::<TileDecoderT>(coarse_x, coarse_y, &self.state.vram);
+                for (fine_y, row) in tile.rows(&self.state.vram) {
                     for (fine_x, pixel) in row.pixels() {
-                        let color = self.cgram[background.palette_addr + pixel];
+                        let color = self.state.cgram[background.palette_addr + pixel];
                         image.set_pixel(
                             (coarse_x * 8 + fine_x, coarse_y * 8 + fine_y),
                             color.into(),
@@ -956,7 +970,7 @@ impl Ppu {
     }
 
     pub fn debug_render_sprite<ImageT: Image>(&self, sprite_id: u32) -> ImageT {
-        let sprite = self.oam.get_sprite(sprite_id);
+        let sprite = self.state.oam.get_sprite(sprite_id);
         let mut image = ImageT::new(sprite.width(), sprite.height());
         for coarse_y in 0..(sprite.coarse_height()) {
             for coarse_x in 0..(sprite.coarse_width()) {
@@ -967,9 +981,9 @@ impl Ppu {
                     false,
                     false,
                 );
-                for (fine_y, row) in tile.rows(&self.vram) {
+                for (fine_y, row) in tile.rows(&self.state.vram) {
                     for (fine_x, pixel) in row.pixels() {
-                        let color = self.cgram[sprite.palette_addr() + pixel];
+                        let color = self.state.cgram[sprite.palette_addr() + pixel];
                         image.set_pixel(
                             (coarse_x * 8 + fine_x, coarse_y * 8 + fine_y),
                             color.into(),
@@ -982,6 +996,7 @@ impl Ppu {
     }
 }
 
+#[derive(Encode, Decode)]
 struct Framebuffer(Vec<Rgb15>);
 
 impl Framebuffer {
@@ -1013,7 +1028,7 @@ impl std::ops::IndexMut<(u32, u32)> for Framebuffer {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize, strum::Display)]
+#[derive(Default, Copy, Clone, Debug, Encode, Decode, strum::Display)]
 pub enum BgMode {
     #[default]
     Mode0,
@@ -1026,13 +1041,13 @@ pub enum BgMode {
     Mode7,
 }
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Encode, Decode, Copy, Clone)]
 pub enum ColorMathOperation {
     Add,
     Subtract,
 }
 
-#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Copy, Clone, Debug, Encode, Decode)]
 pub struct Background {
     pub main_enabled: bool,
     pub subscreen_enabled: bool,
@@ -1088,7 +1103,7 @@ impl Background {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize, strum::Display)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Encode, Decode, strum::Display)]
 pub enum BitDepth {
     #[default]
     Disabled,
@@ -1098,14 +1113,14 @@ pub enum BitDepth {
     Opt,
 }
 
-#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize, strum::Display)]
+#[derive(Default, Copy, Clone, Debug, Encode, Decode, strum::Display)]
 pub enum TileSize {
     #[default]
     Size8x8,
     Size16x16,
 }
 
-#[derive(Default, Copy, Clone, Debug, Serialize, Deserialize, strum::Display)]
+#[derive(Default, Copy, Clone, Debug, Encode, Decode, strum::Display)]
 pub enum TilemapSize {
     #[default]
     Size32x32,
@@ -1114,7 +1129,7 @@ pub enum TilemapSize {
     Size64x64,
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize, strum::Display)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Encode, Decode, strum::Display)]
 pub enum BackgroundId {
     #[default]
     BG1 = 0,

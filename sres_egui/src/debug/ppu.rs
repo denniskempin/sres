@@ -116,7 +116,7 @@ impl PpuBackgroundWidget {
             ],
             &mut self.selected_bg,
         );
-        let background = &ppu.backgrounds[self.selected_bg as usize];
+        let background = &ppu.state.backgrounds[self.selected_bg as usize];
         ui.label(format!(
             "Scroll: ({}, {})",
             background.h_offset, background.v_offset
@@ -183,7 +183,7 @@ impl PpuSpritesWidget {
             }
         });
 
-        let sprite = ppu.oam.get_sprite(self.sprite_id);
+        let sprite = ppu.state.oam.get_sprite(self.sprite_id);
         ui.horizontal(|ui| {
             ui.vertical(|ui| ui.label(format!("Position: ({}, {})", sprite.x, sprite.y)));
             ui.image((
@@ -238,7 +238,7 @@ impl PpuVramWidget {
                 BackgroundId::BG4,
             ] {
                 if ui.button(bgid.to_string()).clicked() {
-                    let bg = ppu.backgrounds[*bgid as usize];
+                    let bg = ppu.state.backgrounds[*bgid as usize];
                     self.bit_depth = bg.bit_depth;
                     self.addr = bg.tileset_addr;
                     self.palette_addr = bg.palette_addr;
@@ -246,11 +246,11 @@ impl PpuVramWidget {
             }
             if ui.button("Sprites0").clicked() {
                 self.bit_depth = BitDepth::Bpp4;
-                self.addr = ppu.oam.nametables.0;
+                self.addr = ppu.state.oam.nametables.0;
             }
             if ui.button("Sprites1").clicked() {
                 self.bit_depth = BitDepth::Bpp4;
-                self.addr = ppu.oam.nametables.1;
+                self.addr = ppu.state.oam.nametables.1;
                 self.palette_addr = 128;
             }
         });
@@ -306,7 +306,7 @@ impl PpuPaletteWidget {
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
         self.palette_texture.set(
-            ppu.cgram.debug_render_palette::<EguiImageImpl>(),
+            ppu.state.cgram.debug_render_palette::<EguiImageImpl>(),
             TextureOptions::default(),
         );
     }

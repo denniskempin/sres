@@ -2,12 +2,13 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
 
+use bitcode::Decode;
+use bitcode::Encode;
 use intbits::Bits;
-use serde::Deserialize;
-use serde::Serialize;
 
 use crate::common::uint::U16Ext;
 
+#[derive(Encode, Decode)]
 pub struct Vram {
     pub memory: Vec<u16>,
     pub current_addr: VramAddr,
@@ -135,7 +136,7 @@ impl std::ops::Index<VramAddr> for Vram {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, Encode, Decode)]
 pub struct VramAddr(pub u16);
 
 impl VramAddr {
