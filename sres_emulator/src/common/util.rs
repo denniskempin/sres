@@ -4,6 +4,9 @@ use std::collections::VecDeque;
 use std::io::BufWriter;
 use std::io::Write;
 
+use bitcode::Decode;
+use bitcode::Encode;
+
 #[derive(Clone)]
 pub struct RingBuffer<T, const N: usize> {
     pub stack: VecDeque<T>,
@@ -41,7 +44,7 @@ impl<T, const N: usize> Default for RingBuffer<T, N> {
 
 /// A simple edge detector that can be used to detect rising and falling edges of a signal.
 /// Used to simplify detection of start/end of vblank, timers, etc.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Encode, Decode)]
 pub struct EdgeDetector {
     pub value: bool,
     pub rise_triggered: bool,

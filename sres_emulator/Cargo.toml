@@ -26,6 +26,7 @@ itertools = "0.13"
 serde_path_to_error = "0.1"
 strum = { version = "0.26", features = ["derive"] }
 bilge = "0.2"
+bitcode = "=0.6.0"
 
 [dev-dependencies]
 tempfile = "3.10"

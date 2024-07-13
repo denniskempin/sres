@@ -2,9 +2,9 @@
 use std::ops::Add;
 use std::ops::Div;
 
+use bitcode::Decode;
+use bitcode::Encode;
 use intbits::Bits;
-use serde::Deserialize;
-use serde::Serialize;
 
 /// Conversion factor from u5 to u8
 const U5_TO_U8_CONVERSION: f32 = 8.225806;
@@ -14,7 +14,7 @@ const U5_TO_U8_CONVERSION: f32 = 8.225806;
 pub struct ColorIdx(pub u8);
 
 /// RGB format used by SNES, 5 bits per channel
-#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Encode, Decode)]
 pub struct Rgb15(pub u16);
 
 impl Rgb15 {

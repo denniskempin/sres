@@ -1,5 +1,7 @@
 //! Tracking of PPU events and timing.
 
+use bitcode::Decode;
+use bitcode::Encode;
 use intbits::Bits;
 
 use crate::common::address::AddressU24;
@@ -7,7 +9,7 @@ use crate::common::system::ClockInfo;
 use crate::common::uint::U16Ext;
 use crate::common::util::EdgeDetector;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Encode, Decode)]
 pub struct PpuTimer {
     master_clock: u64,
     v: u64,
@@ -339,7 +341,7 @@ impl Default for PpuTimer {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, strum::Display)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, strum::Display, Encode, Decode)]
 enum HVTimerMode {
     Off,
     TriggerH,

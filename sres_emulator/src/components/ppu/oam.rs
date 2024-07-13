@@ -2,12 +2,13 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
 
+use bitcode::Decode;
+use bitcode::Encode;
 use intbits::Bits;
-use serde::Deserialize;
-use serde::Serialize;
 
 use super::vram::VramAddr;
 
+#[derive(Encode, Decode)]
 pub struct Oam {
     pub memory: Vec<u8>,
     /// Contains the currently selected OAM address set via the OAMADD register.
@@ -201,7 +202,7 @@ impl Oam {
     }
 }
 
-#[derive(Default, Clone, Copy, Debug)]
+#[derive(Default, Clone, Copy, Debug, Encode, Decode)]
 struct OamAddr(u16);
 
 impl OamAddr {
@@ -326,7 +327,7 @@ impl Display for Sprite {
     }
 }
 
-#[derive(Default, Clone, Copy, Debug, Serialize, Deserialize, strum::Display)]
+#[derive(Default, Clone, Copy, Debug, Encode, Decode, strum::Display)]
 pub enum SpriteSize {
     #[default]
     Size8x8,
