@@ -5,8 +5,6 @@
 //!
 //! Some tests will use snapshots of the PPU state to run testing in isolation of the CPU
 //! behavior and in absence of ROM files.
-use bitcode::Decode;
-use bitcode::Encode;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -14,16 +12,11 @@ use std::path::PathBuf;
 use image::RgbaImage;
 use sres_emulator::cartridge::Cartridge;
 use sres_emulator::common::image::Image;
-use sres_emulator::common::image::Rgb15;
 use sres_emulator::common::image::Rgba32;
 use sres_emulator::common::logging;
-use sres_emulator::components::ppu::Background;
 use sres_emulator::components::ppu::BackgroundId;
-use sres_emulator::components::ppu::BgMode;
 use sres_emulator::components::ppu::BitDepth;
-use sres_emulator::components::ppu::ColorMathOperation;
 use sres_emulator::components::ppu::Ppu;
-use sres_emulator::components::ppu::SpriteSize;
 use sres_emulator::components::ppu::VramAddr;
 use sres_emulator::System;
 
@@ -170,9 +163,9 @@ fn test_tloz_game() {
 fn run_snapshot_framebuffer_test(snapshot_name: &str) {
     logging::test_init(true);
 
-    let mut ppu =
-        PpuSnapshot::read_from_file(&test_dir().join(format!("{snapshot_name}.snapshot")))
-            .restore();
+    let mut ppu = Ppu::new();
+    ppu.load_state(&std::fs::read(&test_dir().join(format!("{snapshot_name}.snapshot"))).unwrap())
+        .unwrap();
     for scanline in 0..256 {
         ppu.draw_scanline(scanline);
     }
@@ -207,8 +200,11 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
             .iter()
             .find(|(_, snapshot_frame)| *snapshot_frame == frame)
         {
-            PpuSnapshot::snapshot(&system.cpu.bus.ppu)
-                .write_to_file(&test_dir().join(format!("{rom_name}-{test_name}.snapshot")));
+            std::fs::write(
+                &test_dir().join(format!("{rom_name}-{test_name}.snapshot")),
+                &system.cpu.bus.ppu.save_state(),
+            )
+            .unwrap();
         }
     }
 }
@@ -244,84 +240,5 @@ impl Image for TestImageImpl {
 
     fn set_pixel(&mut self, index: (u32, u32), value: Rgba32) {
         self.inner[(index.0, index.1)] = image::Rgba::from(value.0);
-    }
-}
-
-/// Snapshot of PPU data. Can be saved from a running emulator session and then restored later
-/// for testing PPU rendering in isolation of other emulator components.
-#[derive(Encode, Decode)]
-struct PpuSnapshot {
-    vram: Vec<u16>,
-    cgram: Vec<Rgb15>,
-    bgmode: BgMode,
-    bg3_priority: bool,
-    backgrounds: [Background; 4],
-    oam: Vec<u8>,
-    oam_main_enabled: bool,
-    oam_sub_enabled: bool,
-    oam_color_math_enabled: bool,
-    sprite_sizes: (SpriteSize, SpriteSize),
-    nametables: (VramAddr, VramAddr),
-    color_math_backdrop_enabled: bool,
-    color_math_operation: ColorMathOperation,
-    color_math_half: bool,
-    fixed_color: Rgb15,
-}
-
-impl PpuSnapshot {
-    pub fn snapshot(ppu: &Ppu) -> Self {
-        PpuSnapshot {
-            vram: ppu.state.vram.memory.clone(),
-            cgram: ppu.state.cgram.memory.clone(),
-            bgmode: ppu.state.bgmode,
-            bg3_priority: ppu.state.bg3_priority,
-            backgrounds: [
-                ppu.state.backgrounds[0],
-                ppu.state.backgrounds[1],
-                ppu.state.backgrounds[2],
-                ppu.state.backgrounds[3],
-            ],
-            oam: ppu.state.oam.memory.clone(),
-            oam_main_enabled: ppu.state.oam.main_enabled,
-            oam_sub_enabled: ppu.state.oam.sub_enabled,
-            oam_color_math_enabled: ppu.state.oam.color_math_enabled,
-            sprite_sizes: ppu.state.oam.sprite_sizes,
-            nametables: ppu.state.oam.nametables,
-            color_math_backdrop_enabled: ppu.state.color_math_backdrop_enabled,
-            color_math_operation: ppu.state.color_math_operation,
-            color_math_half: ppu.state.color_math_half,
-            fixed_color: ppu.state.fixed_color,
-        }
-    }
-
-    pub fn write_to_file(&self, path: &Path) {
-        std::fs::write(path, &bitcode::encode(self)).unwrap();
-    }
-
-    pub fn restore(self) -> Ppu {
-        let mut ppu = Ppu::new();
-        ppu.state.vram.memory = self.vram;
-        ppu.state.cgram.memory = self.cgram;
-        ppu.state.bgmode = self.bgmode;
-        ppu.state.bg3_priority = self.bg3_priority;
-        ppu.state.backgrounds[0] = self.backgrounds[0];
-        ppu.state.backgrounds[1] = self.backgrounds[1];
-        ppu.state.backgrounds[2] = self.backgrounds[2];
-        ppu.state.backgrounds[3] = self.backgrounds[3];
-        ppu.state.oam.memory = self.oam;
-        ppu.state.oam.sprite_sizes = self.sprite_sizes;
-        ppu.state.oam.nametables = self.nametables;
-        ppu.state.oam.main_enabled = self.oam_main_enabled;
-        ppu.state.oam.sub_enabled = self.oam_sub_enabled;
-        ppu.state.oam.color_math_enabled = self.oam_color_math_enabled;
-        ppu.state.color_math_backdrop_enabled = self.color_math_backdrop_enabled;
-        ppu.state.color_math_operation = self.color_math_operation;
-        ppu.state.color_math_half = self.color_math_half;
-        ppu.state.fixed_color = self.fixed_color;
-        ppu
-    }
-
-    pub fn read_from_file(path: &Path) -> Self {
-        bitcode::decode(&std::fs::read(path).unwrap()).unwrap()
     }
 }

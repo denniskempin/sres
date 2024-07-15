@@ -26,7 +26,6 @@ use crate::common::uint::U32Ext;
 use crate::common::uint::U8Ext;
 
 pub struct Ppu {
-    timer: PpuTimer,
     disabled: bool,
     pub headless: bool,
     pub state: PpuState,
@@ -34,9 +33,10 @@ pub struct Ppu {
 
 #[derive(Encode, Decode)]
 pub struct PpuState {
-    pub vram: Vram,
-    pub bgmode: BgMode,
-    pub bg3_priority: bool,
+    timer: PpuTimer,
+    vram: Vram,
+    bgmode: BgMode,
+    bg3_priority: bool,
     pub backgrounds: [Background; 4],
 
     framebuffer: Framebuffer,
@@ -47,10 +47,10 @@ pub struct PpuState {
     bgofs_latch: u8,
     bghofs_latch: u8,
 
-    pub color_math_backdrop_enabled: bool,
-    pub color_math_operation: ColorMathOperation,
-    pub color_math_half: bool,
-    pub fixed_color: Rgb15,
+    color_math_backdrop_enabled: bool,
+    color_math_operation: ColorMathOperation,
+    color_math_half: bool,
+    fixed_color: Rgb15,
 
     mode7_latch: u8,
     m7a_mul: i16,
@@ -66,6 +66,7 @@ pub struct PpuState {
 impl Default for PpuState {
     fn default() -> Self {
         Self {
+            timer: PpuTimer::default(),
             vram: Vram::new(),
             bgmode: BgMode::Mode0,
             bg3_priority: false,
@@ -103,14 +104,26 @@ impl Ppu {
     pub fn new() -> Self {
         Self {
             disabled: false,
-            timer: PpuTimer::default(),
             headless: false,
             state: PpuState::default(),
         }
     }
 
+    pub fn reset(&mut self) {
+        self.state = PpuState::default();
+    }
+
+    pub fn load_state(&mut self, encoded: &[u8]) -> anyhow::Result<()> {
+        self.state = bitcode::decode(encoded)?;
+        Ok(())
+    }
+
+    pub fn save_state(&self) -> Vec<u8> {
+        bitcode::encode(&self.state)
+    }
+
     pub fn clock_info(&self) -> ClockInfo {
-        self.timer.clock_info()
+        self.state.timer.clock_info()
     }
 
     pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
@@ -125,7 +138,7 @@ impl Ppu {
             0x213D => self.read_opvct(),
             0x213E => self.peek_stat77(),
             0x213F => self.read_stat78(),
-            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.timer.bus_read(addr),
+            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.state.timer.bus_read(addr),
             _ => {
                 log::warn!("PPU: Unhandled read from {:04X}", addr.offset);
                 0
@@ -145,7 +158,7 @@ impl Ppu {
             0x213D => Some(self.peek_opvct()),
             0x213E => Some(self.peek_stat77()),
             0x213F => Some(self.peek_stat78()),
-            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.timer.bus_peek(addr),
+            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.state.timer.bus_peek(addr),
             _ => None,
         }
     }
@@ -176,7 +189,7 @@ impl Ppu {
             0x2132 => self.write_coldata(value),
             0x211B => self.write_m7a(value),
             0x211C => self.write_m7b(value),
-            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.timer.bus_write(addr, value),
+            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.state.timer.bus_write(addr, value),
             _ => log::warn!(
                 "PPU: Unhandled write to {:04X} = {:02X}",
                 addr.offset,
@@ -186,7 +199,7 @@ impl Ppu {
     }
 
     pub fn advance_master_clock(&mut self, cycles: u64) {
-        self.timer.advance_master_clock(cycles);
+        self.state.timer.advance_master_clock(cycles);
         if self.disabled {
             return;
         }
@@ -199,16 +212,11 @@ impl Ppu {
     }
 
     pub fn consume_nmi_interrupt(&mut self) -> bool {
-        self.timer.consume_nmi_interrupt()
+        self.state.timer.consume_nmi_interrupt()
     }
 
     pub fn consume_timer_interrupt(&mut self) -> bool {
-        self.timer.consume_timer_interrupt()
-    }
-
-    pub fn reset(&mut self) {
-        self.state.last_drawn_scanline = 0;
-        self.timer = PpuTimer::default();
+        self.state.timer.consume_timer_interrupt()
     }
 
     pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {
