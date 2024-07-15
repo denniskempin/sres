@@ -3,6 +3,10 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::hash::Hash;
 
+use bitcode::Decode;
+use bitcode::Encode;
+use intbits::Bits;
+
 use crate::common::uint::U16Ext;
 use crate::common::uint::U32Ext;
 use crate::common::uint::UIntTruncate;
@@ -156,6 +160,63 @@ impl Address for AddressU16 {
 }
 
 impl Display for AddressU16 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "${:04X}", self.0)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, Encode, Decode)]
+pub struct AddressU15(pub u16);
+
+impl AddressU15 {
+    pub fn set_low_byte(&mut self, value: u8) {
+        self.0.set_low_byte(value);
+    }
+
+    pub fn set_high_byte(&mut self, value: u8) {
+        self.0.set_high_byte(value.bits(0..=6) & 0x7F);
+    }
+}
+
+impl std::ops::Add<u16> for AddressU15 {
+    type Output = Self;
+
+    fn add(self, rhs: u16) -> Self {
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        Self(self.0.wrapping_add(rhs) & 0x7FFF)
+    }
+}
+
+impl std::ops::Add<u32> for AddressU15 {
+    type Output = Self;
+
+    fn add(self, rhs: u32) -> Self {
+        self + rhs as u16
+    }
+}
+
+impl std::ops::Sub<u16> for AddressU15 {
+    type Output = Self;
+
+    fn sub(self, rhs: u16) -> Self {
+        #[allow(clippy::suspicious_arithmetic_impl)]
+        Self(self.0.wrapping_sub(rhs) & 0x7FFF)
+    }
+}
+
+impl From<u16> for AddressU15 {
+    fn from(value: u16) -> Self {
+        Self(value & 0x7FFF)
+    }
+}
+
+impl From<AddressU15> for usize {
+    fn from(value: AddressU15) -> Self {
+        value.0 as usize
+    }
+}
+
+impl Display for AddressU15 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "${:04X}", self.0)
     }

@@ -12,11 +12,10 @@ use intbits::Bits;
 
 use self::cgram::CgRam;
 use self::oam::Oam;
-pub use self::oam::SpriteSize;
 // Public to allow for access in benches
 pub use self::timer::PpuTimer;
 use self::vram::Vram;
-pub use self::vram::VramAddr;
+use crate::common::address::AddressU15;
 use crate::common::address::AddressU24;
 use crate::common::image::Image;
 use crate::common::image::Rgb15;
@@ -565,7 +564,7 @@ impl Ppu {
     /// ++++-++--- Tilemap VRAM address (word address = AAAAAA << 10)
     fn write_bgnsc(&mut self, addr: AddressU24, value: u8) {
         let bg_id = (addr.offset - 0x2107) as usize;
-        self.state.backgrounds[bg_id].tilemap_addr = VramAddr((value.bits(2..=7) as u16) << 10);
+        self.state.backgrounds[bg_id].tilemap_addr = AddressU15((value.bits(2..=7) as u16) << 10);
         self.state.backgrounds[bg_id].tilemap_size = match value.bits(0..=1) {
             0 => TilemapSize::Size32x32,
             1 => TilemapSize::Size64x32,
@@ -583,8 +582,8 @@ impl Ppu {
     /// |||| ++++- BG1 CHR word base address (word address = AAAA << 12)
     /// ++++------ BG2 CHR word base address (word address = BBBB << 12)
     fn write_bg12nba(&mut self, value: u8) {
-        self.state.backgrounds[0].tileset_addr = VramAddr((value.low_nibble() as u16) << 12);
-        self.state.backgrounds[1].tileset_addr = VramAddr((value.high_nibble() as u16) << 12);
+        self.state.backgrounds[0].tileset_addr = AddressU15((value.low_nibble() as u16) << 12);
+        self.state.backgrounds[1].tileset_addr = AddressU15((value.high_nibble() as u16) << 12);
     }
 
     /// Register 210C: BG34NBA - Tileset base address for BG3 and BG4
@@ -595,8 +594,8 @@ impl Ppu {
     /// |||| ++++- BG3 CHR word base address (word address = CCCC << 12)
     /// ++++------ BG4 CHR word base address (word address = DDDD << 12)
     fn write_bg34nba(&mut self, value: u8) {
-        self.state.backgrounds[2].tileset_addr = VramAddr((value.low_nibble() as u16) << 12);
-        self.state.backgrounds[3].tileset_addr = VramAddr((value.high_nibble() as u16) << 12);
+        self.state.backgrounds[2].tileset_addr = AddressU15((value.low_nibble() as u16) << 12);
+        self.state.backgrounds[3].tileset_addr = AddressU15((value.high_nibble() as u16) << 12);
     }
 
     /// Register 210D, 210F, 2111, 2113: BGNHOFS - Background N horizontal scroll
@@ -889,7 +888,7 @@ impl Ppu {
 
     pub fn debug_render_vram<ImageT: Image>(
         &self,
-        addr: VramAddr,
+        addr: AddressU15,
         num_rows: u32,
         bit_depth: BitDepth,
         palette_addr: u8,
@@ -913,7 +912,7 @@ impl Ppu {
     fn debug_render_vram_impl<TileDecoderT: TileDecoder>(
         &self,
         image: &mut impl Image,
-        addr: VramAddr,
+        addr: AddressU15,
         num_rows: u32,
         palette_addr: u8,
     ) {
@@ -1063,8 +1062,8 @@ pub struct Background {
     pub bit_depth: BitDepth,
     pub palette_addr: u8,
     pub tile_size: TileSize,
-    pub tilemap_addr: VramAddr,
-    pub tileset_addr: VramAddr,
+    pub tilemap_addr: AddressU15,
+    pub tileset_addr: AddressU15,
     pub tilemap_size: TilemapSize,
     pub h_offset: u32,
     pub v_offset: u32,
@@ -1147,7 +1146,7 @@ pub enum BackgroundId {
 }
 
 pub struct Tile<TileDecoderT: TileDecoder> {
-    tile_addr: VramAddr,
+    tile_addr: AddressU15,
     palette: u8,
     priority: bool,
     flip_v: bool,
@@ -1156,7 +1155,7 @@ pub struct Tile<TileDecoderT: TileDecoder> {
 }
 
 impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
-    pub fn from_tilemap_entry(tileset_addr: VramAddr, tilemap_entry: u16) -> Self {
+    pub fn from_tilemap_entry(tileset_addr: AddressU15, tilemap_entry: u16) -> Self {
         let tile_idx = tilemap_entry.bits(0..=9);
         Self {
             tile_addr: tileset_addr + tile_idx * TileDecoderT::WORDS_PER_ROW as u16 * 8,
@@ -1169,7 +1168,7 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
     }
 
     pub fn from_tileset_index(
-        tileset_addr: VramAddr,
+        tileset_addr: AddressU15,
         tile_idx: u32,
         flip_h: bool,
         flip_v: bool,
@@ -1235,7 +1234,7 @@ pub trait TileDecoder {
     const WORDS_PER_ROW: u32;
     const NUM_COLORS: u8;
 
-    fn new(tile_addr: VramAddr, vram: &Vram) -> Self;
+    fn new(tile_addr: AddressU15, vram: &Vram) -> Self;
     fn pixel(&self, pixel_idx: u32) -> u8;
 }
 
@@ -1247,7 +1246,7 @@ impl TileDecoder for Bpp2Decoder {
     const WORDS_PER_ROW: u32 = 1;
     const NUM_COLORS: u8 = 4;
 
-    fn new(row_addr: VramAddr, vram: &Vram) -> Self {
+    fn new(row_addr: AddressU15, vram: &Vram) -> Self {
         let data = vram[row_addr];
         Self {
             planes: [data.low_byte(), data.high_byte()],
@@ -1267,7 +1266,7 @@ impl TileDecoder for Bpp4Decoder {
     const WORDS_PER_ROW: u32 = 2;
     const NUM_COLORS: u8 = 16;
 
-    fn new(row_addr: VramAddr, vram: &Vram) -> Self {
+    fn new(row_addr: AddressU15, vram: &Vram) -> Self {
         let low_word = vram[row_addr];
         let high_word = vram[row_addr + 8_u16];
         Self {
@@ -1296,7 +1295,7 @@ impl TileDecoder for Bpp8Decoder {
     const WORDS_PER_ROW: u32 = 4;
     const NUM_COLORS: u8 = 255;
 
-    fn new(row_addr: VramAddr, vram: &Vram) -> Self {
+    fn new(row_addr: AddressU15, vram: &Vram) -> Self {
         let word0 = vram[row_addr];
         let word1 = vram[row_addr + 8_u16];
         let word2 = vram[row_addr + 16_u16];
