@@ -11,13 +11,13 @@ use std::path::PathBuf;
 
 use image::RgbaImage;
 use sres_emulator::cartridge::Cartridge;
+use sres_emulator::common::address::AddressU15;
 use sres_emulator::common::image::Image;
 use sres_emulator::common::image::Rgba32;
 use sres_emulator::common::logging;
 use sres_emulator::components::ppu::BackgroundId;
 use sres_emulator::components::ppu::BitDepth;
 use sres_emulator::components::ppu::Ppu;
-use sres_emulator::components::ppu::VramAddr;
 use sres_emulator::System;
 
 #[test]
@@ -104,7 +104,7 @@ pub fn test_krom_interlace_rpg_debug_render() {
     // Debug render portion of VRAM
     let vram_path = test_dir().join("krom_interlace_rpg-vram");
     compare_to_golden(
-        &ppu.debug_render_vram(VramAddr(0), 32, BitDepth::Bpp4, 0),
+        &ppu.debug_render_vram(AddressU15(0), 32, BitDepth::Bpp4, 0),
         &vram_path,
     );
 }

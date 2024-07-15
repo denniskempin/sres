@@ -1,20 +1,18 @@
 //! Implementation of VRAM containing tile and tilemap data.
-use std::fmt::Display;
-use std::fmt::Formatter;
-
 use bitcode::Decode;
 use bitcode::Encode;
 use intbits::Bits;
 
+use crate::common::address::AddressU15;
 use crate::common::uint::U16Ext;
 
 #[derive(Encode, Decode)]
 pub struct Vram {
-    pub memory: Vec<u16>,
-    pub current_addr: VramAddr,
-    pub read_latch: bool,
-    pub increment_mode: bool,
-    pub increment_amount: u16,
+    memory: Vec<u16>,
+    current_addr: AddressU15,
+    read_latch: bool,
+    increment_mode: bool,
+    increment_amount: u16,
 }
 
 impl Vram {
@@ -22,7 +20,7 @@ impl Vram {
     pub fn new() -> Self {
         Self {
             memory: vec![0; 0x20000],
-            current_addr: VramAddr::from(0),
+            current_addr: AddressU15::from(0),
             read_latch: false,
             increment_mode: false,
             increment_amount: 1,
@@ -128,67 +126,10 @@ impl Vram {
     }
 }
 
-impl std::ops::Index<VramAddr> for Vram {
+impl std::ops::Index<AddressU15> for Vram {
     type Output = u16;
 
-    fn index(&self, index: VramAddr) -> &Self::Output {
+    fn index(&self, index: AddressU15) -> &Self::Output {
         &self.memory[usize::from(index)]
-    }
-}
-
-#[derive(Copy, Clone, Debug, Default, Encode, Decode)]
-pub struct VramAddr(pub u16);
-
-impl VramAddr {
-    pub fn set_low_byte(&mut self, value: u8) {
-        self.0.set_low_byte(value);
-    }
-
-    pub fn set_high_byte(&mut self, value: u8) {
-        self.0.set_high_byte(value.bits(0..=6) & 0x7F);
-    }
-}
-
-impl std::ops::Add<u16> for VramAddr {
-    type Output = Self;
-
-    fn add(self, rhs: u16) -> Self {
-        #[allow(clippy::suspicious_arithmetic_impl)]
-        Self(self.0.wrapping_add(rhs) & 0x7FFF)
-    }
-}
-
-impl std::ops::Add<u32> for VramAddr {
-    type Output = Self;
-
-    fn add(self, rhs: u32) -> Self {
-        self + rhs as u16
-    }
-}
-
-impl std::ops::Sub<u16> for VramAddr {
-    type Output = Self;
-
-    fn sub(self, rhs: u16) -> Self {
-        #[allow(clippy::suspicious_arithmetic_impl)]
-        Self(self.0.wrapping_sub(rhs) & 0x7FFF)
-    }
-}
-
-impl From<u16> for VramAddr {
-    fn from(value: u16) -> Self {
-        Self(value & 0x7FFF)
-    }
-}
-
-impl From<VramAddr> for usize {
-    fn from(value: VramAddr) -> Self {
-        value.0 as usize
-    }
-}
-
-impl Display for VramAddr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "${:04X}", self.0)
     }
 }

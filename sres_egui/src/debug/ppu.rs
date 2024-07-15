@@ -5,11 +5,11 @@ use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
 use egui::Vec2;
+use sres_emulator::common::address::AddressU15;
 use sres_emulator::components::ppu::Background;
 use sres_emulator::components::ppu::BackgroundId;
 use sres_emulator::components::ppu::BitDepth;
 use sres_emulator::components::ppu::Ppu;
-use sres_emulator::components::ppu::VramAddr;
 use sres_emulator::System;
 
 use crate::util::EguiImageImpl;
@@ -195,7 +195,7 @@ impl PpuSpritesWidget {
 }
 
 struct PpuVramWidget {
-    addr: VramAddr,
+    addr: AddressU15,
     bit_depth: BitDepth,
     palette_addr: u8,
     vram_texture: TextureHandle,
@@ -204,7 +204,7 @@ struct PpuVramWidget {
 impl PpuVramWidget {
     pub fn new(cc: &CreationContext) -> Self {
         PpuVramWidget {
-            addr: VramAddr(0),
+            addr: AddressU15(0),
             bit_depth: BitDepth::Bpp2,
             palette_addr: 0,
             vram_texture: cc.egui_ctx.load_texture(

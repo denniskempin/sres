@@ -9,7 +9,7 @@ use crate::common::uint::U16Ext;
 #[derive(Encode, Decode)]
 pub struct CgRam {
     /// Contains the contents of CGRAM translated into RGBA values for more efficient rendering.
-    pub memory: Vec<Rgb15>,
+    memory: Vec<Rgb15>,
     /// Contains the currently selected CGRAM address set via the CGADD register.
     current_addr: u8,
     /// Represents the write latch. Contains the previous written value or None if the latch is

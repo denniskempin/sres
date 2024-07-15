@@ -6,11 +6,11 @@ use bitcode::Decode;
 use bitcode::Encode;
 use intbits::Bits;
 
-use super::vram::VramAddr;
+use crate::common::address::AddressU15;
 
 #[derive(Encode, Decode)]
 pub struct Oam {
-    pub memory: Vec<u8>,
+    memory: Vec<u8>,
     /// Contains the currently selected OAM address set via the OAMADD register.
     current_addr: OamAddr,
     /// Represents the write latch. Contains the previous written value or None if the latch is
@@ -18,9 +18,9 @@ pub struct Oam {
     latch: Option<u8>,
     /// Sprite sizes set by OBJSEL.
     /// Each sprite can select one of these sizese in the OAM attributes.
-    pub sprite_sizes: (SpriteSize, SpriteSize),
+    sprite_sizes: (SpriteSize, SpriteSize),
     /// Base address for both nametables used by sprites.
-    pub nametables: (VramAddr, VramAddr),
+    pub nametables: (AddressU15, AddressU15),
 
     pub main_enabled: bool,
     pub sub_enabled: bool,
@@ -35,7 +35,7 @@ impl Oam {
             current_addr: OamAddr(0),
             latch: None,
             sprite_sizes: (SpriteSize::Size8x8, SpriteSize::Size16x16),
-            nametables: (VramAddr(0), VramAddr(0)),
+            nametables: (AddressU15(0), AddressU15(0)),
             main_enabled: false,
             sub_enabled: false,
             color_math_enabled: false,
@@ -81,7 +81,7 @@ impl Oam {
     ///             6: 16x32 and 32x64
     ///             7: 16x32 and 32x32
     pub fn write_objsel(&mut self, value: u8) {
-        self.nametables.0 = VramAddr((value.bits(0..=1) as u16) << 13);
+        self.nametables.0 = AddressU15((value.bits(0..=1) as u16) << 13);
         self.nametables.1 = self.nametables.0 + ((value.bits(3..=4) as u16 + 1) << 12);
         use SpriteSize::*;
         self.sprite_sizes = match value.bits(5..=7) {
@@ -231,7 +231,7 @@ pub struct Sprite {
     pub x: u32,
     pub y: u32,
     pub tile: u32,
-    pub nametable: VramAddr,
+    pub nametable: AddressU15,
     pub palette: u8,
     pub priority: u8,
     pub hflip: bool,
@@ -245,7 +245,7 @@ impl Sprite {
         data: [u8; 4],
         attributes: u8,
         sprite_sizes: (SpriteSize, SpriteSize),
-        nametables: (VramAddr, VramAddr),
+        nametables: (AddressU15, AddressU15),
     ) -> Self {
         Self {
             id,
