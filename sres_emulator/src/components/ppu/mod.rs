@@ -1,5 +1,6 @@
 //! Implementation of the Picture Processing Unit
 mod cgram;
+mod debug;
 mod oam;
 mod timer;
 mod vram;
@@ -13,6 +14,8 @@ use intbits::Bits;
 use self::cgram::CgRam;
 use self::oam::Oam;
 // Public to allow for access in benches
+pub use self::debug::PpuDebug;
+pub use self::debug::VramRenderSelection;
 pub use self::timer::PpuTimer;
 use self::vram::Vram;
 use crate::common::address::AddressU15;
@@ -24,10 +27,19 @@ use crate::common::uint::U16Ext;
 use crate::common::uint::U32Ext;
 use crate::common::uint::U8Ext;
 
+#[derive(Default, Copy, Clone, Debug, PartialEq, Encode, Decode, strum::Display)]
+pub enum BackgroundId {
+    #[default]
+    BG1 = 0,
+    BG2 = 1,
+    BG3 = 2,
+    BG4 = 3,
+}
+
 pub struct Ppu {
     disabled: bool,
-    pub headless: bool,
-    pub state: PpuState,
+    headless: bool,
+    state: PpuState,
 }
 
 #[derive(Encode, Decode)]
@@ -36,11 +48,11 @@ pub struct PpuState {
     vram: Vram,
     bgmode: BgMode,
     bg3_priority: bool,
-    pub backgrounds: [Background; 4],
+    backgrounds: [Background; 4],
 
     framebuffer: Framebuffer,
-    pub cgram: CgRam,
-    pub oam: Oam,
+    cgram: CgRam,
+    oam: Oam,
     last_drawn_scanline: u64,
 
     bgofs_latch: u8,
@@ -108,6 +120,11 @@ impl Ppu {
         }
     }
 
+    /// Only used for benchmarks, runs full PPU emulation but does not render
+    pub fn force_headless(&mut self) {
+        self.headless = true;
+    }
+
     pub fn reset(&mut self) {
         self.state = PpuState::default();
     }
@@ -123,6 +140,10 @@ impl Ppu {
 
     pub fn clock_info(&self) -> ClockInfo {
         self.state.timer.clock_info()
+    }
+
+    pub fn debug(&self) -> PpuDebug<'_> {
+        PpuDebug(self)
     }
 
     pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
@@ -884,123 +905,6 @@ impl Ppu {
         log::warn!("STAT78 not implemented");
         0
     }
-    // Debug APIs
-
-    pub fn debug_render_vram<ImageT: Image>(
-        &self,
-        addr: AddressU15,
-        num_rows: u32,
-        bit_depth: BitDepth,
-        palette_addr: u8,
-    ) -> ImageT {
-        let mut image = ImageT::new(16 * 8, num_rows * 8);
-        match bit_depth {
-            BitDepth::Bpp2 => {
-                self.debug_render_vram_impl::<Bpp2Decoder>(&mut image, addr, num_rows, palette_addr)
-            }
-            BitDepth::Bpp4 => {
-                self.debug_render_vram_impl::<Bpp4Decoder>(&mut image, addr, num_rows, palette_addr)
-            }
-            BitDepth::Bpp8 => {
-                self.debug_render_vram_impl::<Bpp8Decoder>(&mut image, addr, num_rows, palette_addr)
-            }
-            _ => (),
-        };
-        image
-    }
-
-    fn debug_render_vram_impl<TileDecoderT: TileDecoder>(
-        &self,
-        image: &mut impl Image,
-        addr: AddressU15,
-        num_rows: u32,
-        palette_addr: u8,
-    ) {
-        for coarse_x in 0..16 {
-            for coarse_y in 0..num_rows {
-                let tile_idx = coarse_y * 16 + coarse_x;
-                let tile = Tile::<TileDecoderT>::from_tileset_index(addr, tile_idx, false, false);
-                for (row_idx, row) in tile.rows(&self.state.vram) {
-                    for (col_idx, pixel) in row.pixels() {
-                        let color = self.state.cgram[palette_addr + pixel];
-                        image.set_pixel(
-                            (coarse_x * 8 + col_idx, coarse_y * 8 + row_idx),
-                            color.into(),
-                        );
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn debug_render_background<ImageT: Image>(&self, background_id: BackgroundId) -> ImageT {
-        let background = &self.state.backgrounds[background_id as usize];
-        let mut image = ImageT::new(
-            background.coarse_width() * 8,
-            background.coarse_height() * 8,
-        );
-        match background.bit_depth {
-            BitDepth::Bpp2 => {
-                self.debug_render_background_impl::<Bpp2Decoder>(&mut image, background)
-            }
-            BitDepth::Bpp4 => {
-                self.debug_render_background_impl::<Bpp4Decoder>(&mut image, background)
-            }
-            BitDepth::Bpp8 => {
-                self.debug_render_background_impl::<Bpp8Decoder>(&mut image, background)
-            }
-            _ => (),
-        };
-        image
-    }
-
-    fn debug_render_background_impl<TileDecoderT: TileDecoder>(
-        &self,
-        image: &mut impl Image,
-        background: &Background,
-    ) {
-        for coarse_y in 0..background.coarse_height() {
-            for coarse_x in 0..background.coarse_width() {
-                let tile =
-                    background.get_tile::<TileDecoderT>(coarse_x, coarse_y, &self.state.vram);
-                for (fine_y, row) in tile.rows(&self.state.vram) {
-                    for (fine_x, pixel) in row.pixels() {
-                        let color = self.state.cgram[background.palette_addr + pixel];
-                        image.set_pixel(
-                            (coarse_x * 8 + fine_x, coarse_y * 8 + fine_y),
-                            color.into(),
-                        );
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn debug_render_sprite<ImageT: Image>(&self, sprite_id: u32) -> ImageT {
-        let sprite = self.state.oam.get_sprite(sprite_id);
-        let mut image = ImageT::new(sprite.width(), sprite.height());
-        for coarse_y in 0..(sprite.coarse_height()) {
-            for coarse_x in 0..(sprite.coarse_width()) {
-                let tile_idx = sprite.tile + coarse_x + coarse_y * 16;
-                let tile = Tile::<Bpp4Decoder>::from_tileset_index(
-                    sprite.nametable,
-                    tile_idx,
-                    false,
-                    false,
-                );
-                for (fine_y, row) in tile.rows(&self.state.vram) {
-                    for (fine_x, pixel) in row.pixels() {
-                        let color = self.state.cgram[sprite.palette_addr() + pixel];
-                        image.set_pixel(
-                            (coarse_x * 8 + fine_x, coarse_y * 8 + fine_y),
-                            color.into(),
-                        );
-                    }
-                }
-            }
-        }
-        image
-    }
 }
 
 #[derive(Encode, Decode)]
@@ -1036,7 +940,7 @@ impl std::ops::IndexMut<(u32, u32)> for Framebuffer {
 }
 
 #[derive(Default, Copy, Clone, Debug, Encode, Decode, strum::Display)]
-pub enum BgMode {
+enum BgMode {
     #[default]
     Mode0,
     Mode1,
@@ -1049,28 +953,28 @@ pub enum BgMode {
 }
 
 #[derive(Encode, Decode, Copy, Clone)]
-pub enum ColorMathOperation {
+enum ColorMathOperation {
     Add,
     Subtract,
 }
 
 #[derive(Default, Copy, Clone, Debug, Encode, Decode)]
-pub struct Background {
-    pub main_enabled: bool,
-    pub subscreen_enabled: bool,
-    pub color_math_enabled: bool,
-    pub bit_depth: BitDepth,
-    pub palette_addr: u8,
-    pub tile_size: TileSize,
-    pub tilemap_addr: AddressU15,
-    pub tileset_addr: AddressU15,
-    pub tilemap_size: TilemapSize,
-    pub h_offset: u32,
-    pub v_offset: u32,
+struct Background {
+    main_enabled: bool,
+    subscreen_enabled: bool,
+    color_math_enabled: bool,
+    bit_depth: BitDepth,
+    palette_addr: u8,
+    tile_size: TileSize,
+    tilemap_addr: AddressU15,
+    tileset_addr: AddressU15,
+    tilemap_size: TilemapSize,
+    h_offset: u32,
+    v_offset: u32,
 }
 
 impl Background {
-    pub fn get_tile<TileDecoderT: TileDecoder>(
+    fn get_tile<TileDecoderT: TileDecoder>(
         &self,
         coarse_x: u32,
         coarse_y: u32,
@@ -1087,11 +991,7 @@ impl Background {
         Tile::from_tilemap_entry(self.tileset_addr, tilemap_entry)
     }
 
-    pub fn get_tileset_tile<TileDecoderT: TileDecoder>(&self, index: u32) -> Tile<TileDecoderT> {
-        Tile::from_tileset_index(self.tileset_addr, index, false, false)
-    }
-
-    pub fn coarse_width(&self) -> u32 {
+    fn coarse_width(&self) -> u32 {
         match self.tilemap_size {
             TilemapSize::Size32x32 => 32,
             TilemapSize::Size64x32 => 64,
@@ -1100,7 +1000,7 @@ impl Background {
         }
     }
 
-    pub fn coarse_height(&self) -> u32 {
+    fn coarse_height(&self) -> u32 {
         match self.tilemap_size {
             TilemapSize::Size32x32 => 32,
             TilemapSize::Size64x32 => 32,
@@ -1111,7 +1011,7 @@ impl Background {
 }
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Encode, Decode, strum::Display)]
-pub enum BitDepth {
+enum BitDepth {
     #[default]
     Disabled,
     Bpp2,
@@ -1121,14 +1021,14 @@ pub enum BitDepth {
 }
 
 #[derive(Default, Copy, Clone, Debug, Encode, Decode, strum::Display)]
-pub enum TileSize {
+enum TileSize {
     #[default]
     Size8x8,
     Size16x16,
 }
 
 #[derive(Default, Copy, Clone, Debug, Encode, Decode, strum::Display)]
-pub enum TilemapSize {
+enum TilemapSize {
     #[default]
     Size32x32,
     Size64x32,
@@ -1136,16 +1036,7 @@ pub enum TilemapSize {
     Size64x64,
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq, Encode, Decode, strum::Display)]
-pub enum BackgroundId {
-    #[default]
-    BG1 = 0,
-    BG2 = 1,
-    BG3 = 2,
-    BG4 = 3,
-}
-
-pub struct Tile<TileDecoderT: TileDecoder> {
+struct Tile<TileDecoderT: TileDecoder> {
     tile_addr: AddressU15,
     palette: u8,
     priority: bool,
@@ -1155,7 +1046,7 @@ pub struct Tile<TileDecoderT: TileDecoder> {
 }
 
 impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
-    pub fn from_tilemap_entry(tileset_addr: AddressU15, tilemap_entry: u16) -> Self {
+    fn from_tilemap_entry(tileset_addr: AddressU15, tilemap_entry: u16) -> Self {
         let tile_idx = tilemap_entry.bits(0..=9);
         Self {
             tile_addr: tileset_addr + tile_idx * TileDecoderT::WORDS_PER_ROW as u16 * 8,
@@ -1167,7 +1058,7 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
         }
     }
 
-    pub fn from_tileset_index(
+    fn from_tileset_index(
         tileset_addr: AddressU15,
         tile_idx: u32,
         flip_h: bool,
@@ -1183,7 +1074,7 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
         }
     }
 
-    pub fn row(&self, row_idx: u32, vram: &Vram) -> TileRow<TileDecoderT> {
+    fn row(&self, row_idx: u32, vram: &Vram) -> TileRow<TileDecoderT> {
         let flipped_idx = if self.flip_v { 7 - row_idx } else { row_idx };
         TileRow::new(
             TileDecoderT::new(self.tile_addr + flipped_idx, vram),
@@ -1192,7 +1083,7 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
         )
     }
 
-    pub fn rows<'a>(
+    fn rows<'a>(
         &'a self,
         vram: &'a Vram,
     ) -> impl Iterator<Item = (u32, TileRow<TileDecoderT>)> + 'a {
@@ -1200,14 +1091,14 @@ impl<TileDecoderT: TileDecoder> Tile<TileDecoderT> {
     }
 }
 
-pub struct TileRow<TileDecoderT: TileDecoder> {
+struct TileRow<TileDecoderT: TileDecoder> {
     decoder: TileDecoderT,
     palette: u8,
     flip: bool,
 }
 
 impl<TileDecoderT: TileDecoder> TileRow<TileDecoderT> {
-    pub fn new(decoder: TileDecoderT, palette: u8, flip: bool) -> Self {
+    fn new(decoder: TileDecoderT, palette: u8, flip: bool) -> Self {
         Self {
             decoder,
             palette,
@@ -1215,7 +1106,7 @@ impl<TileDecoderT: TileDecoder> TileRow<TileDecoderT> {
         }
     }
 
-    pub fn pixel(&self, pixel_idx: u32) -> u8 {
+    fn pixel(&self, pixel_idx: u32) -> u8 {
         let flipped_idx = if self.flip { pixel_idx } else { 7 - pixel_idx };
         let raw_pixel = self.decoder.pixel(flipped_idx);
         if raw_pixel == 0 {
@@ -1225,12 +1116,12 @@ impl<TileDecoderT: TileDecoder> TileRow<TileDecoderT> {
         }
     }
 
-    pub fn pixels(&self) -> impl Iterator<Item = (u32, u8)> + '_ {
+    fn pixels(&self) -> impl Iterator<Item = (u32, u8)> + '_ {
         (0..8).map(|pixel_idx| (pixel_idx, self.pixel(pixel_idx)))
     }
 }
 
-pub trait TileDecoder {
+trait TileDecoder {
     const WORDS_PER_ROW: u32;
     const NUM_COLORS: u8;
 
@@ -1238,7 +1129,7 @@ pub trait TileDecoder {
     fn pixel(&self, pixel_idx: u32) -> u8;
 }
 
-pub struct Bpp2Decoder {
+struct Bpp2Decoder {
     planes: [u8; 2],
 }
 
@@ -1258,7 +1149,7 @@ impl TileDecoder for Bpp2Decoder {
     }
 }
 
-pub struct Bpp4Decoder {
+struct Bpp4Decoder {
     planes: [u8; 4],
 }
 
@@ -1287,7 +1178,7 @@ impl TileDecoder for Bpp4Decoder {
     }
 }
 
-pub struct Bpp8Decoder {
+struct Bpp8Decoder {
     planes: [u8; 8],
 }
 

@@ -148,27 +148,6 @@ impl Oam {
         self.memory[usize::from(self.current_addr)]
     }
 
-    pub fn get_sprites_on_scanline(&self, scanline: u32, priority: u32) -> Vec<(Sprite, u32)> {
-        let mut sprites = Vec::new();
-        for sprite_id in 0..128 {
-            let sprite = self.get_sprite(sprite_id);
-            if sprite.priority != priority as u8 {
-                continue;
-            }
-
-            let y = sprite.y;
-            let overdraw_scanline = scanline + 256;
-            if (y..(y + sprite.height())).contains(&scanline) {
-                sprites.push((sprite, scanline - y));
-            } else if (y..(y + sprite.height())).contains(&overdraw_scanline) {
-                sprites.push((sprite, overdraw_scanline - y));
-            }
-            if sprites.len() > 32 {
-                break;
-            }
-        }
-        sprites
-    }
     pub fn get_all_sprites_on_scanline(&self, scanline: u32) -> Vec<(Sprite, u32)> {
         let mut sprites = Vec::new();
         for sprite_id in 0..128 {
@@ -187,6 +166,7 @@ impl Oam {
         }
         sprites
     }
+
     pub fn get_sprite(&self, sprite_id: u32) -> Sprite {
         let sprite_addr = sprite_id as usize * 4;
         let attribute_addr = 0x200 + (sprite_id as usize) / 4;

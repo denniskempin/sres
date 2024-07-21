@@ -5,11 +5,10 @@ use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
 use egui::Vec2;
-use sres_emulator::common::address::AddressU15;
-use sres_emulator::components::ppu::Background;
 use sres_emulator::components::ppu::BackgroundId;
-use sres_emulator::components::ppu::BitDepth;
+
 use sres_emulator::components::ppu::Ppu;
+use sres_emulator::components::ppu::VramRenderSelection;
 use sres_emulator::System;
 
 use crate::util::EguiImageImpl;
@@ -98,7 +97,8 @@ impl PpuBackgroundWidget {
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
         self.tilemap_texture.set(
-            ppu.debug_render_background::<EguiImageImpl>(self.selected_bg),
+            ppu.debug()
+                .render_background::<EguiImageImpl>(self.selected_bg),
             TextureOptions::default(),
         );
     }
@@ -116,13 +116,9 @@ impl PpuBackgroundWidget {
             ],
             &mut self.selected_bg,
         );
-        let background = &ppu.state.backgrounds[self.selected_bg as usize];
-        ui.label(format!(
-            "Scroll: ({}, {})",
-            background.h_offset, background.v_offset
-        ));
+        ui.label(ppu.debug().background_info(self.selected_bg));
         ui.horizontal(|ui| {
-            tilemap_widget(ui, background, &self.tilemap_texture);
+            tilemap_widget(ui, &self.tilemap_texture);
         });
     }
 }
@@ -135,18 +131,12 @@ fn tabs_widget<T: ToString + PartialEq + Copy>(ui: &mut Ui, tabs: &[T], selected
     });
 }
 
-fn tilemap_widget(ui: &mut Ui, background: &Background, tilemap_texture: &TextureHandle) {
-    ui.vertical(|ui| {
-        ui.label(format!(
-            "Tilemap ({}, {})",
-            background.tilemap_addr, background.tilemap_size
-        ));
-        ui.image((tilemap_texture.id(), Vec2::new(512.0, 512.0)));
-    });
+fn tilemap_widget(ui: &mut Ui, tilemap_texture: &TextureHandle) {
+    ui.image((tilemap_texture.id(), Vec2::new(512.0, 512.0)));
 }
 
 struct PpuSpritesWidget {
-    sprite_id: u32,
+    sprite_id: usize,
     sprite_texture: TextureHandle,
 }
 
@@ -164,7 +154,7 @@ impl PpuSpritesWidget {
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
         self.sprite_texture.set(
-            ppu.debug_render_sprite::<EguiImageImpl>(self.sprite_id),
+            ppu.debug().render_sprite::<EguiImageImpl>(self.sprite_id),
             TextureOptions::default(),
         );
     }
@@ -183,30 +173,30 @@ impl PpuSpritesWidget {
             }
         });
 
-        let sprite = ppu.state.oam.get_sprite(self.sprite_id);
         ui.horizontal(|ui| {
-            ui.vertical(|ui| ui.label(format!("Position: ({}, {})", sprite.x, sprite.y)));
+            ui.label(ppu.debug().sprite_info(self.sprite_id));
             ui.image((
                 self.sprite_texture.id(),
-                Vec2::new(sprite.width() as f32 * 4.0, sprite.height() as f32 * 4.0),
+                Vec2::new(
+                    self.sprite_texture.size_vec2().x * 4.0,
+                    self.sprite_texture.size_vec2().y * 4.0,
+                ),
             ));
         });
     }
 }
 
 struct PpuVramWidget {
-    addr: AddressU15,
-    bit_depth: BitDepth,
-    palette_addr: u8,
+    offset: i32,
+    selection: VramRenderSelection,
     vram_texture: TextureHandle,
 }
 
 impl PpuVramWidget {
     pub fn new(cc: &CreationContext) -> Self {
         PpuVramWidget {
-            addr: AddressU15(0),
-            bit_depth: BitDepth::Bpp2,
-            palette_addr: 0,
+            offset: 0,
+            selection: VramRenderSelection::Background(BackgroundId::BG1),
             vram_texture: cc.egui_ctx.load_texture(
                 "Vram",
                 ColorImage::example(),
@@ -217,12 +207,8 @@ impl PpuVramWidget {
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
         self.vram_texture.set(
-            ppu.debug_render_vram::<EguiImageImpl>(
-                self.addr,
-                32,
-                self.bit_depth,
-                self.palette_addr,
-            ),
+            ppu.debug()
+                .render_vram::<EguiImageImpl>(32, self.offset, self.selection),
             TextureOptions::default(),
         );
     }
@@ -231,61 +217,21 @@ impl PpuVramWidget {
         self.update_textures(ppu);
 
         ui.horizontal(|ui| {
-            for bgid in &[
-                BackgroundId::BG1,
-                BackgroundId::BG2,
-                BackgroundId::BG3,
-                BackgroundId::BG4,
+            for selection in &[
+                VramRenderSelection::Background(BackgroundId::BG1),
+                VramRenderSelection::Background(BackgroundId::BG2),
+                VramRenderSelection::Background(BackgroundId::BG3),
+                VramRenderSelection::Background(BackgroundId::BG4),
+                VramRenderSelection::Sprite0,
+                VramRenderSelection::Sprite1,
             ] {
-                if ui.button(bgid.to_string()).clicked() {
-                    let bg = ppu.state.backgrounds[*bgid as usize];
-                    self.bit_depth = bg.bit_depth;
-                    self.addr = bg.tileset_addr;
-                    self.palette_addr = bg.palette_addr;
+                if ui.button(selection.to_string()).clicked() {
+                    self.selection = *selection;
+                    self.offset = 0;
                 }
-            }
-            if ui.button("Sprites0").clicked() {
-                self.bit_depth = BitDepth::Bpp4;
-                self.addr = ppu.state.oam.nametables.0;
-            }
-            if ui.button("Sprites1").clicked() {
-                self.bit_depth = BitDepth::Bpp4;
-                self.addr = ppu.state.oam.nametables.1;
-                self.palette_addr = 128;
             }
         });
-
-        ui.group(|ui| {
-            ui.horizontal(|ui| {
-                ui.label("Bit Depth: ".to_string());
-                tabs_widget(
-                    ui,
-                    &[BitDepth::Bpp2, BitDepth::Bpp4, BitDepth::Bpp8],
-                    &mut self.bit_depth,
-                );
-            });
-            ui.horizontal(|ui| {
-                ui.label("Addr: {}".to_string());
-                if ui.button("-").clicked() {
-                    self.addr = self.addr - 0x400_u16;
-                }
-                ui.label(format!("{}", self.addr));
-                if ui.button("+").clicked() {
-                    self.addr = self.addr + 0x400_u16;
-                }
-            });
-            ui.horizontal(|ui| {
-                ui.label("Palette: {}".to_string());
-                if ui.button("-").clicked() {
-                    self.palette_addr = self.palette_addr.wrapping_sub(0x10);
-                }
-                ui.label(format!("{:02X}", self.palette_addr));
-                if ui.button("+").clicked() {
-                    self.palette_addr = self.palette_addr.wrapping_add(0x10);
-                }
-            });
-            ui.image((self.vram_texture.id(), Vec2::new(512.0, 512.0)));
-        });
+        ui.image((self.vram_texture.id(), Vec2::new(512.0, 512.0)));
     }
 }
 
@@ -306,7 +252,7 @@ impl PpuPaletteWidget {
 
     pub fn update_textures(&mut self, ppu: &Ppu) {
         self.palette_texture.set(
-            ppu.state.cgram.debug_render_palette::<EguiImageImpl>(),
+            ppu.debug().render_palette::<EguiImageImpl>(),
             TextureOptions::default(),
         );
     }
