@@ -2,14 +2,13 @@
 use bitcode::Decode;
 use bitcode::Encode;
 
-use crate::common::image::Image;
 use crate::common::image::Rgb15;
 use crate::common::uint::U16Ext;
 
 #[derive(Encode, Decode)]
 pub struct CgRam {
     /// Contains the contents of CGRAM translated into RGBA values for more efficient rendering.
-    memory: Vec<Rgb15>,
+    pub memory: Vec<Rgb15>,
     /// Contains the currently selected CGRAM address set via the CGADD register.
     current_addr: u8,
     /// Represents the write latch. Contains the previous written value or None if the latch is
@@ -99,21 +98,6 @@ impl CgRam {
             None => self.memory[self.current_addr as usize].0.low_byte(),
             Some(high_byte) => high_byte,
         }
-    }
-
-    pub fn debug_render_palette<ImageT: Image>(&self) -> ImageT {
-        let mut image = ImageT::new(128, 128);
-        for y in 0..16_u32 {
-            for x in 0..16_u32 {
-                let color = self.memory[(y * 16 + x) as usize];
-                for fine_y in 0..8_u32 {
-                    for fine_x in 0..8_u32 {
-                        image.set_pixel((x * 8 + fine_x, y * 8 + fine_y), color.into());
-                    }
-                }
-            }
-        }
-        image
     }
 }
 
