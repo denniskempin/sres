@@ -76,16 +76,16 @@ pub enum MappingMode {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SnesHeader {
-    pub name: String,
-    pub fast_rom: bool,
-    pub mapping_mode: MappingMode,
-    pub rom_size: usize,
-    pub sram_size: usize,
+struct SnesHeader {
+    name: String,
+    fast_rom: bool,
+    mapping_mode: MappingMode,
+    rom_size: usize,
+    sram_size: usize,
 }
 
 impl SnesHeader {
-    pub fn find_header_in_rom(rom: &[u8]) -> Result<Self> {
+    fn find_header_in_rom(rom: &[u8]) -> Result<Self> {
         let lorom_header = Self::try_header(rom, MappingMode::LoRom);
         let hirom_header = Self::try_header(rom, MappingMode::HiRom);
 
@@ -109,7 +109,7 @@ impl SnesHeader {
         }
     }
 
-    pub fn try_header(rom: &[u8], mapping_mode: MappingMode) -> Result<Self> {
+    fn try_header(rom: &[u8], mapping_mode: MappingMode) -> Result<Self> {
         let location = match mapping_mode {
             MappingMode::LoRom => 0x7FC0,
             MappingMode::HiRom => 0xFFC0,
@@ -131,7 +131,7 @@ impl SnesHeader {
         }
     }
 
-    pub fn parse_header(data: &[u8]) -> Result<Self> {
+    fn parse_header(data: &[u8]) -> Result<Self> {
         ensure!(data.len() >= 32, "Header too short");
         let raw = RawSnesHeader::unpack_from_slice(&data[0..32]).unwrap();
         Ok(SnesHeader {
@@ -161,17 +161,17 @@ impl SnesHeader {
 
 #[derive(PackedStruct, Clone, Debug, Default, PartialEq, Eq)]
 #[packed_struct(bit_numbering = "msb0", endian = "lsb")]
-pub struct RawSnesHeader {
-    pub name: [u8; 21],
-    pub mapping: u8,
-    pub chipset: u8,
-    pub rom_size: u8,
-    pub sram_size: u8,
-    pub country: u8,
-    pub developer_id: u8,
-    pub version: u8,
-    pub checksum_complement: u16,
-    pub checksum: u16,
+struct RawSnesHeader {
+    name: [u8; 21],
+    mapping: u8,
+    chipset: u8,
+    rom_size: u8,
+    sram_size: u8,
+    country: u8,
+    developer_id: u8,
+    version: u8,
+    checksum_complement: u16,
+    checksum: u16,
 }
 
 #[cfg(test)]

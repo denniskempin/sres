@@ -3,8 +3,8 @@
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
-use sres_emulator::cartridge::Cartridge;
 use sres_emulator::common::util::format_memory;
+use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::debugger::EventFilter;
 use sres_emulator::System;
 

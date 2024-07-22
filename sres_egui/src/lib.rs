@@ -20,7 +20,7 @@ use egui::Sense;
 use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
-use sres_emulator::cartridge::Cartridge;
+use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::controller::StandardController;
 use sres_emulator::System;
 use tracing::instrument;
