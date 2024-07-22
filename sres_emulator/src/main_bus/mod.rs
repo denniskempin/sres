@@ -7,8 +7,6 @@ use log::trace;
 
 use self::multiplication::MultiplicationUnit;
 use crate::apu::Apu;
-use crate::cartridge::Cartridge;
-use crate::cartridge::MappingMode;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
 use crate::common::debug_events::CpuEvent;
@@ -16,6 +14,8 @@ use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::system::ClockInfo;
 use crate::common::uint::U16Ext;
+use crate::components::cartridge::Cartridge;
+use crate::components::cartridge::MappingMode;
 use crate::components::cpu::MainBus;
 use crate::components::ppu::Ppu;
 

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::Criterion;
-use sres_emulator::cartridge::Cartridge;
+use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::System;
 
 fn criterion_benchmark(c: &mut Criterion) {

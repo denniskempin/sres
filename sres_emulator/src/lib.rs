@@ -1,5 +1,4 @@
 pub mod apu;
-pub mod cartridge;
 pub mod common;
 pub mod components;
 pub mod controller;
@@ -11,12 +10,11 @@ use std::cell::RefMut;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use common::debug_events::DebugEventCollectorRef;
-use components::cpu::MainBus;
-
 use crate::apu::ApuDebug;
-use crate::cartridge::Cartridge;
+use crate::common::debug_events::DebugEventCollectorRef;
+use crate::components::cartridge::Cartridge;
 use crate::components::cpu::Cpu;
+use crate::components::cpu::MainBus;
 use crate::debugger::BreakReason;
 use crate::debugger::Debugger;
 use crate::debugger::EventFilter;

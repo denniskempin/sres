@@ -10,10 +10,10 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use image::RgbaImage;
-use sres_emulator::cartridge::Cartridge;
 use sres_emulator::common::image::Image;
 use sres_emulator::common::image::Rgba32;
 use sres_emulator::common::logging;
+use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::components::ppu::BackgroundId;
 use sres_emulator::components::ppu::Ppu;
 use sres_emulator::components::ppu::VramRenderSelection;
