@@ -12,10 +12,10 @@ use log::error;
 use pretty_assertions::assert_eq;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::logging;
-use sres_emulator::common::system::CpuState;
 use sres_emulator::common::util::format_memory;
 use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::components::cpu::Cpu;
+use sres_emulator::components::cpu::CpuState;
 use sres_emulator::main_bus::MainBusImpl;
 use sres_emulator::System;
 

@@ -5,6 +5,7 @@ use sres_emulator::apu::ApuBusEvent;
 use sres_emulator::common::address::AddressU16;
 use sres_emulator::common::address::AddressU24;
 use sres_emulator::components::cpu::CpuEvent;
+use sres_emulator::components::cpu::CpuState;
 use sres_emulator::components::spc700::Spc700Event;
 use sres_emulator::components::spc700::Spc700State;
 use sres_emulator::debugger::DebugEvent;
@@ -60,11 +61,7 @@ pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
     });
 }
 
-fn cpu_log_line(
-    ui: &mut Ui,
-    state: &sres_emulator::common::system::CpuState,
-    selected: &mut InternalLink,
-) {
+fn cpu_log_line(ui: &mut Ui, state: &CpuState, selected: &mut InternalLink) {
     label_cpu_pc(ui, state.instruction.address, selected);
     label_strong(ui, state.instruction.operation.clone());
     if let Some(operand) = state.instruction.operand_str.clone() {

@@ -1,6 +1,3 @@
-//! Implements the trace log format used by BSNES to compare the emulator to BSNES.
-//!
-//! Also a useful, compact format for debugging emulator execution.
 use std::fmt::Display;
 use std::fmt::Write;
 use std::str::FromStr;
@@ -9,17 +6,32 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 
-use super::system::ClockInfo;
-use super::system::CpuState;
-use super::system::CpuStatusFlags;
-use super::system::InstructionMeta;
+use crate::common::address::AddressU24;
+use crate::common::address::InstructionMeta;
+use crate::common::clock::ClockInfo;
+
+use super::status::StatusFlags;
+
+/// Represents a snapshot of the Cpu state for debugging purposes
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct CpuState {
+    pub instruction: InstructionMeta<AddressU24>,
+    pub a: u16,
+    pub x: u16,
+    pub y: u16,
+    pub s: u16,
+    pub d: u16,
+    pub db: u8,
+    pub status: StatusFlags,
+    pub clock: ClockInfo,
+}
 
 impl Display for CpuState {
     /// Format a trace object into a BSNES trace line
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} {} V:{:03} H:{:04} F:{:02}",
+            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} ",
             u32::from(self.instruction.address),
             self.instruction.operation,
             self.instruction.operand_str.as_deref().unwrap_or_default(),
@@ -34,11 +46,29 @@ impl Display for CpuState {
             self.s,
             self.d,
             self.db,
-            self.status,
-            self.clock.v,
-            self.clock.h_counter,
-            self.clock.f,
-        )
+        )?;
+        f.write_char(if self.status.negative { 'N' } else { '.' })?;
+        f.write_char(if self.status.overflow { 'V' } else { '.' })?;
+        f.write_char(if self.status.accumulator_register_size {
+            'M'
+        } else {
+            '.'
+        })?;
+        f.write_char(if self.status.index_register_size_or_break {
+            'X'
+        } else {
+            '.'
+        })?;
+        f.write_char(if self.status.decimal { 'D' } else { '.' })?;
+        f.write_char(if self.status.irq_disable { 'I' } else { '.' })?;
+        f.write_char(if self.status.zero { 'Z' } else { '.' })?;
+        f.write_char(if self.status.carry { 'C' } else { '.' })?;
+        write!(
+            f,
+            " V:{:03} H:{:04} F:{:02}",
+            self.clock.v, self.clock.h_counter, self.clock.f,
+        )?;
+        Ok(())
     }
 }
 
@@ -101,29 +131,7 @@ impl FromStr for CpuState {
     }
 }
 
-impl Display for CpuStatusFlags {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_char(if self.negative { 'N' } else { '.' })?;
-        f.write_char(if self.overflow { 'V' } else { '.' })?;
-        f.write_char(if self.accumulator_register_size {
-            'M'
-        } else {
-            '.'
-        })?;
-        f.write_char(if self.index_register_size_or_break {
-            'X'
-        } else {
-            '.'
-        })?;
-        f.write_char(if self.decimal { 'D' } else { '.' })?;
-        f.write_char(if self.irq_disable { 'I' } else { '.' })?;
-        f.write_char(if self.zero { 'Z' } else { '.' })?;
-        f.write_char(if self.carry { 'C' } else { '.' })?;
-        Ok(())
-    }
-}
-
-impl FromStr for CpuStatusFlags {
+impl FromStr for StatusFlags {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -131,7 +139,7 @@ impl FromStr for CpuStatusFlags {
             bail!("StatusFlags string must be 8 characters long");
         }
         let mut chars = s.chars();
-        Ok(CpuStatusFlags {
+        Ok(StatusFlags {
             negative: chars.next().unwrap() != '.',
             overflow: chars.next().unwrap() != '.',
             accumulator_register_size: chars.next().unwrap() != '.',

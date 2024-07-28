@@ -11,11 +11,11 @@ use std::sync::atomic::Ordering;
 
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
+use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
-use crate::common::system::InstructionMeta;
 use crate::common::uint::UInt;
 
 use self::opcode_table::InstructionDef;

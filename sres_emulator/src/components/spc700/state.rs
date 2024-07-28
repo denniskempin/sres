@@ -5,7 +5,7 @@ use anyhow::Context;
 use anyhow::Result;
 
 use crate::common::address::AddressU16;
-use crate::common::system::InstructionMeta;
+use crate::common::address::InstructionMeta;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Spc700State {

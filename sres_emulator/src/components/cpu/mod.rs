@@ -2,6 +2,7 @@
 mod instructions;
 mod opcode_table;
 mod operands;
+mod state;
 mod status;
 #[cfg(test)]
 mod test;
@@ -10,21 +11,20 @@ use std::sync::atomic::Ordering;
 
 use intbits::Bits;
 
-use self::opcode_table::build_opcode_table;
-use self::opcode_table::Instruction;
-use self::status::StatusFlags;
 use crate::common::address::AddressU24;
+use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
+use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
-use crate::common::system::ClockInfo;
-use crate::common::system::CpuState;
-use crate::common::system::CpuStatusFlags;
-use crate::common::system::InstructionMeta;
-use crate::common::system::NativeVectorTable;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
+
+use self::opcode_table::build_opcode_table;
+use self::opcode_table::Instruction;
+pub use self::state::CpuState;
+use self::status::StatusFlags;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CpuEvent {
@@ -195,6 +195,18 @@ pub trait MainBus: Bus<AddressU24> {
     fn clock_info(&self) -> ClockInfo;
 }
 
+#[derive(Clone, Copy, PartialEq, Debug, strum::Display, strum::EnumString)]
+pub enum NativeVectorTable {
+    #[strum(serialize = "cop")]
+    Cop = 0xFFE4,
+    #[strum(serialize = "break", serialize = "brk")]
+    Break = 0xFFE6,
+    #[strum(serialize = "nmi")]
+    Nmi = 0xFFEA,
+    #[strum(serialize = "irq")]
+    Irq = 0xFFEE,
+}
+
 #[derive(Default)]
 struct VariableLengthRegister {
     value: u16,
@@ -239,7 +251,7 @@ impl<'a, BusT: MainBus> CpuDebug<'a, BusT> {
             s: self.0.s,
             d: self.0.d,
             db: self.0.db,
-            status: CpuStatusFlags {
+            status: StatusFlags {
                 negative: self.0.status.negative,
                 overflow: self.0.status.overflow,
                 accumulator_register_size: self.0.status.accumulator_register_size,
