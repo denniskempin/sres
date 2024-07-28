@@ -6,7 +6,6 @@ pub mod clock;
 pub mod debug_events;
 pub mod image;
 pub mod logging;
-#[cfg(test)]
 pub mod test_bus;
 pub mod uint;
 pub mod util;

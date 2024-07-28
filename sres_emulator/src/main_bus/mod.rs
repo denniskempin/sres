@@ -25,7 +25,7 @@ pub enum MainBusEvent {
 }
 
 pub struct MainBusImpl {
-    pub ppu: Ppu,
+    pub(crate) ppu: Ppu,
     pub(crate) apu: Apu,
 
     wram: Vec<u8>,

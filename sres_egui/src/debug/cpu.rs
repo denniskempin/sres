@@ -23,10 +23,7 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
         ui.label("Status:");
         ui.label(trace.status.to_string());
     });
-    ui.label(format!(
-        "Cycle: {}",
-        emulator.cpu.bus.ppu.clock_info().master_clock
-    ));
+    ui.label(format!("Cycle: {}", emulator.clock_info().master_clock));
     ui.label(format!("PC: {:}", trace.instruction.address));
 }
 

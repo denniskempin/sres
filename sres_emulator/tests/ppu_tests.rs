@@ -87,29 +87,25 @@ pub fn test_krom_interlace_rpg_debug_render() {
     let rom_path = test_dir().join("krom_interlace_rpg.sfc");
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.execute_frames(10);
-    let ppu = system.cpu.bus.ppu;
+    let ppu = system.debug().ppu();
 
     // Debug render sprite 0
     let sprite_path = test_dir().join("krom_interlace_rpg-sprite0");
-    compare_to_golden(&ppu.debug().render_sprite(0), &sprite_path);
+    compare_to_golden(&ppu.render_sprite(0), &sprite_path);
 
     // Debug render BG0
     let background_path = test_dir().join("krom_interlace_rpg-bg0");
-    compare_to_golden(
-        &ppu.debug().render_background(BackgroundId::BG1),
-        &background_path,
-    );
+    compare_to_golden(&ppu.render_background(BackgroundId::BG1), &background_path);
 
     // Debug render portion of VRAM
     let vram_bg0_path = test_dir().join("krom_interlace_rpg-vram-bg1");
     compare_to_golden(
-        &ppu.debug()
-            .render_vram(32, 0, VramRenderSelection::Background(BackgroundId::BG1)),
+        &ppu.render_vram(32, 0, VramRenderSelection::Background(BackgroundId::BG1)),
         &vram_bg0_path,
     );
     let vram_sprite_path = test_dir().join("krom_interlace_rpg-vram-sprite");
     compare_to_golden(
-        &ppu.debug().render_vram(32, 0, VramRenderSelection::Sprite0),
+        &ppu.render_vram(32, 0, VramRenderSelection::Sprite0),
         &vram_sprite_path,
     );
 }
@@ -169,7 +165,7 @@ fn run_snapshot_framebuffer_test(snapshot_name: &str) {
     logging::test_init(true);
 
     let mut ppu = Ppu::new();
-    ppu.load_state(&std::fs::read(&test_dir().join(format!("{snapshot_name}.snapshot"))).unwrap())
+    ppu.load_state(&std::fs::read(test_dir().join(format!("{snapshot_name}.snapshot"))).unwrap())
         .unwrap();
     for scanline in 0..256 {
         ppu.draw_scanline(scanline);
@@ -192,7 +188,7 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
 
     let rom_path = test_dir().join(format!("{rom_name}.sfc"));
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
-    system.cpu.bus.ppu.force_headless();
+    system.ppu().force_headless();
 
     let last_frame = snapshots.iter().map(|(_, frame)| frame).max().unwrap();
     for frame in 0..=*last_frame {
@@ -207,7 +203,7 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
         {
             std::fs::write(
                 &test_dir().join(format!("{rom_name}-{test_name}.snapshot")),
-                &system.cpu.bus.ppu.save_state(),
+                &system.ppu().save_state(),
             )
             .unwrap();
         }
