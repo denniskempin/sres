@@ -20,7 +20,7 @@ pub fn test_play_brr_sample() {
     system.debug_until(EventFilter::Spc700ProgramCounter(0x02e9..0x02ea));
 
     assert_eq!(
-        system.cpu.bus.apu.debug().dsp().voice(0),
+        system.debug().apu().dsp().voice(0),
         "vol:127/127 pitch:4096 adsr:(10,7,7,0) src:$00 env:0 out:0".to_string()
     );
 }
@@ -39,7 +39,7 @@ pub fn test_play_noise() {
 
     // Verify the program has been loaded correctly at 0x0200 in SPC700 RAM.
     let spc_program = std::fs::read(spc_rom_path).unwrap();
-    let debug = system.cpu.bus.apu.debug();
+    let debug = system.debug().apu();
     let actual_program = &debug.ram()[0x0200..(0x0200 + spc_program.len())];
     assert_eq!(format_memory(actual_program), format_memory(&spc_program));
 

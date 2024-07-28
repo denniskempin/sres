@@ -26,7 +26,7 @@ pub enum MainBusEvent {
 
 pub struct MainBusImpl {
     pub ppu: Ppu,
-    pub apu: Apu,
+    pub(crate) apu: Apu,
 
     wram: Vec<u8>,
     sram: Vec<u8>,
@@ -177,6 +177,8 @@ impl MainBusImpl {
             }
         }
         self.dma_controller.update_state();
+        self.apu
+            .catch_up_to_master_clock(self.clock_info().master_clock);
     }
 }
 

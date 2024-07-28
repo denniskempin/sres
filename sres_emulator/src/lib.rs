@@ -62,10 +62,6 @@ impl System {
             }
 
             self.cpu.step();
-            self.cpu
-                .bus
-                .apu
-                .catch_up_to_master_clock(self.cpu.bus.clock_info().master_clock);
 
             if let Some(break_reason) = self.debugger().take_break_reason() {
                 return ExecutionResult::Break(break_reason);
@@ -120,10 +116,6 @@ impl System {
             }
 
             self.cpu.step();
-            self.cpu
-                .bus
-                .apu
-                .catch_up_to_master_clock(self.cpu.bus.clock_info().master_clock);
 
             if let Some(break_reason) = self.debugger().take_break_reason() {
                 if break_reason.trigger == event {
