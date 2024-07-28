@@ -14,7 +14,7 @@ pub enum ApuBusEvent {
 }
 
 pub struct ApuBus {
-    pub debug_event_collector: DebugEventCollectorRef,
+    pub debug_event_collector: DebugEventCollectorRef<ApuEvent>,
     pub master_cycle: u64,
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
@@ -27,7 +27,7 @@ pub struct ApuBus {
 
 impl ApuBus {
     #[allow(clippy::new_without_default)]
-    pub fn new(debug_event_collector: DebugEventCollectorRef) -> Self {
+    pub fn new(debug_event_collector: DebugEventCollectorRef<ApuEvent>) -> Self {
         Self {
             debug_event_collector,
             master_cycle: 0,
@@ -62,13 +62,13 @@ impl Bus<AddressU16> for ApuBus {
         self.master_cycle += 21;
         let value = self.peek_u8(addr).unwrap_or_default();
         self.debug_event_collector
-            .collect_apu_event(ApuEvent::Read(addr, value));
+            .collect_event(ApuEvent::Read(addr, value));
         value
     }
 
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
         self.debug_event_collector
-            .collect_apu_event(ApuEvent::Write(addr, value));
+            .collect_event(ApuEvent::Write(addr, value));
 
         self.master_cycle += 21;
         #[allow(clippy::single_match)]

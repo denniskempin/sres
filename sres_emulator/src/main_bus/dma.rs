@@ -9,7 +9,6 @@ use packed_struct::prelude::*;
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
-use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U8Ext;
@@ -18,11 +17,11 @@ pub struct DmaController {
     dma_channels: [DmaChannel; 8],
     dma_pending: u8,
     dma_active: bool,
-    debug_event_collector: DebugEventCollectorRef,
+    debug_event_collector: DebugEventCollectorRef<()>,
 }
 
 impl DmaController {
-    pub fn new(debug_event_collector: DebugEventCollectorRef) -> Self {
+    pub fn new(debug_event_collector: DebugEventCollectorRef<()>) -> Self {
         Self {
             dma_channels: Default::default(),
             dma_pending: 0,
@@ -106,7 +105,7 @@ impl DmaController {
             Some(value) => value,
             None => {
                 self.debug_event_collector
-                    .collect_event(DebugEvent::Error(format!("Invalid read from {}", addr)));
+                    .collect_error(format!("Invalid read from {}", addr));
                 0
             }
         }
@@ -150,13 +149,13 @@ impl DmaController {
                     0x7 => log::warn!("HDMA not implemented."),
                     _ => {
                         self.debug_event_collector
-                            .collect_event(DebugEvent::Error(format!("Invalid write to {}", addr)));
+                            .collect_error(format!("Invalid write to {}", addr));
                     }
                 }
             }
             _ => {
                 self.debug_event_collector
-                    .collect_event(DebugEvent::Error(format!("Invalid write to {}", addr)));
+                    .collect_error(format!("Invalid write to {}", addr));
             }
         }
     }

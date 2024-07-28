@@ -29,7 +29,7 @@ pub trait Spc700Bus: Bus<AddressU16> {
 
 pub struct Spc700<BusT: Spc700Bus> {
     pub bus: BusT,
-    debug_event_collector: DebugEventCollectorRef,
+    debug_event_collector: DebugEventCollectorRef<ApuEvent>,
     opcode_table: [InstructionDef<BusT>; 256],
     pc: AddressU16,
     a: u8,
@@ -40,7 +40,7 @@ pub struct Spc700<BusT: Spc700Bus> {
 }
 
 impl<BusT: Spc700Bus> Spc700<BusT> {
-    pub fn new(bus: BusT, debug_event_collector: DebugEventCollectorRef) -> Self {
+    pub fn new(bus: BusT, debug_event_collector: DebugEventCollectorRef<ApuEvent>) -> Self {
         let mut cpu = Self {
             opcode_table: opcode_table::build_opcode_table(),
             bus,
@@ -75,7 +75,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     pub fn step(&mut self) {
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.debug_event_collector
-                .collect_apu_event(ApuEvent::Step(self.debug().state()));
+                .collect_event(ApuEvent::Step(self.debug().state()));
         }
 
         let opcode = self.bus.cycle_read_u8(self.pc);

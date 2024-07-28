@@ -3,9 +3,11 @@
 //! Allows internal components to notify of events during emulation (e.g. memory access),
 //! and allows the front end to set and detect breakpoints on those events.
 
+use std::cell::RefCell;
 use std::fmt::Display;
 use std::fmt::UpperHex;
 use std::ops::Range;
+use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::atomic::Ordering;
 
@@ -14,6 +16,7 @@ use num_traits::PrimInt;
 use crate::common::address::AddressU24;
 use crate::common::debug_events::ApuEvent;
 use crate::common::debug_events::CpuEvent;
+use crate::common::debug_events::DebugErrorCollector;
 use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollector;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
@@ -143,6 +146,8 @@ pub enum Trigger {
     Interrupt(NativeVectorTable),
 }
 
+pub type DebuggerRef = Rc<RefCell<Debugger>>;
+
 pub struct Debugger {
     pub log_points: Vec<EventFilter>,
     pub break_points: Vec<EventFilter>,
@@ -233,10 +238,8 @@ impl Debugger {
             enabled: false,
         }
     }
-}
 
-impl DebugEventCollector for Debugger {
-    fn collect_event(&mut self, event: DebugEvent) {
+    fn collect_debug_event(&mut self, event: DebugEvent) {
         let break_trigger = self
             .break_points
             .iter()
@@ -256,6 +259,28 @@ impl DebugEventCollector for Debugger {
             self.log.push(event);
         }
     }
+}
+
+impl DebugErrorCollector for Debugger {
+    fn collect_error(&mut self, message: String) {
+        self.collect_debug_event(DebugEvent::Error(message));
+    }
+}
+
+impl DebugEventCollector<ApuEvent> for Debugger {
+    fn collect_event(&mut self, event: ApuEvent) {
+        self.collect_debug_event(DebugEvent::Apu(event));
+    }
+}
+
+impl DebugEventCollector<CpuEvent> for Debugger {
+    fn collect_event(&mut self, event: CpuEvent) {
+        self.collect_debug_event(DebugEvent::Cpu(event));
+    }
+}
+
+impl DebugEventCollector<()> for Debugger {
+    fn collect_event(&mut self, _event: ()) {}
 }
 
 /// Parses a hex 1234:5678 range string into a Range<u32>
