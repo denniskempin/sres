@@ -10,6 +10,8 @@ use std::cell::RefMut;
 use std::ops::Deref;
 use std::rc::Rc;
 
+use components::ppu::PpuDebug;
+
 use crate::apu::Apu;
 use crate::apu::ApuDebug;
 use crate::common::clock::ClockInfo;
@@ -149,6 +151,10 @@ impl System {
 pub struct SystemDebug<'a>(&'a System);
 
 impl<'a> SystemDebug<'a> {
+    pub fn ppu(self) -> PpuDebug<'a> {
+        self.0.cpu.bus.ppu.debug()
+    }
+
     pub fn apu(self) -> ApuDebug<'a> {
         self.0.cpu.bus.apu.debug()
     }

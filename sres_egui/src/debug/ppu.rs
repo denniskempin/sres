@@ -5,8 +5,9 @@ use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
 use egui::Vec2;
+use sres_emulator::common::clock::ClockInfo;
 use sres_emulator::components::ppu::BackgroundId;
-use sres_emulator::components::ppu::Ppu;
+use sres_emulator::components::ppu::PpuDebug;
 use sres_emulator::components::ppu::VramRenderSelection;
 use sres_emulator::System;
 
@@ -45,7 +46,7 @@ impl PpuDebugWindow {
         egui::Window::new("PPU")
             .open(&mut self.open)
             .show(ctx, |ui| {
-                ppu_status_widget(ui, &emulator.cpu.bus.ppu);
+                clock_info_widget(ui, emulator.clock_info());
                 tabs_widget(
                     ui,
                     &[
@@ -59,22 +60,18 @@ impl PpuDebugWindow {
                 ui.separator();
                 match self.selected_tab {
                     PpuDebugTabs::Background => {
-                        self.background_widget.show(ui, &emulator.cpu.bus.ppu);
+                        self.background_widget.show(ui, &emulator.debug().ppu());
                     }
-                    PpuDebugTabs::Sprites => self.sprites_widget.show(ui, &emulator.cpu.bus.ppu),
-                    PpuDebugTabs::Vram => self.vram_widget.show(ui, &emulator.cpu.bus.ppu),
-                    PpuDebugTabs::Palette => self.palette_widget.show(ui, &emulator.cpu.bus.ppu),
+                    PpuDebugTabs::Sprites => self.sprites_widget.show(ui, &emulator.debug().ppu()),
+                    PpuDebugTabs::Vram => self.vram_widget.show(ui, &emulator.debug().ppu()),
+                    PpuDebugTabs::Palette => self.palette_widget.show(ui, &emulator.debug().ppu()),
                 }
             });
     }
 }
 
-pub fn ppu_status_widget(ui: &mut Ui, ppu: &Ppu) {
-    ui.label(format!(
-        "V, H: ({}, {})",
-        ppu.clock_info().v,
-        ppu.clock_info().hdot()
-    ));
+pub fn clock_info_widget(ui: &mut Ui, clock_info: ClockInfo) {
+    ui.label(format!("V, H: ({}, {})", clock_info.v, clock_info.hdot()));
 }
 
 struct PpuBackgroundWidget {
@@ -94,15 +91,14 @@ impl PpuBackgroundWidget {
         }
     }
 
-    pub fn update_textures(&mut self, ppu: &Ppu) {
+    pub fn update_textures(&mut self, ppu: &PpuDebug<'_>) {
         self.tilemap_texture.set(
-            ppu.debug()
-                .render_background::<EguiImageImpl>(self.selected_bg),
+            ppu.render_background::<EguiImageImpl>(self.selected_bg),
             TextureOptions::default(),
         );
     }
 
-    pub fn show(&mut self, ui: &mut Ui, ppu: &Ppu) {
+    pub fn show(&mut self, ui: &mut Ui, ppu: &PpuDebug<'_>) {
         self.update_textures(ppu);
 
         tabs_widget(
@@ -115,7 +111,7 @@ impl PpuBackgroundWidget {
             ],
             &mut self.selected_bg,
         );
-        ui.label(ppu.debug().background_info(self.selected_bg));
+        ui.label(ppu.background_info(self.selected_bg));
         ui.horizontal(|ui| {
             tilemap_widget(ui, &self.tilemap_texture);
         });
@@ -151,14 +147,14 @@ impl PpuSpritesWidget {
         }
     }
 
-    pub fn update_textures(&mut self, ppu: &Ppu) {
+    pub fn update_textures(&mut self, ppu: &PpuDebug<'_>) {
         self.sprite_texture.set(
-            ppu.debug().render_sprite::<EguiImageImpl>(self.sprite_id),
+            ppu.render_sprite::<EguiImageImpl>(self.sprite_id),
             TextureOptions::default(),
         );
     }
 
-    pub fn show(&mut self, ui: &mut Ui, ppu: &Ppu) {
+    pub fn show(&mut self, ui: &mut Ui, ppu: &PpuDebug<'_>) {
         self.update_textures(ppu);
 
         ui.horizontal(|ui| {
@@ -173,7 +169,7 @@ impl PpuSpritesWidget {
         });
 
         ui.horizontal(|ui| {
-            ui.label(ppu.debug().sprite_info(self.sprite_id));
+            ui.label(ppu.sprite_info(self.sprite_id));
             ui.image((
                 self.sprite_texture.id(),
                 Vec2::new(
@@ -204,15 +200,14 @@ impl PpuVramWidget {
         }
     }
 
-    pub fn update_textures(&mut self, ppu: &Ppu) {
+    pub fn update_textures(&mut self, ppu: &PpuDebug<'_>) {
         self.vram_texture.set(
-            ppu.debug()
-                .render_vram::<EguiImageImpl>(32, self.offset, self.selection),
+            ppu.render_vram::<EguiImageImpl>(32, self.offset, self.selection),
             TextureOptions::default(),
         );
     }
 
-    pub fn show(&mut self, ui: &mut Ui, ppu: &Ppu) {
+    pub fn show(&mut self, ui: &mut Ui, ppu: &PpuDebug<'_>) {
         self.update_textures(ppu);
 
         ui.horizontal(|ui| {
@@ -249,14 +244,14 @@ impl PpuPaletteWidget {
         }
     }
 
-    pub fn update_textures(&mut self, ppu: &Ppu) {
+    pub fn update_textures(&mut self, ppu: &PpuDebug<'_>) {
         self.palette_texture.set(
-            ppu.debug().render_palette::<EguiImageImpl>(),
+            ppu.render_palette::<EguiImageImpl>(),
             TextureOptions::default(),
         );
     }
 
-    pub fn show(&mut self, ui: &mut Ui, ppu: &Ppu) {
+    pub fn show(&mut self, ui: &mut Ui, ppu: &PpuDebug<'_>) {
         self.update_textures(ppu);
 
         ui.image((self.palette_texture.id(), Vec2::new(256.0, 256.0)));
