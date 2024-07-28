@@ -1,3 +1,4 @@
+#![cfg(test)]
 use std::str::FromStr;
 
 use super::apu_bus::ApuBus;

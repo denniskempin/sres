@@ -4,11 +4,10 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Result;
 
-use crate::common::address::AddressU16;
-use crate::common::address::InstructionMeta;
-
 use super::Spc700;
 use super::Spc700Bus;
+use crate::common::address::AddressU16;
+use crate::common::address::InstructionMeta;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Spc700Event {

@@ -12,10 +12,10 @@ use bitcode::Encode;
 use intbits::Bits;
 
 use self::cgram::CgRam;
-use self::oam::Oam;
 // Public to allow for access in benches
 pub use self::debug::PpuDebug;
 pub use self::debug::VramRenderSelection;
+use self::oam::Oam;
 pub use self::timer::PpuTimer;
 use self::vram::Vram;
 use crate::common::address::AddressU15;

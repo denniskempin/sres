@@ -5,7 +5,7 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use eframe::wasm_bindgen;
 use eframe::wasm_bindgen::prelude::*;
-use sres_emulator::cartridge::Cartridge;
+use sres_emulator::components::cartridge::Cartridge;
 use web_sys;
 
 use crate::EmulatorApp;

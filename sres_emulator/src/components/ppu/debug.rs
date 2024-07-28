@@ -1,6 +1,3 @@
-use crate::common::address::AddressU15;
-use crate::common::image::Image;
-
 use super::Background;
 use super::BackgroundId;
 use super::BitDepth;
@@ -10,6 +7,8 @@ use super::Bpp8Decoder;
 use super::Ppu;
 use super::Tile;
 use super::TileDecoder;
+use crate::common::address::AddressU15;
+use crate::common::image::Image;
 
 pub struct PpuDebug<'a>(pub &'a Ppu);
 
