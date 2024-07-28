@@ -171,6 +171,16 @@ pub struct Debugger {
 }
 
 impl Debugger {
+    pub fn new() -> DebuggerRef {
+        Rc::new(RefCell::new(Debugger {
+            log_points: Vec::new(),
+            break_points: Vec::new(),
+            log: RingBuffer::default(),
+            break_reason: None,
+            enabled: false,
+        }))
+    }
+
     pub fn enabled(&self) -> bool {
         self.enabled
     }
@@ -238,18 +248,6 @@ impl Debugger {
             self.remove_log_point(&trigger)
         } else {
             self.add_log_point(trigger)
-        }
-    }
-
-    /// Internal API
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self {
-            log_points: vec![],
-            break_points: vec![],
-            break_reason: None,
-            log: RingBuffer::default(),
-            enabled: false,
         }
     }
 

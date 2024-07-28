@@ -5,10 +5,8 @@ pub mod controller;
 pub mod debugger;
 pub mod main_bus;
 
-use std::cell::RefCell;
 use std::cell::RefMut;
 use std::ops::Deref;
-use std::rc::Rc;
 
 use components::ppu::PpuDebug;
 
@@ -45,7 +43,7 @@ impl System {
     }
 
     pub fn with_cartridge(cartridge: &Cartridge) -> Self {
-        let debugger = Rc::new(RefCell::new(Debugger::new()));
+        let debugger = Debugger::new();
         Self {
             cpu: Cpu::new(
                 MainBusImpl::new(cartridge, debugger.clone()),
