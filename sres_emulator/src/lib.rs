@@ -10,6 +10,9 @@ use std::cell::RefMut;
 use std::ops::Deref;
 use std::rc::Rc;
 
+use common::clock::ClockInfo;
+use common::image::Image;
+use controller::StandardController;
 use debugger::DebuggerRef;
 
 use crate::apu::ApuDebug;
@@ -37,14 +40,6 @@ impl System {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self::with_cartridge(&Cartridge::default())
-    }
-
-    pub fn debug(&self) -> SystemDebug<'_> {
-        SystemDebug(self)
-    }
-
-    pub fn debugger(&self) -> RefMut<'_, Debugger> {
-        self.debugger.deref().borrow_mut()
     }
 
     pub fn with_cartridge(cartridge: &Cartridge) -> Self {
@@ -96,6 +91,28 @@ impl System {
         self.execute_until(|cpu| cpu.bus.clock_info().f >= target_frame)
     }
 
+    pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {
+        // TODO: Implement frame skip/doubling if not running at 60fps
+        self.execute_frames(1)
+    }
+
+    pub fn clock_info(&self) -> ClockInfo {
+        self.cpu.bus.ppu.clock_info()
+    }
+
+    pub fn update_joypads(&mut self, joy1: StandardController, joy2: StandardController) {
+        self.cpu.bus.joy1 = joy1.to_u16();
+        self.cpu.bus.joy2 = joy2.to_u16();
+    }
+
+    pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {
+        self.cpu.bus.ppu.get_rgba_framebuffer()
+    }
+
+    pub fn force_headless(&mut self) {
+        self.cpu.bus.ppu.force_headless();
+    }
+
     pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {
         self.debugger().enable();
         self.debugger().add_break_point(event.clone());
@@ -123,9 +140,14 @@ impl System {
         result
     }
 
-    pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {
-        // TODO: Implement frame skip/doubling if not running at 60fps
-        self.execute_frames(1)
+    /// Exposes debug information for investigating the system state.
+    pub fn debug(&self) -> SystemDebug<'_> {
+        SystemDebug(self)
+    }
+
+    /// Exposes an interactive debugger to set break and log points.
+    pub fn debugger(&self) -> RefMut<'_, Debugger> {
+        self.debugger.deref().borrow_mut()
     }
 }
 

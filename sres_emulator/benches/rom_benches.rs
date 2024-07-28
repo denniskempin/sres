@@ -19,7 +19,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function("krom_adc_frame_time_headless", |b| {
         let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&adc_rom_path).unwrap());
-        system.cpu.bus.ppu.force_headless();
+        system.force_headless();
         b.iter(|| system.execute_frames(1));
     });
 
@@ -32,7 +32,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("krom_blend_frame_time_headless", |b| {
         let mut system =
             System::with_cartridge(&Cartridge::with_sfc_file(&blend_rom_path).unwrap());
-        system.cpu.bus.ppu.force_headless();
+        system.force_headless();
         b.iter(|| system.execute_frames(1));
     });
 }
