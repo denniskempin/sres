@@ -4,35 +4,7 @@ use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::atomic::AtomicBool;
 
-use crate::common::address::AddressU16;
-use crate::common::address::AddressU24;
-use crate::common::system::CpuState;
-use crate::common::system::NativeVectorTable;
-use crate::common::system::Spc700State;
-
 pub static DEBUG_EVENTS_ENABLED: AtomicBool = AtomicBool::new(false);
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum DebugEvent {
-    Cpu(CpuEvent),
-    Apu(ApuEvent),
-    Error(String),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum CpuEvent {
-    Step(CpuState),
-    Interrupt(NativeVectorTable),
-    Read(AddressU24, u8),
-    Write(AddressU24, u8),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum ApuEvent {
-    Step(Spc700State),
-    Read(AddressU16, u8),
-    Write(AddressU16, u8),
-}
 
 pub trait DebugErrorCollector {
     #[cold]

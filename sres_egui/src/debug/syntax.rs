@@ -1,11 +1,13 @@
 use egui::Color32;
 use egui::RichText;
 use egui::Ui;
+use sres_emulator::apu::ApuBusEvent;
 use sres_emulator::common::address::AddressU16;
 use sres_emulator::common::address::AddressU24;
-use sres_emulator::common::debug_events::ApuEvent;
-use sres_emulator::common::debug_events::CpuEvent;
-use sres_emulator::common::debug_events::DebugEvent;
+use sres_emulator::components::cpu::CpuEvent;
+use sres_emulator::components::spc700::Spc700Event;
+use sres_emulator::debugger::DebugEvent;
+use sres_emulator::main_bus::MainBusEvent;
 
 use super::InternalLink;
 
@@ -15,13 +17,13 @@ pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
     use DebugEvent::*;
     ui.horizontal(|ui| {
         match event {
-            Cpu(CpuEvent::Read(addr, value)) => {
+            MainBus(MainBusEvent::Read(addr, value)) => {
                 label_cpu(ui);
                 label_read(ui, "R");
                 label_cpu_addr(ui, *addr, selected);
                 label_normal(ui, format!("= {:02X}", value));
             }
-            Cpu(CpuEvent::Write(addr, value)) => {
+            MainBus(MainBusEvent::Write(addr, value)) => {
                 label_cpu(ui);
                 label_write(ui, "W");
                 label_cpu_addr(ui, *addr, selected);
@@ -38,16 +40,16 @@ pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
                 label_cpu(ui);
                 cpu_log_line(ui, state, selected);
             }
-            Apu(ApuEvent::Step(state)) => {
+            Spc700(Spc700Event::Step(state)) => {
                 spc700_log_line(ui, state, selected);
             }
-            Apu(ApuEvent::Read(addr, value)) => {
+            ApuBus(ApuBusEvent::Read(addr, value)) => {
                 label_spc(ui);
                 label_read(ui, "R");
                 label_addr(ui, addr.to_string());
                 label_normal(ui, format!("= {:02X}", value));
             }
-            Apu(ApuEvent::Write(addr, value)) => {
+            ApuBus(ApuBusEvent::Write(addr, value)) => {
                 label_spc(ui);
                 label_write(ui, "W");
                 label_addr(ui, addr.to_string());

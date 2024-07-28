@@ -16,7 +16,6 @@ use self::status::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
-use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::system::ClockInfo;
@@ -26,6 +25,12 @@ use crate::common::system::InstructionMeta;
 use crate::common::system::NativeVectorTable;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CpuEvent {
+    Step(CpuState),
+    Interrupt(NativeVectorTable),
+}
 
 pub struct Cpu<BusT: MainBus> {
     pub bus: BusT,
