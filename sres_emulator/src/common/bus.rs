@@ -1,5 +1,7 @@
 //! Generic Bus trait that can be used with both U16 and U24 addresses.
 
+use std::ops::RangeInclusive;
+
 use crate::common::address::Address;
 use crate::common::address::Wrap;
 use crate::common::uint::RegisterSize;
@@ -50,5 +52,12 @@ pub trait Bus<AddressT: Address> {
             RegisterSize::U8 => self.cycle_write_u8(addr, value.to_u8()),
             RegisterSize::U16 => self.cycle_write_u16(addr, value.to_u16(), wrap),
         }
+    }
+
+    fn peek_range(&self, range: RangeInclusive<u32>) -> Vec<u8> {
+        range
+            .into_iter()
+            .map(|idx| self.peek_u8(AddressT::from(idx)).unwrap_or_default())
+            .collect()
     }
 }
