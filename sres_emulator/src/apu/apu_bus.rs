@@ -61,13 +61,13 @@ impl Bus<AddressU16> for ApuBus {
         self.master_cycle += 21;
         let value = self.peek_u8(addr).unwrap_or_default();
         self.debug_event_collector
-            .collect_event(ApuBusEvent::Read(addr, value));
+            .on_event(ApuBusEvent::Read(addr, value));
         value
     }
 
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
         self.debug_event_collector
-            .collect_event(ApuBusEvent::Write(addr, value));
+            .on_event(ApuBusEvent::Write(addr, value));
 
         self.master_cycle += 21;
         #[allow(clippy::single_match)]

@@ -276,37 +276,37 @@ impl Debugger {
 }
 
 impl DebugErrorCollector for Debugger {
-    fn collect_error(&mut self, message: String) {
+    fn on_error(&mut self, message: String) {
         self.collect_debug_event(DebugEvent::Error(message));
     }
 }
 
 impl DebugEventCollector<ApuBusEvent> for Debugger {
-    fn collect_event(&mut self, event: ApuBusEvent) {
+    fn on_event(&mut self, event: ApuBusEvent) {
         self.collect_debug_event(DebugEvent::ApuBus(event));
     }
 }
 
 impl DebugEventCollector<Spc700Event> for Debugger {
-    fn collect_event(&mut self, event: Spc700Event) {
+    fn on_event(&mut self, event: Spc700Event) {
         self.collect_debug_event(DebugEvent::Spc700(event));
     }
 }
 
 impl DebugEventCollector<CpuEvent> for Debugger {
-    fn collect_event(&mut self, event: CpuEvent) {
+    fn on_event(&mut self, event: CpuEvent) {
         self.collect_debug_event(DebugEvent::Cpu(event));
     }
 }
 
 impl DebugEventCollector<MainBusEvent> for Debugger {
-    fn collect_event(&mut self, event: MainBusEvent) {
+    fn on_event(&mut self, event: MainBusEvent) {
         self.collect_debug_event(DebugEvent::MainBus(event));
     }
 }
 
 impl DebugEventCollector<()> for Debugger {
-    fn collect_event(&mut self, _event: ()) {}
+    fn on_event(&mut self, _event: ()) {}
 }
 
 /// Parses a hex 1234:5678 range string into a Range<u32>

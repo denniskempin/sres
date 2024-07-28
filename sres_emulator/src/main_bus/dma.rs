@@ -105,7 +105,7 @@ impl DmaController {
             Some(value) => value,
             None => {
                 self.debug_event_collector
-                    .collect_error(format!("Invalid read from {}", addr));
+                    .on_error(format!("Invalid read from {}", addr));
                 0
             }
         }
@@ -149,13 +149,13 @@ impl DmaController {
                     0x7 => log::warn!("HDMA not implemented."),
                     _ => {
                         self.debug_event_collector
-                            .collect_error(format!("Invalid write to {}", addr));
+                            .on_error(format!("Invalid write to {}", addr));
                     }
                 }
             }
             _ => {
                 self.debug_event_collector
-                    .collect_error(format!("Invalid write to {}", addr));
+                    .on_error(format!("Invalid write to {}", addr));
             }
         }
     }

@@ -81,7 +81,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     pub fn step(&mut self) {
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.debug_event_collector
-                .collect_event(Spc700Event::Step(self.debug().state()));
+                .on_event(Spc700Event::Step(self.debug().state()));
         }
 
         let opcode = self.bus.cycle_read_u8(self.pc);

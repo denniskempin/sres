@@ -20,7 +20,7 @@ use super::Cpu;
 use super::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
-use crate::common::debug_events::dummy_collector;
+use crate::common::debug_events::test::mock_collector;
 use crate::common::logging;
 use crate::common::test_bus::Cycle;
 use crate::common::test_bus::TestBus;
@@ -202,7 +202,7 @@ impl TestCpuState {
         for (addr, value) in &self.ram {
             bus.memory.set(AddressU24::from(*addr), *value);
         }
-        let mut cpu = Cpu::new(bus, dummy_collector());
+        let mut cpu = Cpu::new(bus, mock_collector());
         cpu.pc = AddressU24 {
             bank: self.pbr,
             offset: self.pc,
