@@ -2,6 +2,7 @@
 //!
 //! The data provides thousands of test cases with initial CPU state and expected CPU state after
 //! executing one instruction.
+#![cfg(test)]
 
 use std::collections::HashMap;
 use std::fs::File;

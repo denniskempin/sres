@@ -6,7 +6,6 @@ use egui::TextureOptions;
 use egui::Ui;
 use egui::Vec2;
 use sres_emulator::components::ppu::BackgroundId;
-
 use sres_emulator::components::ppu::Ppu;
 use sres_emulator::components::ppu::VramRenderSelection;
 use sres_emulator::System;

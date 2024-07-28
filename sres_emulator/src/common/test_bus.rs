@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;

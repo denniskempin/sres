@@ -6,14 +6,13 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 
-use crate::common::address::AddressU24;
-use crate::common::address::InstructionMeta;
-use crate::common::clock::ClockInfo;
-
 use super::Cpu;
 use super::MainBus;
 use super::NativeVectorTable;
 use super::StatusFlags;
+use crate::common::address::AddressU24;
+use crate::common::address::InstructionMeta;
+use crate::common::clock::ClockInfo;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CpuEvent {

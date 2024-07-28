@@ -4,13 +4,18 @@ mod instructions;
 mod opcode_table;
 mod operands;
 mod status;
-#[cfg(test)]
 mod test;
 
 use std::sync::atomic::Ordering;
 
 use intbits::Bits;
 
+pub use self::debug::CpuDebug;
+pub use self::debug::CpuEvent;
+pub use self::debug::CpuState;
+use self::opcode_table::build_opcode_table;
+use self::opcode_table::Instruction;
+use self::status::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
@@ -19,13 +24,6 @@ use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
-
-pub use self::debug::CpuDebug;
-pub use self::debug::CpuEvent;
-pub use self::debug::CpuState;
-use self::opcode_table::build_opcode_table;
-use self::opcode_table::Instruction;
-use self::status::StatusFlags;
 
 pub struct Cpu<BusT: MainBus> {
     pub bus: BusT,

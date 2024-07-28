@@ -1,3 +1,4 @@
+mod apu;
 mod cpu;
 mod ppu;
 mod syntax;
@@ -6,6 +7,7 @@ use std::cell::RefMut;
 use std::fmt::Debug;
 use std::time::Duration;
 
+use apu::ApuDebugWindow;
 use eframe::CreationContext;
 use egui::Context;
 use egui::FontId;
@@ -98,6 +100,7 @@ pub struct DebugUi {
     command: Option<DebugCommand>,
     alert: Alert,
     ppu_debug: PpuDebugWindow,
+    apu_debug: ApuDebugWindow,
     memory_viewer: MemoryViewer,
     past_emulation_times: RingBuffer<Duration, 60>,
     log_viewer: LogViewer,
@@ -111,6 +114,7 @@ impl DebugUi {
             command: None,
             alert: Alert::default(),
             ppu_debug: PpuDebugWindow::new(cc),
+            apu_debug: ApuDebugWindow::new(),
             memory_viewer: MemoryViewer::new("CPU Bus"),
             show_profiler: false,
             log_viewer: LogViewer::new(),
@@ -182,6 +186,7 @@ impl DebugUi {
     pub fn modals(&mut self, ctx: &Context, emulator: &mut System) {
         self.alert.render(ctx);
         self.ppu_debug.show(ctx, emulator);
+        self.apu_debug.show(ctx, emulator);
         self.memory_viewer
             .show(ctx, |addr| emulator.cpu.bus.peek_u8(addr));
         if self.show_profiler && !puffin_egui::profiler_window(ctx) {
@@ -207,7 +212,9 @@ impl DebugUi {
             if ui.button("PPU").clicked() {
                 self.ppu_debug.open = !self.ppu_debug.open;
             }
-            ui.button("APU").clicked();
+            if ui.button("APU").clicked() {
+                self.apu_debug.open = !self.apu_debug.open;
+            }
             if ui.button("Memory").clicked() {
                 self.memory_viewer.is_open = !self.memory_viewer.is_open;
             }
