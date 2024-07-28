@@ -12,7 +12,7 @@ use crate::common::uint::U32Ext;
 use crate::common::uint::UIntTruncate;
 
 /// Address types enforce that the wrapping behavior for each calculation is explicitly specified.
-pub trait Address: Eq + Hash + Display + Ord + Copy + Clone {
+pub trait Address: Eq + Hash + Display + Ord + Copy + Clone + From<u32> {
     fn add_signed(&self, rhs: i32, wrap: Wrap) -> Self;
     fn add<T: UIntTruncate>(&self, rhs: T, wrap: Wrap) -> Self;
     fn add_detect_page_cross<T: UIntTruncate + Copy>(&self, rhs: T, wrap: Wrap) -> (bool, Self);
@@ -165,6 +165,13 @@ impl Display for AddressU16 {
     }
 }
 
+impl From<u32> for AddressU16 {
+    #[inline]
+    fn from(addr: u32) -> Self {
+        AddressU16(addr as u16)
+    }
+}
+
 #[derive(Copy, Clone, Debug, Default, Encode, Decode)]
 pub struct AddressU15(pub u16);
 
@@ -207,6 +214,13 @@ impl std::ops::Sub<u16> for AddressU15 {
 impl From<u16> for AddressU15 {
     fn from(value: u16) -> Self {
         Self(value & 0x7FFF)
+    }
+}
+
+impl From<u32> for AddressU15 {
+    #[inline]
+    fn from(addr: u32) -> Self {
+        Self((addr as u16) & 0x7FFF)
     }
 }
 

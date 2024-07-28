@@ -20,7 +20,7 @@ impl Vram {
     pub fn new() -> Self {
         Self {
             memory: vec![0; 0x20000],
-            current_addr: AddressU15::from(0),
+            current_addr: AddressU15(0),
             read_latch: false,
             increment_mode: false,
             increment_amount: 1,

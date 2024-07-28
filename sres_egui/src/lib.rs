@@ -112,8 +112,7 @@ impl EmulatorApp {
             self.input_recording
                 .insert(self.emulator.clock_info().f, joy1.to_u16());
         }
-        self.emulator
-            .update_joypads(joy1, StandardController::default())
+        self.emulator.update_joypads(joy1.to_u16(), 0)
     }
 
     fn menu_bar(&mut self, ui: &mut Ui) {

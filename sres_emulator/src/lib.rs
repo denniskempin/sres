@@ -12,7 +12,6 @@ use std::rc::Rc;
 
 use common::clock::ClockInfo;
 use common::image::Image;
-use controller::StandardController;
 use debugger::DebuggerRef;
 
 use crate::apu::ApuDebug;
@@ -100,9 +99,8 @@ impl System {
         self.cpu.bus.ppu.clock_info()
     }
 
-    pub fn update_joypads(&mut self, joy1: StandardController, joy2: StandardController) {
-        self.cpu.bus.joy1 = joy1.to_u16();
-        self.cpu.bus.joy2 = joy2.to_u16();
+    pub fn update_joypads(&mut self, joy1: u16, joy2: u16) {
+        self.cpu.bus.update_joypads(joy1, joy2);
     }
 
     pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {

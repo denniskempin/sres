@@ -197,7 +197,7 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
     let last_frame = snapshots.iter().map(|(_, frame)| frame).max().unwrap();
     for frame in 0..=*last_frame {
         if input_recording.contains_key(&frame) {
-            system.cpu.bus.joy1 = input_recording[&frame];
+            system.update_joypads(input_recording[&frame], 0);
         }
         system.execute_frames(1);
 

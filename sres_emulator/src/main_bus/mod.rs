@@ -25,19 +25,20 @@ pub enum MainBusEvent {
 }
 
 pub struct MainBusImpl {
-    pub debug_event_collector: DebugEventCollectorRef<MainBusEvent>,
-
-    pub wram: Vec<u8>,
-    pub sram: Vec<u8>,
-    pub rom: Vec<u8>,
-    pub clock_speed: u64,
-    pub dma_controller: DmaController,
     pub ppu: Ppu,
     pub apu: Apu,
-    pub multiplication: MultiplicationUnit,
-    pub joy1: u16,
-    pub joy2: u16,
-    pub mapping_mode: MappingMode,
+
+    wram: Vec<u8>,
+    sram: Vec<u8>,
+    rom: Vec<u8>,
+    clock_speed: u64,
+    dma_controller: DmaController,
+    multiplication: MultiplicationUnit,
+    joy1: u16,
+    joy2: u16,
+    mapping_mode: MappingMode,
+
+    debug_event_collector: DebugEventCollectorRef<MainBusEvent>,
 }
 
 impl MainBusImpl {
@@ -146,6 +147,11 @@ impl MainBusImpl {
                     .on_error(format!("Write to unmapped region {}", addr));
             }
         }
+    }
+
+    pub fn update_joypads(&mut self, joy1: u16, joy2: u16) {
+        self.joy1 = joy1;
+        self.joy2 = joy2;
     }
 
     #[inline]
