@@ -1,5 +1,4 @@
 use crate::common::address::Address;
-use crate::common::address::AddressU16;
 use crate::common::address::AddressU24;
 
 /// Represents a snapshot of the Cpu state for debugging purposes
@@ -126,17 +125,6 @@ impl ClockInfo {
         }
         counter / 4
     }
-}
-
-// Representation of the state of [Spc700] in the same format as logged by BSNES.
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct Spc700State {
-    pub instruction: InstructionMeta<AddressU16>,
-    pub a: u8,
-    pub x: u8,
-    pub y: u8,
-    pub sp: AddressU16,
-    pub status: String,
 }
 
 #[cfg(test)]

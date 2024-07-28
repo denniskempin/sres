@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use super::apu_bus::ApuBus;
 use crate::common::debug_events::dummy_collector;
-use crate::common::system::Spc700State;
 use crate::components::spc700::Spc700;
 use crate::components::spc700::Spc700Bus;
+use crate::components::spc700::Spc700State;
 
 fn assert_state(spc700: &Spc700<impl Spc700Bus>, expected_state: &str) {
     let mut actual = spc700.debug().state();

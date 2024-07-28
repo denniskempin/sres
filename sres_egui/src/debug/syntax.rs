@@ -6,6 +6,7 @@ use sres_emulator::common::address::AddressU16;
 use sres_emulator::common::address::AddressU24;
 use sres_emulator::components::cpu::CpuEvent;
 use sres_emulator::components::spc700::Spc700Event;
+use sres_emulator::components::spc700::Spc700State;
 use sres_emulator::debugger::DebugEvent;
 use sres_emulator::main_bus::MainBusEvent;
 
@@ -93,11 +94,7 @@ fn cpu_log_line(
     label_strong(ui, state.status.to_string());
 }
 
-fn spc700_log_line(
-    ui: &mut Ui,
-    state: &sres_emulator::common::system::Spc700State,
-    selected: &mut InternalLink,
-) {
+fn spc700_log_line(ui: &mut Ui, state: &Spc700State, selected: &mut InternalLink) {
     label_spc(ui);
     label_spc700_pc(ui, state.instruction.address, selected);
     label_normal(ui, " ");
