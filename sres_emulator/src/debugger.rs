@@ -18,10 +18,10 @@ use crate::common::address::AddressU24;
 use crate::common::debug_events::DebugErrorCollector;
 use crate::common::debug_events::DebugEventCollector;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
-use crate::common::system::CpuState;
-use crate::common::system::NativeVectorTable;
 use crate::common::util::RingBuffer;
 use crate::components::cpu::CpuEvent;
+use crate::components::cpu::CpuState;
+use crate::components::cpu::NativeVectorTable;
 use crate::components::spc700::Spc700Event;
 use crate::main_bus::MainBusEvent;
 
@@ -357,7 +357,6 @@ fn format_range<T: PrimInt + UpperHex>(range: &Range<T>) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::common::system::NativeVectorTable;
 
     #[test]
     fn test_parse_range() {
