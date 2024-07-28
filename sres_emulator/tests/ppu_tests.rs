@@ -70,7 +70,7 @@ fn run_framebuffer_test(test_name: &str, frame: u64) -> System {
     system.execute_frames(frame);
     let framebuffer_path = test_dir().join(format!("{test_name}-framebuffer"));
     compare_to_golden(
-        &system.cpu.bus.ppu.get_rgba_framebuffer::<TestImageImpl>(),
+        &system.get_rgba_framebuffer::<TestImageImpl>(),
         &framebuffer_path,
     );
     system

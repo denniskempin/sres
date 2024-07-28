@@ -110,9 +110,10 @@ impl EmulatorApp {
         if self.input_recording_active && joy1.to_u16() != self.input_recording_last {
             self.input_recording_last = joy1.to_u16();
             self.input_recording
-                .insert(self.emulator.cpu.bus.ppu.clock_info().f, joy1.to_u16());
+                .insert(self.emulator.clock_info().f, joy1.to_u16());
         }
-        self.emulator.cpu.bus.joy1 = joy1.to_u16();
+        self.emulator
+            .update_joypads(joy1, StandardController::default())
     }
 
     fn menu_bar(&mut self, ui: &mut Ui) {
@@ -167,11 +168,7 @@ impl EmulatorApp {
 
     fn main_display(&mut self, ui: &mut Ui) {
         self.framebuffer_texture.set(
-            self.emulator
-                .cpu
-                .bus
-                .ppu
-                .get_rgba_framebuffer::<EguiImageImpl>(),
+            self.emulator.get_rgba_framebuffer::<EguiImageImpl>(),
             TextureOptions::default(),
         );
 
