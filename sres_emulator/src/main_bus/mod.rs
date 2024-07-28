@@ -105,25 +105,25 @@ impl MainBusImpl {
                 0x421B => self.joy2.high_byte(),
                 _ => {
                     self.debug_event_collector
-                        .collect_error(format!("Read from unimplemented register {}", addr));
+                        .on_error(format!("Read from unimplemented register {}", addr));
                     0
                 }
             },
             MemoryBlock::Unmapped => {
                 self.debug_event_collector
-                    .collect_error(format!("Read from unmapped memory region {}", addr));
+                    .on_error(format!("Read from unmapped memory region {}", addr));
                 0
             }
         };
         self.debug_event_collector
-            .collect_event(MainBusEvent::Read(addr, value));
+            .on_event(MainBusEvent::Read(addr, value));
         value
     }
 
     #[allow(clippy::single_match)]
     fn bus_write(&mut self, addr: AddressU24, value: u8) {
         self.debug_event_collector
-            .collect_event(MainBusEvent::Write(addr, value));
+            .on_event(MainBusEvent::Write(addr, value));
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
             MemoryBlock::Rom(offset) => self.rom[offset] = value,
@@ -135,7 +135,7 @@ impl MainBusImpl {
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
                 0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.bus_write(addr, value),
                 _ => {
-                    self.debug_event_collector.collect_error(format!(
+                    self.debug_event_collector.on_error(format!(
                         "Write to unimplemented register {} = {}",
                         addr, value
                     ));
@@ -143,7 +143,7 @@ impl MainBusImpl {
             },
             MemoryBlock::Unmapped => {
                 self.debug_event_collector
-                    .collect_error(format!("Write to unmapped region {}", addr));
+                    .on_error(format!("Write to unmapped region {}", addr));
             }
         }
     }

@@ -92,7 +92,7 @@ impl<BusT: MainBus> Cpu<BusT> {
     pub fn step(&mut self) {
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.debug_event_collector
-                .collect_event(CpuEvent::Step(self.debug().state()));
+                .on_event(CpuEvent::Step(self.debug().state()));
         }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
@@ -118,7 +118,7 @@ impl<BusT: MainBus> Cpu<BusT> {
 
     fn interrupt(&mut self, handler: NativeVectorTable) {
         self.debug_event_collector
-            .collect_event(CpuEvent::Interrupt(handler));
+            .on_event(CpuEvent::Interrupt(handler));
         self.stack_push_u24(u32::from(self.pc));
         self.stack_push_u8(u8::from(self.status));
         self.status.irq_disable = true;
