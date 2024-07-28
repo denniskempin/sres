@@ -9,7 +9,6 @@ use self::multiplication::MultiplicationUnit;
 use crate::apu::Apu;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
-use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::system::ClockInfo;
 use crate::common::uint::U16Ext;
@@ -19,17 +18,14 @@ use crate::components::cpu::MainBus;
 use crate::components::ppu::Ppu;
 use crate::debugger::DebuggerRef;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum MemoryBlock {
-    Ram(usize),
-    Rom(usize),
-    Sram(usize),
-    Register,
-    Unmapped,
+#[derive(Debug, Clone, PartialEq)]
+pub enum MainBusEvent {
+    Read(AddressU24, u8),
+    Write(AddressU24, u8),
 }
 
 pub struct MainBusImpl {
-    pub debug_event_collector: DebugEventCollectorRef<CpuEvent>,
+    pub debug_event_collector: DebugEventCollectorRef<MainBusEvent>,
 
     pub wram: Vec<u8>,
     pub sram: Vec<u8>,
@@ -120,14 +116,14 @@ impl MainBusImpl {
             }
         };
         self.debug_event_collector
-            .collect_event(CpuEvent::Read(addr, value));
+            .collect_event(MainBusEvent::Read(addr, value));
         value
     }
 
     #[allow(clippy::single_match)]
     fn bus_write(&mut self, addr: AddressU24, value: u8) {
         self.debug_event_collector
-            .collect_event(CpuEvent::Write(addr, value));
+            .collect_event(MainBusEvent::Write(addr, value));
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
             MemoryBlock::Rom(offset) => self.rom[offset] = value,
@@ -229,6 +225,15 @@ impl MainBus for MainBusImpl {
     fn clock_info(&self) -> ClockInfo {
         self.ppu.clock_info()
     }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum MemoryBlock {
+    Ram(usize),
+    Rom(usize),
+    Sram(usize),
+    Register,
+    Unmapped,
 }
 
 /// Memory access speed as per memory map. See:

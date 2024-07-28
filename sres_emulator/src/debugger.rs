@@ -13,16 +13,26 @@ use std::sync::atomic::Ordering;
 
 use num_traits::PrimInt;
 
+use crate::apu::ApuBusEvent;
 use crate::common::address::AddressU24;
-use crate::common::debug_events::ApuEvent;
-use crate::common::debug_events::CpuEvent;
 use crate::common::debug_events::DebugErrorCollector;
-use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollector;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::system::CpuState;
 use crate::common::system::NativeVectorTable;
 use crate::common::util::RingBuffer;
+use crate::components::cpu::CpuEvent;
+use crate::components::spc700::Spc700Event;
+use crate::main_bus::MainBusEvent;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum DebugEvent {
+    Cpu(CpuEvent),
+    MainBus(MainBusEvent),
+    ApuBus(ApuBusEvent),
+    Spc700(Spc700Event),
+    Error(String),
+}
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum EventFilter {
@@ -48,10 +58,10 @@ impl EventFilter {
             (CpuInstruction(instr), Cpu(CpuEvent::Step(cpu))) => {
                 instr == &cpu.instruction.operation
             }
-            (CpuMemoryRead(range), Cpu(CpuEvent::Read(addr, _))) => {
+            (CpuMemoryRead(range), MainBus(MainBusEvent::Read(addr, _))) => {
                 range.contains(&u32::from(*addr))
             }
-            (CpuMemoryWrite(range), Cpu(CpuEvent::Write(addr, _))) => {
+            (CpuMemoryWrite(range), MainBus(MainBusEvent::Write(addr, _))) => {
                 range.contains(&u32::from(*addr))
             }
             (ExecutionError, Error(_)) => true,
@@ -62,11 +72,15 @@ impl EventFilter {
                     true
                 }
             }
-            (Spc700ProgramCounter(range), Apu(ApuEvent::Step(spc))) => {
+            (Spc700ProgramCounter(range), Spc700(Spc700Event::Step(spc))) => {
                 range.contains(&spc.instruction.address.0)
             }
-            (Spc700MemoryRead(range), Apu(ApuEvent::Read(addr, _))) => range.contains(&addr.0),
-            (Spc700MemoryWrite(range), Apu(ApuEvent::Write(addr, _))) => range.contains(&addr.0),
+            (Spc700MemoryRead(range), ApuBus(ApuBusEvent::Read(addr, _))) => {
+                range.contains(&addr.0)
+            }
+            (Spc700MemoryWrite(range), ApuBus(ApuBusEvent::Write(addr, _))) => {
+                range.contains(&addr.0)
+            }
 
             _ => false,
         }
@@ -267,15 +281,27 @@ impl DebugErrorCollector for Debugger {
     }
 }
 
-impl DebugEventCollector<ApuEvent> for Debugger {
-    fn collect_event(&mut self, event: ApuEvent) {
-        self.collect_debug_event(DebugEvent::Apu(event));
+impl DebugEventCollector<ApuBusEvent> for Debugger {
+    fn collect_event(&mut self, event: ApuBusEvent) {
+        self.collect_debug_event(DebugEvent::ApuBus(event));
+    }
+}
+
+impl DebugEventCollector<Spc700Event> for Debugger {
+    fn collect_event(&mut self, event: Spc700Event) {
+        self.collect_debug_event(DebugEvent::Spc700(event));
     }
 }
 
 impl DebugEventCollector<CpuEvent> for Debugger {
     fn collect_event(&mut self, event: CpuEvent) {
         self.collect_debug_event(DebugEvent::Cpu(event));
+    }
+}
+
+impl DebugEventCollector<MainBusEvent> for Debugger {
+    fn collect_event(&mut self, event: MainBusEvent) {
+        self.collect_debug_event(DebugEvent::MainBus(event));
     }
 }
 
