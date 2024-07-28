@@ -10,17 +10,18 @@ use std::cell::RefMut;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use common::clock::ClockInfo;
-use common::image::Image;
-use debugger::DebuggerRef;
-
+use crate::apu::Apu;
 use crate::apu::ApuDebug;
+use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
+use crate::common::image::Image;
 use crate::components::cartridge::Cartridge;
 use crate::components::cpu::Cpu;
 use crate::components::cpu::MainBus;
+use crate::components::ppu::Ppu;
 use crate::debugger::BreakReason;
 use crate::debugger::Debugger;
+use crate::debugger::DebuggerRef;
 use crate::debugger::EventFilter;
 use crate::main_bus::MainBusImpl;
 
@@ -103,8 +104,12 @@ impl System {
         self.cpu.bus.ppu.get_rgba_framebuffer()
     }
 
-    pub fn force_headless(&mut self) {
-        self.cpu.bus.ppu.force_headless();
+    pub fn ppu(&mut self) -> &mut Ppu {
+        &mut self.cpu.bus.ppu
+    }
+
+    pub fn apu(&mut self) -> &mut Apu {
+        &mut self.cpu.bus.apu
     }
 
     pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {
