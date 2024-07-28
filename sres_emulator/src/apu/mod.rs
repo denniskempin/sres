@@ -11,6 +11,7 @@ use crate::common::address::AddressU24;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDspDebug;
 use crate::components::spc700::Spc700;
+use crate::debugger::DebuggerRef;
 
 pub struct Apu {
     spc700: Spc700<ApuBus>,
@@ -18,11 +19,11 @@ pub struct Apu {
 
 impl Apu {
     #[allow(clippy::new_without_default)]
-    pub fn new(debug_event_collector: DebugEventCollectorRef) -> Self {
+    pub fn new(debugger: DebuggerRef) -> Self {
         Self {
             spc700: Spc700::new(
-                ApuBus::new(debug_event_collector.clone()),
-                debug_event_collector,
+                ApuBus::new(DebugEventCollectorRef(debugger.clone())),
+                DebugEventCollectorRef(debugger.clone()),
             ),
         }
     }

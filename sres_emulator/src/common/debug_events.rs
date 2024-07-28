@@ -34,9 +34,14 @@ pub enum ApuEvent {
     Write(AddressU16, u8),
 }
 
-pub trait DebugEventCollector {
+pub trait DebugErrorCollector {
     #[cold]
-    fn collect_event(&mut self, event: DebugEvent);
+    fn collect_error(&mut self, message: String);
+}
+
+pub trait DebugEventCollector<EventT>: DebugErrorCollector {
+    #[cold]
+    fn collect_event(&mut self, event: EventT);
 }
 
 /// Wrapper to a dyn trait reference of a DebugEventCollector
@@ -44,25 +49,24 @@ pub trait DebugEventCollector {
 /// This is used by emulator components to generate events, which can then be
 /// collected by the debugger.
 #[derive(Clone)]
-pub struct DebugEventCollectorRef(pub Rc<RefCell<dyn DebugEventCollector>>);
+pub struct DebugEventCollectorRef<EventT>(pub Rc<RefCell<dyn DebugEventCollector<EventT>>>);
 
-impl DebugEventCollectorRef {
-    pub fn collect_event(&self, event: DebugEvent) {
+impl<EventT> DebugEventCollectorRef<EventT> {
+    pub fn collect_event(&self, event: EventT) {
         if DEBUG_EVENTS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
             self.0.deref().borrow_mut().collect_event(event);
         }
     }
-    pub fn collect_cpu_event(&self, event: CpuEvent) {
-        self.collect_event(DebugEvent::Cpu(event));
-    }
 
-    pub fn collect_apu_event(&self, event: ApuEvent) {
-        self.collect_event(DebugEvent::Apu(event));
+    pub fn collect_error(&self, message: String) {
+        if DEBUG_EVENTS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+            self.0.deref().borrow_mut().collect_error(message);
+        }
     }
 }
 
 #[cfg(test)]
-pub fn dummy_collector() -> DebugEventCollectorRef {
+pub fn dummy_collector<EventT>() -> DebugEventCollectorRef<EventT> {
     DebugEventCollectorRef(Rc::new(RefCell::new(DummyDebugEventCollector {})))
 }
 
@@ -70,6 +74,11 @@ pub fn dummy_collector() -> DebugEventCollectorRef {
 pub struct DummyDebugEventCollector {}
 
 #[cfg(test)]
-impl DebugEventCollector for DummyDebugEventCollector {
-    fn collect_event(&mut self, _event: DebugEvent) {}
+impl DebugErrorCollector for DummyDebugEventCollector {
+    fn collect_error(&mut self, _message: String) {}
+}
+
+#[cfg(test)]
+impl<EventT> DebugEventCollector<EventT> for DummyDebugEventCollector {
+    fn collect_event(&mut self, _event: EventT) {}
 }

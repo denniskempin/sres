@@ -10,7 +10,6 @@ use crate::apu::Apu;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
 use crate::common::debug_events::CpuEvent;
-use crate::common::debug_events::DebugEvent;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::system::ClockInfo;
 use crate::common::uint::U16Ext;
@@ -18,6 +17,7 @@ use crate::components::cartridge::Cartridge;
 use crate::components::cartridge::MappingMode;
 use crate::components::cpu::MainBus;
 use crate::components::ppu::Ppu;
+use crate::debugger::DebuggerRef;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum MemoryBlock {
@@ -29,7 +29,7 @@ enum MemoryBlock {
 }
 
 pub struct MainBusImpl {
-    pub debug_event_collector: DebugEventCollectorRef,
+    pub debug_event_collector: DebugEventCollectorRef<CpuEvent>,
 
     pub wram: Vec<u8>,
     pub sram: Vec<u8>,
@@ -45,7 +45,7 @@ pub struct MainBusImpl {
 }
 
 impl MainBusImpl {
-    pub fn new(cartridge: &Cartridge, debug_event_collector: DebugEventCollectorRef) -> Self {
+    pub fn new(cartridge: &Cartridge, debugger: DebuggerRef) -> Self {
         let mut rom = vec![0; 0x4000000];
         for (i, byte) in cartridge.rom.iter().enumerate() {
             rom[i] = *byte;
@@ -56,11 +56,11 @@ impl MainBusImpl {
             sram: cartridge.sram.clone(),
             rom,
             clock_speed: 8,
-            dma_controller: DmaController::new(debug_event_collector.clone()),
+            dma_controller: DmaController::new(DebugEventCollectorRef(debugger.clone())),
             ppu: Ppu::new(),
-            apu: Apu::new(debug_event_collector.clone()),
+            apu: Apu::new(debugger.clone()),
             multiplication: MultiplicationUnit::new(),
-            debug_event_collector,
+            debug_event_collector: DebugEventCollectorRef(debugger.clone()),
             joy1: 0,
             joy2: 0,
             mapping_mode: cartridge.mapping_mode,
@@ -109,31 +109,25 @@ impl MainBusImpl {
                 0x421B => self.joy2.high_byte(),
                 _ => {
                     self.debug_event_collector
-                        .collect_event(DebugEvent::Error(format!(
-                            "Read from unimplemented register {}",
-                            addr
-                        )));
+                        .collect_error(format!("Read from unimplemented register {}", addr));
                     0
                 }
             },
             MemoryBlock::Unmapped => {
                 self.debug_event_collector
-                    .collect_event(DebugEvent::Error(format!(
-                        "Read from unmapped memory region {}",
-                        addr
-                    )));
+                    .collect_error(format!("Read from unmapped memory region {}", addr));
                 0
             }
         };
         self.debug_event_collector
-            .collect_cpu_event(CpuEvent::Read(addr, value));
+            .collect_event(CpuEvent::Read(addr, value));
         value
     }
 
     #[allow(clippy::single_match)]
     fn bus_write(&mut self, addr: AddressU24, value: u8) {
         self.debug_event_collector
-            .collect_cpu_event(CpuEvent::Write(addr, value));
+            .collect_event(CpuEvent::Write(addr, value));
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
             MemoryBlock::Rom(offset) => self.rom[offset] = value,
@@ -145,19 +139,15 @@ impl MainBusImpl {
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
                 0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.bus_write(addr, value),
                 _ => {
-                    self.debug_event_collector
-                        .collect_event(DebugEvent::Error(format!(
-                            "Write to unimplemented register {} = {}",
-                            addr, value
-                        )));
+                    self.debug_event_collector.collect_error(format!(
+                        "Write to unimplemented register {} = {}",
+                        addr, value
+                    ));
                 }
             },
             MemoryBlock::Unmapped => {
                 self.debug_event_collector
-                    .collect_event(DebugEvent::Error(format!(
-                        "Write to unmapped region {}",
-                        addr
-                    )));
+                    .collect_error(format!("Write to unmapped region {}", addr));
             }
         }
     }

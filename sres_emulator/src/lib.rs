@@ -10,6 +10,8 @@ use std::cell::RefMut;
 use std::ops::Deref;
 use std::rc::Rc;
 
+use debugger::DebuggerRef;
+
 use crate::apu::ApuDebug;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::cartridge::Cartridge;
@@ -28,7 +30,7 @@ pub enum ExecutionResult {
 
 pub struct System {
     pub cpu: Cpu<MainBusImpl>,
-    debugger: Rc<RefCell<Debugger>>,
+    debugger: DebuggerRef,
 }
 
 impl System {
@@ -49,7 +51,7 @@ impl System {
         let debugger = Rc::new(RefCell::new(Debugger::new()));
         Self {
             cpu: Cpu::new(
-                MainBusImpl::new(cartridge, DebugEventCollectorRef(debugger.clone())),
+                MainBusImpl::new(cartridge, debugger.clone()),
                 DebugEventCollectorRef(debugger.clone()),
             ),
             debugger,
