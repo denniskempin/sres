@@ -1,8 +1,8 @@
 //! Implementation of the 65816 main cpu of the SNES.
+mod debug;
 mod instructions;
 mod opcode_table;
 mod operands;
-mod state;
 mod status;
 #[cfg(test)]
 mod test;
@@ -12,7 +12,6 @@ use std::sync::atomic::Ordering;
 use intbits::Bits;
 
 use crate::common::address::AddressU24;
-use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::clock::ClockInfo;
@@ -21,16 +20,12 @@ use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
 
+pub use self::debug::CpuDebug;
+pub use self::debug::CpuEvent;
+pub use self::debug::CpuState;
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
-pub use self::state::CpuState;
 use self::status::StatusFlags;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum CpuEvent {
-    Step(CpuState),
-    Interrupt(NativeVectorTable),
-}
 
 pub struct Cpu<BusT: MainBus> {
     pub bus: BusT,
@@ -236,55 +231,6 @@ enum EmuVectorTable {
     Nmi = 0xFFFA,
     Reset = 0xFFFC,
     Irq = 0xFFFE,
-}
-
-pub struct CpuDebug<'a, BusT: MainBus>(&'a Cpu<BusT>);
-
-impl<'a, BusT: MainBus> CpuDebug<'a, BusT> {
-    pub fn state(&self) -> CpuState {
-        let (instruction, _) = self.load_instruction_meta(self.0.pc);
-        CpuState {
-            instruction,
-            a: self.0.a.value,
-            x: self.0.x.value,
-            y: self.0.y.value,
-            s: self.0.s,
-            d: self.0.d,
-            db: self.0.db,
-            status: StatusFlags {
-                negative: self.0.status.negative,
-                overflow: self.0.status.overflow,
-                accumulator_register_size: self.0.status.accumulator_register_size,
-                index_register_size_or_break: self.0.status.index_register_size_or_break,
-                decimal: self.0.status.decimal,
-                irq_disable: self.0.status.irq_disable,
-                zero: self.0.status.zero,
-                carry: self.0.status.carry,
-            },
-            clock: self.0.bus.clock_info(),
-        }
-    }
-
-    /// Return the instruction meta data for the instruction at the given address
-    pub fn load_instruction_meta(
-        &self,
-        addr: AddressU24,
-    ) -> (InstructionMeta<AddressU24>, AddressU24) {
-        let opcode = self.0.bus.peek_u8(addr).unwrap_or_default();
-        (self.0.instruction_table[opcode as usize].meta)(self.0, addr)
-    }
-
-    pub fn peek_next_operations(
-        &self,
-        count: usize,
-    ) -> impl Iterator<Item = InstructionMeta<AddressU24>> + '_ {
-        let mut pc = self.0.pc;
-        (0..count).map(move |_| {
-            let (meta, new_pc) = self.load_instruction_meta(pc);
-            pc = new_pc;
-            meta
-        })
-    }
 }
 
 #[cfg(test)]

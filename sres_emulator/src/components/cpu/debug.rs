@@ -10,7 +10,65 @@ use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
 use crate::common::clock::ClockInfo;
 
-use super::status::StatusFlags;
+use super::Cpu;
+use super::MainBus;
+use super::NativeVectorTable;
+use super::StatusFlags;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CpuEvent {
+    Step(CpuState),
+    Interrupt(NativeVectorTable),
+}
+
+pub struct CpuDebug<'a, BusT: MainBus>(pub &'a Cpu<BusT>);
+
+impl<'a, BusT: MainBus> CpuDebug<'a, BusT> {
+    pub fn state(&self) -> CpuState {
+        let (instruction, _) = self.load_instruction_meta(self.0.pc);
+        CpuState {
+            instruction,
+            a: self.0.a.value,
+            x: self.0.x.value,
+            y: self.0.y.value,
+            s: self.0.s,
+            d: self.0.d,
+            db: self.0.db,
+            status: StatusFlags {
+                negative: self.0.status.negative,
+                overflow: self.0.status.overflow,
+                accumulator_register_size: self.0.status.accumulator_register_size,
+                index_register_size_or_break: self.0.status.index_register_size_or_break,
+                decimal: self.0.status.decimal,
+                irq_disable: self.0.status.irq_disable,
+                zero: self.0.status.zero,
+                carry: self.0.status.carry,
+            },
+            clock: self.0.bus.clock_info(),
+        }
+    }
+
+    /// Return the instruction meta data for the instruction at the given address
+    pub fn load_instruction_meta(
+        &self,
+        addr: AddressU24,
+    ) -> (InstructionMeta<AddressU24>, AddressU24) {
+        let opcode = self.0.bus.peek_u8(addr).unwrap_or_default();
+        (self.0.instruction_table[opcode as usize].meta)(self.0, addr)
+    }
+
+    pub fn peek_next_operations(
+        &self,
+        count: usize,
+    ) -> impl Iterator<Item = InstructionMeta<AddressU24>> + '_ {
+        let mut pc = self.0.pc;
+        (0..count).map(move |_| {
+            let (meta, new_pc) = self.load_instruction_meta(pc);
+            pc = new_pc;
+            meta
+        })
+    }
+}
 
 /// Represents a snapshot of the Cpu state for debugging purposes
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -157,7 +215,6 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::common::address::AddressU24;
 
     static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:0236 F:32";
 
