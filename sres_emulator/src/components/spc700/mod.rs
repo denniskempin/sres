@@ -1,8 +1,8 @@
 //! Implementation of the SPC700 CPU.
+mod debug;
 mod instructions;
 mod opcode_table;
 mod operands;
-mod state;
 mod status;
 #[cfg(test)]
 mod test;
@@ -11,23 +11,19 @@ use std::sync::atomic::Ordering;
 
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
-use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::uint::UInt;
 
+pub use self::debug::Spc700Debug;
+pub use self::debug::Spc700Event;
+pub use self::debug::Spc700State;
 use self::opcode_table::InstructionDef;
 use self::operands::AddressMode;
 use self::operands::DecodedOperand;
-pub use self::state::Spc700State;
 use self::status::Spc700StatusFlags;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Spc700Event {
-    Step(Spc700State),
-}
 
 pub trait Spc700Bus: Bus<AddressU16> {
     fn master_cycle(&self) -> u64;
@@ -130,26 +126,5 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         let value = self.bus.cycle_read_u16(self.pc, Wrap::NoWrap);
         self.pc = self.pc.add(2_u8, Wrap::NoWrap);
         value
-    }
-}
-
-pub struct Spc700Debug<'a, BusT: Spc700Bus>(&'a Spc700<BusT>);
-
-impl<'a, BusT: Spc700Bus> Spc700Debug<'a, BusT> {
-    pub fn state(&self) -> Spc700State {
-        Spc700State {
-            instruction: self.disassembly(self.0.pc).0,
-            a: self.0.a,
-            x: self.0.x,
-            y: self.0.y,
-            sp: AddressU16(0x0100 + self.0.sp as u16),
-            status: self.0.status.to_string(),
-        }
-    }
-
-    pub fn disassembly(&self, addr: AddressU16) -> (InstructionMeta<AddressU16>, AddressU16) {
-        let opcode = self.0.bus.peek_u8(addr).unwrap_or_default();
-        let instruction = &self.0.opcode_table[opcode as usize];
-        (instruction.disassembly)(self.0, addr)
     }
 }

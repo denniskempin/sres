@@ -7,6 +7,35 @@ use anyhow::Result;
 use crate::common::address::AddressU16;
 use crate::common::address::InstructionMeta;
 
+use super::Spc700;
+use super::Spc700Bus;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Spc700Event {
+    Step(Spc700State),
+}
+
+pub struct Spc700Debug<'a, BusT: Spc700Bus>(pub &'a Spc700<BusT>);
+
+impl<'a, BusT: Spc700Bus> Spc700Debug<'a, BusT> {
+    pub fn state(&self) -> Spc700State {
+        Spc700State {
+            instruction: self.disassembly(self.0.pc).0,
+            a: self.0.a,
+            x: self.0.x,
+            y: self.0.y,
+            sp: AddressU16(0x0100 + self.0.sp as u16),
+            status: self.0.status.to_string(),
+        }
+    }
+
+    pub fn disassembly(&self, addr: AddressU16) -> (InstructionMeta<AddressU16>, AddressU16) {
+        let opcode = self.0.bus.peek_u8(addr).unwrap_or_default();
+        let instruction = &self.0.opcode_table[opcode as usize];
+        (instruction.disassembly)(self.0, addr)
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Spc700State {
     pub instruction: InstructionMeta<AddressU16>,
