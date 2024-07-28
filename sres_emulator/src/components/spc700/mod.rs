@@ -2,16 +2,13 @@
 mod instructions;
 mod opcode_table;
 mod operands;
+mod state;
 mod status;
 #[cfg(test)]
 mod test;
 
 use std::sync::atomic::Ordering;
 
-use self::opcode_table::InstructionDef;
-use self::operands::AddressMode;
-use self::operands::DecodedOperand;
-use self::status::Spc700StatusFlags;
 use crate::common::address::Address;
 use crate::common::address::AddressU16;
 use crate::common::address::Wrap;
@@ -19,8 +16,13 @@ use crate::common::bus::Bus;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::system::InstructionMeta;
-use crate::common::system::Spc700State;
 use crate::common::uint::UInt;
+
+use self::opcode_table::InstructionDef;
+use self::operands::AddressMode;
+use self::operands::DecodedOperand;
+pub use self::state::Spc700State;
+use self::status::Spc700StatusFlags;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Spc700Event {
