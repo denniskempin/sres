@@ -14,7 +14,7 @@ impl ApuDebugWindow {
         egui::Window::new("PPU")
             .open(&mut self.open)
             .show(ctx, |ui| {
-                let dsp = &emulator.cpu.bus.apu.debug().dsp();
+                let dsp = &emulator.debug().apu().dsp();
                 for i in 0..6 {
                     let voice = dsp.voice(i);
                     ui.label(format!("Voice {}: {}", i, voice));
