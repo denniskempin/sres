@@ -1,23 +1,46 @@
 //! SNES BRR sample decoding
 #![allow(dead_code)]
 
-use core::fmt;
-use std::collections::HashMap;
-
 use anyhow::bail;
 use bilge::prelude::*;
 use intbits::Bits;
 
-pub struct BRRDecoder {
-    cache: HashMap<u8, Vec<i16>>,
+#[derive(Default)]
+struct BrrDecoder {
+    buffer: [i16; 2],
+    end: bool,
 }
 
-impl BRRDecoder {
-    pub fn decode<'a>(&'a mut self, addr: u8, ram: &[u8]) -> &'a Vec<i16> {
-        self.cache
-            .entry(addr)
-            .or_insert_with(|| decode_brr(&ram[(addr as usize)..]).unwrap());
-        &self.cache[&addr]
+impl BrrDecoder {
+    pub fn decode_bytes(&mut self, raw_block: &[u8; 9]) -> [i16; 16] {
+        self.decode(&BrrBlock::from_bytes(raw_block))
+    }
+
+    pub fn decode(&mut self, block: &BrrBlock) -> [i16; 16] {
+        self.end = block.header.end();
+
+        let left_shift = u32::from(block.header.left_shift());
+        let coeff = match block.header.filter().value() {
+            0 => [0.0, 0.0],
+            1 => [15.0 / 16.0, 0.0],
+            2 => [61.0 / 32.0, -15.0 / 16.0],
+            3 => [115.0 / 64.0, -13.0 / 16.0],
+            _ => unreachable!(),
+        };
+
+        block.raw_samples.map(|sample| {
+            let shifted = i4_to_i16(sample)
+                .overflowing_shl(left_shift)
+                .0
+                .overflowing_shr(1)
+                .0;
+            let output = (shifted as f64)
+                + (self.buffer[0] as f64) * coeff[0]
+                + (self.buffer[1] as f64) * coeff[1];
+            self.buffer[1] = self.buffer[0];
+            self.buffer[0] = shifted as i16;
+            self.buffer[0]
+        })
     }
 }
 
@@ -27,15 +50,10 @@ impl BRRDecoder {
 /// that, an error is returned.
 pub fn decode_brr(data: &[u8]) -> anyhow::Result<Vec<i16>> {
     let mut samples: Vec<i16> = Vec::new();
+    let mut decoder = BrrDecoder::default();
     for chunk in data.chunks_exact(9) {
-        let history = if samples.len() > 2 {
-            [samples[samples.len() - 1], samples[samples.len() - 2]]
-        } else {
-            [0, 0]
-        };
-        let block = BrrBlock::from_bytes(chunk.try_into().unwrap());
-        samples.extend(block.samples(history));
-        if block.header.end() {
+        samples.extend(decoder.decode_bytes(chunk.try_into().unwrap()));
+        if decoder.end {
             return Ok(samples);
         }
     }
@@ -46,69 +64,26 @@ pub fn decode_brr(data: &[u8]) -> anyhow::Result<Vec<i16>> {
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct BrrBlock {
     header: BrrBlockHeader,
-    sample_pairs: [BrrSamplePair; 8],
+    raw_samples: [u8; 16],
 }
 
 impl BrrBlock {
     /// Decode a BRR block from a 9 byte slice
     pub fn from_bytes(bytes: &[u8; 9]) -> Self {
+        let mut raw_samples = [0; 16];
+        for i in 0..16 {
+            let odd = (i + 1) % 2;
+            raw_samples[i] = bytes[1 + i / 2].bits((odd * 4)..((odd + 1) * 4));
+        }
         Self {
             header: BrrBlockHeader::from(bytes[0]),
-            sample_pairs: [
-                BrrSamplePair::from(bytes[1]),
-                BrrSamplePair::from(bytes[2]),
-                BrrSamplePair::from(bytes[3]),
-                BrrSamplePair::from(bytes[4]),
-                BrrSamplePair::from(bytes[5]),
-                BrrSamplePair::from(bytes[6]),
-                BrrSamplePair::from(bytes[7]),
-                BrrSamplePair::from(bytes[8]),
-            ],
+            raw_samples,
         }
-    }
-
-    /// Unfiltered samples of this block, shifted by header.left_shift
-    fn raw_samples(&self) -> impl Iterator<Item = i16> + '_ {
-        self.sample_pairs.iter().flat_map(|pair| {
-            let left_shift: u32 = u32::from(self.header.left_shift());
-            [
-                i4_to_i16(pair.a())
-                    .overflowing_shl(left_shift)
-                    .0
-                    .overflowing_shr(1)
-                    .0,
-                i4_to_i16(pair.b())
-                    .overflowing_shl(left_shift)
-                    .0
-                    .overflowing_shr(1)
-                    .0,
-            ]
-        })
-    }
-
-    /// Decoded samples for this block
-    ///
-    /// Requires a history of the last two samples as they are used in the decoding filter
-    pub fn samples(&self, mut history: [i16; 2]) -> impl Iterator<Item = i16> + '_ {
-        let coeff = match self.header.filter().value() {
-            0 => [0.0, 0.0],
-            1 => [15.0 / 16.0, 0.0],
-            2 => [61.0 / 32.0, -15.0 / 16.0],
-            3 => [115.0 / 64.0, -13.0 / 16.0],
-            _ => unreachable!(),
-        };
-        self.raw_samples().map(move |sample| {
-            let output =
-                (sample as f64) + (history[0] as f64) * coeff[0] + (history[1] as f64) * coeff[1];
-            history[1] = history[0];
-            history[0] = output as i16;
-            history[0]
-        })
     }
 }
 
 /// Converts a 4-bit signed integer to a 16-bit signed integer
-fn i4_to_i16(sample: u4) -> i16 {
+fn i4_to_i16(sample: u8) -> i16 {
     let u16_sample = u16::from(sample);
     let value = u16_sample.bits(0..3);
     let sign = u16_sample.bit(3);
@@ -128,16 +103,18 @@ struct BrrBlockHeader {
     left_shift: u4,
 }
 
-#[bitsize(8)]
-#[derive(Clone, Copy, Default, FromBits, PartialEq)]
+#[derive(Clone, Copy, Default, PartialEq)]
 struct BrrSamplePair {
-    a: u4,
-    b: u4,
+    a: u8,
+    b: u8,
 }
 
-impl fmt::Debug for BrrSamplePair {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", i4_to_i16(self.a()), i4_to_i16(self.b()))
+impl From<u8> for BrrSamplePair {
+    fn from(value: u8) -> Self {
+        Self {
+            a: value.bits(0..3),
+            b: value.bits(4..7),
+        }
     }
 }
 
@@ -146,41 +123,48 @@ mod tests {
     use std::path::PathBuf;
 
     use hound;
-    use itertools::Itertools;
 
     use super::*;
 
     #[test]
     pub fn test_u4_to_i16() {
-        assert_eq!(i4_to_i16(u4::new(0b0000)), 0);
-        assert_eq!(i4_to_i16(u4::new(0b0111)), 7);
-        assert_eq!(i4_to_i16(u4::new(0b1000)), -8);
-        assert_eq!(i4_to_i16(u4::new(0b1111)), -1);
+        assert_eq!(i4_to_i16(0b0000), 0);
+        assert_eq!(i4_to_i16(0b0111), 7);
+        assert_eq!(i4_to_i16(0b1000), -8);
+        assert_eq!(i4_to_i16(0b1111), -1);
     }
 
     /// Sample pairs of a single impulse
-    fn impulse() -> [BrrSamplePair; 8] {
-        [
-            BrrSamplePair::new(u4::new(1), u4::new(0)),
-            BrrSamplePair::new(u4::new(0), u4::new(0)),
-            BrrSamplePair::new(u4::new(0), u4::new(0)),
-            BrrSamplePair::new(u4::new(0), u4::new(0)),
-            BrrSamplePair::new(u4::new(0), u4::new(0)),
-            BrrSamplePair::new(u4::new(0), u4::new(0)),
-            BrrSamplePair::new(u4::new(0), u4::new(0)),
-            BrrSamplePair::new(u4::new(0), u4::new(0)),
-        ]
+    fn impulse() -> [u8; 16] {
+        let mut out = [0; 16];
+        out[0] = 1;
+        out
+    }
+
+    #[test]
+    pub fn test_brr_block_from_bytes() {
+        let bytes = [0x00, 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0];
+        assert_eq!(
+            BrrBlock::from_bytes(&bytes),
+            BrrBlock {
+                header: BrrBlockHeader::new(false, false, u2::new(0), u4::new(0)),
+                raw_samples: [
+                    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
+                    0x0E, 0x0F, 0x00
+                ]
+            }
+        )
     }
 
     #[test]
     pub fn test_decode_filter0() {
         let block = BrrBlock {
             header: BrrBlockHeader::new(true, false, u2::new(0), u4::new(6)),
-            sample_pairs: impulse(),
+            raw_samples: impulse(),
         };
         assert_eq!(
-            block.samples([0, 0]).collect_vec(),
-            vec![32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            BrrDecoder::default().decode(&block),
+            [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         )
     }
 
@@ -188,11 +172,11 @@ mod tests {
     pub fn test_decode_filter1() {
         let block = BrrBlock {
             header: BrrBlockHeader::new(true, false, u2::new(1), u4::new(6)),
-            sample_pairs: impulse(),
+            raw_samples: impulse(),
         };
         assert_eq!(
-            block.samples([0, 0]).collect_vec(),
-            vec![32, 30, 28, 26, 24, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9]
+            BrrDecoder::default().decode(&block),
+            [32, 30, 28, 26, 24, 22, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9]
         )
     }
 
@@ -200,11 +184,11 @@ mod tests {
     pub fn test_decode_filter2() {
         let block = BrrBlock {
             header: BrrBlockHeader::new(true, false, u2::new(2), u4::new(6)),
-            sample_pairs: impulse(),
+            raw_samples: impulse(),
         };
         assert_eq!(
-            block.samples([0, 0]).collect_vec(),
-            vec![32, 61, 86, 106, 121, 131, 136, 136, 131, 122, 109, 93, 75, 55, 34, 13]
+            BrrDecoder::default().decode(&block),
+            [32, 61, 86, 106, 121, 131, 136, 136, 131, 122, 109, 93, 75, 55, 34, 13]
         )
     }
 
@@ -212,11 +196,11 @@ mod tests {
     pub fn test_decode_filter3() {
         let block = BrrBlock {
             header: BrrBlockHeader::new(true, false, u2::new(3), u4::new(6)),
-            sample_pairs: impulse(),
+            raw_samples: impulse(),
         };
         assert_eq!(
-            block.samples([0, 0]).collect_vec(),
-            vec![32, 57, 76, 90, 99, 104, 106, 105, 102, 97, 91, 84, 77, 70, 63, 56]
+            BrrDecoder::default().decode(&block),
+            [32, 57, 76, 90, 99, 104, 106, 105, 102, 97, 91, 84, 77, 70, 63, 56]
         )
     }
 

@@ -1,4 +1,5 @@
 mod brr;
+mod test;
 mod voice;
 
 use self::voice::Voice;

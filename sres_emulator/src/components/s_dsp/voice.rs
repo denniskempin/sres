@@ -6,26 +6,26 @@ use intbits::Bits;
 use crate::common::uint::U16Ext;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Voice {
+pub(crate) struct Voice {
     /// VOL (L): $X0 - SVVV VVVV - Left channel volume, signed.
-    vol_l: i8,
+    pub vol_l: i8,
     /// VOL (R): $X1 - SVVV VVVV - Right channel volume, signed.
-    vol_r: i8,
+    pub vol_r: i8,
     /// P (L)   $X2 - LLLL LLLL - Low 8 bits of sample pitch.
     /// P (H) - $X3 - --HH HHHH - High 6 bits of sample pitch.
-    pitch: u16,
+    pub pitch: u16,
     /// SCRN: $X4 SSSS SSSS Selects a sample source entry from the directory
-    sample_source: u8,
+    pub sample_source: u8,
     /// ADSR (1): $X5 - EDDD AAAA - ADSR enable (E), decay rate (D), attack rate (A).
-    adsr1: Adsr1,
+    pub adsr1: Adsr1,
     /// ADSR (2): $X6 - SSSR RRRR - Sustain level (S), release rate (R).
-    adsr2: Adsr2,
+    pub adsr2: Adsr2,
     /// GAIN: $X7 - 0VVV VVVV or 1MMV VVVV - Mode (M), value (V).
-    gain: Gain,
+    pub gain: Gain,
     /// ENVX: $X8 - 0VVV VVVV - Reads current 7-bit value of ADSR/GAIN envelope.
-    envx: u8,
+    pub envx: u8,
     /// OUTX - $X9 - SVVV VVVV - Reads signed 8-bit value of current sample wave multiplied by ENVX, before applying VOL.
-    outx: i8,
+    pub outx: i8,
 }
 
 impl Display for Voice {
@@ -84,11 +84,15 @@ impl Voice {
             _ => {}
         }
     }
+
+    pub fn generate_samples(&mut self, num_samples: usize, output: &mut Vec<i16>) {
+        output.extend((0..num_samples).map(|_| 0))
+    }
 }
 
 #[bitsize(8)]
 #[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-struct Adsr1 {
+pub(crate) struct Adsr1 {
     attack_rate: u4,
     decay_rate: u3,
     enable: bool,
@@ -96,13 +100,13 @@ struct Adsr1 {
 
 #[bitsize(8)]
 #[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-struct Adsr2 {
+pub(crate) struct Adsr2 {
     release_rate: u5,
     sustain_level: u3,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-struct Gain(u8);
+pub(crate) struct Gain(pub u8);
 
 impl Gain {
     fn mode(&self) -> GainMode {
@@ -137,6 +141,50 @@ impl Display for GainMode {
             GainMode::ExponentialDecay(value) => write!(f, "exp dec,{}", value),
             GainMode::LinearIncrease(value) => write!(f, "lin inc,{}", value),
             GainMode::BentIncrease(value) => write!(f, "bent inc,{}", value),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::path::PathBuf;
+
+    use bilge::prelude::*;
+
+    use super::*;
+
+    #[test]
+    fn play_brr_sample_test() {
+        let filename = "voice_brr_sample";
+        let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let brr_path = root_dir.join(format!("src/components/s_dsp/voice/{filename}.brr"));
+        let wav_path = root_dir.join(format!("src/components/s_dsp/voice/{filename}.wav"));
+
+        let mut voice = Voice {
+            vol_l: 127,
+            vol_r: 127,
+            pitch: 4096,
+            sample_source: 0,
+            adsr1: Adsr1::new(u4::new(10), u3::new(7), true),
+            adsr2: Adsr2::new(u5::new(0), u3::new(7)),
+            gain: Gain(0),
+            envx: 0,
+            outx: 0,
+        };
+
+        const NUM_SAMPLES: usize = 7936; // Length of the play_brr_sample sample
+        let mut output: Vec<i16> = Vec::with_capacity(NUM_SAMPLES);
+        voice.generate_samples(NUM_SAMPLES, &mut output);
+
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 32_000,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(wav_path, spec).unwrap();
+        for sample in output {
+            writer.write_sample(sample).unwrap();
         }
     }
 }
