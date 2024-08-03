@@ -151,14 +151,15 @@ mod test {
 
     use bilge::prelude::*;
 
+    use crate::common::test_util::compare_wav_against_golden;
+
     use super::*;
 
     #[test]
     fn play_brr_sample_test() {
         let filename = "voice_brr_sample";
         let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let brr_path = root_dir.join(format!("src/components/s_dsp/voice/{filename}.brr"));
-        let wav_path = root_dir.join(format!("src/components/s_dsp/voice/{filename}.wav"));
+        let prefix = root_dir.join(format!("src/components/s_dsp/voice/{filename}"));
 
         let mut voice = Voice {
             vol_l: 127,
@@ -175,16 +176,6 @@ mod test {
         const NUM_SAMPLES: usize = 7936; // Length of the play_brr_sample sample
         let mut output: Vec<i16> = Vec::with_capacity(NUM_SAMPLES);
         voice.generate_samples(NUM_SAMPLES, &mut output);
-
-        let spec = hound::WavSpec {
-            channels: 1,
-            sample_rate: 32_000,
-            bits_per_sample: 16,
-            sample_format: hound::SampleFormat::Int,
-        };
-        let mut writer = hound::WavWriter::create(wav_path, spec).unwrap();
-        for sample in output {
-            writer.write_sample(sample).unwrap();
-        }
+        compare_wav_against_golden(&output, &prefix)
     }
 }

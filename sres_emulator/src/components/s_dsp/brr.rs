@@ -38,7 +38,7 @@ impl BrrDecoder {
                 + (self.buffer[0] as f64) * coeff[0]
                 + (self.buffer[1] as f64) * coeff[1];
             self.buffer[1] = self.buffer[0];
-            self.buffer[0] = shifted as i16;
+            self.buffer[0] = output as i16;
             self.buffer[0]
         })
     }
@@ -72,7 +72,7 @@ impl BrrBlock {
     pub fn from_bytes(bytes: &[u8; 9]) -> Self {
         let mut raw_samples = [0; 16];
         for i in 0..16 {
-            let odd = (i + 1) % 2;
+            let odd = (i) % 2;
             raw_samples[i] = bytes[1 + i / 2].bits((odd * 4)..((odd + 1) * 4));
         }
         Self {
@@ -122,7 +122,7 @@ impl From<u8> for BrrSamplePair {
 mod tests {
     use std::path::PathBuf;
 
-    use hound;
+    use crate::common::test_util::compare_wav_against_golden;
 
     use super::*;
 
@@ -211,20 +211,11 @@ mod tests {
 
     pub fn test_brr_decode(filename: &str) {
         let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let brr_path = root_dir.join(format!("src/components/s_dsp/brr/{filename}.brr"));
-        let wav_path = root_dir.join(format!("src/components/s_dsp/brr/{filename}.wav"));
-        let brr_data = std::fs::read(brr_path).unwrap();
+        let prefix = root_dir.join(format!("src/components/s_dsp/brr/{filename}"));
 
-        let spec = hound::WavSpec {
-            channels: 1,
-            sample_rate: 32_000,
-            bits_per_sample: 16,
-            sample_format: hound::SampleFormat::Int,
-        };
+        let brr_data = std::fs::read(prefix.with_extension("brr")).unwrap();
         let decoded = decode_brr(&brr_data).unwrap();
-        let mut writer = hound::WavWriter::create(wav_path, spec).unwrap();
-        for sample in decoded {
-            writer.write_sample(sample).unwrap();
-        }
+
+        compare_wav_against_golden(&decoded, &prefix);
     }
 }
