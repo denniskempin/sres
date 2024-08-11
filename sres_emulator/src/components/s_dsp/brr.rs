@@ -1,6 +1,8 @@
 //! SNES BRR sample decoding
 #![allow(dead_code)]
 
+use std::collections::VecDeque;
+
 use anyhow::bail;
 use bilge::prelude::*;
 use intbits::Bits;
@@ -44,20 +46,42 @@ impl BrrDecoder {
     }
 }
 
-/// Decodes BRR encoded audio into signed 16-bit PCM samples.
-///
-/// The decoding will continue until a BRR block with end=true is found. If the data ends before
-/// that, an error is returned.
-pub fn decode_brr(data: &[u8]) -> anyhow::Result<Vec<i16>> {
-    let mut samples: Vec<i16> = Vec::new();
-    let mut decoder = BrrDecoder::default();
-    for chunk in data.chunks_exact(9) {
-        samples.extend(decoder.decode_bytes(chunk.try_into().unwrap()));
-        if decoder.end {
-            return Ok(samples);
+struct BrrIterator<'a> {
+    data: &'a [u8],
+    index: usize,
+    decoder: BrrDecoder,
+    current_block: VecDeque<i16>,
+}
+
+impl BrrIterator<'_> {
+    pub fn new(data: &[u8], index: usize) -> BrrIterator {
+        BrrIterator {
+            data,
+            index,
+            decoder: BrrDecoder::default(),
+            current_block: VecDeque::with_capacity(16),
         }
     }
-    bail!("End of data before final BRR block");
+}
+
+impl<'a> Iterator for BrrIterator<'a> {
+    type Item = i16;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_block.is_empty() {
+            if self.decoder.end {
+                return None;
+            }
+            // TODO: Wrapping
+            let new_index = self.index + 9;
+            let samples = self
+                .decoder
+                .decode_bytes(self.data[self.index..new_index].try_into().unwrap());
+            self.current_block.extend(samples.iter());
+            self.index = new_index;
+        }
+        self.current_block.pop_front()
+    }
 }
 
 /// The BRR format is composed of blocks of 9 bytes with a header and 16 4-bit samples.
@@ -72,7 +96,7 @@ impl BrrBlock {
     pub fn from_bytes(bytes: &[u8; 9]) -> Self {
         let mut raw_samples = [0; 16];
         for i in 0..16 {
-            let odd = (i) % 2;
+            let odd = (i + 1) % 2;
             raw_samples[i] = bytes[1 + i / 2].bits((odd * 4)..((odd + 1) * 4));
         }
         Self {
@@ -214,7 +238,7 @@ mod tests {
         let prefix = root_dir.join(format!("src/components/s_dsp/brr/{filename}"));
 
         let brr_data = std::fs::read(prefix.with_extension("brr")).unwrap();
-        let decoded = decode_brr(&brr_data).unwrap();
+        let decoded: Vec<i16> = BrrIterator::new(&brr_data, 0).collect();
 
         compare_wav_against_golden(&decoded, &prefix);
     }
