@@ -151,9 +151,8 @@ mod test {
 
     use bilge::prelude::*;
 
-    use crate::common::test_util::compare_wav_against_golden;
-
     use super::*;
+    use crate::common::test_util::compare_wav_against_golden;
 
     #[test]
     fn play_brr_sample_test() {

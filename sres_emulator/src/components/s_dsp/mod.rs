@@ -1,4 +1,5 @@
 mod brr;
+mod pitch;
 mod test;
 mod voice;
 
