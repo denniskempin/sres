@@ -9,7 +9,7 @@ pub fn compare_wav_against_golden(data: &[i16], path_prefix: &Path) {
     let golden_path = path_prefix.with_extension("wav");
     if golden_path.exists() {
         let golden = read_snes_wav(&golden_path);
-        if data != &golden {
+        if data != golden {
             let actual_path = path_prefix.with_extension("actual.wav");
             write_snes_wav(data, &actual_path);
             panic!("Actual result does not match golden. See {:?}", actual_path);

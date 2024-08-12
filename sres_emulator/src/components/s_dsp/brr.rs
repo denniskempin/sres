@@ -3,7 +3,6 @@
 
 use std::collections::VecDeque;
 
-use anyhow::bail;
 use bilge::prelude::*;
 use intbits::Bits;
 
@@ -146,9 +145,8 @@ impl From<u8> for BrrSamplePair {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::common::test_util::compare_wav_against_golden;
-
     use super::*;
+    use crate::common::test_util::compare_wav_against_golden;
 
     #[test]
     pub fn test_u4_to_i16() {
