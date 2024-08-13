@@ -11,7 +11,8 @@ use intbits::Bits;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U8Ext;
 
-struct PitchGenerator {
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct PitchGenerator {
     buffer: [i16; 12],
     counter: PitchCounter,
 }

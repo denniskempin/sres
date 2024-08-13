@@ -3,6 +3,8 @@ use std::fmt::Display;
 use bilge::prelude::*;
 use intbits::Bits;
 
+use super::brr::BrrDecoder;
+use super::pitch::PitchGenerator;
 use crate::common::uint::U16Ext;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

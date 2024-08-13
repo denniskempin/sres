@@ -6,18 +6,51 @@ use std::collections::VecDeque;
 use bilge::prelude::*;
 use intbits::Bits;
 
-#[derive(Default)]
-struct BrrDecoder {
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct BrrDecoder {
     buffer: [i16; 2],
     end: bool,
+    memory_index: usize,
+    current_block: VecDeque<i16>,
 }
 
 impl BrrDecoder {
-    pub fn decode_bytes(&mut self, raw_block: &[u8; 9]) -> [i16; 16] {
+    pub fn new(memory_index: usize) -> BrrDecoder {
+        BrrDecoder {
+            buffer: [0, 0],
+            end: false,
+            memory_index,
+            current_block: VecDeque::with_capacity(16),
+        }
+    }
+
+    pub fn iter<'a>(&'a mut self, memory: &'a [u8]) -> BrrIterator<'a> {
+        BrrIterator {
+            decoder: self,
+            memory,
+        }
+    }
+
+    pub fn next_sample(&mut self, memory: &[u8]) -> Option<i16> {
+        if self.current_block.is_empty() {
+            if self.end {
+                return None;
+            }
+            // TODO: Wrapping
+            let new_index = self.memory_index + 9;
+            let samples =
+                self.decode_bytes(memory[self.memory_index..new_index].try_into().unwrap());
+            self.current_block.extend(samples.iter());
+            self.memory_index = new_index;
+        }
+        self.current_block.pop_front()
+    }
+
+    fn decode_bytes(&mut self, raw_block: &[u8; 9]) -> [i16; 16] {
         self.decode(&BrrBlock::from_bytes(raw_block))
     }
 
-    pub fn decode(&mut self, block: &BrrBlock) -> [i16; 16] {
+    fn decode(&mut self, block: &BrrBlock) -> [i16; 16] {
         self.end = block.header.end();
 
         let left_shift = u32::from(block.header.left_shift());
@@ -45,41 +78,16 @@ impl BrrDecoder {
     }
 }
 
-struct BrrIterator<'a> {
-    data: &'a [u8],
-    index: usize,
-    decoder: BrrDecoder,
-    current_block: VecDeque<i16>,
-}
-
-impl BrrIterator<'_> {
-    pub fn new(data: &[u8], index: usize) -> BrrIterator {
-        BrrIterator {
-            data,
-            index,
-            decoder: BrrDecoder::default(),
-            current_block: VecDeque::with_capacity(16),
-        }
-    }
+pub struct BrrIterator<'a> {
+    decoder: &'a mut BrrDecoder,
+    memory: &'a [u8],
 }
 
 impl<'a> Iterator for BrrIterator<'a> {
     type Item = i16;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current_block.is_empty() {
-            if self.decoder.end {
-                return None;
-            }
-            // TODO: Wrapping
-            let new_index = self.index + 9;
-            let samples = self
-                .decoder
-                .decode_bytes(self.data[self.index..new_index].try_into().unwrap());
-            self.current_block.extend(samples.iter());
-            self.index = new_index;
-        }
-        self.current_block.pop_front()
+        self.decoder.next_sample(self.memory)
     }
 }
 
@@ -236,7 +244,8 @@ mod tests {
         let prefix = root_dir.join(format!("src/components/s_dsp/brr/{filename}"));
 
         let brr_data = std::fs::read(prefix.with_extension("brr")).unwrap();
-        let decoded: Vec<i16> = BrrIterator::new(&brr_data, 0).collect();
+        let mut decoder = BrrDecoder::new(0);
+        let decoded: Vec<i16> = decoder.iter(&brr_data).collect();
 
         compare_wav_against_golden(&decoded, &prefix);
     }
