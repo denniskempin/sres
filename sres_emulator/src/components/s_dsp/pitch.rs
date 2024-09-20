@@ -11,31 +11,30 @@ use intbits::Bits;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U8Ext;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PitchGenerator {
     buffer: [i16; 12],
     counter: PitchCounter,
 }
 
 impl PitchGenerator {
-    pub fn new(input: &mut impl Iterator<Item = i16>) -> Self {
-        Self {
-            buffer: [
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-                input.next().unwrap_or_default(),
-            ],
-            counter: PitchCounter::default(),
-        }
+    pub fn init(&mut self, input: &mut impl Iterator<Item = i16>) {
+        self.buffer = [
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+            input.next().unwrap_or_default(),
+        ];
+        self.counter = PitchCounter::default();
+        dbg!(self);
     }
 
     pub fn generate_sample(&mut self, pitch: u16, input: &mut impl Iterator<Item = i16>) -> i16 {
@@ -177,8 +176,9 @@ mod test {
         let mut input = [0_i16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
             .iter()
             .copied();
+        let mut generator = PitchGenerator::default();
         // Loads the first 12 samples. 4 remaining.
-        let mut generator = PitchGenerator::new(&mut input);
+        generator.init(&mut input);
         assert_eq!(&generator.buffer, &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
         assert_eq!(input.len(), 4);
 
@@ -225,7 +225,8 @@ mod test {
 
     fn test_interpolation(pitch: u16, input_vec: Vec<i16>, expected: Vec<i16>) {
         let mut input = input_vec.iter().copied();
-        let mut generator = PitchGenerator::new(&mut input);
+        let mut generator = PitchGenerator::default();
+        generator.init(&mut input);
         let actual = (0..(expected.len()))
             .map(|_| generator.generate_sample(pitch, &mut input))
             .collect_vec();

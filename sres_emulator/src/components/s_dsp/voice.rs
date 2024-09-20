@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::fmt::Display;
 
 use bilge::prelude::*;
@@ -7,7 +8,7 @@ use super::brr::BrrDecoder;
 use super::pitch::PitchGenerator;
 use crate::common::uint::U16Ext;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Voice {
     /// VOL (L): $X0 - SVVV VVVV - Left channel volume, signed.
     pub vol_l: i8,
@@ -28,6 +29,9 @@ pub(crate) struct Voice {
     pub envx: u8,
     /// OUTX - $X9 - SVVV VVVV - Reads signed 8-bit value of current sample wave multiplied by ENVX, before applying VOL.
     pub outx: i8,
+
+    brr_decoder: BrrDecoder,
+    pitch_generator: PitchGenerator,
 }
 
 impl Display for Voice {
@@ -87,8 +91,24 @@ impl Voice {
         }
     }
 
-    pub fn generate_samples(&mut self, num_samples: usize, output: &mut Vec<i16>) {
-        output.extend((0..num_samples).map(|_| 0))
+    pub fn dir_info(&self, memory: &[u8], dir: usize) -> (u16, u16) {
+        let source_addr = dir + self.sample_source as usize * 4;
+        let start_addr = u16::from_le_bytes([memory[source_addr], memory[source_addr + 1]]);
+        let loop_addr = u16::from_le_bytes([memory[source_addr + 2], memory[source_addr + 3]]);
+        (start_addr, loop_addr)
+    }
+
+    pub fn on(&mut self, memory: &[u8], dir: usize) {
+        let (start_addr, _) = self.dir_info(memory, dir);
+        self.brr_decoder.reset(start_addr as usize);
+        self.pitch_generator
+            .init(&mut self.brr_decoder.iter(memory));
+    }
+
+    pub fn generate_sample(&mut self, memory: &[u8], _dir: usize) -> i16 {
+        // TODO: loop addr is not handled
+        self.pitch_generator
+            .generate_sample(self.pitch, &mut self.brr_decoder.iter(memory))
     }
 }
 
@@ -161,6 +181,17 @@ mod test {
         let filename = "voice_brr_sample";
         let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let prefix = root_dir.join(format!("src/components/s_dsp/voice/{filename}"));
+        let brr_data = std::fs::read(prefix.with_extension("brr")).unwrap();
+
+        // APU memory layout see `tests/apu_tests/play_brr_sample.spc.asm`
+        // 0x0300: Sample directory with a single entry pointing to (0x0400, 0x0877)
+        // 0x0400: Sample data
+        let mut memory = [0_u8; 0x10000];
+        memory[0x0300] = 0x00;
+        memory[0x0301] = 0x04;
+        memory[0x0302] = 0x77;
+        memory[0x0303] = 0x08;
+        memory[0x0400..0x0400 + brr_data.len()].copy_from_slice(&brr_data);
 
         let mut voice = Voice {
             vol_l: 127,
@@ -172,11 +203,15 @@ mod test {
             gain: Gain(0),
             envx: 0,
             outx: 0,
+            brr_decoder: BrrDecoder::default(),
+            pitch_generator: PitchGenerator::default(),
         };
+        voice.on(&memory, 0x0300);
 
         const NUM_SAMPLES: usize = 7936; // Length of the play_brr_sample sample
-        let mut output: Vec<i16> = Vec::with_capacity(NUM_SAMPLES);
-        voice.generate_samples(NUM_SAMPLES, &mut output);
+        let output: Vec<i16> = (0..NUM_SAMPLES)
+            .map(|_| voice.generate_sample(&memory, 0x0300))
+            .collect();
         compare_wav_against_golden(&output, &prefix)
     }
 }
