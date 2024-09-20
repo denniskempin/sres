@@ -9,6 +9,7 @@ use std::cell::RefMut;
 use std::ops::Deref;
 
 use components::ppu::PpuDebug;
+use components::s_dsp::SDsp;
 
 use crate::apu::Apu;
 use crate::apu::ApuDebug;
@@ -110,6 +111,10 @@ impl System {
 
     pub fn apu(&mut self) -> &mut Apu {
         &mut self.cpu.bus.apu
+    }
+
+    pub fn s_dsp(&mut self) -> &mut SDsp {
+        &mut self.cpu.bus.apu.spc700.bus.dsp
     }
 
     pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {

@@ -1,7 +1,11 @@
+#![allow(clippy::single_match)]
+
 mod brr;
 mod pitch;
 mod test;
 mod voice;
+
+use intbits::Bits;
 
 use self::voice::Voice;
 use crate::common::uint::U8Ext;
@@ -24,8 +28,24 @@ impl SDsp {
             0x0..=0x9 => {
                 self.voices[reg.high_nibble() as usize].write_register(reg.low_nibble(), value)
             }
+            0xC => match reg.high_nibble() {
+                0x4 => {
+                    for (idx, voice) in self.voices.iter_mut().enumerate() {
+                        voice.trigger_on = value.bit(idx);
+                    }
+                }
+                _ => {}
+            },
             _ => self.raw[reg as usize] = value,
         }
+    }
+
+    pub fn generate_sample(&mut self, memory: &[u8]) -> i16 {
+        let dir = 0; // TODO
+        self.voices
+            .iter_mut()
+            .map(|v| v.generate_sample(memory, dir))
+            .sum()
     }
 
     pub fn debug(&self) -> SDspDebug<'_> {

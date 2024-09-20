@@ -30,6 +30,7 @@ pub(crate) struct Voice {
     /// OUTX - $X9 - SVVV VVVV - Reads signed 8-bit value of current sample wave multiplied by ENVX, before applying VOL.
     pub outx: i8,
 
+    pub trigger_on: bool,
     brr_decoder: BrrDecoder,
     pitch_generator: PitchGenerator,
 }
@@ -93,19 +94,19 @@ impl Voice {
 
     pub fn dir_info(&self, memory: &[u8], dir: usize) -> (u16, u16) {
         let source_addr = dir + self.sample_source as usize * 4;
-        let start_addr = u16::from_le_bytes([memory[source_addr], memory[source_addr + 1]]);
-        let loop_addr = u16::from_le_bytes([memory[source_addr + 2], memory[source_addr + 3]]);
+        let start_addr = u16::from_le_bytes([memory[source_addr], memory[source_addr + 1]]) * 2;
+        let loop_addr = u16::from_le_bytes([memory[source_addr + 2], memory[source_addr + 3]]) * 2;
         (start_addr, loop_addr)
     }
 
-    pub fn on(&mut self, memory: &[u8], dir: usize) {
-        let (start_addr, _) = self.dir_info(memory, dir);
-        self.brr_decoder.reset(start_addr as usize);
-        self.pitch_generator
-            .init(&mut self.brr_decoder.iter(memory));
-    }
-
-    pub fn generate_sample(&mut self, memory: &[u8], _dir: usize) -> i16 {
+    pub fn generate_sample(&mut self, memory: &[u8], dir: usize) -> i16 {
+        if self.trigger_on {
+            let (start_addr, _) = self.dir_info(memory, dir);
+            self.brr_decoder.reset(start_addr as usize);
+            self.pitch_generator
+                .init(&mut self.brr_decoder.iter(memory));
+            self.trigger_on = false;
+        }
         // TODO: loop addr is not handled
         self.pitch_generator
             .generate_sample(self.pitch, &mut self.brr_decoder.iter(memory))
@@ -184,13 +185,11 @@ mod test {
         let brr_data = std::fs::read(prefix.with_extension("brr")).unwrap();
 
         // APU memory layout see `tests/apu_tests/play_brr_sample.spc.asm`
-        // 0x0300: Sample directory with a single entry pointing to (0x0400, 0x0877)
+        // 0x0300: Sample directory with a single entry pointing to 0x0400
         // 0x0400: Sample data
         let mut memory = [0_u8; 0x10000];
         memory[0x0300] = 0x00;
-        memory[0x0301] = 0x04;
-        memory[0x0302] = 0x77;
-        memory[0x0303] = 0x08;
+        memory[0x0301] = 0x02;
         memory[0x0400..0x0400 + brr_data.len()].copy_from_slice(&brr_data);
 
         let mut voice = Voice {
@@ -205,8 +204,8 @@ mod test {
             outx: 0,
             brr_decoder: BrrDecoder::default(),
             pitch_generator: PitchGenerator::default(),
+            trigger_on: true,
         };
-        voice.on(&memory, 0x0300);
 
         const NUM_SAMPLES: usize = 7936; // Length of the play_brr_sample sample
         let output: Vec<i16> = (0..NUM_SAMPLES)
