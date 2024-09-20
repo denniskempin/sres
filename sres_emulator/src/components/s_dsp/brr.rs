@@ -26,6 +26,7 @@ impl BrrDecoder {
 
     pub fn reset(&mut self, memory_index: usize) {
         *self = BrrDecoder::new(memory_index);
+        dbg!(self);
     }
 
     pub fn iter<'a>(&'a mut self, memory: &'a [u8]) -> BrrIterator<'a> {

@@ -13,7 +13,7 @@ use crate::components::spc700::Spc700;
 use crate::debugger::DebuggerRef;
 
 pub struct Apu {
-    spc700: Spc700<ApuBus>,
+    pub spc700: Spc700<ApuBus>,
 }
 
 impl Apu {
@@ -29,6 +29,11 @@ impl Apu {
 
     pub fn debug(&self) -> ApuDebug<'_> {
         ApuDebug(self)
+    }
+
+    pub fn generate_sample(&mut self) -> i16 {
+        let memory = &self.spc700.bus.ram;
+        self.spc700.bus.dsp.generate_sample(memory)
     }
 
     pub fn catch_up_to_master_clock(&mut self, master_clock: u64) {

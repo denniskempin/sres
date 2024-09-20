@@ -27,6 +27,7 @@ serde_path_to_error = "0.1"
 strum = { version = "0.26", features = ["derive"] }
 bilge = "0.2"
 bitcode = "=0.6.0"
+hound = "3.5"
 
 [dev-dependencies]
 tempfile = "3.10"
@@ -36,7 +37,6 @@ serde_json = "*"
 xz2 = "0.1"
 image = { version = "0.25", features = ["png"] }
 bincode = "1.3"
-hound = "3.5"
 rasciigraph = "0.2"
 
 [[bench]]
