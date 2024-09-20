@@ -37,7 +37,16 @@ impl Default for SDsp {
     fn default() -> Self {
         Self {
             raw: [0; 128],
-            voices: [Voice::default(); 8],
+            voices: [
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+            ],
         }
     }
 }
