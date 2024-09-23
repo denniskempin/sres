@@ -166,10 +166,10 @@ impl EmulatorApp {
     }
 
     fn main_display(&mut self, ui: &mut Ui) {
-        self.framebuffer_texture.set(
-            self.emulator.get_rgba_framebuffer::<EguiImageImpl>(),
-            TextureOptions::default(),
-        );
+        if let Some(video_frame) = self.emulator.pending_rgba_video_frame::<EguiImageImpl>() {
+            self.framebuffer_texture
+                .set(video_frame, TextureOptions::default());
+        }
 
         let desired_size = ui.available_size();
         let (whole_rect, _) =

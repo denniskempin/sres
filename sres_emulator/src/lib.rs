@@ -8,6 +8,8 @@ pub mod main_bus;
 use std::cell::RefMut;
 use std::ops::Deref;
 
+use common::util::EdgeDetector;
+use components::ppu::Framebuffer;
 use components::ppu::PpuDebug;
 use components::s_dsp::SDsp;
 
@@ -35,6 +37,8 @@ pub enum ExecutionResult {
 pub struct System {
     pub cpu: Cpu<MainBusImpl>,
     debugger: DebuggerRef,
+    vblank_detector: EdgeDetector,
+    pending_video_frame: Option<Framebuffer>,
 }
 
 impl System {
@@ -51,6 +55,8 @@ impl System {
                 DebugEventCollectorRef(debugger.clone()),
             ),
             debugger,
+            vblank_detector: EdgeDetector::new(),
+            pending_video_frame: None,
         }
     }
 
@@ -63,7 +69,7 @@ impl System {
                 return ExecutionResult::Halt;
             }
 
-            self.cpu.step();
+            self.step();
 
             if let Some(break_reason) = self.debugger().take_break_reason() {
                 return ExecutionResult::Break(break_reason);
@@ -101,8 +107,8 @@ impl System {
         self.cpu.bus.update_joypads(joy1, joy2);
     }
 
-    pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {
-        self.cpu.bus.ppu.get_rgba_framebuffer()
+    pub fn pending_rgba_video_frame<ImageT: Image>(&self) -> Option<ImageT> {
+        self.pending_video_frame.as_ref().map(|fb| fb.to_rgba())
     }
 
     pub fn ppu(&mut self) -> &mut Ppu {
@@ -125,7 +131,7 @@ impl System {
                 break ExecutionResult::Halt;
             }
 
-            self.cpu.step();
+            self.step();
 
             if let Some(break_reason) = self.debugger().take_break_reason() {
                 if break_reason.trigger == event {
@@ -138,6 +144,16 @@ impl System {
         self.debugger().remove_break_point(&event);
 
         result
+    }
+
+    fn step(&mut self) {
+        self.cpu.step();
+        self.vblank_detector
+            .update_signal(self.cpu.bus.ppu.clock_info().vblank());
+        if self.vblank_detector.consume_rise() {
+            // TODO: Unnecessary clone, should use re-usable buffers or double buffering
+            self.pending_video_frame = Some(self.cpu.bus.ppu.framebuffer().clone());
+        }
     }
 
     /// Exposes debug information for investigating the system state.

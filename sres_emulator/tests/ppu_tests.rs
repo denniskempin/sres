@@ -70,7 +70,7 @@ fn run_framebuffer_test(test_name: &str, frame: u64) -> System {
     system.execute_frames(frame);
     let framebuffer_path = test_dir().join(format!("{test_name}-framebuffer"));
     compare_to_golden(
-        &system.get_rgba_framebuffer::<TestImageImpl>(),
+        &system.pending_rgba_video_frame::<TestImageImpl>().unwrap(),
         &framebuffer_path,
     );
     system
@@ -172,7 +172,7 @@ fn run_snapshot_framebuffer_test(snapshot_name: &str) {
     }
 
     compare_to_golden(
-        &ppu.get_rgba_framebuffer::<TestImageImpl>(),
+        &ppu.framebuffer().to_rgba::<TestImageImpl>(),
         &test_dir().join(snapshot_name),
     );
 }
