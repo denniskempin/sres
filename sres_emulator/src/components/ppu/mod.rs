@@ -125,6 +125,10 @@ impl Ppu {
         self.headless = true;
     }
 
+    pub fn framebuffer(&self) -> &Framebuffer {
+        &self.state.framebuffer
+    }
+
     pub fn reset(&mut self) {
         self.state = PpuState::default();
     }
@@ -237,14 +241,6 @@ impl Ppu {
 
     pub fn consume_timer_interrupt(&mut self) -> bool {
         self.state.timer.consume_timer_interrupt()
-    }
-
-    pub fn get_rgba_framebuffer<ImageT: Image>(&self) -> ImageT {
-        let mut image = ImageT::new(256, 224);
-        for (x, y, pixel) in self.state.framebuffer.iter() {
-            image.set_pixel((x, y), (*pixel).into());
-        }
-        image
     }
 
     pub fn draw_scanline(&mut self, screen_y: u32) {
@@ -907,8 +903,8 @@ impl Ppu {
     }
 }
 
-#[derive(Encode, Decode)]
-struct Framebuffer(Vec<Rgb15>);
+#[derive(Encode, Decode, Clone)]
+pub struct Framebuffer(Vec<Rgb15>);
 
 impl Framebuffer {
     fn iter(&self) -> impl Iterator<Item = (u32, u32, &Rgb15)> {
@@ -916,6 +912,14 @@ impl Framebuffer {
             .iter()
             .enumerate()
             .map(|(idx, pixel)| (idx as u32 % 256, idx as u32 / 256, pixel))
+    }
+
+    pub fn to_rgba<ImageT: Image>(&self) -> ImageT {
+        let mut image = ImageT::new(256, 224);
+        for (x, y, pixel) in self.iter() {
+            image.set_pixel((x, y), (*pixel).into());
+        }
+        image
     }
 }
 

@@ -75,6 +75,10 @@ impl ClockInfo {
         }
         counter / 4
     }
+
+    pub fn vblank(&self) -> bool {
+        self.v >= 225
+    }
 }
 
 #[cfg(test)]
