@@ -76,12 +76,14 @@ const CACHE_SIZE: usize = 32 * 1024;
 
 enum BusAction {
     Clock(ClockInfo),
-    Write(AddressU24, u8),
+    Write(ClockInfo, AddressU24, u8),
 }
 
 pub struct BatchedBusDeviceU24<DeviceT: BusDeviceU24> {
     pub inner: DeviceT,
     cache: Vec<BusAction>,
+    inner_clock: ClockInfo,
+    current_clock: ClockInfo,
 }
 
 impl<DeviceT: BusDeviceU24> BusDeviceU24 for BatchedBusDeviceU24<DeviceT> {
@@ -90,22 +92,24 @@ impl<DeviceT: BusDeviceU24> BusDeviceU24 for BatchedBusDeviceU24<DeviceT> {
     }
 
     fn read(&mut self, addr: AddressU24) -> u8 {
-        self.drain_cache();
+        self.sync();
         self.inner.read(addr)
     }
 
     fn write(&mut self, addr: AddressU24, value: u8) {
         if self.cache.len() >= CACHE_SIZE {
-            self.drain_cache();
+            self.sync();
         }
-        self.cache.push(BusAction::Write(addr, value))
+        self.cache
+            .push(BusAction::Write(self.current_clock, addr, value))
     }
 
     fn update_clock(&mut self, new_clock: ClockInfo) {
-        if self.cache.len() >= CACHE_SIZE {
-            self.drain_cache();
+        if new_clock.master_clock - self.inner_clock.master_clock > 1024 {
+            self.cache.push(BusAction::Clock(new_clock));
+            self.inner_clock = new_clock;
         }
-        self.cache.push(BusAction::Clock(new_clock));
+        self.current_clock = new_clock;
     }
 
     fn reset(&mut self) {
@@ -119,15 +123,23 @@ impl<DeviceT: BusDeviceU24> BatchedBusDeviceU24<DeviceT> {
         Self {
             inner,
             cache: Vec::with_capacity(CACHE_SIZE),
+            current_clock: ClockInfo::default(),
+            inner_clock: ClockInfo::default(),
         }
     }
 
-    pub fn drain_cache(&mut self) {
+    pub fn sync(&mut self) {
         for action in self.cache.drain(..) {
             match action {
-                BusAction::Clock(new_clock) => self.inner.update_clock(new_clock),
-                BusAction::Write(addr, value) => self.inner.write(addr, value),
+                BusAction::Clock(clock) => {
+                    self.inner.update_clock(clock);
+                }
+                BusAction::Write(clock, addr, value) => {
+                    self.inner.update_clock(clock);
+                    self.inner.write(addr, value);
+                }
             }
         }
+        self.inner.update_clock(self.current_clock);
     }
 }

@@ -10,8 +10,6 @@ use std::path::PathBuf;
 use anyhow::Result;
 use log::error;
 use pretty_assertions::assert_eq;
-use sres_emulator::apu::Apu;
-use sres_emulator::common::bus::BatchedBusDeviceU24;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::logging;
 use sres_emulator::common::util::format_memory;
@@ -20,6 +18,7 @@ use sres_emulator::components::cpu::Cpu;
 use sres_emulator::components::cpu::CpuState;
 use sres_emulator::components::ppu::Ppu;
 use sres_emulator::main_bus::MainBusImpl;
+use sres_emulator::CpuT;
 use sres_emulator::System;
 
 #[test]
@@ -250,9 +249,7 @@ pub fn test_dma_oam() {
     );
 }
 
-fn run_test_rom(
-    test_name: &str,
-) -> Cpu<MainBusImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU24<Apu>>> {
+fn run_test_rom(test_name: &str) -> CpuT {
     logging::test_init(false);
 
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
