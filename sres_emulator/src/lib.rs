@@ -100,7 +100,7 @@ impl System {
     }
 
     pub fn clock_info(&self) -> ClockInfo {
-        self.cpu.bus.ppu.clock_info()
+        self.cpu.bus.clock_info()
     }
 
     pub fn update_joypads(&mut self, joy1: u16, joy2: u16) {
@@ -149,7 +149,7 @@ impl System {
     fn step(&mut self) {
         self.cpu.step();
         self.vblank_detector
-            .update_signal(self.cpu.bus.ppu.clock_info().vblank());
+            .update_signal(self.cpu.bus.clock_info().vblank());
         if self.vblank_detector.consume_rise() {
             // TODO: Unnecessary clone, should use re-usable buffers or double buffering
             self.pending_video_frame = Some(self.cpu.bus.ppu.framebuffer().clone());

@@ -1,6 +1,5 @@
 //! Implementation of the Picture Processing Unit
 mod cgram;
-mod clock;
 mod debug;
 mod oam;
 mod vram;
@@ -13,7 +12,6 @@ use intbits::Bits;
 
 use self::cgram::CgRam;
 // Public to allow for access in benches
-pub use self::clock::Clock;
 pub use self::debug::PpuDebug;
 pub use self::debug::VramRenderSelection;
 use self::oam::Oam;
@@ -44,9 +42,9 @@ pub struct Ppu {
 
 #[derive(Encode, Decode)]
 pub struct PpuState {
-    timer: Clock,
     vram: Vram,
     bgmode: BgMode,
+    current_clock: ClockInfo,
     bg3_priority: bool,
     backgrounds: [Background; 4],
 
@@ -77,10 +75,10 @@ pub struct PpuState {
 impl Default for PpuState {
     fn default() -> Self {
         Self {
-            timer: Clock::default(),
             vram: Vram::new(),
             bgmode: BgMode::Mode0,
             bg3_priority: false,
+            current_clock: ClockInfo::default(),
             backgrounds: [Background::default(); 4],
             framebuffer: Framebuffer::default(),
             cgram: CgRam::new(),
@@ -142,10 +140,6 @@ impl Ppu {
         bitcode::encode(&self.state)
     }
 
-    pub fn clock_info(&self) -> ClockInfo {
-        self.state.timer.clock_info()
-    }
-
     pub fn debug(&self) -> PpuDebug<'_> {
         PpuDebug(self)
     }
@@ -162,7 +156,6 @@ impl Ppu {
             0x213D => self.read_opvct(),
             0x213E => self.peek_stat77(),
             0x213F => self.read_stat78(),
-            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.state.timer.bus_read(addr),
             _ => {
                 log::warn!("PPU: Unhandled read from {:04X}", addr.offset);
                 0
@@ -182,7 +175,6 @@ impl Ppu {
             0x213D => Some(self.peek_opvct()),
             0x213E => Some(self.peek_stat77()),
             0x213F => Some(self.peek_stat78()),
-            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.state.timer.bus_peek(addr),
             _ => None,
         }
     }
@@ -213,7 +205,6 @@ impl Ppu {
             0x2132 => self.write_coldata(value),
             0x211B => self.write_m7a(value),
             0x211C => self.write_m7b(value),
-            0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.state.timer.bus_write(addr, value),
             _ => log::warn!(
                 "PPU: Unhandled write to {:04X} = {:02X}",
                 addr.offset,
@@ -222,25 +213,17 @@ impl Ppu {
         }
     }
 
-    pub fn advance_master_clock(&mut self, cycles: u64) {
-        self.state.timer.advance_master_clock(cycles);
+    pub fn update_clock(&mut self, new_clock: ClockInfo) {
         if self.disabled {
             return;
         }
-        if self.clock_info().v != self.state.last_drawn_scanline {
+        if new_clock.v != self.state.last_drawn_scanline {
             if !self.headless {
-                self.draw_scanline(self.clock_info().v as u32);
+                self.draw_scanline(new_clock.v as u32);
             }
-            self.state.last_drawn_scanline = self.clock_info().v;
+            self.state.last_drawn_scanline = new_clock.v;
         }
-    }
-
-    pub fn consume_nmi_interrupt(&mut self) -> bool {
-        self.state.timer.consume_nmi_interrupt()
-    }
-
-    pub fn consume_timer_interrupt(&mut self) -> bool {
-        self.state.timer.consume_timer_interrupt()
+        self.state.current_clock = new_clock;
     }
 
     pub fn draw_scanline(&mut self, screen_y: u32) {
@@ -792,8 +775,8 @@ impl Ppu {
     /// On read: counter_latch = 1
     fn read_shvl(&mut self) -> u8 {
         if !self.state.counter_latch {
-            self.state.h_counter = self.clock_info().hdot() as u16;
-            self.state.v_counter = self.clock_info().v as u16;
+            self.state.h_counter = self.state.current_clock.hdot() as u16;
+            self.state.v_counter = self.state.current_clock.v as u16;
         }
         self.state.counter_latch = true;
         0

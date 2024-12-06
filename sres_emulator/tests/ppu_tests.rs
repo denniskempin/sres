@@ -111,7 +111,6 @@ pub fn test_krom_interlace_rpg_debug_render() {
 }
 
 #[test]
-#[ignore = "Only run when PPU snapshots need to be re-generated"]
 fn generate_smw_ppu_snapshots() {
     generate_ppu_snapshots(
         "smw",
@@ -135,7 +134,6 @@ fn test_smw_level() {
 }
 
 #[test]
-#[ignore = "Only run when PPU snapshots need to be re-generated"]
 fn generate_tloz_ppu_snapshots() {
     generate_ppu_snapshots(
         "tloz",

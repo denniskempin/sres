@@ -14,6 +14,7 @@ use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U16Ext;
 use crate::components::cartridge::Cartridge;
 use crate::components::cartridge::MappingMode;
+use crate::components::clock::Clock;
 use crate::components::cpu::MainBus;
 use crate::components::ppu::Ppu;
 use crate::debugger::DebuggerRef;
@@ -27,6 +28,7 @@ pub enum MainBusEvent {
 pub struct MainBusImpl {
     pub(crate) ppu: Ppu,
     pub(crate) apu: Apu,
+    clock: Clock,
 
     wram: Vec<u8>,
     sram: Vec<u8>,
@@ -49,6 +51,7 @@ impl MainBusImpl {
         }
 
         Self {
+            clock: Clock::default(),
             wram: vec![0; 0x4000000],
             sram: cartridge.sram.clone(),
             rom,
@@ -73,7 +76,7 @@ impl MainBusImpl {
                 0x2100..=0x213F => self.ppu.bus_peek(addr),
                 0x2140..=0x217F => self.apu.bus_peek(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.bus_peek(addr),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_peek(addr),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
                 0x4218 => Some(self.joy1.low_byte()),
                 0x4219 => Some(self.joy1.high_byte()),
@@ -94,7 +97,7 @@ impl MainBusImpl {
                 0x2100..=0x213F => self.ppu.bus_read(addr),
                 0x2140..=0x217F => self.apu.bus_read(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.bus_read(addr),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_read(addr),
                 0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4016..=0x4017 => {
                     log::warn!("Serial Joypad not implemented");
@@ -134,7 +137,7 @@ impl MainBusImpl {
                 0x2140..=0x217F => self.apu.bus_write(addr, value),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.ppu.bus_write(addr, value),
+                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_write(addr, value),
                 _ => {
                     self.debug_event_collector.on_error(format!(
                         "Write to unimplemented register {} = {}",
@@ -164,21 +167,22 @@ impl MainBusImpl {
     }
 
     fn advance_master_clock(&mut self, cycles: u64) {
-        self.ppu.advance_master_clock(cycles);
+        self.clock.advance_master_clock(cycles);
 
         if let Some((transfers, duration)) = self
             .dma_controller
             .pending_transfers(self.clock_info().master_clock, self.clock_speed)
         {
-            self.ppu.advance_master_clock(duration);
+            self.clock.advance_master_clock(duration);
             for (source, destination) in transfers {
                 let value = self.bus_read(source);
                 self.bus_write(destination, value);
             }
         }
         self.dma_controller.update_state();
+        self.ppu.update_clock(self.clock.clock_info());
         self.apu
-            .catch_up_to_master_clock(self.clock_info().master_clock);
+            .catch_up_to_master_clock(self.clock.clock_info().master_clock);
     }
 }
 
@@ -190,7 +194,9 @@ impl Bus<AddressU24> for MainBusImpl {
     fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
         self.clock_speed = memory_access_speed(addr);
         trace!(target: "cycles", "cycle read {addr} ({} cycles)", self.clock_speed);
-        self.ppu.advance_master_clock(self.clock_speed - 6);
+        // TODO: Ugly. Cannot use self.advance_master_clock here because it may be using bus read/write during dma
+        self.clock.advance_master_clock(self.clock_speed - 6);
+        self.ppu.update_clock(self.clock.clock_info());
         let value = self.bus_read(addr);
         self.advance_master_clock(6);
         value
@@ -216,6 +222,7 @@ impl Bus<AddressU24> for MainBusImpl {
     }
 
     fn reset(&mut self) {
+        self.clock = Clock::default();
         self.ppu.reset();
         self.advance_master_clock(186);
     }
@@ -223,15 +230,15 @@ impl Bus<AddressU24> for MainBusImpl {
 
 impl MainBus for MainBusImpl {
     fn consume_nmi_interrupt(&mut self) -> bool {
-        self.ppu.consume_nmi_interrupt()
+        self.clock.consume_nmi_interrupt()
     }
 
     fn consume_timer_interrupt(&mut self) -> bool {
-        self.ppu.consume_timer_interrupt()
+        self.clock.consume_timer_interrupt()
     }
 
     fn clock_info(&self) -> ClockInfo {
-        self.ppu.clock_info()
+        self.clock.clock_info()
     }
 }
 
