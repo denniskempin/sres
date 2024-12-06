@@ -71,3 +71,63 @@ pub trait BusDeviceU24 {
     fn update_clock(&mut self, new_clock: ClockInfo);
     fn reset(&mut self);
 }
+
+const CACHE_SIZE: usize = 32 * 1024;
+
+enum BusAction {
+    Clock(ClockInfo),
+    Write(AddressU24, u8),
+}
+
+pub struct BatchedBusDeviceU24<DeviceT: BusDeviceU24> {
+    pub inner: DeviceT,
+    cache: Vec<BusAction>,
+}
+
+impl<DeviceT: BusDeviceU24> BusDeviceU24 for BatchedBusDeviceU24<DeviceT> {
+    fn peek(&self, addr: AddressU24) -> Option<u8> {
+        self.inner.peek(addr)
+    }
+
+    fn read(&mut self, addr: AddressU24) -> u8 {
+        self.drain_cache();
+        self.inner.read(addr)
+    }
+
+    fn write(&mut self, addr: AddressU24, value: u8) {
+        if self.cache.len() >= CACHE_SIZE {
+            self.drain_cache();
+        }
+        self.cache.push(BusAction::Write(addr, value))
+    }
+
+    fn update_clock(&mut self, new_clock: ClockInfo) {
+        if self.cache.len() >= CACHE_SIZE {
+            self.drain_cache();
+        }
+        self.cache.push(BusAction::Clock(new_clock));
+    }
+
+    fn reset(&mut self) {
+        self.cache.clear();
+        self.inner.reset()
+    }
+}
+
+impl<DeviceT: BusDeviceU24> BatchedBusDeviceU24<DeviceT> {
+    pub fn new(inner: DeviceT) -> Self {
+        Self {
+            inner,
+            cache: Vec::with_capacity(CACHE_SIZE),
+        }
+    }
+
+    pub fn drain_cache(&mut self) {
+        for action in self.cache.drain(..) {
+            match action {
+                BusAction::Clock(new_clock) => self.inner.update_clock(new_clock),
+                BusAction::Write(addr, value) => self.inner.write(addr, value),
+            }
+        }
+    }
+}
