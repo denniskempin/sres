@@ -12,6 +12,7 @@
 //! - Do not use super to refer to outer modules
 
 pub mod cartridge;
+pub mod clock;
 pub mod cpu;
 pub mod ppu;
 pub mod s_dsp;

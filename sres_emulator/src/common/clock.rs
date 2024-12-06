@@ -1,4 +1,6 @@
-#[derive(Default, Clone, Copy, PartialEq, Debug)]
+use bitcode::{Decode, Encode};
+
+#[derive(Default, Clone, Copy, PartialEq, Debug, Encode, Decode)]
 pub struct ClockInfo {
     pub master_clock: u64,
     pub v: u64,
