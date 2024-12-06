@@ -34,9 +34,10 @@ pub enum ExecutionResult {
     Halt,
     Break(BreakReason),
 }
+pub type CpuT = Cpu<MainBusImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU24<Apu>>>;
 
 pub struct System {
-    pub cpu: Cpu<MainBusImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU24<Apu>>>,
+    pub cpu: CpuT,
     debugger: DebuggerRef,
     debugger_enabled: bool,
     vblank_detector: EdgeDetector,
@@ -70,7 +71,7 @@ impl System {
 
     fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
     where
-        F: Fn(&Cpu<MainBusImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU24<Apu>>>) -> bool,
+        F: Fn(&CpuT) -> bool,
     {
         loop {
             if self.cpu.halted() {
@@ -84,8 +85,8 @@ impl System {
             }
 
             if should_break(&self.cpu) {
-                self.cpu.bus.ppu.drain_cache();
-                self.cpu.bus.apu.drain_cache();
+                self.cpu.bus.ppu.sync();
+                self.cpu.bus.apu.sync();
                 return ExecutionResult::Normal;
             }
         }
@@ -165,15 +166,15 @@ impl System {
     fn step(&mut self) {
         self.cpu.step();
         if self.debugger_enabled {
-            self.cpu.bus.ppu.drain_cache();
-            self.cpu.bus.apu.drain_cache();
+            self.cpu.bus.ppu.sync();
+            self.cpu.bus.apu.sync();
         }
 
         self.vblank_detector
             .update_signal(self.cpu.bus.clock_info().vblank());
         if self.vblank_detector.consume_rise() {
-            self.cpu.bus.ppu.drain_cache();
-            self.cpu.bus.apu.drain_cache();
+            self.cpu.bus.ppu.sync();
+            self.cpu.bus.apu.sync();
             // TODO: Unnecessary clone, should use re-usable buffers or double buffering
             self.pending_video_frame = Some(self.cpu.bus.ppu.inner.framebuffer().clone());
         }
