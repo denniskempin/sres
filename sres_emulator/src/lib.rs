@@ -15,6 +15,7 @@ use components::s_dsp::SDsp;
 
 use crate::apu::Apu;
 use crate::apu::ApuDebug;
+use crate::common::bus::BatchedBusDeviceU24;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::image::Image;
@@ -35,8 +36,9 @@ pub enum ExecutionResult {
 }
 
 pub struct System {
-    pub cpu: Cpu<MainBusImpl<Ppu, Apu>>,
+    pub cpu: Cpu<MainBusImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU24<Apu>>>,
     debugger: DebuggerRef,
+    debugger_enabled: bool,
     vblank_detector: EdgeDetector,
     pending_video_frame: Option<Framebuffer>,
 }
@@ -53,13 +55,14 @@ impl System {
             cpu: Cpu::new(
                 MainBusImpl::new(
                     cartridge,
-                    Ppu::new(),
-                    Apu::new(debugger.clone()),
+                    BatchedBusDeviceU24::new(Ppu::new()),
+                    BatchedBusDeviceU24::new(Apu::new(debugger.clone())),
                     debugger.clone(),
                 ),
                 DebugEventCollectorRef(debugger.clone()),
             ),
             debugger,
+            debugger_enabled: false,
             vblank_detector: EdgeDetector::new(),
             pending_video_frame: None,
         }
@@ -67,7 +70,7 @@ impl System {
 
     fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
     where
-        F: Fn(&Cpu<MainBusImpl<Ppu, Apu>>) -> bool,
+        F: Fn(&Cpu<MainBusImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU24<Apu>>>) -> bool,
     {
         loop {
             if self.cpu.halted() {
@@ -81,6 +84,8 @@ impl System {
             }
 
             if should_break(&self.cpu) {
+                self.cpu.bus.ppu.drain_cache();
+                self.cpu.bus.apu.drain_cache();
                 return ExecutionResult::Normal;
             }
         }
@@ -122,18 +127,19 @@ impl System {
     }
 
     pub fn ppu(&mut self) -> &mut Ppu {
-        &mut self.cpu.bus.ppu
+        &mut self.cpu.bus.ppu.inner
     }
 
     pub fn apu(&mut self) -> &mut Apu {
-        &mut self.cpu.bus.apu
+        &mut self.cpu.bus.apu.inner
     }
 
     pub fn s_dsp(&mut self) -> &mut SDsp {
-        &mut self.cpu.bus.apu.spc700.bus.dsp
+        &mut self.apu().spc700.bus.dsp
     }
 
     pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {
+        self.debugger_enabled = true;
         self.debugger().enable();
         self.debugger().add_break_point(event.clone());
         let result = loop {
@@ -158,11 +164,18 @@ impl System {
 
     fn step(&mut self) {
         self.cpu.step();
+        if self.debugger_enabled {
+            self.cpu.bus.ppu.drain_cache();
+            self.cpu.bus.apu.drain_cache();
+        }
+
         self.vblank_detector
             .update_signal(self.cpu.bus.clock_info().vblank());
         if self.vblank_detector.consume_rise() {
+            self.cpu.bus.ppu.drain_cache();
+            self.cpu.bus.apu.drain_cache();
             // TODO: Unnecessary clone, should use re-usable buffers or double buffering
-            self.pending_video_frame = Some(self.cpu.bus.ppu.framebuffer().clone());
+            self.pending_video_frame = Some(self.cpu.bus.ppu.inner.framebuffer().clone());
         }
     }
 
@@ -181,10 +194,10 @@ pub struct SystemDebug<'a>(&'a System);
 
 impl<'a> SystemDebug<'a> {
     pub fn ppu(self) -> PpuDebug<'a> {
-        self.0.cpu.bus.ppu.debug()
+        self.0.cpu.bus.ppu.inner.debug()
     }
 
     pub fn apu(self) -> ApuDebug<'a> {
-        self.0.cpu.bus.apu.debug()
+        self.0.cpu.bus.apu.inner.debug()
     }
 }

@@ -11,6 +11,7 @@ use anyhow::Result;
 use log::error;
 use pretty_assertions::assert_eq;
 use sres_emulator::apu::Apu;
+use sres_emulator::common::bus::BatchedBusDeviceU24;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::logging;
 use sres_emulator::common::util::format_memory;
@@ -249,7 +250,9 @@ pub fn test_dma_oam() {
     );
 }
 
-fn run_test_rom(test_name: &str) -> Cpu<MainBusImpl<Ppu, Apu>> {
+fn run_test_rom(
+    test_name: &str,
+) -> Cpu<MainBusImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU24<Apu>>> {
     logging::test_init(false);
 
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
