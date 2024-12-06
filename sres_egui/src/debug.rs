@@ -24,7 +24,6 @@ use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::address::Wrap;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::util::RingBuffer;
-use sres_emulator::components::cpu::MainBus;
 use sres_emulator::debugger::Debugger;
 use sres_emulator::debugger::EventFilter;
 use sres_emulator::ExecutionResult;
@@ -153,9 +152,7 @@ impl DebugUi {
                 } else {
                     None
                 };
-
-                let current_scanline = emulator.clock_info().v;
-                emulator.execute_until(|cpu| cpu.bus.clock_info().v > current_scanline)
+                emulator.execute_scanlines(1)
             }
             DebugCommand::StepInstructions(n) => {
                 self.command = if n > 1 {
@@ -163,7 +160,7 @@ impl DebugUi {
                 } else {
                     None
                 };
-                emulator.execute_until(|_| true)
+                emulator.execute_one_instruction()
             }
         }
     }

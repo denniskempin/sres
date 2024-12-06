@@ -6,9 +6,9 @@ use dma::DmaController;
 use log::trace;
 
 use self::multiplication::MultiplicationUnit;
-use crate::apu::Apu;
 use crate::common::address::AddressU24;
 use crate::common::bus::Bus;
+use crate::common::bus::BusDeviceU24;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U16Ext;
@@ -16,7 +16,6 @@ use crate::components::cartridge::Cartridge;
 use crate::components::cartridge::MappingMode;
 use crate::components::clock::Clock;
 use crate::components::cpu::MainBus;
-use crate::components::ppu::Ppu;
 use crate::debugger::DebuggerRef;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,9 +24,9 @@ pub enum MainBusEvent {
     Write(AddressU24, u8),
 }
 
-pub struct MainBusImpl {
-    pub(crate) ppu: Ppu,
-    pub(crate) apu: Apu,
+pub struct MainBusImpl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> {
+    pub(crate) ppu: PpuT,
+    pub(crate) apu: ApuT,
     clock: Clock,
 
     wram: Vec<u8>,
@@ -43,8 +42,8 @@ pub struct MainBusImpl {
     debug_event_collector: DebugEventCollectorRef<MainBusEvent>,
 }
 
-impl MainBusImpl {
-    pub fn new(cartridge: &Cartridge, debugger: DebuggerRef) -> Self {
+impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
+    pub fn new(cartridge: &Cartridge, ppu: PpuT, apu: ApuT, debugger: DebuggerRef) -> Self {
         let mut rom = vec![0; 0x4000000];
         for (i, byte) in cartridge.rom.iter().enumerate() {
             rom[i] = *byte;
@@ -57,8 +56,8 @@ impl MainBusImpl {
             rom,
             clock_speed: 8,
             dma_controller: DmaController::new(DebugEventCollectorRef(debugger.clone())),
-            ppu: Ppu::new(),
-            apu: Apu::new(debugger.clone()),
+            ppu,
+            apu,
             multiplication: MultiplicationUnit::new(),
             debug_event_collector: DebugEventCollectorRef(debugger.clone()),
             joy1: 0,
@@ -73,8 +72,8 @@ impl MainBusImpl {
             MemoryBlock::Rom(offset) => Some(self.rom[offset]),
             MemoryBlock::Sram(offset) => Some(self.sram[offset]),
             MemoryBlock::Register => match addr.offset {
-                0x2100..=0x213F => self.ppu.bus_peek(addr),
-                0x2140..=0x217F => self.apu.bus_peek(addr),
+                0x2100..=0x213F => self.ppu.peek(addr),
+                0x2140..=0x217F => self.apu.peek(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
                 0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_peek(addr),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
@@ -94,8 +93,8 @@ impl MainBusImpl {
             MemoryBlock::Rom(offset) => self.rom[offset],
             MemoryBlock::Sram(offset) => self.sram[offset],
             MemoryBlock::Register => match addr.offset {
-                0x2100..=0x213F => self.ppu.bus_read(addr),
-                0x2140..=0x217F => self.apu.bus_read(addr),
+                0x2100..=0x213F => self.ppu.read(addr),
+                0x2140..=0x217F => self.apu.read(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
                 0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_read(addr),
                 0x4214..=0x4217 => self.multiplication.bus_read(addr),
@@ -133,8 +132,8 @@ impl MainBusImpl {
             MemoryBlock::Rom(offset) => self.rom[offset] = value,
             MemoryBlock::Sram(offset) => self.sram[offset] = value,
             MemoryBlock::Register => match addr.offset {
-                0x2100..=0x213F => self.ppu.bus_write(addr, value),
-                0x2140..=0x217F => self.apu.bus_write(addr, value),
+                0x2100..=0x213F => self.ppu.write(addr, value),
+                0x2140..=0x217F => self.apu.write(addr, value),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
                 0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_write(addr, value),
@@ -181,12 +180,11 @@ impl MainBusImpl {
         }
         self.dma_controller.update_state();
         self.ppu.update_clock(self.clock.clock_info());
-        self.apu
-            .catch_up_to_master_clock(self.clock.clock_info().master_clock);
+        self.apu.update_clock(self.clock.clock_info());
     }
 }
 
-impl Bus<AddressU24> for MainBusImpl {
+impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> Bus<AddressU24> for MainBusImpl<PpuT, ApuT> {
     fn peek_u8(&self, addr: AddressU24) -> Option<u8> {
         self.bus_peek(addr)
     }
@@ -228,7 +226,7 @@ impl Bus<AddressU24> for MainBusImpl {
     }
 }
 
-impl MainBus for MainBusImpl {
+impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBus for MainBusImpl<PpuT, ApuT> {
     fn consume_nmi_interrupt(&mut self) -> bool {
         self.clock.consume_nmi_interrupt()
     }

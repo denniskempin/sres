@@ -3,7 +3,9 @@
 use std::ops::RangeInclusive;
 
 use crate::common::address::Address;
+use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
+use crate::common::clock::ClockInfo;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
 
@@ -60,4 +62,12 @@ pub trait Bus<AddressT: Address> {
             .map(|idx| self.peek_u8(AddressT::from(idx)).unwrap_or_default())
             .collect()
     }
+}
+
+pub trait BusDeviceU24 {
+    fn peek(&self, addr: AddressU24) -> Option<u8>;
+    fn read(&mut self, addr: AddressU24) -> u8;
+    fn write(&mut self, addr: AddressU24, value: u8);
+    fn update_clock(&mut self, new_clock: ClockInfo);
+    fn reset(&mut self);
 }

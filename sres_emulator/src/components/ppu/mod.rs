@@ -11,13 +11,13 @@ use bitcode::Encode;
 use intbits::Bits;
 
 use self::cgram::CgRam;
-// Public to allow for access in benches
 pub use self::debug::PpuDebug;
 pub use self::debug::VramRenderSelection;
 use self::oam::Oam;
 use self::vram::Vram;
 use crate::common::address::AddressU15;
 use crate::common::address::AddressU24;
+use crate::common::bus::BusDeviceU24;
 use crate::common::clock::ClockInfo;
 use crate::common::image::Image;
 use crate::common::image::Rgb15;
@@ -102,49 +102,8 @@ impl Default for PpuState {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
-enum Layer {
-    Background(BackgroundId, bool),
-    Object(u8),
-}
-
-impl Ppu {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self {
-            disabled: false,
-            headless: false,
-            state: PpuState::default(),
-        }
-    }
-
-    /// Only used for benchmarks, runs full PPU emulation but does not render
-    pub fn force_headless(&mut self) {
-        self.headless = true;
-    }
-
-    pub fn framebuffer(&self) -> &Framebuffer {
-        &self.state.framebuffer
-    }
-
-    pub fn reset(&mut self) {
-        self.state = PpuState::default();
-    }
-
-    pub fn load_state(&mut self, encoded: &[u8]) -> anyhow::Result<()> {
-        self.state = bitcode::decode(encoded)?;
-        Ok(())
-    }
-
-    pub fn save_state(&self) -> Vec<u8> {
-        bitcode::encode(&self.state)
-    }
-
-    pub fn debug(&self) -> PpuDebug<'_> {
-        PpuDebug(self)
-    }
-
-    pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
+impl BusDeviceU24 for Ppu {
+    fn read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
             0x2138 => self.state.oam.read_oamdataread(),
             0x2139 => self.state.vram.read_vmdatalread(),
@@ -163,7 +122,7 @@ impl Ppu {
         }
     }
 
-    pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
+    fn peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
             0x2138 => Some(self.state.oam.peek_oamdataread()),
             0x2139 => Some(self.state.vram.peek_vmdatalread()),
@@ -179,7 +138,7 @@ impl Ppu {
         }
     }
 
-    pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
+    fn write(&mut self, addr: AddressU24, value: u8) {
         match addr.offset {
             0x2100 => self.write_inidisp(value),
             0x2101 => self.state.oam.write_objsel(value),
@@ -213,7 +172,7 @@ impl Ppu {
         }
     }
 
-    pub fn update_clock(&mut self, new_clock: ClockInfo) {
+    fn update_clock(&mut self, new_clock: ClockInfo) {
         if self.disabled {
             return;
         }
@@ -224,6 +183,49 @@ impl Ppu {
             self.state.last_drawn_scanline = new_clock.v;
         }
         self.state.current_clock = new_clock;
+    }
+
+    fn reset(&mut self) {
+        self.state = PpuState::default();
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+enum Layer {
+    Background(BackgroundId, bool),
+    Object(u8),
+}
+
+impl Ppu {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self {
+            disabled: false,
+            headless: false,
+            state: PpuState::default(),
+        }
+    }
+
+    /// Only used for benchmarks, runs full PPU emulation but does not render
+    pub fn force_headless(&mut self) {
+        self.headless = true;
+    }
+
+    pub fn framebuffer(&self) -> &Framebuffer {
+        &self.state.framebuffer
+    }
+
+    pub fn load_state(&mut self, encoded: &[u8]) -> anyhow::Result<()> {
+        self.state = bitcode::decode(encoded)?;
+        Ok(())
+    }
+
+    pub fn save_state(&self) -> Vec<u8> {
+        bitcode::encode(&self.state)
+    }
+
+    pub fn debug(&self) -> PpuDebug<'_> {
+        PpuDebug(self)
     }
 
     pub fn draw_scanline(&mut self, screen_y: u32) {

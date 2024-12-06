@@ -35,7 +35,7 @@ pub enum ExecutionResult {
 }
 
 pub struct System {
-    pub cpu: Cpu<MainBusImpl>,
+    pub cpu: Cpu<MainBusImpl<Ppu, Apu>>,
     debugger: DebuggerRef,
     vblank_detector: EdgeDetector,
     pending_video_frame: Option<Framebuffer>,
@@ -51,7 +51,12 @@ impl System {
         let debugger = Debugger::new();
         Self {
             cpu: Cpu::new(
-                MainBusImpl::new(cartridge, debugger.clone()),
+                MainBusImpl::new(
+                    cartridge,
+                    Ppu::new(),
+                    Apu::new(debugger.clone()),
+                    debugger.clone(),
+                ),
                 DebugEventCollectorRef(debugger.clone()),
             ),
             debugger,
@@ -60,9 +65,9 @@ impl System {
         }
     }
 
-    pub fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
+    fn execute_until<F>(&mut self, should_break: F) -> ExecutionResult
     where
-        F: Fn(&Cpu<MainBusImpl>) -> bool,
+        F: Fn(&Cpu<MainBusImpl<Ppu, Apu>>) -> bool,
     {
         loop {
             if self.cpu.halted() {
@@ -92,6 +97,11 @@ impl System {
     pub fn execute_frames(&mut self, count: u64) -> ExecutionResult {
         let target_frame = self.cpu.bus.clock_info().f + count;
         self.execute_until(|cpu| cpu.bus.clock_info().f >= target_frame)
+    }
+
+    pub fn execute_scanlines(&mut self, count: u64) -> ExecutionResult {
+        let target_scanline = self.cpu.bus.clock_info().v + count;
+        self.execute_until(|cpu| cpu.bus.clock_info().v >= target_scanline)
     }
 
     pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {
