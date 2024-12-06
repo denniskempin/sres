@@ -7,6 +7,8 @@ use log::debug;
 use self::apu_bus::ApuBus;
 pub use self::apu_bus::ApuBusEvent;
 use crate::common::address::AddressU24;
+use crate::common::bus::BusDeviceU24;
+use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDspDebug;
 use crate::components::spc700::Spc700;
@@ -36,21 +38,7 @@ impl Apu {
         self.spc700.bus.dsp.generate_sample(memory)
     }
 
-    pub fn catch_up_to_master_clock(&mut self, master_clock: u64) {
-        self.spc700.catch_up_to_master_clock(master_clock);
-    }
-
-    pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
-        self.read_apuio(addr)
-    }
-
-    pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
-        Some(self.peek_apuio(addr))
-    }
-
-    pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
-        self.write_apuio(addr, value)
-    }
+    pub fn catch_up_to_master_clock(&mut self, master_clock: u64) {}
 
     /// Register 2140..2144: APUION - APU IO Channels
     fn write_apuio(&mut self, addr: AddressU24, value: u8) {
@@ -70,6 +58,26 @@ impl Apu {
         debug!("APUIO[{:04X}] reads {:02X}", addr.offset, value);
         value
     }
+}
+
+impl BusDeviceU24 for Apu {
+    fn read(&mut self, addr: AddressU24) -> u8 {
+        self.read_apuio(addr)
+    }
+
+    fn peek(&self, addr: AddressU24) -> Option<u8> {
+        Some(self.peek_apuio(addr))
+    }
+
+    fn write(&mut self, addr: AddressU24, value: u8) {
+        self.write_apuio(addr, value)
+    }
+
+    fn update_clock(&mut self, new_clock: ClockInfo) {
+        self.spc700.catch_up_to_master_clock(new_clock.master_clock);
+    }
+
+    fn reset(&mut self) {}
 }
 
 pub struct ApuDebug<'a>(&'a Apu);
