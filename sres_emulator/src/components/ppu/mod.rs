@@ -1,8 +1,8 @@
 //! Implementation of the Picture Processing Unit
 mod cgram;
+mod clock;
 mod debug;
 mod oam;
-mod timer;
 mod vram;
 
 use std::marker::PhantomData;
@@ -13,10 +13,10 @@ use intbits::Bits;
 
 use self::cgram::CgRam;
 // Public to allow for access in benches
+pub use self::clock::Clock;
 pub use self::debug::PpuDebug;
 pub use self::debug::VramRenderSelection;
 use self::oam::Oam;
-pub use self::timer::PpuTimer;
 use self::vram::Vram;
 use crate::common::address::AddressU15;
 use crate::common::address::AddressU24;
@@ -44,7 +44,7 @@ pub struct Ppu {
 
 #[derive(Encode, Decode)]
 pub struct PpuState {
-    timer: PpuTimer,
+    timer: Clock,
     vram: Vram,
     bgmode: BgMode,
     bg3_priority: bool,
@@ -77,7 +77,7 @@ pub struct PpuState {
 impl Default for PpuState {
     fn default() -> Self {
         Self {
-            timer: PpuTimer::default(),
+            timer: Clock::default(),
             vram: Vram::new(),
             bgmode: BgMode::Mode0,
             bg3_priority: false,
