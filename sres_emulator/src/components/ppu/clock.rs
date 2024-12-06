@@ -10,7 +10,7 @@ use crate::common::uint::U16Ext;
 use crate::common::util::EdgeDetector;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Encode, Decode)]
-pub struct PpuTimer {
+pub struct Clock {
     master_clock: u64,
     v: u64,
     h_counter: u64,
@@ -29,7 +29,7 @@ pub struct PpuTimer {
     nmi_interrupt: bool,
 }
 
-impl PpuTimer {
+impl Clock {
     pub fn clock_info(&self) -> ClockInfo {
         ClockInfo {
             master_clock: self.master_clock,
@@ -319,7 +319,7 @@ impl PpuTimer {
     }
 }
 
-impl Default for PpuTimer {
+impl Default for Clock {
     fn default() -> Self {
         Self {
             master_clock: 0,
@@ -409,7 +409,7 @@ mod tests {
 
     #[test]
     fn test_hv_increments() {
-        let mut timer = PpuTimer::default();
+        let mut timer = Clock::default();
         timer.advance_master_clock(186);
         for (v, h) in V_H_REFERENCE_LOG {
             assert_eq!(timer.v, *v);
@@ -420,7 +420,7 @@ mod tests {
 
     #[test]
     fn test_h_timer() {
-        let mut timer = PpuTimer::default();
+        let mut timer = Clock::default();
         // Enable timer on H=64
         timer.bus_write(0x4207.into(), 0x40);
         timer.bus_write(0x4208.into(), 0x00);
@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn test_v_timer() {
-        let mut timer = PpuTimer::default();
+        let mut timer = Clock::default();
         // Enable timer on V=2
         timer.bus_write(0x4209.into(), 0x02);
         timer.bus_write(0x420A.into(), 0x00);
@@ -515,7 +515,7 @@ mod tests {
             (225, 0, true, false),
         ];
         for (v, h, expected_nmi, expected_internal_nmi) in TEST_CASES {
-            let mut timer = PpuTimer {
+            let mut timer = Clock {
                 v: *v,
                 h_counter: *h,
                 ..Default::default()
