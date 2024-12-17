@@ -1,6 +1,12 @@
 //! Generic Bus trait that can be used with both U16 and U24 addresses.
 
 use std::ops::RangeInclusive;
+use std::sync::mpsc::sync_channel;
+use std::sync::mpsc::Sender;
+use std::sync::mpsc::SyncSender;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::thread;
 
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
@@ -141,5 +147,88 @@ impl<DeviceT: BusDeviceU24> BatchedBusDeviceU24<DeviceT> {
             }
         }
         self.inner.update_clock(self.current_clock);
+    }
+}
+
+pub struct AsyncBusDeviceU24<DeviceT: BusDeviceU24 + Send + 'static> {
+    pub inner: Arc<Mutex<DeviceT>>,
+
+    sender: SyncSender<BusAction>,
+    inner_clock: ClockInfo,
+    current_clock: ClockInfo,
+}
+
+impl<DeviceT: BusDeviceU24 + Send + 'static> BusDeviceU24 for AsyncBusDeviceU24<DeviceT> {
+    fn peek(&self, addr: AddressU24) -> Option<u8> {
+        self.inner.lock().unwrap().peek(addr)
+    }
+
+    fn read(&mut self, addr: AddressU24) -> u8 {
+        self.sync();
+        self.inner.lock().unwrap().read(addr)
+    }
+
+    fn write(&mut self, addr: AddressU24, value: u8) {
+        self.sender
+            .send(BusAction::Write(self.current_clock, addr, value))
+            .unwrap()
+    }
+
+    fn update_clock(&mut self, new_clock: ClockInfo) {
+        if new_clock.master_clock - self.inner_clock.master_clock > 1024 {
+            self.sender.send(BusAction::Clock(new_clock)).unwrap();
+            self.inner_clock = new_clock;
+        }
+        self.current_clock = new_clock;
+    }
+
+    fn reset(&mut self) {
+        self.inner.lock().unwrap().reset()
+    }
+}
+
+impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
+    pub fn new(raw_inner: DeviceT) -> Self {
+        let (sender, receiver) = sync_channel::<BusAction>(1024);
+        let inner = Arc::new(Mutex::new(raw_inner));
+        let inner_clone = inner.clone();
+        thread::spawn(move || {
+            while let Ok(action) = receiver.recv() {
+                let mut inner = inner.lock().unwrap();
+                match action {
+                    BusAction::Clock(clock) => {
+                        inner.update_clock(clock);
+                    }
+                    BusAction::Write(clock, addr, value) => {
+                        inner.update_clock(clock);
+                        inner.write(addr, value);
+                    }
+                }
+                while let Ok(action) = receiver.try_recv() {
+                    match action {
+                        BusAction::Clock(clock) => {
+                            inner.update_clock(clock);
+                        }
+                        BusAction::Write(clock, addr, value) => {
+                            inner.update_clock(clock);
+                            inner.write(addr, value);
+                        }
+                    }
+                }
+            }
+        });
+
+        Self {
+            inner: inner_clone,
+            sender,
+            current_clock: ClockInfo::default(),
+            inner_clock: ClockInfo::default(),
+        }
+    }
+
+    pub fn sync(&mut self) {
+        // Wait for lock to free after all actions have been processed
+        // (I guess there could be a race condition if the thread has not yet started processing)
+        self.inner.lock().unwrap();
     }
 }
