@@ -12,6 +12,7 @@ use intbits::Bits;
 
 pub use self::debug::CpuDebug;
 pub use self::debug::CpuEvent;
+pub use self::debug::CpuEventFilter;
 pub use self::debug::CpuState;
 use self::opcode_table::build_opcode_table;
 use self::opcode_table::Instruction;
@@ -200,6 +201,15 @@ pub enum NativeVectorTable {
     Irq = 0xFFEE,
 }
 
+#[allow(dead_code)]
+enum EmuVectorTable {
+    Cop = 0xFFF4,
+    Break = 0xFFF6,
+    Nmi = 0xFFFA,
+    Reset = 0xFFFC,
+    Irq = 0xFFFE,
+}
+
 #[derive(Default)]
 struct VariableLengthRegister {
     value: u16,
@@ -220,15 +230,6 @@ impl VariableLengthRegister {
     fn get<T: UInt>(&self) -> T {
         T::from_u16(self.value)
     }
-}
-
-#[allow(dead_code)]
-enum EmuVectorTable {
-    Cop = 0xFFF4,
-    Break = 0xFFF6,
-    Nmi = 0xFFFA,
-    Reset = 0xFFFC,
-    Irq = 0xFFFE,
 }
 
 #[cfg(test)]

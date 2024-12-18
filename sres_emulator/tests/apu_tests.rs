@@ -6,7 +6,8 @@ use pretty_assertions::assert_eq;
 use sres_emulator::common::test_util::compare_wav_against_golden;
 use sres_emulator::common::util::format_memory;
 use sres_emulator::components::cartridge::Cartridge;
-use sres_emulator::debugger::{EventFilter, Spc700EventFilter};
+use sres_emulator::components::spc700::Spc700EventFilter;
+use sres_emulator::debugger::EventFilter;
 use sres_emulator::System;
 
 #[test]
@@ -20,7 +21,9 @@ pub fn test_play_brr_sample() {
     );
 
     // Run until spc reaches infinite loop of the program.
-    system.debug_until(EventFilter::Spc700(Spc700EventFilter::ProgramCounter(0x02e9..0x02ea)));
+    system.debug_until(EventFilter::Spc700(Spc700EventFilter::ProgramCounter(
+        0x02e9..0x02ea,
+    )));
 
     assert_eq!(
         system.debug().apu().dsp().voice(0),
@@ -44,7 +47,9 @@ pub fn test_play_noise() {
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
 
     // Run until SPC jumps into the loaded program
-    system.debug_until(EventFilter::Spc700(Spc700EventFilter::ProgramCounter(0x0200..0x0201)));
+    system.debug_until(EventFilter::Spc700(Spc700EventFilter::ProgramCounter(
+        0x0200..0x0201,
+    )));
 
     // Verify the program has been loaded correctly at 0x0200 in SPC700 RAM.
     let spc_program = std::fs::read(spc_rom_path).unwrap();
@@ -53,7 +58,9 @@ pub fn test_play_noise() {
     assert_eq!(format_memory(actual_program), format_memory(&spc_program));
 
     // Run until "Kick" info has been written into Voice 0
-    system.debug_until(EventFilter::Spc700(Spc700EventFilter::ProgramCounter(0x02dd..0x02de)));
+    system.debug_until(EventFilter::Spc700(Spc700EventFilter::ProgramCounter(
+        0x02dd..0x02de,
+    )));
 
     assert_eq!(
         system.debug().apu().dsp().voice(0),

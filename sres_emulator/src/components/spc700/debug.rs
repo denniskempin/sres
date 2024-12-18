@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::ops::Range;
 use std::str::FromStr;
 
 use anyhow::Context;
@@ -12,6 +13,21 @@ use crate::common::address::InstructionMeta;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Spc700Event {
     Step(Spc700State),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum Spc700EventFilter {
+    ProgramCounter(Range<u16>),
+}
+
+impl Spc700EventFilter {
+    pub fn matches(&self, event: &Spc700Event) -> bool {
+        match (self, event) {
+            (Spc700EventFilter::ProgramCounter(range), Spc700Event::Step(spc)) => {
+                range.contains(&spc.instruction.address.0)
+            }
+        }
+    }
 }
 
 pub struct Spc700Debug<'a, BusT: Spc700Bus>(pub &'a Spc700<BusT>);

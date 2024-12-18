@@ -14,16 +14,20 @@ use std::sync::atomic::Ordering;
 use num_traits::PrimInt;
 
 use crate::apu::ApuBusEvent;
+use crate::apu::ApuBusEventFilter;
 use crate::common::address::AddressU24;
 use crate::common::debug_events::DebugErrorCollector;
 use crate::common::debug_events::DebugEventCollector;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::util::RingBuffer;
 use crate::components::cpu::CpuEvent;
+use crate::components::cpu::CpuEventFilter;
 use crate::components::cpu::CpuState;
 use crate::components::cpu::NativeVectorTable;
 use crate::components::spc700::Spc700Event;
+use crate::components::spc700::Spc700EventFilter;
 use crate::main_bus::MainBusEvent;
+use crate::main_bus::MainBusEventFilter;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DebugEvent {
@@ -43,30 +47,6 @@ pub enum EventFilter {
     ExecutionError,
 }
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum CpuEventFilter {
-    ProgramCounter(Range<u32>),
-    Instruction(String),
-    Interrupt(Option<NativeVectorTable>),
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum MainBusEventFilter {
-    MemoryRead(Range<u32>),
-    MemoryWrite(Range<u32>),
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum ApuBusEventFilter {
-    MemoryRead(Range<u16>),
-    MemoryWrite(Range<u16>),
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum Spc700EventFilter {
-    ProgramCounter(Range<u16>),
-}
-
 impl EventFilter {
     pub fn matches(&self, event: &DebugEvent) -> bool {
         match (self, event) {
@@ -76,65 +56,6 @@ impl EventFilter {
             (EventFilter::Spc700(filter), DebugEvent::Spc700(event)) => filter.matches(event),
             (EventFilter::ExecutionError, DebugEvent::Error(_)) => true,
             _ => false,
-        }
-    }
-}
-
-impl CpuEventFilter {
-    pub fn matches(&self, event: &CpuEvent) -> bool {
-        match (self, event) {
-            (CpuEventFilter::ProgramCounter(range), CpuEvent::Step(cpu)) => {
-                range.contains(&u32::from(cpu.instruction.address))
-            }
-            (CpuEventFilter::Instruction(instr), CpuEvent::Step(cpu)) => {
-                instr == &cpu.instruction.operation
-            }
-            (CpuEventFilter::Interrupt(expected_handler), CpuEvent::Interrupt(handler)) => {
-                if let Some(expected_handler) = expected_handler {
-                    expected_handler == handler
-                } else {
-                    true
-                }
-            }
-            _ => false,
-        }
-    }
-}
-
-impl MainBusEventFilter {
-    pub fn matches(&self, event: &MainBusEvent) -> bool {
-        match (self, event) {
-            (MainBusEventFilter::MemoryRead(range), MainBusEvent::Read(addr, _)) => {
-                range.contains(&u32::from(*addr))
-            }
-            (MainBusEventFilter::MemoryWrite(range), MainBusEvent::Write(addr, _)) => {
-                range.contains(&u32::from(*addr))
-            }
-            _ => false,
-        }
-    }
-}
-
-impl ApuBusEventFilter {
-    pub fn matches(&self, event: &ApuBusEvent) -> bool {
-        match (self, event) {
-            (ApuBusEventFilter::MemoryRead(range), ApuBusEvent::Read(addr, _)) => {
-                range.contains(&addr.0)
-            }
-            (ApuBusEventFilter::MemoryWrite(range), ApuBusEvent::Write(addr, _)) => {
-                range.contains(&addr.0)
-            }
-            _ => false,
-        }
-    }
-}
-
-impl Spc700EventFilter {
-    pub fn matches(&self, event: &Spc700Event) -> bool {
-        match (self, event) {
-            (Spc700EventFilter::ProgramCounter(range), Spc700Event::Step(spc)) => {
-                range.contains(&spc.instruction.address.0)
-            }
         }
     }
 }
@@ -463,10 +384,25 @@ mod test {
             assert_eq!(filter.parse::<EventFilter>().unwrap(), expected);
         };
 
-        check_format("pc 0", EventFilter::Cpu(CpuEventFilter::ProgramCounter(0..1)));
-        check_format("jmp", EventFilter::Cpu(CpuEventFilter::Instruction("jmp".to_string())));
-        check_format("irq nmi", EventFilter::Cpu(CpuEventFilter::Interrupt(Some(NativeVectorTable::Nmi))));
-        check_format("r 10:1F", EventFilter::MainBus(MainBusEventFilter::MemoryRead(0x10..0x20)));
-        check_format("w", EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0..u32::MAX)));
+        check_format(
+            "pc 0",
+            EventFilter::Cpu(CpuEventFilter::ProgramCounter(0..1)),
+        );
+        check_format(
+            "jmp",
+            EventFilter::Cpu(CpuEventFilter::Instruction("jmp".to_string())),
+        );
+        check_format(
+            "irq nmi",
+            EventFilter::Cpu(CpuEventFilter::Interrupt(Some(NativeVectorTable::Nmi))),
+        );
+        check_format(
+            "r 10:1F",
+            EventFilter::MainBus(MainBusEventFilter::MemoryRead(0x10..0x20)),
+        );
+        check_format(
+            "w",
+            EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0..u32::MAX)),
+        );
     }
 }

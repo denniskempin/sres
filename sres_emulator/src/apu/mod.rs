@@ -6,6 +6,7 @@ use log::debug;
 
 use self::apu_bus::ApuBus;
 pub use self::apu_bus::ApuBusEvent;
+pub use self::apu_bus::ApuBusEventFilter;
 use crate::common::address::AddressU24;
 use crate::common::bus::BusDeviceU24;
 use crate::common::clock::ClockInfo;

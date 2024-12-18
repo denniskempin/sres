@@ -10,6 +10,7 @@ use std::sync::atomic::Ordering;
 
 pub use self::debug::Spc700Debug;
 pub use self::debug::Spc700Event;
+pub use self::debug::Spc700EventFilter;
 pub use self::debug::Spc700State;
 use self::opcode_table::InstructionDef;
 use self::operands::AddressMode;

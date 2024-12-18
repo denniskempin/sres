@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use intbits::Bits;
 
 use crate::common::address::AddressU16;
@@ -5,12 +7,6 @@ use crate::common::bus::Bus;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ApuBusEvent {
-    Read(AddressU16, u8),
-    Write(AddressU16, u8),
-}
 
 pub struct ApuBus {
     pub debug_event_collector: DebugEventCollectorRef<ApuBusEvent>,
@@ -93,6 +89,32 @@ impl Bus<AddressU16> for ApuBus {
 impl Spc700Bus for ApuBus {
     fn master_cycle(&self) -> u64 {
         self.master_cycle
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ApuBusEvent {
+    Read(AddressU16, u8),
+    Write(AddressU16, u8),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum ApuBusEventFilter {
+    MemoryRead(Range<u16>),
+    MemoryWrite(Range<u16>),
+}
+
+impl ApuBusEventFilter {
+    pub fn matches(&self, event: &ApuBusEvent) -> bool {
+        match (self, event) {
+            (ApuBusEventFilter::MemoryRead(range), ApuBusEvent::Read(addr, _)) => {
+                range.contains(&addr.0)
+            }
+            (ApuBusEventFilter::MemoryWrite(range), ApuBusEvent::Write(addr, _)) => {
+                range.contains(&addr.0)
+            }
+            _ => false,
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::fmt::Write;
+use std::ops::Range;
 use std::str::FromStr;
 
 use anyhow::bail;
@@ -18,6 +19,34 @@ use crate::common::clock::ClockInfo;
 pub enum CpuEvent {
     Step(CpuState),
     Interrupt(NativeVectorTable),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum CpuEventFilter {
+    ProgramCounter(Range<u32>),
+    Instruction(String),
+    Interrupt(Option<NativeVectorTable>),
+}
+
+impl CpuEventFilter {
+    pub fn matches(&self, event: &CpuEvent) -> bool {
+        match (self, event) {
+            (CpuEventFilter::ProgramCounter(range), CpuEvent::Step(cpu)) => {
+                range.contains(&u32::from(cpu.instruction.address))
+            }
+            (CpuEventFilter::Instruction(instr), CpuEvent::Step(cpu)) => {
+                instr == &cpu.instruction.operation
+            }
+            (CpuEventFilter::Interrupt(expected_handler), CpuEvent::Interrupt(handler)) => {
+                if let Some(expected_handler) = expected_handler {
+                    expected_handler == handler
+                } else {
+                    true
+                }
+            }
+            _ => false,
+        }
+    }
 }
 
 pub struct CpuDebug<'a, BusT: MainBus>(pub &'a Cpu<BusT>);

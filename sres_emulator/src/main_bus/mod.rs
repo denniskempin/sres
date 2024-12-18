@@ -2,6 +2,8 @@
 mod dma;
 mod multiplication;
 
+use core::ops::Range;
+
 use dma::DmaController;
 use log::trace;
 
@@ -22,6 +24,26 @@ use crate::debugger::DebuggerRef;
 pub enum MainBusEvent {
     Read(AddressU24, u8),
     Write(AddressU24, u8),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum MainBusEventFilter {
+    MemoryRead(Range<u32>),
+    MemoryWrite(Range<u32>),
+}
+
+impl MainBusEventFilter {
+    pub fn matches(&self, event: &MainBusEvent) -> bool {
+        match (self, event) {
+            (MainBusEventFilter::MemoryRead(range), MainBusEvent::Read(addr, _)) => {
+                range.contains(&u32::from(*addr))
+            }
+            (MainBusEventFilter::MemoryWrite(range), MainBusEvent::Write(addr, _)) => {
+                range.contains(&u32::from(*addr))
+            }
+            _ => false,
+        }
+    }
 }
 
 pub struct MainBusImpl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> {
