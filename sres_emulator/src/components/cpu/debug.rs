@@ -22,7 +22,7 @@ pub enum CpuEvent {
 
 pub struct CpuDebug<'a, BusT: MainBus>(pub &'a Cpu<BusT>);
 
-impl<'a, BusT: MainBus> CpuDebug<'a, BusT> {
+impl<BusT: MainBus> CpuDebug<'_, BusT> {
     pub fn state(&self) -> CpuState {
         let (instruction, _) = self.load_instruction_meta(self.0.pc);
         CpuState {

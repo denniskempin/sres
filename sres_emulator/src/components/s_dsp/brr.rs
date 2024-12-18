@@ -88,7 +88,7 @@ pub struct BrrIterator<'a> {
     memory: &'a [u8],
 }
 
-impl<'a> Iterator for BrrIterator<'a> {
+impl Iterator for BrrIterator<'_> {
     type Item = i16;
 
     fn next(&mut self) -> Option<Self::Item> {

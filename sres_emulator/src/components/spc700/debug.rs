@@ -16,7 +16,7 @@ pub enum Spc700Event {
 
 pub struct Spc700Debug<'a, BusT: Spc700Bus>(pub &'a Spc700<BusT>);
 
-impl<'a, BusT: Spc700Bus> Spc700Debug<'a, BusT> {
+impl<BusT: Spc700Bus> Spc700Debug<'_, BusT> {
     pub fn state(&self) -> Spc700State {
         Spc700State {
             instruction: self.disassembly(self.0.pc).0,

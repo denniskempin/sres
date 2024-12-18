@@ -202,8 +202,8 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
             .find(|(_, snapshot_frame)| *snapshot_frame == frame)
         {
             std::fs::write(
-                &test_dir().join(format!("{rom_name}-{test_name}.snapshot")),
-                &system.ppu().save_state(),
+                test_dir().join(format!("{rom_name}-{test_name}.snapshot")),
+                system.ppu().save_state(),
             )
             .unwrap();
         }

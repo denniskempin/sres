@@ -12,7 +12,7 @@ use crate::common::image::Image;
 
 pub struct PpuDebug<'a>(pub &'a Ppu);
 
-impl<'a> PpuDebug<'a> {
+impl PpuDebug<'_> {
     pub fn background_info(&self, background_id: BackgroundId) -> String {
         let background = self.0.state.backgrounds[background_id as usize];
         format!("Scroll ({}, {})", background.h_offset, background.v_offset)
