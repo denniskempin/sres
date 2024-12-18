@@ -603,7 +603,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.bus.cycle_io();
         self.bus.cycle_io();
         let a = self.a;
-        let a = (a >> 4) | (a << 4);
+        let a = a.rotate_left(4);
         self.update_negative_zero_flags(a);
         self.a = a;
     }

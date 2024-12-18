@@ -38,7 +38,7 @@ impl Apu {
         self.spc700.bus.dsp.generate_sample(memory)
     }
 
-    pub fn catch_up_to_master_clock(&mut self, master_clock: u64) {}
+    pub fn catch_up_to_master_clock(&mut self, _master_clock: u64) {}
 
     /// Register 2140..2144: APUION - APU IO Channels
     fn write_apuio(&mut self, addr: AddressU24, value: u8) {

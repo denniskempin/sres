@@ -2,7 +2,6 @@
 
 use std::ops::RangeInclusive;
 use std::sync::mpsc::sync_channel;
-use std::sync::mpsc::Sender;
 use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -229,6 +228,6 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
     pub fn sync(&mut self) {
         // Wait for lock to free after all actions have been processed
         // (I guess there could be a race condition if the thread has not yet started processing)
-        self.inner.lock().unwrap();
+        drop(self.inner.lock().unwrap());
     }
 }
