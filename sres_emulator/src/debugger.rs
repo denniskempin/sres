@@ -34,55 +34,107 @@ pub enum DebugEvent {
     Error(String),
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum EventFilter {
-    CpuProgramCounter(Range<u32>),
-    CpuInstruction(String),
-    CpuMemoryRead(Range<u32>),
-    CpuMemoryWrite(Range<u32>),
+    Cpu(CpuEventFilter),
+    MainBus(MainBusEventFilter),
+    ApuBus(ApuBusEventFilter),
+    Spc700(Spc700EventFilter),
     ExecutionError,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum CpuEventFilter {
+    ProgramCounter(Range<u32>),
+    Instruction(String),
     Interrupt(Option<NativeVectorTable>),
-    Spc700ProgramCounter(Range<u16>),
-    Spc700MemoryRead(Range<u16>),
-    Spc700MemoryWrite(Range<u16>),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum MainBusEventFilter {
+    MemoryRead(Range<u32>),
+    MemoryWrite(Range<u32>),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum ApuBusEventFilter {
+    MemoryRead(Range<u16>),
+    MemoryWrite(Range<u16>),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum Spc700EventFilter {
+    ProgramCounter(Range<u16>),
 }
 
 impl EventFilter {
     pub fn matches(&self, event: &DebugEvent) -> bool {
-        use DebugEvent::*;
-        use EventFilter::*;
         match (self, event) {
-            (CpuProgramCounter(range), Cpu(CpuEvent::Step(cpu))) => {
+            (EventFilter::Cpu(filter), DebugEvent::Cpu(event)) => filter.matches(event),
+            (EventFilter::MainBus(filter), DebugEvent::MainBus(event)) => filter.matches(event),
+            (EventFilter::ApuBus(filter), DebugEvent::ApuBus(event)) => filter.matches(event),
+            (EventFilter::Spc700(filter), DebugEvent::Spc700(event)) => filter.matches(event),
+            (EventFilter::ExecutionError, DebugEvent::Error(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+impl CpuEventFilter {
+    pub fn matches(&self, event: &CpuEvent) -> bool {
+        match (self, event) {
+            (CpuEventFilter::ProgramCounter(range), CpuEvent::Step(cpu)) => {
                 range.contains(&u32::from(cpu.instruction.address))
             }
-            (CpuInstruction(instr), Cpu(CpuEvent::Step(cpu))) => {
+            (CpuEventFilter::Instruction(instr), CpuEvent::Step(cpu)) => {
                 instr == &cpu.instruction.operation
             }
-            (CpuMemoryRead(range), MainBus(MainBusEvent::Read(addr, _))) => {
-                range.contains(&u32::from(*addr))
-            }
-            (CpuMemoryWrite(range), MainBus(MainBusEvent::Write(addr, _))) => {
-                range.contains(&u32::from(*addr))
-            }
-            (ExecutionError, Error(_)) => true,
-            (Interrupt(expected_handler), Cpu(CpuEvent::Interrupt(handler))) => {
+            (CpuEventFilter::Interrupt(expected_handler), CpuEvent::Interrupt(handler)) => {
                 if let Some(expected_handler) = expected_handler {
                     expected_handler == handler
                 } else {
                     true
                 }
             }
-            (Spc700ProgramCounter(range), Spc700(Spc700Event::Step(spc))) => {
+            _ => false,
+        }
+    }
+}
+
+impl MainBusEventFilter {
+    pub fn matches(&self, event: &MainBusEvent) -> bool {
+        match (self, event) {
+            (MainBusEventFilter::MemoryRead(range), MainBusEvent::Read(addr, _)) => {
+                range.contains(&u32::from(*addr))
+            }
+            (MainBusEventFilter::MemoryWrite(range), MainBusEvent::Write(addr, _)) => {
+                range.contains(&u32::from(*addr))
+            }
+            _ => false,
+        }
+    }
+}
+
+impl ApuBusEventFilter {
+    pub fn matches(&self, event: &ApuBusEvent) -> bool {
+        match (self, event) {
+            (ApuBusEventFilter::MemoryRead(range), ApuBusEvent::Read(addr, _)) => {
+                range.contains(&addr.0)
+            }
+            (ApuBusEventFilter::MemoryWrite(range), ApuBusEvent::Write(addr, _)) => {
+                range.contains(&addr.0)
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Spc700EventFilter {
+    pub fn matches(&self, event: &Spc700Event) -> bool {
+        match (self, event) {
+            (Spc700EventFilter::ProgramCounter(range), Spc700Event::Step(spc)) => {
                 range.contains(&spc.instruction.address.0)
             }
-            (Spc700MemoryRead(range), ApuBus(ApuBusEvent::Read(addr, _))) => {
-                range.contains(&addr.0)
-            }
-            (Spc700MemoryWrite(range), ApuBus(ApuBusEvent::Write(addr, _))) => {
-                range.contains(&addr.0)
-            }
-
-            _ => false,
         }
     }
 }
@@ -91,42 +143,73 @@ impl FromStr for EventFilter {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use EventFilter::*;
         let (key, arg) = s.split_once(' ').unwrap_or((s, ""));
         Ok(match key.to_lowercase().as_str() {
-            "pc" => CpuProgramCounter(parse_range(arg)?),
-            "irq" => Interrupt(if arg.is_empty() {
+            "pc" => EventFilter::Cpu(CpuEventFilter::ProgramCounter(parse_range(arg)?)),
+            "irq" => EventFilter::Cpu(CpuEventFilter::Interrupt(if arg.is_empty() {
                 None
             } else {
                 Some(NativeVectorTable::from_str(arg)?)
-            }),
-            "r" => CpuMemoryRead(parse_range(arg)?),
-            "w" => CpuMemoryWrite(parse_range(arg)?),
-            "s-pc" => Spc700ProgramCounter(parse_range(arg)?),
-            &_ => CpuInstruction(s.to_string()),
+            })),
+            "r" => EventFilter::MainBus(MainBusEventFilter::MemoryRead(parse_range(arg)?)),
+            "w" => EventFilter::MainBus(MainBusEventFilter::MemoryWrite(parse_range(arg)?)),
+            "s-pc" => EventFilter::Spc700(Spc700EventFilter::ProgramCounter(parse_range(arg)?)),
+            "error" => EventFilter::ExecutionError,
+            &_ => EventFilter::Cpu(CpuEventFilter::Instruction(s.to_string())),
         })
     }
 }
 
 impl Display for EventFilter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use EventFilter::*;
         match self {
-            CpuProgramCounter(range) => write!(f, "pc{}", format_range(range)),
-            CpuInstruction(s) => write!(f, "{}", s),
-            CpuMemoryRead(range) => write!(f, "r{}", format_range(range)),
-            CpuMemoryWrite(range) => write!(f, "w{}", format_range(range)),
-            ExecutionError => write!(f, "error"),
-            Interrupt(handler) => {
+            EventFilter::Cpu(filter) => write!(f, "{}", filter),
+            EventFilter::MainBus(filter) => write!(f, "{}", filter),
+            EventFilter::ApuBus(filter) => write!(f, "{}", filter),
+            EventFilter::Spc700(filter) => write!(f, "{}", filter),
+            EventFilter::ExecutionError => write!(f, "error"),
+        }
+    }
+}
+
+impl Display for CpuEventFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CpuEventFilter::ProgramCounter(range) => write!(f, "pc{}", format_range(range)),
+            CpuEventFilter::Instruction(s) => write!(f, "{}", s),
+            CpuEventFilter::Interrupt(handler) => {
                 if let Some(handler) = handler {
                     write!(f, "irq {}", handler)
                 } else {
                     write!(f, "irq")
                 }
             }
-            Spc700ProgramCounter(range) => write!(f, "spc-pc{}", format_range(range)),
-            Spc700MemoryRead(range) => write!(f, "spc-r{}", format_range(range)),
-            Spc700MemoryWrite(range) => write!(f, "spc-w{}", format_range(range)),
+        }
+    }
+}
+
+impl Display for MainBusEventFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MainBusEventFilter::MemoryRead(range) => write!(f, "r{}", format_range(range)),
+            MainBusEventFilter::MemoryWrite(range) => write!(f, "w{}", format_range(range)),
+        }
+    }
+}
+
+impl Display for ApuBusEventFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ApuBusEventFilter::MemoryRead(range) => write!(f, "spc-r{}", format_range(range)),
+            ApuBusEventFilter::MemoryWrite(range) => write!(f, "spc-w{}", format_range(range)),
+        }
+    }
+}
+
+impl Display for Spc700EventFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Spc700EventFilter::ProgramCounter(range) => write!(f, "spc-pc{}", format_range(range)),
         }
     }
 }
@@ -380,11 +463,10 @@ mod test {
             assert_eq!(filter.parse::<EventFilter>().unwrap(), expected);
         };
 
-        use EventFilter::*;
-        check_format("pc 0", CpuProgramCounter(0..1));
-        check_format("jmp", CpuInstruction("jmp".to_string()));
-        check_format("irq nmi", Interrupt(Some(NativeVectorTable::Nmi)));
-        check_format("r 10:1F", CpuMemoryRead(0x10..0x20));
-        check_format("w", CpuMemoryWrite(0..u32::MAX));
+        check_format("pc 0", EventFilter::Cpu(CpuEventFilter::ProgramCounter(0..1)));
+        check_format("jmp", EventFilter::Cpu(CpuEventFilter::Instruction("jmp".to_string())));
+        check_format("irq nmi", EventFilter::Cpu(CpuEventFilter::Interrupt(Some(NativeVectorTable::Nmi))));
+        check_format("r 10:1F", EventFilter::MainBus(MainBusEventFilter::MemoryRead(0x10..0x20)));
+        check_format("w", EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0..u32::MAX)));
     }
 }

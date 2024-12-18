@@ -24,8 +24,7 @@ use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::address::Wrap;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::util::RingBuffer;
-use sres_emulator::debugger::Debugger;
-use sres_emulator::debugger::EventFilter;
+use sres_emulator::debugger::{Debugger, EventFilter, CpuEventFilter, Spc700EventFilter, ApuBusEventFilter, MainBusEventFilter};
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
 
@@ -308,52 +307,52 @@ impl LogViewer {
                 style.override_text_style = Some(text_style.clone());
                 ui.horizontal(|ui| {
                     ui.label("CPU:     ");
-                    log_point_button(ui, "Step", EventFilter::CpuProgramCounter(0..u32::MAX));
-                    log_point_button(ui, "Irq", EventFilter::Interrupt(None));
+                    log_point_button(ui, "Step", EventFilter::Cpu(CpuEventFilter::ProgramCounter(0..u32::MAX)));
+                    log_point_button(ui, "Irq", EventFilter::Cpu(CpuEventFilter::Interrupt(None)));
                     log_point_button(ui, "Err", EventFilter::ExecutionError);
                     ui.label("Bus");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0..u32::MAX));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0..u32::MAX));
+                    log_point_button(ui, "R", EventFilter::MainBus(MainBusEventFilter::MemoryRead(0..u32::MAX)));
+                    log_point_button(ui, "W", EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0..u32::MAX)));
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("CPU MMIO:");
                     ui.label("PPU");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2100..0x2140));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2100..0x2140));
+                    log_point_button(ui, "R", EventFilter::MainBus(MainBusEventFilter::MemoryRead(0x2100..0x2140)));
+                    log_point_button(ui, "W", EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0x2100..0x2140)));
                     ui.label("APU");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2140..0x2144));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2140..0x2144));
+                    log_point_button(ui, "R", EventFilter::MainBus(MainBusEventFilter::MemoryRead(0x2140..0x2144)));
+                    log_point_button(ui, "W", EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0x2140..0x2144)));
                     ui.label("WRAM");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2180..0x2184));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2180..0x2184));
+                    log_point_button(ui, "R", EventFilter::MainBus(MainBusEventFilter::MemoryRead(0x2180..0x2184)));
+                    log_point_button(ui, "W", EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0x2180..0x2184)));
                     ui.label("Other");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x4016..0x4400));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x4016..0x4400));
+                    log_point_button(ui, "R", EventFilter::MainBus(MainBusEventFilter::MemoryRead(0x4016..0x4400)));
+                    log_point_button(ui, "W", EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0x4016..0x4400)));
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("SPC:     ");
-                    log_point_button(ui, "Step", EventFilter::Spc700ProgramCounter(0..u16::MAX));
+                    log_point_button(ui, "Step", EventFilter::Spc700(Spc700EventFilter::ProgramCounter(0..u16::MAX)));
                     ui.label("Bus");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0..u16::MAX));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0..u16::MAX));
+                    log_point_button(ui, "R", EventFilter::ApuBus(ApuBusEventFilter::MemoryRead(0..u16::MAX)));
+                    log_point_button(ui, "W", EventFilter::ApuBus(ApuBusEventFilter::MemoryWrite(0..u16::MAX)));
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("SPC MMIO:");
                     ui.label("Ctrl");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f1..0x00f2));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f1..0x00f2));
+                    log_point_button(ui, "R", EventFilter::ApuBus(ApuBusEventFilter::MemoryRead(0x00f1..0x00f2)));
+                    log_point_button(ui, "W", EventFilter::ApuBus(ApuBusEventFilter::MemoryWrite(0x00f1..0x00f2)));
                     ui.label("CPU");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f4..0x00f8));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f4..0x00f8));
+                    log_point_button(ui, "R", EventFilter::ApuBus(ApuBusEventFilter::MemoryRead(0x00f4..0x00f8)));
+                    log_point_button(ui, "W", EventFilter::ApuBus(ApuBusEventFilter::MemoryWrite(0x00f4..0x00f8)));
                     ui.label("DSP");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f2..0x00f4));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f2..0x00f4));
+                    log_point_button(ui, "R", EventFilter::ApuBus(ApuBusEventFilter::MemoryRead(0x00f2..0x00f4)));
+                    log_point_button(ui, "W", EventFilter::ApuBus(ApuBusEventFilter::MemoryWrite(0x00f2..0x00f4)));
                     ui.label("Timer");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00fa..0x0100));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00fa..0x0100));
+                    log_point_button(ui, "R", EventFilter::ApuBus(ApuBusEventFilter::MemoryRead(0x00fa..0x0100)));
+                    log_point_button(ui, "W", EventFilter::ApuBus(ApuBusEventFilter::MemoryWrite(0x00fa..0x0100)));
                 });
 
                 ui.separator();
