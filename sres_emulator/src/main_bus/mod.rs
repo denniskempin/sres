@@ -13,6 +13,7 @@ use crate::common::bus::Bus;
 use crate::common::bus::BusDeviceU24;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
+use crate::common::debug_events::EventFilter;
 use crate::common::uint::U16Ext;
 use crate::components::cartridge::Cartridge;
 use crate::components::cartridge::MappingMode;
@@ -32,8 +33,8 @@ pub enum MainBusEventFilter {
     MemoryWrite(Range<u32>),
 }
 
-impl MainBusEventFilter {
-    pub fn matches(&self, event: &MainBusEvent) -> bool {
+impl EventFilter<MainBusEvent> for MainBusEventFilter {
+    fn matches(&self, event: &MainBusEvent) -> bool {
         match (self, event) {
             (MainBusEventFilter::MemoryRead(range), MainBusEvent::Read(addr, _)) => {
                 range.contains(&u32::from(*addr))
@@ -42,7 +43,7 @@ impl MainBusEventFilter {
                 range.contains(&u32::from(*addr))
             }
             _ => false,
-        }
+        }    
     }
 }
 

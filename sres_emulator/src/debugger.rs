@@ -18,6 +18,9 @@ use crate::apu::ApuBusEventFilter;
 use crate::common::address::AddressU24;
 use crate::common::debug_events::DebugErrorCollector;
 use crate::common::debug_events::DebugEventCollector;
+use crate::common::debug_events::DebugEventLogger;
+use crate::common::debug_events::DebuggerConfig;
+use crate::common::debug_events::EventFilter;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::util::RingBuffer;
 use crate::components::cpu::CpuEvent;
@@ -38,8 +41,32 @@ pub enum DebugEvent {
     Error(String),
 }
 
+impl From<CpuEvent> for DebugEvent {
+    fn from(event: CpuEvent) -> Self {
+        DebugEvent::Cpu(event)
+    }
+}
+
+impl From<MainBusEvent> for DebugEvent {
+    fn from(event: MainBusEvent) -> Self {
+        DebugEvent::MainBus(event)
+    }
+}
+
+impl From<ApuBusEvent> for DebugEvent { 
+    fn from(event: ApuBusEvent) -> Self {
+        DebugEvent::ApuBus(event)
+    }
+}
+
+impl From<Spc700Event> for DebugEvent {
+    fn from(event: Spc700Event) -> Self {
+        DebugEvent::Spc700(event)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
-pub enum EventFilter {
+pub enum AnyEventFilter {
     Cpu(CpuEventFilter),
     MainBus(MainBusEventFilter),
     ApuBus(ApuBusEventFilter),
@@ -47,48 +74,72 @@ pub enum EventFilter {
     ExecutionError,
 }
 
-impl EventFilter {
+impl AnyEventFilter {
     pub fn matches(&self, event: &DebugEvent) -> bool {
         match (self, event) {
-            (EventFilter::Cpu(filter), DebugEvent::Cpu(event)) => filter.matches(event),
-            (EventFilter::MainBus(filter), DebugEvent::MainBus(event)) => filter.matches(event),
-            (EventFilter::ApuBus(filter), DebugEvent::ApuBus(event)) => filter.matches(event),
-            (EventFilter::Spc700(filter), DebugEvent::Spc700(event)) => filter.matches(event),
-            (EventFilter::ExecutionError, DebugEvent::Error(_)) => true,
+            (AnyEventFilter::Cpu(filter), DebugEvent::Cpu(event)) => filter.matches(event),
+            (AnyEventFilter::MainBus(filter), DebugEvent::MainBus(event)) => filter.matches(event),
+            (AnyEventFilter::ApuBus(filter), DebugEvent::ApuBus(event)) => filter.matches(event),
+            (AnyEventFilter::Spc700(filter), DebugEvent::Spc700(event)) => filter.matches(event),
+            (AnyEventFilter::ExecutionError, DebugEvent::Error(_)) => true,
             _ => false,
         }
     }
 }
 
-impl FromStr for EventFilter {
+impl From<CpuEventFilter> for AnyEventFilter {
+    fn from(filter: CpuEventFilter) -> Self {
+        AnyEventFilter::Cpu(filter)
+    }
+}
+
+impl From<MainBusEventFilter> for AnyEventFilter {
+    fn from(filter: MainBusEventFilter) -> Self {
+        AnyEventFilter::MainBus(filter)
+    }
+}
+
+impl From<ApuBusEventFilter> for AnyEventFilter {
+    fn from(filter: ApuBusEventFilter) -> Self {
+        AnyEventFilter::ApuBus(filter)
+    }
+}
+
+impl From<Spc700EventFilter> for AnyEventFilter {
+    fn from(filter: Spc700EventFilter) -> Self {
+        AnyEventFilter::Spc700(filter)
+    }
+}
+
+impl FromStr for AnyEventFilter {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (key, arg) = s.split_once(' ').unwrap_or((s, ""));
         Ok(match key.to_lowercase().as_str() {
-            "pc" => EventFilter::Cpu(CpuEventFilter::ProgramCounter(parse_range(arg)?)),
-            "irq" => EventFilter::Cpu(CpuEventFilter::Interrupt(if arg.is_empty() {
+            "pc" => AnyEventFilter::Cpu(CpuEventFilter::ProgramCounter(parse_range(arg)?)),
+            "irq" => AnyEventFilter::Cpu(CpuEventFilter::Interrupt(if arg.is_empty() {
                 None
             } else {
                 Some(NativeVectorTable::from_str(arg)?)
             })),
-            "r" => EventFilter::MainBus(MainBusEventFilter::MemoryRead(parse_range(arg)?)),
-            "w" => EventFilter::MainBus(MainBusEventFilter::MemoryWrite(parse_range(arg)?)),
-            "s-pc" => EventFilter::Spc700(Spc700EventFilter::ProgramCounter(parse_range(arg)?)),
-            "error" => EventFilter::ExecutionError,
-            &_ => EventFilter::Cpu(CpuEventFilter::Instruction(s.to_string())),
+            "r" => AnyEventFilter::MainBus(MainBusEventFilter::MemoryRead(parse_range(arg)?)),
+            "w" => AnyEventFilter::MainBus(MainBusEventFilter::MemoryWrite(parse_range(arg)?)),
+            "s-pc" => AnyEventFilter::Spc700(Spc700EventFilter::ProgramCounter(parse_range(arg)?)),
+            "error" => AnyEventFilter::ExecutionError,
+            &_ => AnyEventFilter::Cpu(CpuEventFilter::Instruction(s.to_string())),
         })
     }
 }
 
-impl Display for EventFilter {
+impl Display for AnyEventFilter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EventFilter::Cpu(filter) => write!(f, "{}", filter),
-            EventFilter::MainBus(filter) => write!(f, "{}", filter),
-            EventFilter::ApuBus(filter) => write!(f, "{}", filter),
-            EventFilter::Spc700(filter) => write!(f, "{}", filter),
-            EventFilter::ExecutionError => write!(f, "error"),
+            AnyEventFilter::Cpu(filter) => write!(f, "{}", filter),
+            AnyEventFilter::MainBus(filter) => write!(f, "{}", filter),
+            AnyEventFilter::ApuBus(filter) => write!(f, "{}", filter),
+            AnyEventFilter::Spc700(filter) => write!(f, "{}", filter),
+            AnyEventFilter::ExecutionError => write!(f, "error"),
         }
     }
 }
@@ -136,7 +187,7 @@ impl Display for Spc700EventFilter {
 }
 
 pub struct BreakReason {
-    pub trigger: EventFilter,
+    pub trigger: AnyEventFilter,
     pub event: DebugEvent,
 }
 
@@ -167,8 +218,8 @@ pub enum Trigger {
 pub type DebuggerRef = Rc<RefCell<Debugger>>;
 
 pub struct Debugger {
-    pub log_points: Vec<EventFilter>,
-    pub break_points: Vec<EventFilter>,
+    pub log_points: Vec<AnyEventFilter>,
+    pub break_points: Vec<AnyEventFilter>,
     pub log: RingBuffer<DebugEvent, 1024>,
     pub break_reason: Option<BreakReason>,
     pub enabled: bool,
@@ -184,6 +235,12 @@ impl Debugger {
             enabled: false,
         }))
     }
+
+    pub fn collect_events<EventT: Into<DebugEvent>, EventFilterT: EventFilter<EventT>>(&mut self, logger: &mut DebugEventLogger<EventT, EventFilterT>) {
+        for event in logger.log.drain() {
+            self.collect_debug_event(event.into());
+        }
+    } 
 
     pub fn enabled(&self) -> bool {
         self.enabled
@@ -211,21 +268,21 @@ impl Debugger {
         self.break_reason.take()
     }
 
-    pub fn has_break_point(&self, trigger: &EventFilter) -> bool {
+    pub fn has_break_point(&self, trigger: &AnyEventFilter) -> bool {
         self.break_points.iter().any(|t| t == trigger)
     }
 
-    pub fn add_break_point(&mut self, trigger: EventFilter) {
+    pub fn add_break_point(&mut self, trigger: AnyEventFilter) {
         if !self.has_break_point(&trigger) {
             self.break_points.push(trigger);
         }
     }
 
-    pub fn remove_break_point(&mut self, trigger: &EventFilter) {
+    pub fn remove_break_point(&mut self, trigger: &AnyEventFilter) {
         self.break_points.retain(|t| t != trigger)
     }
 
-    pub fn toggle_break_point(&mut self, trigger: EventFilter) {
+    pub fn toggle_break_point(&mut self, trigger: AnyEventFilter) {
         if self.has_break_point(&trigger) {
             self.remove_break_point(&trigger)
         } else {
@@ -233,21 +290,22 @@ impl Debugger {
         }
     }
 
-    pub fn has_log_point(&self, trigger: &EventFilter) -> bool {
+    pub fn has_log_point(&self, trigger: &AnyEventFilter) -> bool {
         self.log_points.iter().any(|t| t == trigger)
     }
 
-    pub fn add_log_point(&mut self, trigger: EventFilter) {
+    pub fn add_log_point(&mut self, trigger: AnyEventFilter) {
+        let trigger = trigger.into();
         if !self.has_log_point(&trigger) {
             self.log_points.push(trigger);
         }
     }
 
-    pub fn remove_log_point(&mut self, trigger: &EventFilter) {
+    pub fn remove_log_point(&mut self, trigger: &AnyEventFilter) {
         self.log_points.retain(|t| t != trigger)
     }
 
-    pub fn toggle_log_point(&mut self, trigger: EventFilter) {
+    pub fn toggle_log_point(&mut self, trigger: AnyEventFilter) {
         if self.has_log_point(&trigger) {
             self.remove_log_point(&trigger)
         } else {
@@ -309,6 +367,66 @@ impl DebugEventCollector<MainBusEvent> for Debugger {
 
 impl DebugEventCollector<()> for Debugger {
     fn on_event(&mut self, _event: ()) {}
+}
+
+pub trait DebugEventLoggerConfigBuilder<EventT, EventFilterT: EventFilter<EventT>> {
+    fn build_debug_event_logger_config(&self) -> DebuggerConfig<EventT, EventFilterT>;
+}
+
+impl DebugEventLoggerConfigBuilder<CpuEvent, CpuEventFilter> for Debugger {
+    fn build_debug_event_logger_config(&self) -> DebuggerConfig<CpuEvent, CpuEventFilter> {
+        DebuggerConfig::new(
+            self.enabled,
+            self.log_points.iter().filter_map(|filter| {
+                match filter {
+                    AnyEventFilter::Cpu(filter) => Some(filter),
+                    _ => None,
+                }
+            }).cloned().collect()
+        )
+    }
+}
+
+impl DebugEventLoggerConfigBuilder<MainBusEvent, MainBusEventFilter> for Debugger {
+    fn build_debug_event_logger_config(&self) -> DebuggerConfig<MainBusEvent, MainBusEventFilter> {
+        DebuggerConfig::new(
+            self.enabled,
+            self.log_points.iter().filter_map(|filter| {
+                match filter {
+                    AnyEventFilter::MainBus(filter) => Some(filter),
+                    _ => None,
+                }
+            }).cloned().collect()
+        )
+    }
+}
+
+impl DebugEventLoggerConfigBuilder<ApuBusEvent, ApuBusEventFilter> for Debugger {
+    fn build_debug_event_logger_config(&self) -> DebuggerConfig<ApuBusEvent, ApuBusEventFilter> {
+        DebuggerConfig::new(
+            self.enabled,
+            self.log_points.iter().filter_map(|filter| {
+                match filter {
+                    AnyEventFilter::ApuBus(filter) => Some(filter),
+                    _ => None,
+                }
+            }).cloned().collect()
+        )
+    }
+}   
+
+impl DebugEventLoggerConfigBuilder<Spc700Event, Spc700EventFilter> for Debugger {
+    fn build_debug_event_logger_config(&self) -> DebuggerConfig<Spc700Event, Spc700EventFilter> {
+        DebuggerConfig::new(
+            self.enabled,
+            self.log_points.iter().filter_map(|filter| {
+                match filter {
+                    AnyEventFilter::Spc700(filter) => Some(filter),
+                    _ => None,
+                }
+            }).cloned().collect()
+        )
+    }
 }
 
 /// Parses a hex 1234:5678 range string into a Range<u32>
@@ -379,30 +497,30 @@ mod test {
 
     #[test]
     fn test_trace_filter_format() {
-        let check_format = |filter: &str, expected: EventFilter| {
+        let check_format = |filter: &str, expected: AnyEventFilter| {
             assert_eq!(format!("{}", expected), filter);
-            assert_eq!(filter.parse::<EventFilter>().unwrap(), expected);
+            assert_eq!(filter.parse::<AnyEventFilter>().unwrap(), expected);
         };
 
         check_format(
             "pc 0",
-            EventFilter::Cpu(CpuEventFilter::ProgramCounter(0..1)),
+            AnyEventFilter::Cpu(CpuEventFilter::ProgramCounter(0..1)),
         );
         check_format(
             "jmp",
-            EventFilter::Cpu(CpuEventFilter::Instruction("jmp".to_string())),
+            AnyEventFilter::Cpu(CpuEventFilter::Instruction("jmp".to_string())),
         );
         check_format(
             "irq nmi",
-            EventFilter::Cpu(CpuEventFilter::Interrupt(Some(NativeVectorTable::Nmi))),
+            AnyEventFilter::Cpu(CpuEventFilter::Interrupt(Some(NativeVectorTable::Nmi))),
         );
         check_format(
             "r 10:1F",
-            EventFilter::MainBus(MainBusEventFilter::MemoryRead(0x10..0x20)),
+            AnyEventFilter::MainBus(MainBusEventFilter::MemoryRead(0x10..0x20)),
         );
         check_format(
             "w",
-            EventFilter::MainBus(MainBusEventFilter::MemoryWrite(0..u32::MAX)),
+            AnyEventFilter::MainBus(MainBusEventFilter::MemoryWrite(0..u32::MAX)),
         );
     }
 }

@@ -14,6 +14,7 @@ use super::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
 use crate::common::clock::ClockInfo;
+use crate::common::debug_events::EventFilter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CpuEvent {
@@ -28,8 +29,8 @@ pub enum CpuEventFilter {
     Interrupt(Option<NativeVectorTable>),
 }
 
-impl CpuEventFilter {
-    pub fn matches(&self, event: &CpuEvent) -> bool {
+impl EventFilter<CpuEvent> for CpuEventFilter {
+    fn matches(&self, event: &CpuEvent) -> bool {
         match (self, event) {
             (CpuEventFilter::ProgramCounter(range), CpuEvent::Step(cpu)) => {
                 range.contains(&u32::from(cpu.instruction.address))

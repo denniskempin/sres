@@ -9,6 +9,7 @@ use super::Spc700;
 use super::Spc700Bus;
 use crate::common::address::AddressU16;
 use crate::common::address::InstructionMeta;
+use crate::common::debug_events::EventFilter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Spc700Event {
@@ -20,8 +21,8 @@ pub enum Spc700EventFilter {
     ProgramCounter(Range<u16>),
 }
 
-impl Spc700EventFilter {
-    pub fn matches(&self, event: &Spc700Event) -> bool {
+impl EventFilter<Spc700Event> for Spc700EventFilter {
+    fn matches(&self, event: &Spc700Event) -> bool {
         match (self, event) {
             (Spc700EventFilter::ProgramCounter(range), Spc700Event::Step(spc)) => {
                 range.contains(&spc.instruction.address.0)

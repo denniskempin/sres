@@ -17,7 +17,6 @@ use crate::apu::Apu;
 use crate::apu::ApuDebug;
 use crate::common::bus::BatchedBusDeviceU24;
 use crate::common::clock::ClockInfo;
-use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::image::Image;
 use crate::components::cartridge::Cartridge;
 use crate::components::cpu::Cpu;
@@ -26,7 +25,8 @@ use crate::components::ppu::Ppu;
 use crate::debugger::BreakReason;
 use crate::debugger::Debugger;
 use crate::debugger::DebuggerRef;
-use crate::debugger::EventFilter;
+use crate::debugger::AnyEventFilter;
+use crate::debugger::DebugEventLoggerConfigBuilder;
 use crate::main_bus::MainBusImpl;
 
 pub enum ExecutionResult {
@@ -59,8 +59,7 @@ impl System {
                     BatchedBusDeviceU24::new(Ppu::new()),
                     BatchedBusDeviceU24::new(Apu::new(debugger.clone())),
                     debugger.clone(),
-                ),
-                DebugEventCollectorRef(debugger.clone()),
+                )
             ),
             debugger,
             debugger_enabled: false,
@@ -73,6 +72,7 @@ impl System {
     where
         F: Fn(&CpuT) -> bool,
     {
+        self.update_debug_logger_configs();
         loop {
             if self.cpu.halted() {
                 return ExecutionResult::Halt;
@@ -139,10 +139,11 @@ impl System {
         &mut self.apu().spc700.bus.dsp
     }
 
-    pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {
+    pub fn debug_until(&mut self, event: AnyEventFilter) -> ExecutionResult {
         self.debugger_enabled = true;
         self.debugger().enable();
         self.debugger().add_break_point(event.clone());
+        self.update_debug_logger_configs();
         let result = loop {
             if self.cpu.halted() {
                 break ExecutionResult::Halt;
@@ -163,6 +164,20 @@ impl System {
         result
     }
 
+    fn update_debug_logger_configs(&mut self) {
+        let debugger = self.debugger.deref().borrow();
+        self.cpu.debug_event_logger.config = debugger.build_debug_event_logger_config();
+    }
+
+    fn collect_debug_events(&mut self) {
+        if !self.debugger().enabled() {
+            return;
+        }
+
+        let mut debugger = self.debugger.deref().borrow_mut();
+        debugger.collect_events(&mut self.cpu.debug_event_logger);
+    }
+
     fn step(&mut self) {
         self.cpu.step();
         if self.debugger_enabled {
@@ -178,6 +193,7 @@ impl System {
             // TODO: Unnecessary clone, should use re-usable buffers or double buffering
             self.pending_video_frame = Some(self.cpu.bus.ppu.inner.framebuffer().clone());
         }
+        self.collect_debug_events();
     }
 
     /// Exposes debug information for investigating the system state.

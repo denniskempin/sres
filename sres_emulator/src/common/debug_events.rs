@@ -1,8 +1,11 @@
 //! TODO Add documentation
+use core::marker::PhantomData;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::atomic::AtomicBool;
+
+use super::util::RingBuffer;
 
 pub static DEBUG_EVENTS_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -33,6 +36,63 @@ impl<EventT> DebugEventCollectorRef<EventT> {
     pub fn on_error(&self, message: String) {
         if DEBUG_EVENTS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
             self.0.deref().borrow_mut().on_error(message);
+        }
+    }
+}
+pub trait EventFilter<EventT> {
+    fn matches(&self, event: &EventT) -> bool;
+}
+
+pub struct DebuggerConfig<EventT, EventFilterT: EventFilter<EventT>> {
+    pub enabled: bool,
+    pub event_filter: Vec<EventFilterT>,
+    pub phantom: PhantomData<EventT>,
+}
+
+impl<EventT, EventFilterT: EventFilter<EventT>> DebuggerConfig<EventT, EventFilterT> {
+ pub fn new(enabled: bool, event_filter: Vec<EventFilterT>) -> Self {
+    Self {
+        enabled,
+        event_filter,
+        phantom: PhantomData,
+    }
+ }
+}
+
+impl<EventT, EventFilterT: EventFilter<EventT>> Default for DebuggerConfig<EventT, EventFilterT> {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            event_filter: Vec::new(),
+            phantom: PhantomData,
+        }
+    }
+}
+
+pub struct DebugEventLogger<EventT, EventFilterT: EventFilter<EventT>> {
+    pub config: DebuggerConfig<EventT, EventFilterT>,
+    pub log: RingBuffer<EventT, 1024>,
+}
+
+impl<EventT, EventFilterT: EventFilter<EventT>> DebugEventLogger<EventT, EventFilterT> {
+    pub fn new() -> Self {
+        Self {
+            config: DebuggerConfig::default(),
+            log: RingBuffer::default(),
+        }
+    }
+
+    pub fn collect_event(&mut self, event: EventT) {
+        if !self.config.enabled {
+            return;
+        }
+        if self
+            .config
+            .event_filter
+            .iter()
+            .any(|filter| filter.matches(&event))
+        {
+            self.log.push(event);
         }
     }
 }

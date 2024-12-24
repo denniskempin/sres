@@ -4,7 +4,7 @@ use intbits::Bits;
 
 use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
-use crate::common::debug_events::DebugEventCollectorRef;
+use crate::common::debug_events::{DebugEventCollectorRef, EventFilter};
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
 
@@ -104,8 +104,8 @@ pub enum ApuBusEventFilter {
     MemoryWrite(Range<u16>),
 }
 
-impl ApuBusEventFilter {
-    pub fn matches(&self, event: &ApuBusEvent) -> bool {
+impl EventFilter<ApuBusEvent> for ApuBusEventFilter {
+    fn matches(&self, event: &ApuBusEvent) -> bool {
         match (self, event) {
             (ApuBusEventFilter::MemoryRead(range), ApuBusEvent::Read(addr, _)) => {
                 range.contains(&addr.0)

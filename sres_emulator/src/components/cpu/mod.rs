@@ -6,7 +6,6 @@ mod operands;
 mod status;
 mod test;
 
-use std::sync::atomic::Ordering;
 
 use intbits::Bits;
 
@@ -21,13 +20,14 @@ use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::clock::ClockInfo;
-use crate::common::debug_events::DebugEventCollectorRef;
-use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
+use crate::common::debug_events::DebugEventLogger;
+use crate::common::debug_events::DebuggerConfig;
 use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
 
 pub struct Cpu<BusT: MainBus> {
     pub bus: BusT,
+pub(crate) debug_event_logger: DebugEventLogger<CpuEvent, CpuEventFilter>,
     pc: AddressU24,
     a: VariableLengthRegister,
     x: VariableLengthRegister,
@@ -39,13 +39,12 @@ pub struct Cpu<BusT: MainBus> {
     emulation_mode: bool,
     halt: bool,
     instruction_table: [Instruction<BusT>; 256],
-    debug_event_collector: DebugEventCollectorRef<CpuEvent>,
 }
 
 const STACK_BASE: u16 = 0;
 
 impl<BusT: MainBus> Cpu<BusT> {
-    pub fn new(bus: BusT, debug_event_collector: DebugEventCollectorRef<CpuEvent>) -> Self {
+    pub fn new(bus: BusT) -> Self {
         let mut cpu = Self {
             bus,
             a: Default::default(),
@@ -59,7 +58,7 @@ impl<BusT: MainBus> Cpu<BusT> {
             emulation_mode: true,
             halt: false,
             instruction_table: build_opcode_table(),
-            debug_event_collector,
+            debug_event_logger: DebugEventLogger::new(),
         };
         cpu.reset();
         cpu
@@ -84,9 +83,9 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
-        if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
-            self.debug_event_collector
-                .on_event(CpuEvent::Step(self.debug().state()));
+        if self.debug_event_logger.config.enabled {
+            self.debug_event_logger
+                .collect_event(CpuEvent::Step(self.debug().state()));
         }
         let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
@@ -103,6 +102,10 @@ impl<BusT: MainBus> Cpu<BusT> {
         CpuDebug(self)
     }
 
+    pub fn update_debug_event_logger_config(&mut self, config: DebuggerConfig<CpuEvent, CpuEventFilter>) {
+        self.debug_event_logger.config = config;
+    }
+
     fn update_register_sizes(&mut self) {
         if self.status.index_register_size_or_break {
             self.x.value = self.x.get::<u8>() as u16;
@@ -111,8 +114,8 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     fn interrupt(&mut self, handler: NativeVectorTable) {
-        self.debug_event_collector
-            .on_event(CpuEvent::Interrupt(handler));
+        self.debug_event_logger
+            .collect_event(CpuEvent::Interrupt(handler));
         self.stack_push_u24(u32::from(self.pc));
         self.stack_push_u8(u8::from(self.status));
         self.status.irq_disable = true;

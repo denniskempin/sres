@@ -29,6 +29,10 @@ impl<T, const N: usize> RingBuffer<T, N> {
         self.stack.iter()
     }
 
+    pub fn drain(&mut self) -> std::collections::vec_deque::Drain<T> {
+        self.stack.drain(..)
+    }
+
     pub fn len(&self) -> usize {
         self.stack.len()
     }
