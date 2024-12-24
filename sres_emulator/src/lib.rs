@@ -5,8 +5,8 @@ pub mod controller;
 pub mod debugger;
 pub mod main_bus;
 
-use std::cell::RefMut;
 use std::ops::Deref;
+use std::sync::MutexGuard;
 
 use common::util::EdgeDetector;
 use components::ppu::Framebuffer;
@@ -186,8 +186,8 @@ impl System {
     }
 
     /// Exposes an interactive debugger to set break and log points.
-    pub fn debugger(&self) -> RefMut<'_, Debugger> {
-        self.debugger.deref().borrow_mut()
+    pub fn debugger(&self) -> MutexGuard<'_, Debugger> {
+        self.debugger.deref().lock().unwrap()
     }
 }
 

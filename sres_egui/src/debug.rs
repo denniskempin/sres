@@ -3,8 +3,8 @@ mod cpu;
 mod ppu;
 mod syntax;
 
-use std::cell::RefMut;
 use std::fmt::Debug;
+use std::sync::MutexGuard;
 use std::time::Duration;
 
 use apu::ApuDebugWindow;
@@ -265,7 +265,7 @@ impl Alert {
     }
 }
 
-pub fn breakpoints_widget(ui: &mut Ui, mut _debugger: RefMut<'_, Debugger>) {
+pub fn breakpoints_widget(ui: &mut Ui, mut _debugger: MutexGuard<'_, Debugger>) {
     ui.horizontal_wrapped(|_ui| {});
 }
 

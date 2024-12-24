@@ -3,13 +3,13 @@
 //! Allows internal components to notify of events during emulation (e.g. memory access),
 //! and allows the front end to set and detect breakpoints on those events.
 
-use std::cell::RefCell;
 use std::fmt::Display;
 use std::fmt::UpperHex;
 use std::ops::Range;
-use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use num_traits::PrimInt;
 
@@ -160,7 +160,7 @@ pub enum Trigger {
     Interrupt(NativeVectorTable),
 }
 
-pub type DebuggerRef = Rc<RefCell<Debugger>>;
+pub type DebuggerRef = Arc<Mutex<Debugger>>;
 
 pub struct Debugger {
     pub log_points: Vec<EventFilter>,
@@ -172,7 +172,7 @@ pub struct Debugger {
 
 impl Debugger {
     pub fn new() -> DebuggerRef {
-        Rc::new(RefCell::new(Debugger {
+        Arc::new(Mutex::new(Debugger {
             log_points: Vec::new(),
             break_points: Vec::new(),
             log: RingBuffer::default(),
