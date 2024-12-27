@@ -103,6 +103,7 @@ impl Default for PpuState {
 }
 
 impl BusDeviceU24 for Ppu {
+    const NAME: &'static str = "PPU";
     fn read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
             0x2138 => self.state.oam.read_oamdataread(),

@@ -7,6 +7,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 
+use tracing::instrument;
+
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
@@ -70,6 +72,7 @@ pub trait Bus<AddressT: Address> {
 }
 
 pub trait BusDeviceU24 {
+    const NAME: &'static str;
     fn peek(&self, addr: AddressU24) -> Option<u8>;
     fn read(&mut self, addr: AddressU24) -> u8;
     fn write(&mut self, addr: AddressU24, value: u8);
@@ -92,6 +95,8 @@ pub struct BatchedBusDeviceU24<DeviceT: BusDeviceU24> {
 }
 
 impl<DeviceT: BusDeviceU24> BusDeviceU24 for BatchedBusDeviceU24<DeviceT> {
+    const NAME: &'static str = DeviceT::NAME;
+
     fn peek(&self, addr: AddressU24) -> Option<u8> {
         self.inner.peek(addr)
     }
@@ -133,7 +138,10 @@ impl<DeviceT: BusDeviceU24> BatchedBusDeviceU24<DeviceT> {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn sync(&mut self) {
+        let cache_size = format!("{} {}", DeviceT::NAME, self.cache.len());
+        puffin::profile_function!(&cache_size);
         for action in self.cache.drain(..) {
             match action {
                 BusAction::Clock(clock) => {
@@ -158,6 +166,8 @@ pub struct AsyncBusDeviceU24<DeviceT: BusDeviceU24 + Send + 'static> {
 }
 
 impl<DeviceT: BusDeviceU24 + Send + 'static> BusDeviceU24 for AsyncBusDeviceU24<DeviceT> {
+    const NAME: &'static str = DeviceT::NAME;
+    
     fn peek(&self, addr: AddressU24) -> Option<u8> {
         self.inner.lock().unwrap().peek(addr)
     }
