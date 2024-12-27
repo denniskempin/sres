@@ -173,6 +173,7 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> BusDeviceU24 for AsyncBusDeviceU24<
     }
 
     fn read(&mut self, addr: AddressU24) -> u8 {
+        puffin::profile_function!(&DeviceT::NAME);
         self.sync();
         self.inner.lock().unwrap().read(addr)
     }
@@ -204,6 +205,8 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
         thread::spawn(move || {
             while let Ok(action) = receiver.recv() {
                 let mut inner = inner.lock().unwrap();
+                {
+                    puffin::profile_scope!("processing events", &DeviceT::NAME);
                 match action {
                     BusAction::Clock(clock) => {
                         inner.update_clock(clock);
@@ -225,6 +228,7 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
                     }
                 }
             }
+            }
         });
 
         Self {
@@ -236,6 +240,7 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
     }
 
     pub fn sync(&mut self) {
+        puffin::profile_function!(&DeviceT::NAME);
         // Wait for lock to free after all actions have been processed
         // (I guess there could be a race condition if the thread has not yet started processing)
         drop(self.inner.lock().unwrap());
