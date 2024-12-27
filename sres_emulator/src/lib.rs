@@ -11,11 +11,10 @@ use std::ops::Deref;
 use common::util::EdgeDetector;
 use components::ppu::Framebuffer;
 use components::ppu::PpuDebug;
-use components::s_dsp::SDsp;
 
 use crate::apu::Apu;
 use crate::apu::ApuDebug;
-use crate::common::bus::BatchedBusDeviceU24;
+use crate::common::bus::AsyncBusDeviceU24;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::image::Image;
@@ -34,7 +33,7 @@ pub enum ExecutionResult {
     Halt,
     Break(BreakReason),
 }
-pub type CpuT = Cpu<MainBusImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU24<Apu>>>;
+pub type CpuT = Cpu<MainBusImpl<AsyncBusDeviceU24<Ppu>, AsyncBusDeviceU24<Apu>>>;
 
 pub struct System {
     pub cpu: CpuT,
@@ -56,8 +55,8 @@ impl System {
             cpu: Cpu::new(
                 MainBusImpl::new(
                     cartridge,
-                    BatchedBusDeviceU24::new(Ppu::new()),
-                    BatchedBusDeviceU24::new(Apu::new(debugger.clone())),
+                    AsyncBusDeviceU24::new(Ppu::new()),
+                    AsyncBusDeviceU24::new(Apu::new(debugger.clone())),
                     debugger.clone(),
                 ),
                 DebugEventCollectorRef(debugger.clone()),
@@ -127,16 +126,12 @@ impl System {
         self.pending_video_frame.as_ref().map(|fb| fb.to_rgba())
     }
 
-    pub fn ppu(&mut self) -> &mut Ppu {
-        &mut self.cpu.bus.ppu.inner
+    pub fn ppu(&mut self) -> MutexGuard<'_, Ppu> {
+        self.cpu.bus.ppu.inner.lock().unwrap()
     }
 
-    pub fn apu(&mut self) -> &mut Apu {
-        &mut self.cpu.bus.apu.inner
-    }
-
-    pub fn s_dsp(&mut self) -> &mut SDsp {
-        &mut self.apu().spc700.bus.dsp
+    pub fn apu(&mut self) -> MutexGuard<'_, Apu> {
+        self.cpu.bus.apu.inner.lock().unwrap()
     }
 
     pub fn debug_until(&mut self, event: EventFilter) -> ExecutionResult {
@@ -176,13 +171,16 @@ impl System {
             self.cpu.bus.ppu.sync();
             self.cpu.bus.apu.sync();
             // TODO: Unnecessary clone, should use re-usable buffers or double buffering
-            self.pending_video_frame = Some(self.cpu.bus.ppu.inner.framebuffer().clone());
+            self.pending_video_frame = Some(self.cpu.bus.ppu.inner.lock().unwrap().framebuffer().clone());
         }
     }
 
     /// Exposes debug information for investigating the system state.
     pub fn debug(&self) -> SystemDebug<'_> {
-        SystemDebug(self)
+        SystemDebug {
+            ppu: self.cpu.bus.ppu.inner.lock().unwrap(),
+            apu: self.cpu.bus.apu.inner.lock().unwrap(),
+        }
     }
 
     /// Exposes an interactive debugger to set break and log points.
@@ -191,14 +189,17 @@ impl System {
     }
 }
 
-pub struct SystemDebug<'a>(&'a System);
+pub struct SystemDebug<'a>{
+    ppu: MutexGuard<'a, Ppu>,
+    apu: MutexGuard<'a, Apu>,
+}
 
 impl<'a> SystemDebug<'a> {
-    pub fn ppu(self) -> PpuDebug<'a> {
-        self.0.cpu.bus.ppu.inner.debug()
+    pub fn ppu(&'a self) -> PpuDebug<'a> {
+        self.ppu.debug()
     }
 
-    pub fn apu(self) -> ApuDebug<'a> {
-        self.0.cpu.bus.apu.inner.debug()
+    pub fn apu(&'a self) -> ApuDebug<'a> {
+        self.apu.debug()
     }
 }
