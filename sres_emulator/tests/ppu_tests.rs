@@ -87,7 +87,8 @@ pub fn test_krom_interlace_rpg_debug_render() {
     let rom_path = test_dir().join("krom_interlace_rpg.sfc");
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.execute_frames(10);
-    let ppu = system.debug().ppu();
+    let system_debug = system.debug();
+    let ppu = system_debug.ppu();
 
     // Debug render sprite 0
     let sprite_path = test_dir().join("krom_interlace_rpg-sprite0");
