@@ -3658,6 +3658,7 @@ dependencies = [
  "serde_path_to_error",
  "strum",
  "tempfile",
+ "tracing",
  "xz2",
 ]
 

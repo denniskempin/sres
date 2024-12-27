@@ -28,6 +28,7 @@ strum = { version = "0.26", features = ["derive"] }
 bilge = "0.2"
 bitcode = "=0.6.0"
 hound = "3.5"
+tracing = "0.1"
 
 [dev-dependencies]
 tempfile = "3.10"

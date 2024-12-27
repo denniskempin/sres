@@ -183,8 +183,8 @@ impl EmulatorApp {
 }
 
 impl eframe::App for EmulatorApp {
-    #[instrument(skip_all)]
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        puffin::profile_function!();
         puffin::GlobalProfiler::lock().new_frame();
         let start = Instant::now();
 
