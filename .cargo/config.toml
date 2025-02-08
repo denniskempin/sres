@@ -1,2 +1,10 @@
 [registries.crates-io]
 protocol = "sparse"
+
+# WASM builds need to use unstable rust to support multi threading
+# See https://rustwasm.github.io/docs/wasm-bindgen/examples/raytrace.html
+[target."wasm32-unknown-unknown"]
+rustflags = '-Ctarget-feature=+atomics,+bulk-memory,+mutable-globals'
+
+[unstable]
+build-std = ['std', 'panic_abort']
