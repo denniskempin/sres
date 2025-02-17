@@ -4,6 +4,7 @@ mod wasm;
 
 use std::collections::HashMap;
 use std::ffi::OsStr;
+use std::io::Read;
 use std::time::Duration;
 
 use eframe::CreationContext;
@@ -27,12 +28,13 @@ use tracing::instrument;
 use util::EguiImageImpl;
 use util::Instant;
 use util::RingBuffer;
+use xz2::read::XzDecoder;
 
 use self::debug::DebugUi;
 
-const PROGRAMS: &[(&str, &[u8])] = &[];
+// Include the generated ROM files
+include!(concat!(env!("OUT_DIR"), "/rom_files.rs"));
 
-const GAMES: &[(&str, &[u8])] = &[];
 pub struct EmulatorApp {
     emulator: System,
     loaded_cartridge: Option<Cartridge>,
@@ -119,16 +121,24 @@ impl EmulatorApp {
         ui.columns(2, |columns| {
             columns[0].with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
                 ui.menu_button("Programs", |ui| {
-                    for program in PROGRAMS {
-                        if ui.button(program.0).clicked() {
-                            self.load_cartridge(Cartridge::with_sfc_data(program.1, None).unwrap());
+                    for program in EMBEDDED_PROGRAMS {
+                        if ui.button(program.name).clicked() {
+                            let compressed_data = program.data;
+                            let mut decoder = XzDecoder::new(compressed_data);
+                            let mut decompressed_data = Vec::new();
+                            decoder.read_to_end(&mut decompressed_data).unwrap();
+                            self.load_cartridge(Cartridge::with_sfc_data(&decompressed_data, None).unwrap());
                         }
                     }
                 });
                 ui.menu_button("Games", |ui| {
-                    for program in GAMES {
-                        if ui.button(program.0).clicked() {
-                            self.load_cartridge(Cartridge::with_sfc_data(program.1, None).unwrap());
+                    for program in EMBEDDED_GAMES {
+                        if ui.button(program.name).clicked() {
+                            let compressed_data = program.data;
+                            let mut decoder = XzDecoder::new(compressed_data);
+                            let mut decompressed_data = Vec::new();
+                            decoder.read_to_end(&mut decompressed_data).unwrap();
+                            self.load_cartridge(Cartridge::with_sfc_data(&decompressed_data, None).unwrap());
                         }
                     }
                 });
