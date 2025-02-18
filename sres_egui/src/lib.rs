@@ -1,10 +1,11 @@
 mod debug;
+mod embedded_roms;
 pub mod util;
 mod wasm;
 
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::io::Read;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use eframe::CreationContext;
@@ -17,23 +18,22 @@ use egui::Image;
 use egui::InputState;
 use egui::Key;
 use egui::Layout;
+use egui::OpenUrl;
+use egui::RichText;
 use egui::Sense;
 use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
+use embedded_roms::RomFileInfo;
+use embedded_roms::EMBEDDED_ROMS;
 use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::controller::StandardController;
 use sres_emulator::System;
-use tracing::instrument;
 use util::EguiImageImpl;
 use util::Instant;
 use util::RingBuffer;
-use xz2::read::XzDecoder;
 
 use self::debug::DebugUi;
-
-// Include the generated ROM files
-include!(concat!(env!("OUT_DIR"), "/rom_files.rs"));
 
 pub struct EmulatorApp {
     emulator: System,
@@ -50,6 +50,7 @@ pub struct EmulatorApp {
 impl EmulatorApp {
     /// Called once before the first frame.
     pub fn new(cc: &CreationContext<'_>, cartridge: Option<Cartridge>) -> Self {
+        egui_extras::install_image_loaders(&cc.egui_ctx);
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
         let mut app = EmulatorApp {
             emulator: System::new(),
@@ -74,7 +75,6 @@ impl EmulatorApp {
 
     fn load_cartridge(&mut self, cartridge: Cartridge) {
         self.emulator = System::with_cartridge(&cartridge);
-        self.emulator.debugger().enable();
         self.loaded_cartridge = Some(cartridge);
     }
 
@@ -120,29 +120,7 @@ impl EmulatorApp {
     fn menu_bar(&mut self, ui: &mut Ui) {
         ui.columns(2, |columns| {
             columns[0].with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
-                ui.menu_button("Programs", |ui| {
-                    for program in EMBEDDED_PROGRAMS {
-                        if ui.button(program.name).clicked() {
-                            let compressed_data = program.data;
-                            let mut decoder = XzDecoder::new(compressed_data);
-                            let mut decompressed_data = Vec::new();
-                            decoder.read_to_end(&mut decompressed_data).unwrap();
-                            self.load_cartridge(Cartridge::with_sfc_data(&decompressed_data, None).unwrap());
-                        }
-                    }
-                });
-                ui.menu_button("Games", |ui| {
-                    for program in EMBEDDED_GAMES {
-                        if ui.button(program.name).clicked() {
-                            let compressed_data = program.data;
-                            let mut decoder = XzDecoder::new(compressed_data);
-                            let mut decompressed_data = Vec::new();
-                            decoder.read_to_end(&mut decompressed_data).unwrap();
-                            self.load_cartridge(Cartridge::with_sfc_data(&decompressed_data, None).unwrap());
-                        }
-                    }
-                });
-                ui.label("(Or drop an .sfc file to load it)");
+                ui.label("(Super Rust Entertainment System)");
             });
             columns[1].with_layout(Layout::right_to_left(egui::Align::Min), |ui| {
                 let avg_duration = self
@@ -190,10 +168,8 @@ impl EmulatorApp {
         ))
         .paint_at(ui, whole_rect);
     }
-}
 
-impl eframe::App for EmulatorApp {
-    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+    fn emulator_ui(&mut self, ctx: &Context) {
         puffin::profile_function!();
         puffin::GlobalProfiler::lock().new_frame();
         let start = Instant::now();
@@ -250,5 +226,66 @@ impl eframe::App for EmulatorApp {
 
         // Always repaint to keep rendering at 60Hz.
         ctx.request_repaint()
+    }
+
+    fn on_cartridge_click(&mut self, rom_info: &RomFileInfo) {
+        let path = PathBuf::from("roms").join(rom_info.path);
+        println!("Loading ROM: {:?}", path);
+        self.load_cartridge(Cartridge::with_sfc_file(&path).unwrap());
+    }
+
+    fn cartridge_card(&mut self, ctx: &Context, ui: &mut Ui, rom_info: &RomFileInfo) {
+        egui::Frame::window(ui.style()).show(ui, |ui| {
+            ui.vertical(|ui| {
+                if ui.add(
+                    egui::Image::new(rom_info.image.clone())
+                        .fit_to_exact_size(egui::Vec2::splat(256.0))
+                        .sense(Sense::click()),
+                ).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                    self.on_cartridge_click(rom_info);
+                }
+                if ui.label(RichText::new(rom_info.name).heading()).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                    self.on_cartridge_click(rom_info);
+                }
+                if let Some((author, url)) = rom_info.attribution {
+                    ui.horizontal(|ui| {
+                        ui.label("By:");
+                        if ui.link(author).clicked() {
+                        ctx.open_url(OpenUrl {
+                            url: url.to_string(),
+                            new_tab: true,
+                        });
+                    }
+                    });
+                } else {
+                    ui.label("");
+                }
+            });
+        });
+    }
+
+    fn cartridge_selector_ui(&mut self, ctx: &Context) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            for category in EMBEDDED_ROMS {
+                ui.vertical(|ui| {
+                    ui.label(RichText::new(category.name).font(FontId::proportional(32.0)));
+                    ui.horizontal(|ui| {
+                        for rom_info in category.roms {
+                            self.cartridge_card(ctx, ui, rom_info);
+                        }
+                    });
+                });
+            }
+        });
+    }
+}
+
+impl eframe::App for EmulatorApp {
+    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        if self.loaded_cartridge.is_none() {
+            self.cartridge_selector_ui(ctx);
+        } else {
+            self.emulator_ui(ctx);
+        }
     }
 }

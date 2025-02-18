@@ -10,7 +10,7 @@ use packed_struct::prelude::*;
 
 #[derive(Clone)]
 pub struct Cartridge {
-    pub mapping_mode: MappingMode,
+    pub header: SnesHeader,
     pub rom: Vec<u8>,
     pub sram: Vec<u8>,
 }
@@ -33,7 +33,7 @@ impl Cartridge {
         };
 
         Ok(Cartridge {
-            mapping_mode: header.mapping_mode,
+            header,
             rom: data.to_vec(),
             sram,
         })
@@ -52,7 +52,7 @@ impl Cartridge {
 
     pub fn with_program(program: &[u8]) -> Cartridge {
         Cartridge {
-            mapping_mode: MappingMode::LoRom,
+            header: SnesHeader::default(),
             rom: program.to_vec(),
             sram: Vec::new(),
         }
@@ -62,7 +62,7 @@ impl Cartridge {
 impl Default for Cartridge {
     fn default() -> Self {
         Self {
-            mapping_mode: MappingMode::LoRom,
+            header: SnesHeader::default(),
             rom: Vec::new(),
             sram: Vec::new(),
         }
@@ -76,12 +76,24 @@ pub enum MappingMode {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct SnesHeader {
-    name: String,
-    fast_rom: bool,
-    mapping_mode: MappingMode,
-    rom_size: usize,
-    sram_size: usize,
+pub struct SnesHeader {
+    pub name: String,
+    pub fast_rom: bool,
+    pub mapping_mode: MappingMode,
+    pub rom_size: usize,
+    pub sram_size: usize,
+}
+
+impl Default for SnesHeader {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            fast_rom: false,
+            mapping_mode: MappingMode::LoRom,
+            rom_size: 0,
+            sram_size: 0,
+        }
+    }
 }
 
 impl SnesHeader {
