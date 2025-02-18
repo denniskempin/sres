@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use argh::FromArgs;
+use egui::{vec2, ViewportBuilder};
 use sres_egui::EmulatorApp;
 use sres_emulator::common::logging;
 use sres_emulator::components::cartridge::Cartridge;
@@ -33,6 +34,7 @@ fn main() {
     };
 
     let native_options = eframe::NativeOptions {
+        viewport: ViewportBuilder::default().with_inner_size(vec2(1024.0, 768.0)),
         ..Default::default()
     };
 

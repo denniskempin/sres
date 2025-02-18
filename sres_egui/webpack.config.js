@@ -25,7 +25,10 @@ module.exports = {
   },
   plugins: [
     new CopyPlugin({
-      patterns: [{ from: "web/index.html", to: dist }],
+      patterns: [
+        { from: "web/index.html", to: dist },
+        { from: "roms", to: path.join(dist, "roms") },
+      ],
     }),
     new WasmPackPlugin({
       crateDirectory: __dirname,

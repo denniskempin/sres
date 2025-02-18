@@ -62,7 +62,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             debug_event_collector: DebugEventCollectorRef(debugger.clone()),
             joy1: 0,
             joy2: 0,
-            mapping_mode: cartridge.mapping_mode,
+            mapping_mode: cartridge.header.mapping_mode,
         }
     }
 
