@@ -3,7 +3,8 @@
 use std::path::PathBuf;
 
 use argh::FromArgs;
-use egui::{vec2, ViewportBuilder};
+use egui::vec2;
+use egui::ViewportBuilder;
 use sres_egui::EmulatorApp;
 use sres_emulator::common::logging;
 use sres_emulator::components::cartridge::Cartridge;
