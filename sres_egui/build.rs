@@ -52,12 +52,13 @@ fn create_rom_file_info(dir_path: &Path) -> String {
                     image: {},
                     attribution: {},
                     path: {:?},
-
+                    rom_data: include_bytes!({:?})
                 }},"#,
                 &rom_name(&path),
                 &rom_image(&path),
                 &rom_attribution(&path),
                 path.strip_prefix(dir_path.parent().unwrap()).unwrap(),
+                path,
             ));
         }
     }

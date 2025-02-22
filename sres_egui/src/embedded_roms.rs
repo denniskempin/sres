@@ -8,6 +8,7 @@ pub struct RomFileInfo {
     pub image: &'static [u8],
     pub attribution: Option<(&'static str, &'static str)>,
     pub path: &'static str,
+    pub rom_data: &'static [u8],
 }
 
 #[allow(dead_code)]
