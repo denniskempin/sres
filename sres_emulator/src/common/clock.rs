@@ -1,4 +1,5 @@
-use bitcode::{Decode, Encode};
+use bitcode::Decode;
+use bitcode::Encode;
 
 #[derive(Default, Clone, Copy, PartialEq, Debug, Encode, Decode)]
 pub struct ClockInfo {

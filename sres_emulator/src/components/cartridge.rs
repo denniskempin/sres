@@ -8,7 +8,7 @@ use anyhow::Result;
 use intbits::Bits;
 use packed_struct::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Cartridge {
     pub header: SnesHeader,
     pub rom: Vec<u8>,
@@ -54,16 +54,6 @@ impl Cartridge {
         Cartridge {
             header: SnesHeader::default(),
             rom: program.to_vec(),
-            sram: Vec::new(),
-        }
-    }
-}
-
-impl Default for Cartridge {
-    fn default() -> Self {
-        Self {
-            header: SnesHeader::default(),
-            rom: Vec::new(),
             sram: Vec::new(),
         }
     }

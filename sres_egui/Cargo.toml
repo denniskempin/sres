@@ -5,9 +5,6 @@ authors = ["Dennis Kempin <dennis.kempin@gmail.com>"]
 edition = "2021"
 rust-version = "1.72"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dependencies]
 anyhow = "1.0"
 argh = "0.1"
@@ -22,6 +19,7 @@ serde_json = "1.0"
 sres_emulator = { path = "../sres_emulator" }
 strum = { version = "0.26", features = ["derive"] }
 tracing = "0.1"
+log = "0.4"
 
 [build-dependencies]
 sres_emulator = { path = "../sres_emulator" }

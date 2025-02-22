@@ -3458,6 +3458,7 @@ dependencies = [
  "egui_extras",
  "image",
  "itertools 0.13.0",
+ "log",
  "puffin",
  "serde",
  "serde_json",

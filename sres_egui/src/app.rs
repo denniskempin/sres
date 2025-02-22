@@ -1,8 +1,3 @@
-mod debug;
-mod embedded_roms;
-pub mod util;
-mod wasm;
-
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::PathBuf;
@@ -25,16 +20,16 @@ use egui::Sense;
 use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
-use embedded_roms::RomFileInfo;
-use embedded_roms::EMBEDDED_ROMS;
 use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::controller::StandardController;
 use sres_emulator::System;
-use util::EguiImageImpl;
-use util::Instant;
-use util::RingBuffer;
 
-use self::debug::DebugUi;
+use crate::debug::DebugUi;
+use crate::embedded_roms::RomFileInfo;
+use crate::embedded_roms::EMBEDDED_ROMS;
+use crate::util::EguiImageImpl;
+use crate::util::Instant;
+use crate::util::RingBuffer;
 
 pub struct EmulatorApp {
     emulator: System,

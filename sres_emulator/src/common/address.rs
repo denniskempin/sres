@@ -94,7 +94,7 @@ impl Address for AddressU24 {
 impl From<AddressU24> for u32 {
     #[inline]
     fn from(addr: AddressU24) -> Self {
-        (addr.bank as u32) << 16 | (addr.offset as u32)
+        ((addr.bank as u32) << 16) | (addr.offset as u32)
     }
 }
 
