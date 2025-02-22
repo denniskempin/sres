@@ -20,6 +20,7 @@ sres_emulator = { path = "../sres_emulator" }
 strum = { version = "0.26", features = ["derive"] }
 tracing = "0.1"
 log = "0.4"
+lazy_static = "1.5.0"
 
 [build-dependencies]
 sres_emulator = { path = "../sres_emulator" }
