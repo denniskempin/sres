@@ -15,6 +15,7 @@ use egui::Context;
 use egui::DroppedFile;
 use egui::FontId;
 use egui::Image;
+use egui::ImageSource;
 use egui::InputState;
 use egui::Key;
 use egui::Layout;
@@ -237,25 +238,36 @@ impl EmulatorApp {
     fn cartridge_card(&mut self, ctx: &Context, ui: &mut Ui, rom_info: &RomFileInfo) {
         egui::Frame::window(ui.style()).show(ui, |ui| {
             ui.vertical(|ui| {
-                if ui.add(
-                    egui::Image::new(rom_info.image.clone())
+                if ui
+                    .add(
+                        egui::Image::new(ImageSource::Bytes {
+                            uri: rom_info.path.into(),
+                            bytes: egui::load::Bytes::Static(rom_info.image),
+                        })
                         .fit_to_exact_size(egui::Vec2::splat(256.0))
                         .sense(Sense::click()),
-                ).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                    )
+                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                    .clicked()
+                {
                     self.on_cartridge_click(rom_info);
                 }
-                if ui.label(RichText::new(rom_info.name).heading()).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                if ui
+                    .label(RichText::new(rom_info.name).heading())
+                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                    .clicked()
+                {
                     self.on_cartridge_click(rom_info);
                 }
                 if let Some((author, url)) = rom_info.attribution {
                     ui.horizontal(|ui| {
                         ui.label("By:");
                         if ui.link(author).clicked() {
-                        ctx.open_url(OpenUrl {
-                            url: url.to_string(),
-                            new_tab: true,
-                        });
-                    }
+                            ctx.open_url(OpenUrl {
+                                url: url.to_string(),
+                                new_tab: true,
+                            });
+                        }
                     });
                 } else {
                     ui.label("");

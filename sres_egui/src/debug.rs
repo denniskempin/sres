@@ -165,7 +165,7 @@ impl DebugUi {
         }
     }
 
-pub fn run_emulator(&mut self, emulator: &mut System, delta_t: f64) {
+    pub fn run_emulator(&mut self, emulator: &mut System, delta_t: f64) {
         puffin::profile_function!();
         if let Some(command) = self.command {
             match self.run_command(emulator, command, delta_t) {

@@ -21,7 +21,7 @@ fn rom_name(path: &Path) -> &str {
 fn rom_image(path: &Path) -> String {
     let image_path = path.with_extension("png");
     if image_path.exists() {
-        format!("include_image!({:?})", image_path)
+        format!("include_bytes!({:?})", image_path)
     } else {
         "DEFAULT_IMAGE".to_string()
     }
