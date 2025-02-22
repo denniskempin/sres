@@ -18,11 +18,21 @@ pub fn start_app(canvas_id: &str) {
     // Redirect tracing to console.log and friends:
     tracing_wasm::set_as_global_default();
 
-    let canvas_id_owned = canvas_id.to_owned();
+    let document = web_sys::window()
+        .expect("No window")
+        .document()
+        .expect("No document");
+
+    let canvas = document
+        .get_element_by_id(canvas_id)
+        .expect("Failed to find the_canvas_id")
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .expect("the_canvas_id was not a HtmlCanvasElement");
+
     wasm_bindgen_futures::spawn_local(async move {
         eframe::WebRunner::new()
             .start(
-                &canvas_id_owned,
+                canvas,
                 Default::default(),
                 Box::new(|cc| {
                     let storage = web_sys::window().unwrap().local_storage().unwrap().unwrap();
@@ -30,7 +40,7 @@ pub fn start_app(canvas_id: &str) {
                     let initial_rom = initial_rom.map(|raw| {
                         Cartridge::with_sfc_data(&STANDARD.decode(raw).unwrap(), None).unwrap()
                     });
-                    Box::new(EmulatorApp::new(cc, initial_rom))
+                    Ok(Box::new(EmulatorApp::new(cc, initial_rom)))
                 }),
             )
             .await

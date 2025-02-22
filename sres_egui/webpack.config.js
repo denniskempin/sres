@@ -22,6 +22,9 @@ module.exports = {
   devServer: {
     static: dist,
     allowedHosts: 'all',
+    client: {
+      overlay:false,
+    },
   },
   plugins: [
     new CopyPlugin({

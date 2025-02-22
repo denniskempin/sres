@@ -59,7 +59,7 @@ impl MemoryViewer {
                     Label::new(RichText::new(
                         "      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F",
                     ))
-                    .wrap(false),
+                    .wrap_mode(egui::TextWrapMode::Extend),
                 );
 
                 let text_style = TextStyle::Body;
@@ -88,7 +88,7 @@ impl MemoryViewer {
                             .join(" ");
                         ui.add(
                             Label::new(RichText::new(format!("{}: {}", addr, bytes_str)))
-                                .wrap(false),
+                                .wrap_mode(egui::TextWrapMode::Extend),
                         );
                     }
                 });
@@ -188,9 +188,9 @@ impl DebugUi {
         self.apu_debug.show(ctx, emulator);
         self.memory_viewer
             .show(ctx, |addr| emulator.cpu.bus.peek_u8(addr));
-        if self.show_profiler && !puffin_egui::profiler_window(ctx) {
+        /* if self.show_profiler && !puffin_egui::profiler_window(ctx) {
             self.show_profiler = false;
-        }
+        } */
         self.log_viewer
             .show(ctx, emulator, &mut self.selected_memory_location);
     }
