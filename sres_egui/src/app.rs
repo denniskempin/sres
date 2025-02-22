@@ -227,7 +227,7 @@ impl EmulatorApp {
     fn on_cartridge_click(&mut self, rom_info: &RomFileInfo) {
         let path = PathBuf::from("roms").join(rom_info.path);
         println!("Loading ROM: {:?}", path);
-        self.load_cartridge(Cartridge::with_sfc_file(&path).unwrap());
+        self.load_cartridge(Cartridge::with_sfc_data(&rom_info.rom_data, None).unwrap());
     }
 
     fn cartridge_card(&mut self, ctx: &Context, ui: &mut Ui, rom_info: &RomFileInfo) {
