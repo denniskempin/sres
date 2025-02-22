@@ -365,7 +365,7 @@ impl U8Ext for u8 {
 
     #[inline]
     fn set_high_nibble(&mut self, high: u8) {
-        *self = *self & 0x0f | (high & 0x0f) << 4;
+        *self = (*self & 0x0f) | ((high & 0x0f) << 4);
     }
 
     #[inline]

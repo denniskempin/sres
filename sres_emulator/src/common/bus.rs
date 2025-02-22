@@ -167,7 +167,7 @@ pub struct AsyncBusDeviceU24<DeviceT: BusDeviceU24 + Send + 'static> {
 
 impl<DeviceT: BusDeviceU24 + Send + 'static> BusDeviceU24 for AsyncBusDeviceU24<DeviceT> {
     const NAME: &'static str = DeviceT::NAME;
-    
+
     fn peek(&self, addr: AddressU24) -> Option<u8> {
         self.inner.lock().unwrap().peek(addr)
     }
@@ -241,5 +241,4 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
             }
         }
     }
-
 }

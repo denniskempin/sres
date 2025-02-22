@@ -62,7 +62,7 @@ impl Apu {
 
 impl BusDeviceU24 for Apu {
     const NAME: &'static str = "APU";
-    
+
     fn read(&mut self, addr: AddressU24) -> u8 {
         self.read_apuio(addr)
     }

@@ -11,8 +11,8 @@ fn rom_name(path: &Path) -> &str {
         .unwrap()
         .strip_suffix(".sfc")
         .unwrap();
-    if name.starts_with("_") {
-        &name[1..]
+    if let Some(stripped) = name.strip_prefix("_") {
+        stripped
     } else {
         name
     }
@@ -72,7 +72,7 @@ fn create_category_info(dir_path: &Path) -> String {
         roms: &[{}]
     }},"#,
         dir_path.file_name().unwrap().to_str().unwrap(),
-        create_rom_file_info(&dir_path)
+        create_rom_file_info(dir_path)
     )
 }
 

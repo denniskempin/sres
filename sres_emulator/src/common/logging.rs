@@ -70,7 +70,7 @@ impl Log for SresLogger {
             trace_logs.push_front(record_str);
             trace_logs.truncate(TRACE_CONTEXT_LINES);
         } else {
-            if trace_logs.len() > 0 {
+            if !trace_logs.is_empty() {
                 if trace_logs.len() == TRACE_CONTEXT_LINES {
                     println!("{}", "...".dimmed());
                 }

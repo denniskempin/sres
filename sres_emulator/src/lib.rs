@@ -189,7 +189,7 @@ impl System {
     }
 }
 
-pub struct SystemDebug<'a>{
+pub struct SystemDebug<'a> {
     ppu: &'a Ppu,
     apu: &'a Apu,
 }
