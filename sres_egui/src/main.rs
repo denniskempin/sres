@@ -47,7 +47,7 @@ fn main() {
     eframe::run_native(
         "Super Rust Entertainment System",
         native_options,
-        Box::new(|cc| Box::new(EmulatorApp::new(cc, cartridge))),
+        Box::new(|cc| Ok(Box::new(EmulatorApp::new(cc, cartridge)))),
     )
     .unwrap();
 }

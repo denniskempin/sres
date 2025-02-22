@@ -11,13 +11,12 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "1.0"
 argh = "0.1"
-eframe = "0.27"
-egui = "0.27"
-egui_extras = { version = "0.27", features = ["image"] }
+eframe = "0.31"
+egui = "0.31"
+egui_extras = { version = "0.31", features = ["image"] }
 image = { version = "0.25", features = ["png"] }
 itertools = "*"
 puffin = "0.19"
-puffin_egui = "0.27"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sres_emulator = { path = "../sres_emulator" }
