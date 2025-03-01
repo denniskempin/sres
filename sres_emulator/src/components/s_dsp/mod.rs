@@ -45,7 +45,7 @@ impl SDsp {
         self.voices
             .iter_mut()
             .map(|v| v.generate_sample(memory, dir))
-            .sum()
+            .fold(0i16, |acc, x| acc.saturating_add(x))
     }
 
     pub fn debug(&self) -> SDspDebug<'_> {

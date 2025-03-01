@@ -32,6 +32,10 @@ impl<T, const N: usize> RingBuffer<T, N> {
     pub fn len(&self) -> usize {
         self.stack.len()
     }
+
+    pub fn drain(&mut self) -> impl Iterator<Item = T> + '_ {
+        self.stack.drain(..)
+    }
 }
 
 impl<T, const N: usize> Default for RingBuffer<T, N> {

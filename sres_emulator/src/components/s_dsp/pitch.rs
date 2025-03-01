@@ -34,7 +34,6 @@ impl PitchGenerator {
             input.next().unwrap_or_default(),
         ];
         self.counter = PitchCounter::default();
-        dbg!(self);
     }
 
     pub fn generate_sample(&mut self, pitch: u16, input: &mut impl Iterator<Item = i16>) -> i16 {
