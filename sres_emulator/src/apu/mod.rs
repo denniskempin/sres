@@ -3,6 +3,7 @@ mod apu_bus;
 mod test;
 
 use log::debug;
+use log::error;
 
 use self::apu_bus::ApuBus;
 pub use self::apu_bus::ApuBusEvent;
@@ -14,8 +15,24 @@ use crate::components::s_dsp::SDspDebug;
 use crate::components::spc700::Spc700;
 use crate::debugger::DebuggerRef;
 
+// SNES APU sample rate is 32kHz
+pub const APU_SAMPLE_RATE: u32 = 32000;
+// Master clock frequency is ~21.47 MHz
+pub const MASTER_CLOCK_FREQUENCY: u64 = 21477272;
+// Number of master clock cycles per audio sample
+pub const CYCLES_PER_SAMPLE: u64 = MASTER_CLOCK_FREQUENCY / APU_SAMPLE_RATE as u64;
+
+// Buffer size for audio samples (about 1/4 second at 32kHz)
+pub const AUDIO_BUFFER_SIZE: usize = 8192;
+
 pub struct Apu {
     pub spc700: Spc700<ApuBus>,
+    /// Buffer to store audio samples
+    sample_buffer: Vec<i16>,
+    /// Last master clock cycle when a sample was generated
+    last_sample_cycle: u64,
+    /// Whether the audio sample buffer has overflowed
+    overflow: bool,
 }
 
 impl Apu {
@@ -26,6 +43,9 @@ impl Apu {
                 ApuBus::new(DebugEventCollectorRef(debugger.clone())),
                 DebugEventCollectorRef(debugger.clone()),
             ),
+            sample_buffer: Vec::with_capacity(AUDIO_BUFFER_SIZE),
+            last_sample_cycle: 0,
+            overflow: false,
         }
     }
 
@@ -33,12 +53,17 @@ impl Apu {
         ApuDebug(self)
     }
 
+    /// Take all available audio samples that have been generated so far
+    pub fn take_audio_samples(&mut self) -> impl Iterator<Item = i16> + '_ {
+        self.overflow = false;
+        self.sample_buffer.drain(..)
+    }
+
+    // Generate a single audio sample
     pub fn generate_sample(&mut self) -> i16 {
         let memory = &self.spc700.bus.ram;
         self.spc700.bus.dsp.generate_sample(memory)
     }
-
-    pub fn catch_up_to_master_clock(&mut self, _master_clock: u64) {}
 
     /// Register 2140..2144: APUION - APU IO Channels
     fn write_apuio(&mut self, addr: AddressU24, value: u8) {
@@ -76,10 +101,26 @@ impl BusDeviceU24 for Apu {
     }
 
     fn update_clock(&mut self, new_clock: ClockInfo) {
+        while new_clock.master_clock - self.last_sample_cycle >= CYCLES_PER_SAMPLE {
+            self.last_sample_cycle += CYCLES_PER_SAMPLE;
+            self.spc700.catch_up_to_master_clock(new_clock.master_clock);
+
+            let sample = self.generate_sample();
+            if self.sample_buffer.len() < AUDIO_BUFFER_SIZE {
+                self.sample_buffer.push(sample);
+            } else if !self.overflow {
+                self.overflow = true;
+                error!("APU audio sample buffer overflow");
+            }
+        }
         self.spc700.catch_up_to_master_clock(new_clock.master_clock);
     }
 
-    fn reset(&mut self) {}
+    fn reset(&mut self) {
+        self.last_sample_cycle = 0;
+        self.overflow = false;
+        self.sample_buffer = Vec::with_capacity(AUDIO_BUFFER_SIZE);
+    }
 }
 
 pub struct ApuDebug<'a>(&'a Apu);
