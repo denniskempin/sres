@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::path::PathBuf;
 use std::time::Duration;
 
 use eframe::CreationContext;
@@ -10,12 +9,9 @@ use egui::Context;
 use egui::DroppedFile;
 use egui::FontId;
 use egui::Image;
-use egui::ImageSource;
 use egui::InputState;
 use egui::Key;
 use egui::Layout;
-use egui::OpenUrl;
-use egui::RichText;
 use egui::Sense;
 use egui::TextureHandle;
 use egui::TextureOptions;
@@ -25,8 +21,7 @@ use sres_emulator::controller::StandardController;
 use sres_emulator::System;
 
 use crate::debug::DebugUi;
-use crate::embedded_roms::RomFileInfo;
-use crate::embedded_roms::EMBEDDED_ROMS;
+use crate::home;
 use crate::util::EguiImageImpl;
 use crate::util::Instant;
 use crate::util::RingBuffer;
@@ -69,7 +64,7 @@ impl EmulatorApp {
         app
     }
 
-    fn load_cartridge(&mut self, cartridge: Cartridge) {
+    pub fn load_cartridge(&mut self, cartridge: Cartridge) {
         self.emulator = System::with_cartridge(&cartridge);
         self.loaded_cartridge = Some(cartridge);
     }
@@ -116,7 +111,10 @@ impl EmulatorApp {
     fn menu_bar(&mut self, ui: &mut Ui) {
         ui.columns(2, |columns| {
             columns[0].with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
-                ui.label("(Super Rust Entertainment System)");
+                if ui.link("Super Rust Entertainment System").clicked() {
+                    // Unload cartridge to return to home screen
+                    self.loaded_cartridge = None;
+                }
             });
             columns[1].with_layout(Layout::right_to_left(egui::Align::Min), |ui| {
                 let avg_duration = self
@@ -223,74 +221,14 @@ impl EmulatorApp {
         // Always repaint to keep rendering at 60Hz.
         ctx.request_repaint()
     }
-
-    fn on_cartridge_click(&mut self, rom_info: &RomFileInfo) {
-        let path = PathBuf::from("roms").join(rom_info.path);
-        println!("Loading ROM: {:?}", path);
-        self.load_cartridge(Cartridge::with_sfc_data(&rom_info.rom_data, None).unwrap());
-    }
-
-    fn cartridge_card(&mut self, ctx: &Context, ui: &mut Ui, rom_info: &RomFileInfo) {
-        egui::Frame::window(ui.style()).show(ui, |ui| {
-            ui.vertical(|ui| {
-                if ui
-                    .add(
-                        egui::Image::new(ImageSource::Bytes {
-                            uri: rom_info.path.into(),
-                            bytes: egui::load::Bytes::Static(rom_info.image),
-                        })
-                        .fit_to_exact_size(egui::Vec2::splat(256.0))
-                        .sense(Sense::click()),
-                    )
-                    .on_hover_cursor(egui::CursorIcon::PointingHand)
-                    .clicked()
-                {
-                    self.on_cartridge_click(rom_info);
-                }
-                if ui
-                    .label(RichText::new(rom_info.name).heading())
-                    .on_hover_cursor(egui::CursorIcon::PointingHand)
-                    .clicked()
-                {
-                    self.on_cartridge_click(rom_info);
-                }
-                if let Some((author, url)) = rom_info.attribution {
-                    ui.horizontal(|ui| {
-                        ui.label("By:");
-                        if ui.link(author).clicked() {
-                            ctx.open_url(OpenUrl {
-                                url: url.to_string(),
-                                new_tab: true,
-                            });
-                        }
-                    });
-                } else {
-                    ui.label("");
-                }
-            });
-        });
-    }
-
-    fn cartridge_selector_ui(&mut self, ctx: &Context) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            for category in EMBEDDED_ROMS {
-                ui.vertical(|ui| {
-                    ui.label(RichText::new(category.name).font(FontId::proportional(32.0)));
-                    ui.horizontal(|ui| {
-                        for rom_info in category.roms {
-                            self.cartridge_card(ctx, ui, rom_info);
-                        }
-                    });
-                });
-            }
-        });
-    }
 }
 
 impl eframe::App for EmulatorApp {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         if self.loaded_cartridge.is_none() {
-            self.cartridge_selector_ui(ctx);
+            home::home_screen(ctx, |cartridge| {
+                self.load_cartridge(cartridge);
+            });
         } else {
             self.emulator_ui(ctx);
         }
