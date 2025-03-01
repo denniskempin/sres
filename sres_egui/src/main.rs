@@ -1,6 +1,7 @@
 pub mod app;
 pub mod debug;
 pub mod embedded_roms;
+pub mod home;
 pub mod util;
 
 use app::EmulatorApp;
