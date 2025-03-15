@@ -12,6 +12,8 @@ pub struct BrrDecoder {
     end: bool,
     memory_index: usize,
     current_block: VecDeque<i16>,
+    loop_addr: Option<usize>,
+    last_block_header: Option<BrrBlockHeader>,
 }
 
 impl BrrDecoder {
@@ -21,11 +23,17 @@ impl BrrDecoder {
             end: false,
             memory_index,
             current_block: VecDeque::with_capacity(16),
+            loop_addr: None,
+            last_block_header: None,
         }
     }
 
     pub fn reset(&mut self, memory_index: usize) {
         *self = BrrDecoder::new(memory_index);
+    }
+
+    pub fn set_loop_addr(&mut self, loop_addr: usize) {
+        self.loop_addr = Some(loop_addr);
     }
 
     pub fn iter<'a>(&'a mut self, memory: &'a [u8]) -> BrrIterator<'a> {
@@ -38,12 +46,32 @@ impl BrrDecoder {
     pub fn next_sample(&mut self, memory: &[u8]) -> Option<i16> {
         if self.current_block.is_empty() {
             if self.end {
-                return None;
+                // Check if we should loop (only if last block had loop flag set)
+                if let Some(header) = self.last_block_header {
+                    if header.loop_flag() && self.loop_addr.is_some() {
+                        // Reset decoder state for looping
+                        self.buffer = [0, 0];
+                        self.end = false;
+                        self.memory_index = self.loop_addr.unwrap();
+                        self.current_block.clear();
+                        self.last_block_header = None;
+                    } else {
+                        return None;
+                    }
+                } else {
+                    return None;
+                }
             }
-            // TODO: Wrapping
             let new_index = self.memory_index + 9;
-            let samples =
-                self.decode_bytes(memory[self.memory_index..new_index].try_into().unwrap());
+            let block =
+                BrrBlock::from_bytes(memory[self.memory_index..new_index].try_into().unwrap());
+
+            // Store header if this is an end block
+            if block.header.end() {
+                self.last_block_header = Some(block.header);
+            }
+
+            let samples = self.decode(&block);
             self.current_block.extend(samples.iter());
             self.memory_index = new_index;
         }
