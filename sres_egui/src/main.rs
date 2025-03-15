@@ -1,4 +1,5 @@
 pub mod app;
+pub mod audio;
 pub mod debug;
 pub mod embedded_roms;
 pub mod home;

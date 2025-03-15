@@ -20,6 +20,7 @@ use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::controller::StandardController;
 use sres_emulator::System;
 
+use crate::audio::AudioOutput;
 use crate::debug::DebugUi;
 use crate::home;
 use crate::util::EguiImageImpl;
@@ -32,6 +33,7 @@ pub struct EmulatorApp {
     framebuffer_texture: TextureHandle,
     debug_ui: DebugUi,
     past_frame_times: RingBuffer<Duration, 60>,
+    audio_output: AudioOutput,
 
     input_recording_active: bool,
     input_recording_last: u16,
@@ -53,6 +55,7 @@ impl EmulatorApp {
             ),
             debug_ui: DebugUi::new(cc),
             past_frame_times: RingBuffer::default(),
+            audio_output: AudioOutput::new(),
             input_recording: HashMap::new(),
             input_recording_last: 0,
             input_recording_active: false,
@@ -67,6 +70,8 @@ impl EmulatorApp {
     pub fn load_cartridge(&mut self, cartridge: Cartridge) {
         self.emulator = System::with_cartridge(&cartridge);
         self.loaded_cartridge = Some(cartridge);
+        // Start audio output when a cartridge is loaded
+        self.audio_output.start();
     }
 
     fn load_dropped_file(&mut self, drop: &DroppedFile) {
@@ -206,6 +211,9 @@ impl EmulatorApp {
                 self.debug_ui.bottom_debug_panel(ui, &self.emulator);
             });
         }
+
+        // Update audio output with new samples from the APU
+        self.audio_output.update(&mut self.emulator);
 
         // Render emulator display
         egui::CentralPanel::default().show(ctx, |ui| {
