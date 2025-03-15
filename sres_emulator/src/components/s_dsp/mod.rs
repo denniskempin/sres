@@ -13,38 +13,47 @@ use crate::common::uint::U8Ext;
 pub struct SDsp {
     raw: [u8; 128],
     voices: [Voice; 8],
+    dir: u8,
 }
 
 impl SDsp {
     pub fn read_register(&self, reg: u8) -> u8 {
-        match reg.low_nibble() {
-            0x0..=0x9 => self.voices[reg.high_nibble() as usize].read_register(reg.low_nibble()),
-            _ => self.raw[reg as usize],
+        match reg {
+            0x5D => self.dir,
+            reg => match reg.low_nibble() {
+                0x0..=0x9 => {
+                    self.voices[reg.high_nibble() as usize].read_register(reg.low_nibble())
+                }
+                _ => self.raw[reg as usize],
+            },
         }
     }
 
     pub fn write_register(&mut self, reg: u8, value: u8) {
-        match reg.low_nibble() {
-            0x0..=0x9 => {
-                self.voices[reg.high_nibble() as usize].write_register(reg.low_nibble(), value)
-            }
-            0xC => match reg.high_nibble() {
-                0x4 => {
-                    for (idx, voice) in self.voices.iter_mut().enumerate() {
-                        voice.trigger_on = value.bit(idx);
-                    }
+        match reg {
+            0x5D => self.dir = value,
+            reg => match reg.low_nibble() {
+                0x0..=0x9 => {
+                    self.voices[reg.high_nibble() as usize].write_register(reg.low_nibble(), value)
                 }
-                _ => {}
+                0xC => match reg.high_nibble() {
+                    0x4 => {
+                        for (idx, voice) in self.voices.iter_mut().enumerate() {
+                            voice.trigger_on = value.bit(idx);
+                        }
+                    }
+                    _ => {}
+                },
+                _ => self.raw[reg as usize] = value,
             },
-            _ => self.raw[reg as usize] = value,
         }
     }
 
     pub fn generate_sample(&mut self, memory: &[u8]) -> i16 {
-        let dir = 0; // TODO
+        let directory_offset = (self.dir as usize) * 0x100;
         self.voices
             .iter_mut()
-            .map(|v| v.generate_sample(memory, dir))
+            .map(|v| v.generate_sample(memory, directory_offset))
             .fold(0i16, |acc, x| acc.saturating_add(x))
     }
 
@@ -67,6 +76,7 @@ impl Default for SDsp {
                 Voice::default(),
                 Voice::default(),
             ],
+            dir: 0,
         }
     }
 }

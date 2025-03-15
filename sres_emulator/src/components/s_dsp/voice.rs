@@ -94,20 +94,20 @@ impl Voice {
 
     pub fn dir_info(&self, memory: &[u8], dir: usize) -> (u16, u16) {
         let source_addr = dir + self.sample_source as usize * 4;
-        let start_addr = u16::from_le_bytes([memory[source_addr], memory[source_addr + 1]]) * 2;
-        let loop_addr = u16::from_le_bytes([memory[source_addr + 2], memory[source_addr + 3]]) * 2;
+        let start_addr = u16::from_le_bytes([memory[source_addr], memory[source_addr + 1]]);
+        let loop_addr = u16::from_le_bytes([memory[source_addr + 2], memory[source_addr + 3]]);
         (start_addr, loop_addr)
     }
 
     pub fn generate_sample(&mut self, memory: &[u8], dir: usize) -> i16 {
         if self.trigger_on {
-            let (start_addr, _) = self.dir_info(memory, dir);
+            let (start_addr, loop_addr) = self.dir_info(memory, dir);
             self.brr_decoder.reset(start_addr as usize);
+            self.brr_decoder.set_loop_addr(loop_addr as usize);
             self.pitch_generator
                 .init(&mut self.brr_decoder.iter(memory));
             self.trigger_on = false;
         }
-        // TODO: loop addr is not handled
         self.pitch_generator
             .generate_sample(self.pitch, &mut self.brr_decoder.iter(memory))
     }
