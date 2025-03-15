@@ -126,6 +126,10 @@ impl System {
         self.pending_video_frame.as_ref().map(|fb| fb.to_rgba())
     }
 
+    pub fn take_pending_audio_buffer(&mut self) -> Option<Vec<i16>> {
+        self.cpu.bus.apu.inner.take_pending_audio_buffer()
+    }
+
     pub fn ppu(&mut self) -> &mut Ppu {
         &mut self.cpu.bus.ppu.inner
     }
