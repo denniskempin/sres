@@ -99,7 +99,13 @@ impl Voice {
         (start_addr, loop_addr)
     }
 
-    pub fn generate_sample(&mut self, memory: &[u8], dir: usize) -> i16 {
+    pub fn generate_sample_with_noise(
+        &mut self,
+        memory: &[u8],
+        dir: usize,
+        use_noise: bool,
+        noise_bits: u16,
+    ) -> i16 {
         if self.trigger_on {
             let (start_addr, loop_addr) = self.dir_info(memory, dir);
             self.brr_decoder.reset(start_addr as usize);
@@ -108,8 +114,23 @@ impl Voice {
                 .init(&mut self.brr_decoder.iter(memory));
             self.trigger_on = false;
         }
-        self.pitch_generator
-            .generate_sample(self.pitch, &mut self.brr_decoder.iter(memory))
+
+        let sample = if use_noise {
+            // Use bit 0 of noise_bits as the noise sample
+            if noise_bits & 1 == 0 {
+                -0x4000
+            } else {
+                0x4000
+            }
+        } else {
+            self.pitch_generator
+                .generate_sample(self.pitch, &mut self.brr_decoder.iter(memory))
+        };
+
+        // Apply volume
+        let left = ((sample as i32) * (self.vol_l as i32)) >> 7;
+        let right = ((sample as i32) * (self.vol_r as i32)) >> 7;
+        (left + right) as i16
     }
 }
 
@@ -189,7 +210,7 @@ mod test {
         // 0x0400: Sample data
         let mut memory = [0_u8; 0x10000];
         memory[0x0300] = 0x00;
-        memory[0x0301] = 0x02;
+        memory[0x0301] = 0x04;
         memory[0x0400..0x0400 + brr_data.len()].copy_from_slice(&brr_data);
 
         let mut voice = Voice {
@@ -209,7 +230,7 @@ mod test {
 
         const NUM_SAMPLES: usize = 7936; // Length of the play_brr_sample sample
         let output: Vec<i16> = (0..NUM_SAMPLES)
-            .map(|_| voice.generate_sample(&memory, 0x0300))
+            .map(|_| voice.generate_sample_with_noise(&memory, 0x0300, false, 0))
             .collect();
         compare_wav_against_golden(&output, &prefix)
     }
