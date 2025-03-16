@@ -8,9 +8,6 @@ use std::ops::Sub;
 
 use intbits::Bits;
 
-use crate::common::uint::U16Ext;
-use crate::common::uint::U8Ext;
-
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PitchGenerator {
     buffer: [i16; 12],
@@ -45,10 +42,11 @@ impl PitchGenerator {
             GAUSSIAN_TABLE[fractional],
         ];
         let samples = (0..4).map(|i| {
-            let sample_index = (self.counter + 0x1000 * i).index();
-            ((self.buffer[sample_index] as i32) * coefficients[i as usize]) >> 11
+            let sample_index = (self.counter + 0x1000_u16.wrapping_mul(i as u16)).index();
+            ((self.buffer[sample_index] as i32).saturating_mul(coefficients[i as usize])) >> 11
         });
-        let sample = samples.sum::<i32>() as i16;
+        let sample = samples.fold(0i32, |acc, x| acc.saturating_add(x));
+        let sample = sample.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
 
         let (new_counter, cross) = self.counter.add_detect_4byte_cross(pitch);
         if cross {
@@ -69,12 +67,12 @@ struct PitchCounter(u16);
 impl PitchCounter {
     pub fn add_detect_4byte_cross(&self, count: u16) -> (PitchCounter, bool) {
         let new_counter = *self + count;
-        let cross = self.0 / 0x4000 != new_counter.0 / 0x4000;
+        let cross = (self.0 >> 14) != (new_counter.0 >> 14);
         (new_counter, cross)
     }
 
     pub fn index(&self) -> usize {
-        self.0.high_byte().high_nibble() as usize
+        (self.0 >> 12) as usize
     }
 
     pub fn fractional(&self) -> usize {
@@ -92,11 +90,12 @@ impl Add<u16> for PitchCounter {
     type Output = Self;
 
     fn add(self, rhs: u16) -> Self::Output {
-        let mut new_counter = self.0 + rhs;
-        if new_counter >= 0xC000 {
-            new_counter -= 0xC000;
-        }
-        Self(new_counter)
+        let new_counter = self.0.wrapping_add(rhs);
+        Self(if new_counter >= 0xC000 {
+            new_counter.wrapping_sub(0xC000)
+        } else {
+            new_counter
+        })
     }
 }
 
@@ -104,11 +103,12 @@ impl Sub<u16> for PitchCounter {
     type Output = Self;
 
     fn sub(self, rhs: u16) -> Self::Output {
-        let mut new_counter = self.0 - rhs;
-        if new_counter >= 0xC000 {
-            new_counter += 0xC000;
-        }
-        Self(new_counter)
+        let new_counter = self.0.wrapping_sub(rhs);
+        Self(if new_counter >= 0xC000 {
+            new_counter.wrapping_add(0xC000)
+        } else {
+            new_counter
+        })
     }
 }
 
