@@ -69,6 +69,7 @@ impl EmulatorApp {
 
     pub fn load_cartridge(&mut self, cartridge: Cartridge) {
         self.emulator = System::with_cartridge(&cartridge);
+        self.emulator.debugger().enable();
         self.loaded_cartridge = Some(cartridge);
         // Start audio output when a cartridge is loaded
         self.audio_output.start();
