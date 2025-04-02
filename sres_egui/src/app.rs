@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use eframe::CreationContext;
 use eframe::Frame;
+use egui::Color32;
 use egui::ColorImage;
 use egui::Context;
 use egui::DroppedFile;
@@ -50,7 +51,7 @@ impl EmulatorApp {
             loaded_cartridge: None,
             framebuffer_texture: cc.egui_ctx.load_texture(
                 "Framebuffer",
-                ColorImage::example(),
+                ColorImage::new([32, 32], Color32::BLACK),
                 Default::default(),
             ),
             debug_ui: DebugUi::new(cc),

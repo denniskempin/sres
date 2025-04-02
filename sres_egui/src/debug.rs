@@ -198,7 +198,12 @@ impl DebugUi {
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
         self.perf_widget(ui);
         ui.separator();
-        cpu::debug_controls_widget(ui, self.command, |command| self.command = command);
+        cpu::debug_controls_widget(
+            ui,
+            self.command,
+            |command| self.command = command,
+            &mut emulator.debugger(),
+        );
         breakpoints_widget(ui, emulator.debugger());
         ui.separator();
         cpu::cpu_state_widget(ui, emulator);
