@@ -11,6 +11,7 @@ argh = "0.1"
 eframe = "0.31"
 egui = "0.31"
 egui_extras = { version = "0.31", features = ["image"] }
+egui_hooks = "0.8"
 image = { version = "0.25", features = ["png"] }
 itertools = "*"
 puffin = "0.19"

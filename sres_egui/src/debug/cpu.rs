@@ -1,4 +1,3 @@
-use std::cell::RefMut;
 use std::collections::HashMap;
 
 use egui::Button;
@@ -8,9 +7,6 @@ use egui::Ui;
 use lazy_static::lazy_static;
 use sres_emulator::common::address::Address;
 use sres_emulator::common::address::InstructionMeta;
-use sres_emulator::components::cpu::NativeVectorTable;
-use sres_emulator::debugger::Debugger;
-use sres_emulator::debugger::EventFilter;
 use sres_emulator::System;
 
 use crate::debug::DebugCommand;
@@ -90,31 +86,10 @@ fn run_button_widget(ui: &mut Ui, paused: bool) -> egui::Response {
     }
 }
 
-pub fn breakpoint_widget(
-    ui: &mut Ui,
-    debugger: &mut RefMut<Debugger>,
-    breakpoint: EventFilter,
-    text: &str,
-) {
-    let mut enabled = debugger.has_break_point(&breakpoint);
-    ui.checkbox(&mut enabled, text);
-    if enabled == debugger.has_break_point(&breakpoint) {
-        // No user interaction, do nothing
-        return;
-    }
-
-    if enabled {
-        debugger.add_break_point(breakpoint);
-    } else {
-        debugger.remove_break_point(&breakpoint);
-    }
-}
-
 pub fn debug_controls_widget(
     ui: &mut Ui,
     current_command: Option<DebugCommand>,
     mut on_new_command: impl FnMut(Option<DebugCommand>),
-    debugger: &mut RefMut<Debugger>,
 ) {
     ui.horizontal_wrapped(|ui| {
         let paused = current_command.is_none();
@@ -139,21 +114,6 @@ pub fn debug_controls_widget(
         {
             on_new_command(Some(DebugCommand::StepScanlines(1)));
         }
-    });
-    ui.collapsing("Breakpoints", |ui| {
-        breakpoint_widget(
-            ui,
-            debugger,
-            EventFilter::Interrupt(Some(NativeVectorTable::Nmi)),
-            "NMI",
-        );
-        breakpoint_widget(
-            ui,
-            debugger,
-            EventFilter::Interrupt(Some(NativeVectorTable::Irq)),
-            "IRQ",
-        );
-        breakpoint_widget(ui, debugger, EventFilter::ExecutionError, "Error");
     });
 }
 

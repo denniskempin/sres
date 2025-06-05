@@ -294,6 +294,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arc-swap"
+version = "1.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
+
+[[package]]
 name = "arg_enum_proc_macro"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1406,6 +1412,17 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "winit",
+]
+
+[[package]]
+name = "egui_hooks"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d47d62cf05db9ea175932ab95d5847e05f0cd1f71347b4cfe02955655efd101c"
+dependencies = [
+ "arc-swap",
+ "egui",
+ "parking_lot",
 ]
 
 [[package]]
@@ -3624,6 +3641,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui_extras",
+ "egui_hooks",
  "image",
  "itertools 0.13.0",
  "lazy_static",
