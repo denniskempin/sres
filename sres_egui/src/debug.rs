@@ -5,6 +5,7 @@ mod syntax;
 
 use std::cell::RefMut;
 use std::fmt::Debug;
+use std::ops::DerefMut;
 use std::time::Duration;
 
 use apu::ApuDebugWindow;
@@ -16,6 +17,7 @@ use egui::RichText;
 use egui::ScrollArea;
 use egui::TextStyle;
 use egui::Ui;
+use egui_hooks::UseHookExt;
 use itertools::Itertools;
 use ppu::PpuDebugWindow;
 use sres_emulator::common::address::Address;
@@ -198,12 +200,8 @@ impl DebugUi {
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
         self.perf_widget(ui);
         ui.separator();
-        cpu::debug_controls_widget(
-            ui,
-            self.command,
-            |command| self.command = command,
-            &mut emulator.debugger(),
-        );
+        cpu::debug_controls_widget(ui, self.command, |command| self.command = command);
+        ui.separator();
         breakpoints_widget(ui, emulator.debugger());
         ui.separator();
         cpu::cpu_state_widget(ui, emulator);
@@ -271,8 +269,71 @@ impl Alert {
     }
 }
 
-pub fn breakpoints_widget(ui: &mut Ui, mut _debugger: RefMut<'_, Debugger>) {
-    ui.horizontal_wrapped(|_ui| {});
+pub fn breakpoints_widget(ui: &mut Ui, mut debugger: RefMut<'_, Debugger>) {
+    ui.vertical(|ui| {
+        if let Some(breakpoint) = breakpoint_input_widget(ui) {
+            debugger.add_break_point(breakpoint);
+        }
+
+        active_breakpoints_widget(ui, &mut debugger.break_points);
+    });
+}
+
+/// Displays input field and add button for new breakpoints using egui data storage
+/// Returns the breakpoint to add if one was entered successfully
+fn breakpoint_input_widget(ui: &mut Ui) -> Option<EventFilter> {
+    let mut breakpoint_text = ui.use_state(String::default, ()).into_var();
+    let error_message = ui.use_state(Option::<String>::default, ());
+
+    let mut breakpoint_to_add = None;
+    ui.horizontal(|ui| {
+        let response = ui.add(
+            egui::TextEdit::singleline(breakpoint_text.deref_mut())
+                .hint_text("e.g. pc 0x8000, r 0x2100..0x2140, irq nmi, LDA"),
+        );
+
+        let enter_pressed = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+
+        if enter_pressed || ui.button("Add").clicked() {
+            let input = breakpoint_text.trim();
+            if !input.is_empty() {
+                match input.parse::<EventFilter>() {
+                    Ok(filter) => {
+                        breakpoint_to_add = Some(filter);
+                        breakpoint_text.clear();
+                        error_message.set_next(None);
+                    }
+                    Err(e) => {
+                        error_message.set_next(Some(format!("Error: {}", e)));
+                    }
+                }
+            }
+        }
+    });
+
+    // Display error message if any
+    if let Some(ref error_msg) = *error_message {
+        ui.colored_label(egui::Color32::RED, error_msg);
+    }
+
+    breakpoint_to_add
+}
+
+/// Displays the list of active breakpoints with remove buttons
+/// Returns a list of indices of breakpoints to remove
+fn active_breakpoints_widget(ui: &mut Ui, breakpoints: &mut Vec<EventFilter>) {
+    let mut to_remove = Vec::new();
+    for (i, breakpoint) in breakpoints.iter().enumerate() {
+        ui.horizontal(|ui| {
+            ui.label(format!("{}", breakpoint));
+            if ui.button("x").clicked() {
+                to_remove.push(i);
+            }
+        });
+    }
+    for &i in to_remove.iter().rev() {
+        breakpoints.remove(i);
+    }
 }
 
 #[allow(dead_code)]
