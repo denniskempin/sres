@@ -7,8 +7,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 
-use tracing::instrument;
-
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
@@ -138,7 +136,6 @@ impl<DeviceT: BusDeviceU24> BatchedBusDeviceU24<DeviceT> {
         }
     }
 
-    #[instrument(skip_all)]
     pub fn sync(&mut self) {
         let cache_size = format!("{} {}", DeviceT::NAME, self.cache.len());
         puffin::profile_function!(&cache_size);

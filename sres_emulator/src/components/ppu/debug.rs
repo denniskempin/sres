@@ -188,7 +188,7 @@ pub enum VramRenderSelection {
 impl std::fmt::Display for VramRenderSelection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            VramRenderSelection::Background(id) => write!(f, "{}", id),
+            VramRenderSelection::Background(id) => write!(f, "{id}"),
             VramRenderSelection::Sprite0 => write!(f, "Sprite0"),
             VramRenderSelection::Sprite1 => write!(f, "Sprite1"),
         }

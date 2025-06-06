@@ -10,7 +10,7 @@ pub fn compare_wav_against_golden(data: &[i16], path_prefix: &Path) {
         if data != golden {
             let actual_path = path_prefix.with_extension("actual.wav");
             write_snes_wav(data, &actual_path);
-            panic!("Actual result does not match golden. See {:?}", actual_path);
+            panic!("Actual result does not match golden. See {actual_path:?}");
         }
     } else {
         write_snes_wav(data, &golden_path);

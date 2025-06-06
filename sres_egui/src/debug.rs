@@ -88,12 +88,12 @@ impl MemoryViewer {
                             (0..bytes_per_line).map(|offset| peek(addr.add(offset, Wrap::NoWrap)));
                         let bytes_str = bytes
                             .map(|b| {
-                                b.map(|b| format!("{:02X}", b))
+                                b.map(|b| format!("{b:02X}"))
                                     .unwrap_or_else(|| "XX".to_string())
                             })
                             .join(" ");
                         ui.add(
-                            Label::new(RichText::new(format!("{}: {}", addr, bytes_str)))
+                            Label::new(RichText::new(format!("{addr}: {bytes_str}")))
                                 .wrap_mode(egui::TextWrapMode::Extend),
                         );
                     }
@@ -306,7 +306,7 @@ fn breakpoint_input_widget(ui: &mut Ui) -> Option<EventFilter> {
                         error_message.set_next(None);
                     }
                     Err(e) => {
-                        error_message.set_next(Some(format!("Error: {}", e)));
+                        error_message.set_next(Some(format!("Error: {e}")));
                     }
                 }
             }
@@ -325,7 +325,7 @@ fn active_breakpoints_widget(ui: &mut Ui, breakpoints: &mut Vec<EventFilter>) {
     let mut to_remove = Vec::new();
     for (i, breakpoint) in breakpoints.iter().enumerate() {
         ui.horizontal(|ui| {
-            ui.label(format!("{}", breakpoint));
+            ui.label(format!("{breakpoint}"));
             if ui.button("x").clicked() {
                 to_remove.push(i);
             }

@@ -75,10 +75,10 @@ impl Log for SresLogger {
                     println!("{}", "...".dimmed());
                 }
                 for log in trace_logs.drain(0..).rev() {
-                    println!("{}", log);
+                    println!("{log}");
                 }
             }
-            println!("{}", record_str);
+            println!("{record_str}");
         }
     }
 

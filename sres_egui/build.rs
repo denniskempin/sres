@@ -21,7 +21,7 @@ fn rom_name(path: &Path) -> &str {
 fn rom_image(path: &Path) -> String {
     let image_path = path.with_extension("png");
     if image_path.exists() {
-        format!("include_bytes!({:?})", image_path)
+        format!("include_bytes!({image_path:?})")
     } else {
         "DEFAULT_IMAGE".to_string()
     }
@@ -34,7 +34,7 @@ fn rom_attribution(path: &Path) -> String {
         let mut lines = content.lines();
         let author = lines.next().unwrap_or("").trim();
         let url = lines.next().unwrap_or("").trim();
-        format!("Some(({:?}, {:?}))", author, url)
+        format!("Some(({author:?}, {url:?}))")
     } else {
         "None".to_string()
     }

@@ -491,7 +491,7 @@ impl Ppu {
     /// |    ++++- Screen brightness (linear steps from 0 = none to $F = full)
     /// +--------- Force blanking
     fn write_inidisp(&mut self, value: u8) {
-        log::info!("INIDISP = {:08b}", value);
+        log::info!("INIDISP = {value:08b}");
         self.disabled = value.bit(7);
     }
 
