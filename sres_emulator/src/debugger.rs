@@ -113,13 +113,13 @@ impl Display for EventFilter {
         use EventFilter::*;
         match self {
             CpuProgramCounter(range) => write!(f, "pc{}", format_range(range)),
-            CpuInstruction(s) => write!(f, "{}", s),
+            CpuInstruction(s) => write!(f, "{s}"),
             CpuMemoryRead(range) => write!(f, "r{}", format_range(range)),
             CpuMemoryWrite(range) => write!(f, "w{}", format_range(range)),
             ExecutionError => write!(f, "error"),
             Interrupt(handler) => {
                 if let Some(handler) = handler {
-                    write!(f, "irq {}", handler)
+                    write!(f, "irq {handler}")
                 } else {
                     write!(f, "irq")
                 }

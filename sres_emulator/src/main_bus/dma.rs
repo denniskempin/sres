@@ -105,7 +105,7 @@ impl DmaController {
             Some(value) => value,
             None => {
                 self.debug_event_collector
-                    .on_error(format!("Invalid read from {}", addr));
+                    .on_error(format!("Invalid read from {addr}"));
                 0
             }
         }
@@ -149,13 +149,13 @@ impl DmaController {
                     0x7 => log::warn!("HDMA not implemented."),
                     _ => {
                         self.debug_event_collector
-                            .on_error(format!("Invalid write to {}", addr));
+                            .on_error(format!("Invalid write to {addr}"));
                     }
                 }
             }
             _ => {
                 self.debug_event_collector
-                    .on_error(format!("Invalid write to {}", addr));
+                    .on_error(format!("Invalid write to {addr}"));
             }
         }
     }
@@ -191,7 +191,7 @@ impl DmaController {
     /// |+-------- Channel 6 HDMA enable
     /// +--------- Channel 7 HDMA enable
     fn write_hdmaen(&mut self, value: u8) {
-        warn!("HDMAEN={:02X} not implemented", value);
+        warn!("HDMAEN={value:02X} not implemented");
     }
 
     /// Register 43N0: DMAPn - DMA channel N control

@@ -71,8 +71,8 @@ fn disassembly_line<AddressT: Address>(
         if let Some(effective_addr) = meta.effective_addr {
             let addr_text = ADDR_ANNOTATIONS
                 .get(&effective_addr.into())
-                .map(|s| format!("[{:}]", s))
-                .unwrap_or(format!("[{:}]", effective_addr));
+                .map(|s| format!("[{s:}]"))
+                .unwrap_or(format!("[{effective_addr:}]"));
             ui.label(RichText::new(addr_text).strong().color(Color32::LIGHT_BLUE));
         }
     });

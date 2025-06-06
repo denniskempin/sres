@@ -102,9 +102,9 @@ impl Operand {
             _ => unreachable!(),
         };
         let disassembly = match self {
-            Self::Immediate => format!("#${:02x}", value),
-            Self::Register(register) => format!("{:}", register),
-            Self::Const(value) => format!("{:02x}", value),
+            Self::Immediate => format!("#${value:02x}"),
+            Self::Register(register) => format!("{register:}"),
+            Self::Const(value) => format!("{value:02x}"),
             Self::InMemory(mode) => mode.disassembly(cpu, addr),
             Self::JumpAddress(mode) => mode.disassembly(cpu, addr),
             Self::Relative => {
@@ -119,7 +119,7 @@ impl Operand {
             Self::Carry => "C".to_string(),
             Self::AbsBit => format!("${:04x}.{}", value.bits(0..13), value.bits(13..16)),
             Self::AbsBitInv => format!("/${:04x}.{}", value.bits(0..13), value.bits(13..16)),
-            Self::DpBit(bit) => format!("${:02x}.{}", value, bit),
+            Self::DpBit(bit) => format!("${value:02x}.{bit}"),
         };
         (disassembly, addr.add(operand_size, Wrap::NoWrap))
     }
@@ -388,22 +388,22 @@ impl AddressMode {
         match self {
             Self::Dp => {
                 if cpu.status.direct_page {
-                    format!("$1{:02x}", value)
+                    format!("$1{value:02x}")
                 } else {
-                    format!("$0{:02x}", value)
+                    format!("$0{value:02x}")
                 }
             }
-            Self::DpXIdx => format!("${:02x}+x", value),
-            Self::DpYIdx => format!("${:02x}+y", value),
-            Self::DpXIdxIndirect => format!("[${:02x}+x]", value),
-            Self::DpIndirectYIdx => format!("[${:02x}]+y", value),
+            Self::DpXIdx => format!("${value:02x}+x"),
+            Self::DpYIdx => format!("${value:02x}+y"),
+            Self::DpXIdxIndirect => format!("[${value:02x}+x]"),
+            Self::DpIndirectYIdx => format!("[${value:02x}]+y"),
             Self::XIndirect => "(x)".to_string(),
             Self::YIndirect => "(y)".to_string(),
             Self::XIndirectAutoInc => "(x++)".to_string(),
-            Self::Abs => format!("${:04x}", value),
-            Self::AbsXIdx => format!("${:04x}+x", value),
-            Self::AbsYIdx => format!("${:04x}+y", value),
-            Self::AbsXIdxIndirect => format!("[${:04x}+x]", value),
+            Self::Abs => format!("${value:04x}"),
+            Self::AbsXIdx => format!("${value:04x}+x"),
+            Self::AbsYIdx => format!("${value:04x}+y"),
+            Self::AbsXIdxIndirect => format!("[${value:04x}+x]"),
         }
     }
 

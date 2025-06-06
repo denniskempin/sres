@@ -80,7 +80,7 @@ where
     F: FnMut(Cartridge),
 {
     let path = PathBuf::from("roms").join(rom_info.path);
-    println!("Loading ROM: {:?}", path);
+    println!("Loading ROM: {path:?}");
     let cartridge = Cartridge::with_sfc_data(rom_info.rom_data, None).unwrap();
     on_load_cartridge(cartridge);
 }

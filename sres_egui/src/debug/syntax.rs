@@ -23,20 +23,20 @@ pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
                 label_cpu(ui);
                 label_read(ui, "R");
                 label_cpu_addr(ui, *addr, selected);
-                label_normal(ui, format!("= {:02X}", value));
+                label_normal(ui, format!("= {value:02X}"));
             }
             MainBus(MainBusEvent::Write(addr, value)) => {
                 label_cpu(ui);
                 label_write(ui, "W");
                 label_cpu_addr(ui, *addr, selected);
-                label_normal(ui, format!("= {:02X}", value));
+                label_normal(ui, format!("= {value:02X}"));
             }
             Cpu(CpuEvent::Interrupt(interrupt)) => {
                 label_cpu(ui);
-                label_normal(ui, format!("IRQ: {:?}", interrupt));
+                label_normal(ui, format!("IRQ: {interrupt:?}"));
             }
             Error(reason) => {
-                label_error(ui, format!("Error: {:?}", reason));
+                label_error(ui, format!("Error: {reason:?}"));
             }
             Cpu(CpuEvent::Step(state)) => {
                 label_cpu(ui);
@@ -49,13 +49,13 @@ pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
                 label_spc(ui);
                 label_read(ui, "R");
                 label_addr(ui, addr.to_string());
-                label_normal(ui, format!("= {:02X}", value));
+                label_normal(ui, format!("= {value:02X}"));
             }
             ApuBus(ApuBusEvent::Write(addr, value)) => {
                 label_spc(ui);
                 label_write(ui, "W");
                 label_addr(ui, addr.to_string());
-                label_normal(ui, format!("= {:02X}", value));
+                label_normal(ui, format!("= {value:02X}"));
             }
         };
     });
@@ -65,7 +65,7 @@ fn cpu_log_line(ui: &mut Ui, state: &CpuState, selected: &mut InternalLink) {
     label_cpu_pc(ui, state.instruction.address, selected);
     label_strong(ui, state.instruction.operation.clone());
     if let Some(operand) = state.instruction.operand_str.clone() {
-        let operand_label = label_addr(ui, format!("{:<12}", operand));
+        let operand_label = label_addr(ui, format!("{operand:<12}"));
         // If there is an effective address, show on hover and link on click.
         if let Some(addr) = state.instruction.effective_addr {
             if operand_label.on_hover_text(addr.to_string()).clicked() {

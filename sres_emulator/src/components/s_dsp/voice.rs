@@ -180,11 +180,11 @@ enum GainMode {
 impl Display for GainMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            GainMode::Fixed(value) => write!(f, "fixed,{}", value),
-            GainMode::LinearDecay(value) => write!(f, "lin dec,{}", value),
-            GainMode::ExponentialDecay(value) => write!(f, "exp dec,{}", value),
-            GainMode::LinearIncrease(value) => write!(f, "lin inc,{}", value),
-            GainMode::BentIncrease(value) => write!(f, "bent inc,{}", value),
+            GainMode::Fixed(value) => write!(f, "fixed,{value}"),
+            GainMode::LinearDecay(value) => write!(f, "lin dec,{value}"),
+            GainMode::ExponentialDecay(value) => write!(f, "exp dec,{value}"),
+            GainMode::LinearIncrease(value) => write!(f, "lin inc,{value}"),
+            GainMode::BentIncrease(value) => write!(f, "bent inc,{value}"),
         }
     }
 }

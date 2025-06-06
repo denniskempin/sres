@@ -22,7 +22,7 @@ impl ApuDebugWindow {
                 let dsp = &debug.apu().dsp();
                 for i in 0..6 {
                     let voice = dsp.voice(i);
-                    ui.label(format!("Voice {}: {}", i, voice));
+                    ui.label(format!("Voice {i}: {voice}"));
                 }
             });
     }

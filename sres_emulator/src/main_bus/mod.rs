@@ -108,13 +108,13 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0x421B => self.joy2.high_byte(),
                 _ => {
                     self.debug_event_collector
-                        .on_error(format!("Read from unimplemented register {}", addr));
+                        .on_error(format!("Read from unimplemented register {addr}"));
                     0
                 }
             },
             MemoryBlock::Unmapped => {
                 self.debug_event_collector
-                    .on_error(format!("Read from unmapped memory region {}", addr));
+                    .on_error(format!("Read from unmapped memory region {addr}"));
                 0
             }
         };
@@ -138,15 +138,13 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
                 0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_write(addr, value),
                 _ => {
-                    self.debug_event_collector.on_error(format!(
-                        "Write to unimplemented register {} = {}",
-                        addr, value
-                    ));
+                    self.debug_event_collector
+                        .on_error(format!("Write to unimplemented register {addr} = {value}"));
                 }
             },
             MemoryBlock::Unmapped => {
                 self.debug_event_collector
-                    .on_error(format!("Write to unmapped region {}", addr));
+                    .on_error(format!("Write to unmapped region {addr}"));
             }
         }
     }

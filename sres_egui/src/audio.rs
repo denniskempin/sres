@@ -43,13 +43,13 @@ impl AudioOutput {
         let stream = match self.setup_audio_stream() {
             Ok(stream) => stream,
             Err(err) => {
-                error!("Failed to setup audio stream: {}", err);
+                error!("Failed to setup audio stream: {err}");
                 return;
             }
         };
 
         if let Err(err) = stream.play() {
-            error!("Error playing audio stream: {}", err);
+            error!("Error playing audio stream: {err}");
             return;
         }
         self.stream = Some(stream);
@@ -100,7 +100,7 @@ impl AudioOutput {
                     }
                 }
             },
-            |err| error!("Error in audio stream: {}", err),
+            |err| error!("Error in audio stream: {err}"),
             None,
         )
     }
