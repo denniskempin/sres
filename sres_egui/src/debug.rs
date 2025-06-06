@@ -232,12 +232,13 @@ pub fn breakpoints_widget(ui: &mut Ui, mut debugger: RefMut<'_, Debugger>) {
 fn breakpoint_input_widget(ui: &mut Ui) -> Option<EventFilter> {
     let mut breakpoint_text = ui.use_state(String::default, ()).into_var();
     let error_message = ui.use_state(Option::<String>::default, ());
+    let mut show_help = ui.use_state(|| false, ()).into_var();
 
     let mut breakpoint_to_add = None;
     ui.horizontal(|ui| {
         let response = ui.add(
             egui::TextEdit::singleline(breakpoint_text.deref_mut())
-                .hint_text("e.g. pc 0x8000, r 0x2100..0x2140, irq nmi, LDA"),
+                .hint_text("e.g. pc 8000, r 2100:2140, irq nmi, LDA"),
         );
 
         let enter_pressed = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
@@ -257,7 +258,50 @@ fn breakpoint_input_widget(ui: &mut Ui) -> Option<EventFilter> {
                 }
             }
         }
+
+        if ui.button("?").clicked() {
+            *show_help = !*show_help;
+        }
     });
+
+    // Help dialog
+    egui::Window::new("Breakpoint Help")
+        .open(show_help.deref_mut())
+        .resizable(true)
+        .default_width(500.0)
+        .show(ui.ctx(), |ui| {
+            let text_style = egui::TextStyle::Monospace;
+            let style = ui.style_mut();
+            style.override_text_style = Some(text_style.clone());
+
+            ui.heading("Supported Breakpoint Formats");
+            ui.separator();
+
+            ui.label("Breakpoint Types:");
+            ui.label("  pc <address/range>  - CPU program counter");
+            ui.label("  r <address/range>   - CPU memory read");
+            ui.label("  w <address/range>   - CPU memory write");
+            ui.label("  <instruction>       - CPU instruction (e.g. LDA, JMP)");
+            ui.label("  irq [type]          - Interrupt (optional type: nmi, etc.)");
+            ui.label("  s-pc <address/range> - SPC700 program counter");
+            ui.separator();
+
+            ui.label("Address formats:");
+            ui.label("  Addresses are in hexadecimal (no 0x prefix needed)");
+            ui.label("  Single address: 8000");
+            ui.label("  Range: 8000:9000 (inclusive start, exclusive end)");
+            ui.label("  Open range: 8000: or :9000");
+            ui.separator();
+
+            ui.label("Examples:");
+            ui.label("  pc 8000             - Break when PC reaches $8000");
+            ui.label("  pc 8000:9000        - Break when PC is in range $8000-$8FFF");
+            ui.label("  r 2100:2140         - Break on reads to PPU registers");
+            ui.label("  w 2100              - Break on writes to INIDISP register");
+            ui.label("  LDA                 - Break on any LDA instruction");
+            ui.label("  irq nmi             - Break on NMI interrupt");
+            ui.label("  s-pc 200:300        - Break when SPC700 PC is in range $200-$2FF");
+        });
 
     // Display error message if any
     if let Some(ref error_msg) = *error_message {
