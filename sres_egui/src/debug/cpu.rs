@@ -71,8 +71,8 @@ fn disassembly_line<AddressT: Address>(
         if let Some(effective_addr) = meta.effective_addr {
             let addr_text = ADDR_ANNOTATIONS
                 .get(&effective_addr.into())
-                .map(|s| format!("[{s:}]"))
-                .unwrap_or(format!("[{effective_addr:}]"));
+                .map(|s| format!("[{:}]", s))
+                .unwrap_or(format!("[{:}]", effective_addr));
             ui.label(RichText::new(addr_text).strong().color(Color32::LIGHT_BLUE));
         }
     });
@@ -88,33 +88,36 @@ fn run_button_widget(ui: &mut Ui, paused: bool) -> egui::Response {
 
 pub fn debug_controls_widget(
     ui: &mut Ui,
-    current_command: Option<DebugCommand>,
-    mut on_new_command: impl FnMut(Option<DebugCommand>),
-) {
+    current_command: DebugCommand,
+) -> Option<DebugCommand> {
+    let mut new_command = None;
+    
     ui.horizontal_wrapped(|ui| {
-        let paused = current_command.is_none();
+        let paused = matches!(current_command, DebugCommand::Pause);
 
         if run_button_widget(ui, paused).clicked() {
             if paused {
-                on_new_command(Some(DebugCommand::Run));
+                new_command = Some(DebugCommand::Run);
             } else {
-                on_new_command(None);
+                new_command = Some(DebugCommand::Pause);
             }
         }
         if ui.add_enabled(paused, Button::new("Step")).clicked() {
-            on_new_command(Some(DebugCommand::StepInstructions(1)));
+            new_command = Some(DebugCommand::StepInstructions(1));
         }
 
         if ui.add_enabled(paused, Button::new("Step Frame")).clicked() {
-            on_new_command(Some(DebugCommand::StepFrames(1)));
+            new_command = Some(DebugCommand::StepFrames(1));
         }
         if ui
             .add_enabled(paused, Button::new("Step Scanline"))
             .clicked()
         {
-            on_new_command(Some(DebugCommand::StepScanlines(1)));
+            new_command = Some(DebugCommand::StepScanlines(1));
         }
     });
+    
+    new_command
 }
 
 lazy_static! {
