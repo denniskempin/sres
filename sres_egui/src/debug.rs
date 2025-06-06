@@ -11,7 +11,9 @@ use std::time::Duration;
 
 use apu::ApuDebugWindow;
 use eframe::CreationContext;
+use egui::Color32;
 use egui::Context;
+use egui::RichText;
 use egui::ScrollArea;
 use egui::Ui;
 use egui_hooks::UseHookExt;
@@ -21,6 +23,7 @@ use sres_emulator::common::address::AddressU16;
 use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::util::RingBuffer;
+use sres_emulator::debugger::BreakReason;
 use sres_emulator::debugger::Debugger;
 use sres_emulator::debugger::EventFilter;
 use sres_emulator::ExecutionResult;
@@ -39,6 +42,7 @@ pub struct DebugUi {
     log_viewer: LogViewer,
     selected_memory_location: InternalLink,
     pub show_profiler: bool,
+    break_reason: Option<BreakReason>,
 }
 
 impl DebugUi {
@@ -53,6 +57,7 @@ impl DebugUi {
             log_viewer: LogViewer::new(),
             past_emulation_times: RingBuffer::default(),
             selected_memory_location: InternalLink::None,
+            break_reason: None,
         }
     }
 
@@ -108,7 +113,7 @@ impl DebugUi {
                     self.command = None;
                 }
                 ExecutionResult::Break(reason) => {
-                    self.alert.show(&reason.trigger.to_string());
+                    self.break_reason = Some(reason);
                     self.command = None;
                 }
             }
@@ -131,7 +136,19 @@ impl DebugUi {
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
         self.perf_widget(ui);
         ui.separator();
-        cpu::debug_controls_widget(ui, self.command, |command| self.command = command);
+        cpu::debug_controls_widget(ui, self.command, |command| {
+            self.command = command;
+            self.break_reason = None;
+        });
+
+        if let Some(ref reason) = self.break_reason {
+            ui.label(
+                RichText::new(format!("Breakpoint: {}", reason.trigger.to_string()))
+                    .strong()
+                    .color(Color32::RED),
+            );
+        }
+
         ui.separator();
         breakpoints_widget(ui, emulator.debugger());
         ui.separator();
