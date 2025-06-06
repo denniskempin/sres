@@ -33,7 +33,7 @@ use self::syntax::log_line;
 use crate::util::Instant;
 
 pub struct DebugUi {
-    command: Option<DebugCommand>,
+    command: DebugCommand,
     alert: Alert,
     ppu_debug: PpuDebugWindow,
     apu_debug: ApuDebugWindow,
@@ -48,7 +48,7 @@ pub struct DebugUi {
 impl DebugUi {
     pub fn new(cc: &CreationContext) -> Self {
         DebugUi {
-            command: None,
+            command: DebugCommand::Pause,
             alert: Alert::default(),
             ppu_debug: PpuDebugWindow::new(cc),
             apu_debug: ApuDebugWindow::new(),
@@ -68,6 +68,7 @@ impl DebugUi {
         _delta_t: f64,
     ) -> ExecutionResult {
         match command {
+            DebugCommand::Pause => ExecutionResult::Normal,
             DebugCommand::Run => {
                 let start = Instant::now();
                 let result = emulator.execute_frames(1);
@@ -78,25 +79,25 @@ impl DebugUi {
             }
             DebugCommand::StepFrames(n) => {
                 self.command = if n > 1 {
-                    Some(DebugCommand::StepFrames(n - 1))
+                    DebugCommand::StepFrames(n - 1)
                 } else {
-                    None
+                    DebugCommand::Pause
                 };
                 emulator.execute_frames(1)
             }
             DebugCommand::StepScanlines(n) => {
                 self.command = if n > 1 {
-                    Some(DebugCommand::StepScanlines(n - 1))
+                    DebugCommand::StepScanlines(n - 1)
                 } else {
-                    None
+                    DebugCommand::Pause
                 };
                 emulator.execute_scanlines(1)
             }
             DebugCommand::StepInstructions(n) => {
                 self.command = if n > 1 {
-                    Some(DebugCommand::StepInstructions(n - 1))
+                    DebugCommand::StepInstructions(n - 1)
                 } else {
-                    None
+                    DebugCommand::Pause
                 };
                 emulator.execute_one_instruction()
             }
@@ -105,16 +106,16 @@ impl DebugUi {
 
     pub fn run_emulator(&mut self, emulator: &mut System, delta_t: f64) {
         puffin::profile_function!();
-        if let Some(command) = self.command {
-            match self.run_command(emulator, command, delta_t) {
+        if !matches!(self.command, DebugCommand::Pause) {
+            match self.run_command(emulator, self.command, delta_t) {
                 ExecutionResult::Normal => (),
                 ExecutionResult::Halt => {
                     self.alert.show("CPU Halted");
-                    self.command = None;
+                    self.command = DebugCommand::Pause;
                 }
                 ExecutionResult::Break(reason) => {
                     self.break_reason = Some(reason);
-                    self.command = None;
+                    self.command = DebugCommand::Pause;
                 }
             }
         }
@@ -136,10 +137,10 @@ impl DebugUi {
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
         self.perf_widget(ui);
         ui.separator();
-        cpu::debug_controls_widget(ui, self.command, |command| {
+        if let Some(command) = cpu::debug_controls_widget(ui, self.command) {
             self.command = command;
             self.break_reason = None;
-        });
+        }
 
         if let Some(ref reason) = self.break_reason {
             ui.label(
@@ -190,6 +191,7 @@ impl DebugUi {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum DebugCommand {
+    Pause,
     Run,
     StepFrames(u32),
     StepInstructions(u32),
