@@ -22,7 +22,7 @@ enum PpuDebugTabs {
 }
 
 pub struct PpuDebugWindow {
-    pub open: bool,
+    open: bool,
     selected_tab: PpuDebugTabs,
     background_widget: PpuBackgroundWidget,
     sprites_widget: PpuSpritesWidget,
@@ -40,6 +40,10 @@ impl PpuDebugWindow {
             vram_widget: PpuVramWidget::new(cc),
             palette_widget: PpuPaletteWidget::new(cc),
         }
+    }
+
+    pub fn toggle(&mut self) {
+        self.open = !self.open;
     }
 
     pub fn show(&mut self, ctx: &Context, emulator: &System) {
