@@ -49,6 +49,10 @@ impl MemoryViewer {
         }
     }
 
+    pub fn toggle(&mut self) {
+        self.is_open = !self.is_open;
+    }
+
     pub fn show<F>(&mut self, ctx: &Context, peek: F)
     where
         F: Fn(AddressU24) -> Option<u8>,
@@ -212,19 +216,19 @@ impl DebugUi {
     pub fn bottom_debug_panel(&mut self, ui: &mut Ui, _emulator: &System) {
         ui.horizontal(|ui| {
             if ui.button("PPU").clicked() {
-                self.ppu_debug.open = !self.ppu_debug.open;
+                self.ppu_debug.toggle();
             }
             if ui.button("APU").clicked() {
-                self.apu_debug.open = !self.apu_debug.open;
+                self.apu_debug.toggle();
             }
             if ui.button("Memory").clicked() {
-                self.memory_viewer.is_open = !self.memory_viewer.is_open;
+                self.memory_viewer.toggle();
             }
             if ui.button("Profiler").clicked() {
                 self.show_profiler = !self.show_profiler;
             }
             if ui.button("Log Viewer").clicked() {
-                self.log_viewer.is_open = !self.log_viewer.is_open;
+                self.log_viewer.toggle();
             }
         });
     }
@@ -279,8 +283,6 @@ pub fn breakpoints_widget(ui: &mut Ui, mut debugger: RefMut<'_, Debugger>) {
     });
 }
 
-/// Displays input field and add button for new breakpoints using egui data storage
-/// Returns the breakpoint to add if one was entered successfully
 fn breakpoint_input_widget(ui: &mut Ui) -> Option<EventFilter> {
     let mut breakpoint_text = ui.use_state(String::default, ()).into_var();
     let error_message = ui.use_state(Option::<String>::default, ());
@@ -319,8 +321,6 @@ fn breakpoint_input_widget(ui: &mut Ui) -> Option<EventFilter> {
     breakpoint_to_add
 }
 
-/// Displays the list of active breakpoints with remove buttons
-/// Returns a list of indices of breakpoints to remove
 fn active_breakpoints_widget(ui: &mut Ui, breakpoints: &mut Vec<EventFilter>) {
     let mut to_remove = Vec::new();
     for (i, breakpoint) in breakpoints.iter().enumerate() {
@@ -351,6 +351,10 @@ struct LogViewer {
 impl LogViewer {
     pub fn new() -> Self {
         Self { is_open: false }
+    }
+
+    pub fn toggle(&mut self) {
+        self.is_open = !self.is_open;
     }
 
     pub fn show(&mut self, ctx: &Context, emulator: &System, selected: &mut InternalLink) {

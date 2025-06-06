@@ -2,12 +2,16 @@ use egui::Context;
 use sres_emulator::System;
 
 pub struct ApuDebugWindow {
-    pub open: bool,
+    open: bool,
 }
 
 impl ApuDebugWindow {
     pub fn new() -> Self {
         ApuDebugWindow { open: false }
+    }
+
+    pub fn toggle(&mut self) {
+        self.open = !self.open;
     }
 
     pub fn show(&mut self, ctx: &Context, emulator: &System) {

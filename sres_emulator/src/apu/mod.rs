@@ -36,6 +36,12 @@ pub struct BufferQueue<T> {
     overflow: bool,
 }
 
+impl<T> Default for BufferQueue<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> BufferQueue<T> {
     pub fn new() -> Self {
         Self {
