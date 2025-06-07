@@ -1,13 +1,11 @@
 mod apu;
 mod cpu;
 mod event;
+mod log_viewer;
 mod memory;
 mod ppu;
-mod syntax;
 
-use std::cell::RefMut;
 use std::fmt::Debug;
-
 use std::time::Duration;
 
 use apu::ApuDebugWindow;
@@ -15,9 +13,8 @@ use eframe::CreationContext;
 use egui::Color32;
 use egui::Context;
 use egui::RichText;
-use egui::ScrollArea;
 use egui::Ui;
-
+use log_viewer::LogViewer;
 use memory::MemoryViewer;
 use ppu::PpuDebugWindow;
 use sres_emulator::common::address::AddressU16;
@@ -25,11 +22,9 @@ use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::util::RingBuffer;
 use sres_emulator::debugger::BreakReason;
-use sres_emulator::debugger::EventFilter;
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
 
-use self::syntax::log_line;
 use crate::util::Instant;
 
 pub struct DebugUi {
@@ -144,7 +139,7 @@ impl DebugUi {
 
         if let Some(ref reason) = self.break_reason {
             ui.label(
-                RichText::new(format!("Breakpoint: {}", reason.trigger.to_string()))
+                RichText::new(format!("Breakpoint: {}", reason.trigger))
                     .strong()
                     .color(Color32::RED),
             );
@@ -219,119 +214,10 @@ impl Alert {
     }
 }
 
-
-
 #[allow(dead_code)]
 pub enum InternalLink {
     None,
     CpuMemory(AddressU24),
     CpuProgramCounter(AddressU24),
     Spc700ProgramCounter(AddressU16),
-}
-
-struct LogViewer {
-    is_open: bool,
-}
-
-impl LogViewer {
-    pub fn new() -> Self {
-        Self { is_open: false }
-    }
-
-    pub fn toggle(&mut self) {
-        self.is_open = !self.is_open;
-    }
-
-    pub fn show(&mut self, ctx: &Context, emulator: &System, selected: &mut InternalLink) {
-        egui::Window::new("Log Viewer")
-            .open(&mut self.is_open)
-            .show(ctx, |ui| {
-                let mut debugger = emulator.debugger();
-                let mut log_point_button = |ui: &mut Ui, label: &str, filter: EventFilter| {
-                    if ui
-                        .add(
-                            egui::Button::new(label)
-                                .selected(debugger.log_points.contains(&filter)),
-                        )
-                        .clicked()
-                    {
-                        debugger.toggle_log_point(filter);
-                    }
-                };
-
-                let text_style = egui::TextStyle::Monospace;
-                let style = ui.style_mut();
-                style.override_text_style = Some(text_style.clone());
-                ui.horizontal(|ui| {
-                    ui.label("CPU:     ");
-                    log_point_button(ui, "Step", EventFilter::CpuProgramCounter(0..u32::MAX));
-                    log_point_button(ui, "Irq", EventFilter::Interrupt(None));
-                    log_point_button(ui, "Err", EventFilter::ExecutionError);
-                    ui.label("Bus");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0..u32::MAX));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0..u32::MAX));
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("CPU MMIO:");
-                    ui.label("PPU");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2100..0x2140));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2100..0x2140));
-                    ui.label("APU");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2140..0x2144));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2140..0x2144));
-                    ui.label("WRAM");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2180..0x2184));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2180..0x2184));
-                    ui.label("Other");
-                    log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x4016..0x4400));
-                    log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x4016..0x4400));
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("SPC:     ");
-                    log_point_button(ui, "Step", EventFilter::Spc700ProgramCounter(0..u16::MAX));
-                    ui.label("Bus");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0..u16::MAX));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0..u16::MAX));
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("SPC MMIO:");
-                    ui.label("Ctrl");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f1..0x00f2));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f1..0x00f2));
-                    ui.label("CPU");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f4..0x00f8));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f4..0x00f8));
-                    ui.label("DSP");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f2..0x00f4));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f2..0x00f4));
-                    ui.label("Timer");
-                    log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00fa..0x0100));
-                    log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00fa..0x0100));
-                });
-
-                ui.separator();
-
-                let num_rows = debugger.log.len();
-                let row_height = ui.text_style_height(&text_style);
-
-                ScrollArea::vertical()
-                    .auto_shrink(false)
-                    .stick_to_bottom(true)
-                    .show_rows(ui, row_height, num_rows, |ui, row_range| {
-                        for row in debugger
-                            .log
-                            .stack
-                            .iter()
-                            .rev()
-                            .skip(row_range.start)
-                            .take(row_range.end - row_range.start)
-                        {
-                            log_line(ui, row, selected);
-                        }
-                    });
-            });
-    }
 }
