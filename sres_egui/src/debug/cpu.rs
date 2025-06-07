@@ -27,14 +27,13 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
     ui.label(format!("PC: {:}", trace.instruction.address));
 }
 
-pub fn disassembly_widget(ui: &mut Ui, emulator: &System) {
+pub fn disassembly_widget(ui: &mut Ui, emulator: &System, selected: &mut InternalLink) {
     ui.label(RichText::new("Operations").strong());
-    let mut selected = InternalLink::None; // TODO add selection handling
     for trace_line in emulator.debugger().cpu_trace().skip(100) {
-        cpu_disassembly_line(ui, trace_line.instruction.clone(), false, &mut selected);
+        cpu_disassembly_line(ui, trace_line.instruction.clone(), false, selected);
     }
     for (idx, meta) in emulator.cpu.debug().peek_next_operations(20).enumerate() {
-        cpu_disassembly_line(ui, meta, idx == 0, &mut selected);
+        cpu_disassembly_line(ui, meta, idx == 0, selected);
     }
 }
 
