@@ -118,7 +118,7 @@ pub fn debug_controls_widget(ui: &mut Ui, current_command: DebugCommand) -> Opti
 }
 
 lazy_static! {
-    static ref ADDR_ANNOTATIONS: HashMap<u32, &'static str> = {
+    pub static ref ADDR_ANNOTATIONS: HashMap<u32, &'static str> = {
         [
             // PPU Display Registers ($2100-$2114)
             (0x2100, "INIDISP"),  // Screen Display

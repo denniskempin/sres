@@ -16,6 +16,7 @@ use sres_emulator::main_bus::MainBusEvent;
 use sres_emulator::System;
 
 use super::event::event_filter_widget;
+use crate::debug::cpu::ADDR_ANNOTATIONS;
 use crate::debug::InternalLink;
 
 pub struct LogViewer {
@@ -175,6 +176,10 @@ fn label_addr(ui: &mut Ui, text: impl Into<String>) -> egui::Response {
 fn label_cpu_addr(ui: &mut Ui, addr: AddressU24, selected: &mut InternalLink) {
     if label_addr(ui, addr.to_string()).clicked() {
         *selected = InternalLink::CpuMemory(addr);
+    }
+    let addr_u32: u32 = addr.into();
+    if ADDR_ANNOTATIONS.contains_key(&addr_u32) {
+        ui.label(format!("[{}]", ADDR_ANNOTATIONS[&addr_u32]));
     }
 }
 
