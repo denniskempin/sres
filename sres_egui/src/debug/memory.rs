@@ -24,6 +24,11 @@ impl MemoryViewer {
         }
     }
 
+    pub fn open_at(&mut self, location: AddressU24) {
+        self.scroll_to_location = Some(location);
+        self.is_open = true;
+    }
+
     pub fn toggle(&mut self) {
         self.is_open = !self.is_open;
     }

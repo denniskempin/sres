@@ -121,13 +121,26 @@ impl DebugUi {
         self.alert.render(ctx);
         self.ppu_debug.show(ctx, emulator);
         self.apu_debug.show(ctx, emulator);
-        self.memory_viewer
-            .show(ctx, |addr| emulator.cpu.bus.peek_u8(addr));
         /* if self.show_profiler && !puffin_egui::profiler_window(ctx) {
             self.show_profiler = false;
         } */
         self.log_viewer
             .show(ctx, emulator, &mut self.selected_memory_location);
+
+        match self.selected_memory_location {
+            InternalLink::None => (),
+            InternalLink::CpuMemory(addr) => {
+                self.memory_viewer.open_at(addr);
+            }
+            InternalLink::CpuProgramCounter(addr) => {
+                self.memory_viewer.open_at(addr);
+            }
+            InternalLink::Spc700ProgramCounter(_) => (),
+        }
+        self.selected_memory_location = InternalLink::None;
+
+        self.memory_viewer
+            .show(ctx, |addr| emulator.cpu.bus.peek_u8(addr));
     }
 
     pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
@@ -151,7 +164,7 @@ impl DebugUi {
         ui.separator();
         cpu::cpu_state_widget(ui, emulator);
         ui.separator();
-        cpu::disassembly_widget(ui, emulator);
+        cpu::disassembly_widget(ui, emulator, &mut self.selected_memory_location);
     }
 
     pub fn bottom_debug_panel(&mut self, ui: &mut Ui, _emulator: &System) {
