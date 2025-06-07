@@ -1,5 +1,8 @@
 use egui::Color32;
+use egui::Context;
 use egui::RichText;
+use egui::ScrollArea;
+use egui::TextStyle;
 use egui::Ui;
 use sres_emulator::apu::ApuBusEvent;
 use sres_emulator::common::address::AddressU16;
@@ -10,12 +13,62 @@ use sres_emulator::components::spc700::Spc700Event;
 use sres_emulator::components::spc700::Spc700State;
 use sres_emulator::debugger::DebugEvent;
 use sres_emulator::main_bus::MainBusEvent;
+use sres_emulator::System;
 
-use super::InternalLink;
+use super::event::event_filter_widget;
+use crate::debug::InternalLink;
+
+pub struct LogViewer {
+    is_open: bool,
+}
+
+impl LogViewer {
+    pub fn new() -> Self {
+        Self { is_open: false }
+    }
+
+    pub fn toggle(&mut self) {
+        self.is_open = !self.is_open;
+    }
+
+    pub fn show(&mut self, ctx: &Context, emulator: &System, selected: &mut InternalLink) {
+        egui::Window::new("Log Viewer")
+            .open(&mut self.is_open)
+            .show(ctx, |ui| {
+                let mut debugger = emulator.debugger();
+                event_filter_widget(ui, &mut debugger.log_points);
+
+                ui.separator();
+
+                let text_style = TextStyle::Monospace;
+                let style = ui.style_mut();
+                style.override_text_style = Some(text_style.clone());
+
+                let num_rows = debugger.log.len();
+                let row_height = ui.text_style_height(&text_style);
+
+                ScrollArea::vertical()
+                    .auto_shrink(false)
+                    .stick_to_bottom(true)
+                    .show_rows(ui, row_height, num_rows, |ui, row_range| {
+                        for row in debugger
+                            .log
+                            .stack
+                            .iter()
+                            .rev()
+                            .skip(row_range.start)
+                            .take(row_range.end - row_range.start)
+                        {
+                            log_line(ui, row, selected);
+                        }
+                    });
+            });
+    }
+}
 
 /// Widget to display a single log line with syntax highlighting, hover info and the ability
 /// to click addresses.
-pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
+fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
     use DebugEvent::*;
     ui.horizontal(|ui| {
         match event {

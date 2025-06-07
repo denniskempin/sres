@@ -71,8 +71,8 @@ fn disassembly_line<AddressT: Address>(
         if let Some(effective_addr) = meta.effective_addr {
             let addr_text = ADDR_ANNOTATIONS
                 .get(&effective_addr.into())
-                .map(|s| format!("[{:}]", s))
-                .unwrap_or(format!("[{:}]", effective_addr));
+                .map(|s| format!("[{s:}]"))
+                .unwrap_or(format!("[{effective_addr:}]"));
             ui.label(RichText::new(addr_text).strong().color(Color32::LIGHT_BLUE));
         }
     });
@@ -86,12 +86,9 @@ fn run_button_widget(ui: &mut Ui, paused: bool) -> egui::Response {
     }
 }
 
-pub fn debug_controls_widget(
-    ui: &mut Ui,
-    current_command: DebugCommand,
-) -> Option<DebugCommand> {
+pub fn debug_controls_widget(ui: &mut Ui, current_command: DebugCommand) -> Option<DebugCommand> {
     let mut new_command = None;
-    
+
     ui.horizontal_wrapped(|ui| {
         let paused = matches!(current_command, DebugCommand::Pause);
 
@@ -116,7 +113,7 @@ pub fn debug_controls_widget(
             new_command = Some(DebugCommand::StepScanlines(1));
         }
     });
-    
+
     new_command
 }
 

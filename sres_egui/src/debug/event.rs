@@ -1,25 +1,22 @@
 use std::ops::DerefMut;
 
+use egui::TextStyle;
 use egui::Ui;
 use egui_hooks::UseHookExt;
 use sres_emulator::debugger::EventFilter;
 
 pub fn event_filter_widget(ui: &mut Ui, event_filters: &mut Vec<EventFilter>) {
     ui.vertical(|ui| {
-        if let Some(breakpoint) = event_filter_input_widget(ui) {
-            event_filters.push(breakpoint);
-        }
-
+        event_filter_input_widget(ui, event_filters);
         event_filter_list_widget(ui, event_filters);
     });
 }
 
-fn event_filter_input_widget(ui: &mut Ui) -> Option<EventFilter> {
+fn event_filter_input_widget(ui: &mut Ui, event_filters: &mut Vec<EventFilter>) {
     let mut breakpoint_text = ui.use_state(String::default, ()).into_var();
     let error_message = ui.use_state(Option::<String>::default, ());
     let mut show_help = ui.use_state(|| false, ()).into_var();
 
-    let mut breakpoint_to_add = None;
     ui.horizontal(|ui| {
         let response = ui.add(
             egui::TextEdit::singleline(breakpoint_text.deref_mut())
@@ -33,7 +30,7 @@ fn event_filter_input_widget(ui: &mut Ui) -> Option<EventFilter> {
             if !input.is_empty() {
                 match input.parse::<EventFilter>() {
                     Ok(filter) => {
-                        breakpoint_to_add = Some(filter);
+                        event_filters.push(filter);
                         breakpoint_text.clear();
                         error_message.set_next(None);
                     }
@@ -48,15 +45,81 @@ fn event_filter_input_widget(ui: &mut Ui) -> Option<EventFilter> {
             *show_help = true;
         }
     });
-
+    ui.collapsing("Events", |ui| {
+        event_filter_quick_add(ui, event_filters);
+    });
     event_filter_help_window(ui, show_help.deref_mut());
 
-    // Display error message if any
     if let Some(ref error_msg) = *error_message {
         ui.colored_label(egui::Color32::RED, error_msg);
     }
+}
 
-    breakpoint_to_add
+fn event_filter_quick_add(ui: &mut Ui, event_filters: &mut Vec<EventFilter>) {
+    let mut log_point_button = |ui: &mut Ui, label: &str, filter: EventFilter| {
+        if ui
+            .add(egui::Button::new(label).selected(event_filters.contains(&filter)))
+            .clicked()
+        {
+            if !event_filters.contains(&filter) {
+                event_filters.push(filter);
+            } else {
+                event_filters.retain(|t| t != &filter)
+            }
+        }
+    };
+    let text_style = TextStyle::Monospace;
+    let style = ui.style_mut();
+    style.override_text_style = Some(text_style.clone());
+    ui.horizontal(|ui| {
+        ui.label("CPU:     ");
+        log_point_button(ui, "Step", EventFilter::CpuProgramCounter(0..u32::MAX));
+        log_point_button(ui, "Irq", EventFilter::Interrupt(None));
+        log_point_button(ui, "Err", EventFilter::ExecutionError);
+        ui.label("Bus");
+        log_point_button(ui, "R", EventFilter::CpuMemoryRead(0..u32::MAX));
+        log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0..u32::MAX));
+    });
+
+    ui.horizontal(|ui| {
+        ui.label("CPU MMIO:");
+        ui.label("PPU");
+        log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2100..0x2140));
+        log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2100..0x2140));
+        ui.label("APU");
+        log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2140..0x2144));
+        log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2140..0x2144));
+        ui.label("WRAM");
+        log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x2180..0x2184));
+        log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x2180..0x2184));
+        ui.label("Other");
+        log_point_button(ui, "R", EventFilter::CpuMemoryRead(0x4016..0x4400));
+        log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0x4016..0x4400));
+    });
+
+    ui.horizontal(|ui| {
+        ui.label("SPC:     ");
+        log_point_button(ui, "Step", EventFilter::Spc700ProgramCounter(0..u16::MAX));
+        ui.label("Bus");
+        log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0..u16::MAX));
+        log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0..u16::MAX));
+    });
+
+    ui.horizontal(|ui| {
+        ui.label("SPC MMIO:");
+        ui.label("Ctrl");
+        log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f1..0x00f2));
+        log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f1..0x00f2));
+        ui.label("CPU");
+        log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f4..0x00f8));
+        log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f4..0x00f8));
+        ui.label("DSP");
+        log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00f2..0x00f4));
+        log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00f2..0x00f4));
+        ui.label("Timer");
+        log_point_button(ui, "R", EventFilter::Spc700MemoryRead(0x00fa..0x0100));
+        log_point_button(ui, "W", EventFilter::Spc700MemoryWrite(0x00fa..0x0100));
+    });
 }
 
 fn event_filter_help_window(ui: &mut Ui, show: &mut bool) {
