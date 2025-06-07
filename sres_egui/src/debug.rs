@@ -4,6 +4,7 @@ mod event;
 mod log_viewer;
 mod memory;
 mod ppu;
+mod syntax;
 
 use std::fmt::Debug;
 use std::time::Duration;
