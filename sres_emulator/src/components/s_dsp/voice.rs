@@ -9,7 +9,7 @@ use super::pitch::PitchGenerator;
 use crate::common::uint::U16Ext;
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct Voice {
+pub struct Voice {
     /// VOL (L): $X0 - SVVV VVVV - Left channel volume, signed.
     pub vol_l: i8,
     /// VOL (R): $X1 - SVVV VVVV - Right channel volume, signed.
@@ -136,24 +136,24 @@ impl Voice {
 
 #[bitsize(8)]
 #[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-pub(crate) struct Adsr1 {
-    attack_rate: u4,
-    decay_rate: u3,
-    enable: bool,
+pub struct Adsr1 {
+    pub attack_rate: u4,
+    pub decay_rate: u3,
+    pub enable: bool,
 }
 
 #[bitsize(8)]
 #[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-pub(crate) struct Adsr2 {
-    release_rate: u5,
-    sustain_level: u3,
+pub struct Adsr2 {
+    pub release_rate: u5,
+    pub sustain_level: u3,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub(crate) struct Gain(pub u8);
+pub struct Gain(pub u8);
 
 impl Gain {
-    fn mode(&self) -> GainMode {
+    pub fn mode(&self) -> GainMode {
         if self.0.bit(0) {
             let rate = self.0.bits(0..5);
             match self.0.bits(5..7) {
@@ -169,7 +169,7 @@ impl Gain {
     }
 }
 
-enum GainMode {
+pub enum GainMode {
     Fixed(u8),
     LinearDecay(u8),
     ExponentialDecay(u8),
