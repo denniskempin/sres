@@ -3,7 +3,7 @@
 mod brr;
 mod pitch;
 mod test;
-mod voice;
+pub mod voice;
 
 use bilge::prelude::*;
 use intbits::Bits;
@@ -102,6 +102,30 @@ impl SDspDebug<'_> {
     pub fn voice(&self, voice: usize) -> String {
         self.0.voices[voice].to_string()
     }
+
+    pub fn voices(&self) -> &[Voice; 8] {
+        &self.0.voices
+    }
+
+    pub fn sample_directory(&self) -> u8 {
+        self.0.dir
+    }
+
+    pub fn flags(&self) -> Flg {
+        self.0.flg
+    }
+
+    pub fn noise_enable(&self) -> u8 {
+        self.0.raw[0x3D]
+    }
+
+    pub fn key_on(&self) -> u8 {
+        self.0.raw[0x4C]
+    }
+
+    pub fn key_off(&self) -> u8 {
+        self.0.raw[0x5C]
+    }
 }
 
 // Flg register
@@ -115,15 +139,15 @@ impl SDspDebug<'_> {
 // +--------- Soft reset (R)
 #[bitsize(8)]
 #[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-struct Flg {
+pub struct Flg {
     /// Bit 7: Soft reset (R)
-    reset: bool,
+    pub reset: bool,
     /// Bit 6: Mute all voices (M)
-    mute: bool,
+    pub mute: bool,
     /// Bit 5: Echo disable (E)
-    echo_disable: bool,
+    pub echo_disable: bool,
     /// Bits 0-4: Noise frequency (N)
-    noise_frequency: u5,
+    pub noise_frequency: u5,
 }
 
 /// Handles the SNES DSP white noise generation

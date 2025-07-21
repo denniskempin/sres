@@ -198,7 +198,7 @@ impl BusDeviceU24 for Apu {
 pub struct ApuDebug<'a>(&'a Apu);
 
 impl<'a> ApuDebug<'a> {
-    pub fn dsp(self) -> SDspDebug<'a> {
+    pub fn dsp(&'a self) -> SDspDebug<'a> {
         self.0.spc700.bus.dsp.debug()
     }
 
