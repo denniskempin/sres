@@ -8,6 +8,8 @@ use super::brr::BrrDecoder;
 use super::pitch::PitchGenerator;
 use crate::common::uint::U16Ext;
 
+pub const OUTX_BUFFER_SIZE: usize = 128;
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Voice {
     /// VOL (L): $X0 - SVVV VVVV - Left channel volume, signed.
@@ -31,6 +33,10 @@ pub struct Voice {
     pub outx: i8,
 
     pub trigger_on: bool,
+
+    /// Buffer of recent samples for debugging purposes
+    pub outx_buffer: AudioRingBuffer<OUTX_BUFFER_SIZE>,
+
     brr_decoder: BrrDecoder,
     pitch_generator: PitchGenerator,
 }
@@ -126,6 +132,8 @@ impl Voice {
             self.pitch_generator
                 .generate_sample(self.pitch, &mut self.brr_decoder.iter(memory))
         };
+        self.outx = sample as i8;
+        self.outx_buffer.push(sample);
 
         // Apply volume
         let left = ((sample as i32) * (self.vol_l as i32)) >> 7;
@@ -134,6 +142,31 @@ impl Voice {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct AudioRingBuffer<const N: usize> {
+    samples: [i16; N],
+    head: usize,
+}
+
+impl<const N: usize> AudioRingBuffer<N> {
+    pub fn push(&mut self, sample: i16) {
+        self.samples[self.head] = sample;
+        self.head = (self.head + 1) % N;
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &i16> {
+        self.samples.iter()
+    }
+}
+
+impl<const N: usize> Default for AudioRingBuffer<N> {
+    fn default() -> Self {
+        Self {
+            samples: [0; N],
+            head: 0,
+        }
+    }
+}
 #[bitsize(8)]
 #[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
 pub struct Adsr1 {
@@ -226,6 +259,7 @@ mod test {
             brr_decoder: BrrDecoder::default(),
             pitch_generator: PitchGenerator::default(),
             trigger_on: true,
+            outx_buffer: AudioRingBuffer::default(),
         };
 
         const NUM_SAMPLES: usize = 7936; // Length of the play_brr_sample sample
