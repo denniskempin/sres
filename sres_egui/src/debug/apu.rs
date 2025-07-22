@@ -23,8 +23,8 @@ impl ApuDebugWindow {
     pub fn show(&mut self, ctx: &Context, emulator: &System) {
         egui::Window::new("APU Debug")
             .open(&mut self.open)
-            .default_width(800.0)
-            .default_height(600.0)
+            .default_width(1200.0)
+            .default_height(800.0)
             .show(ctx, |ui| {
                 let debug = emulator.debug();
                 let apu_debug = debug.apu();
@@ -32,14 +32,17 @@ impl ApuDebugWindow {
                 ui.heading("S-DSP Voice Status");
                 ui.separator();
 
-                ui.vertical(|ui| {
-                    for i in 0..8 {
-                        voice_detail_widget(ui, i, &apu_debug.dsp(), apu_debug.ram());
-                        if i % 2 == 1 {
-                            ui.end_row();
+                egui::Grid::new("voice_grid")
+                    .num_columns(4)
+                    .spacing([5.0, 5.0])
+                    .show(ui, |ui| {
+                        for i in 0..8 {
+                            voice_detail_widget(ui, i, &apu_debug.dsp(), apu_debug.ram());
+                            if i % 4 == 3 {
+                                ui.end_row();
+                            }
                         }
-                    }
-                });
+                    });
 
                 ui.separator();
                 ui.heading("Global DSP Status");
@@ -55,9 +58,8 @@ fn voice_detail_widget(
     ram: &[u8],
 ) {
     ui.group(|ui| {
-        ui.horizontal(|ui| {
-            ui.heading(format!("Voice {}", voice_id));
-
+        ui.set_width(200.0);
+        ui.vertical(|ui| {
             // Get voice data directly from the Voice struct
             let voice = &dsp.voices()[voice_id];
             let vol_l = voice.vol_l;
@@ -70,89 +72,70 @@ fn voice_detail_widget(
             let envx = voice.envx;
             let outx = voice.outx;
 
-            // Voice activity indicator
-            let is_active = envx > 0 || outx != 0;
-            let activity_color = if is_active {
-                Color32::GREEN
-            } else {
-                Color32::GRAY
-            };
-            ui.colored_label(activity_color, if is_active { "●" } else { "○" });
+            // Voice header with activity indicator
+            ui.horizontal(|ui| {
+                ui.heading(format!("Voice {}", voice_id));
+                let is_active = envx > 0 || outx != 0;
+                let activity_color = if is_active {
+                    Color32::GREEN
+                } else {
+                    Color32::GRAY
+                };
+                ui.colored_label(activity_color, if is_active { "●" } else { "○" });
+            });
 
-            // Volume settings
+            // Volume bars
             ui.horizontal(|ui| {
                 ui.label("Vol:");
-                // Volume bars
                 let vol_l_norm = (vol_l.abs() as f32) / 127.0;
                 let vol_r_norm = (vol_r.abs() as f32) / 127.0;
                 volume_bar_widget(ui, vol_l_norm, vol_l < 0);
                 volume_bar_widget(ui, vol_r_norm, vol_r < 0);
             });
 
-            // Pitch
-            ui.horizontal(|ui| {
-                ui.label("Pitch:");
-                ui.label(format!(
-                    "${:04X} ({:.1} Hz)",
-                    pitch,
-                    pitch_to_frequency(pitch)
-                ));
-            });
+            // Pitch (shortened)
+            ui.label(format!(
+                "Pitch: ${:04X} ({:.2} Hz)",
+                pitch,
+                pitch_to_frequency(pitch)
+            ));
 
-            // Sample source and envelope
-            ui.horizontal(|ui| {
-                ui.label("Sample:");
-                ui.label(format!("${:02X}", sample_source));
-                ui.label("Env:");
-                ui.label(format!("{:3}", envx));
-                ui.label("Out:");
-                ui.label(format!("{:+4}", outx));
-            });
+            // Sample, envelope, output in compact format
+            ui.label(format!(
+                "Src:${:02X} Env:{} Out:{:+4}",
+                sample_source, envx, outx
+            ));
 
-            // ADSR/Gain settings
+            // ADSR/Gain settings (compact)
             if adsr1.enable() {
-                ui.horizontal(|ui| {
-                    ui.label("ADSR:");
-                    ui.label(format!(
-                        "A:{} D:{} S:{} R:{}",
-                        adsr1.attack_rate().value(),
-                        adsr1.decay_rate().value(),
-                        adsr2.sustain_level().value(),
-                        adsr2.release_rate().value()
-                    ));
-                });
+                ui.label(format!(
+                    "ADSR: {}/{}/{}/{}",
+                    adsr1.attack_rate().value(),
+                    adsr1.decay_rate().value(),
+                    adsr2.sustain_level().value(),
+                    adsr2.release_rate().value()
+                ));
             } else {
-                ui.horizontal(|ui| {
-                    ui.label("GAIN:");
+                ui.label(format!(
+                    "GAIN: {}",
                     match gain.mode() {
-                        GainMode::Fixed(value) => {
-                            ui.label(format!("Fixed {}", value));
-                        }
-                        GainMode::LinearDecay(rate) => {
-                            ui.label(format!("Lin Dec {}", rate));
-                        }
-                        GainMode::ExponentialDecay(rate) => {
-                            ui.label(format!("Exp Dec {}", rate));
-                        }
-                        GainMode::LinearIncrease(rate) => {
-                            ui.label(format!("Lin Inc {}", rate));
-                        }
-                        GainMode::BentIncrease(rate) => {
-                            ui.label(format!("Bent Inc {}", rate));
-                        }
+                        GainMode::Fixed(value) => format!("Fix {}", value),
+                        GainMode::LinearDecay(rate) => format!("LDec {}", rate),
+                        GainMode::ExponentialDecay(rate) => format!("EDec {}", rate),
+                        GainMode::LinearIncrease(rate) => format!("LInc {}", rate),
+                        GainMode::BentIncrease(rate) => format!("BInc {}", rate),
                     }
-                });
+                ));
             }
 
             // Envelope visualization
             envelope_widget(ui, envx);
 
             // Waveform visualization
-            ui.vertical(|ui| {
-                waveform_widget(ui, &voice.outx_buffer);
-            });
+            ui.label("Waveform:");
+            waveform_widget(ui, &voice.outx_buffer);
 
-            // Sample directory info
+            // Sample directory info (compact)
             if sample_source != 0 {
                 let dir_offset = dsp.sample_directory() as usize * 0x100;
                 let source_addr = dir_offset + sample_source as usize * 4;
@@ -160,10 +143,8 @@ fn voice_detail_widget(
                     let start_addr = u16::from_le_bytes([ram[source_addr], ram[source_addr + 1]]);
                     let loop_addr =
                         u16::from_le_bytes([ram[source_addr + 2], ram[source_addr + 3]]);
-                    ui.horizontal(|ui| {
-                        ui.label("Sample:");
-                        ui.label(format!("Start:${:04X} Loop:${:04X}", start_addr, loop_addr));
-                    });
+                    ui.label(format!("Start:${:04X}", start_addr));
+                    ui.label(format!("Loop:${:04X}", loop_addr));
                 }
             }
         });
@@ -236,7 +217,7 @@ fn global_dsp_state_widget(
 }
 
 fn volume_bar_widget(ui: &mut Ui, level: f32, negative: bool) {
-    let size = egui::Vec2::new(40.0, 8.0);
+    let size = egui::Vec2::new(30.0, 6.0);
     let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
 
     let bg_color = Color32::from_gray(50);
@@ -261,7 +242,7 @@ fn volume_bar_widget(ui: &mut Ui, level: f32, negative: bool) {
 }
 
 fn envelope_widget(ui: &mut Ui, envx: u8) {
-    let size = egui::Vec2::new(60.0, 20.0);
+    let size = egui::Vec2::new(50.0, 16.0);
     let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
 
     let bg_color = Color32::from_gray(30);
@@ -295,7 +276,7 @@ fn envelope_widget(ui: &mut Ui, envx: u8) {
 }
 
 fn waveform_widget(ui: &mut Ui, buffer: &AudioRingBuffer<OUTX_BUFFER_SIZE>) {
-    let size = egui::Vec2::new(120.0, 40.0);
+    let size = egui::Vec2::new(160.0, 30.0);
     let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
 
     let bg_color = Color32::from_gray(20);
