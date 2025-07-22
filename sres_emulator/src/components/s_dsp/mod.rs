@@ -17,6 +17,7 @@ pub struct SDsp {
     dir: u8,
     flg: Flg,
     noise_generator: NoiseGenerator,
+    global_counter: u16,
 }
 
 impl SDsp {
@@ -60,14 +61,24 @@ impl SDsp {
 
         let directory_offset = (self.dir as usize) * 0x100;
         let noise_on = self.raw[0x3D]; // NON register
-        self.voices
+        let result = self
+            .voices
             .iter_mut()
             .enumerate()
             .map(|(i, v)| {
                 let use_noise = noise_on.bit(i);
-                v.generate_sample_with_noise(memory, directory_offset, use_noise, noise_bits)
+                v.generate_sample_with_noise(
+                    memory,
+                    directory_offset,
+                    use_noise,
+                    noise_bits,
+                    self.global_counter,
+                )
             })
-            .fold(0i16, |acc, x| acc.saturating_add(x))
+            .fold(0i16, |acc, x| acc.saturating_add(x));
+
+        self.global_counter = self.global_counter.wrapping_add(1);
+        result
     }
 
     pub fn debug(&self) -> SDspDebug<'_> {
@@ -92,6 +103,7 @@ impl Default for SDsp {
             dir: 0,
             flg: Flg::default(),
             noise_generator: NoiseGenerator::new(),
+            global_counter: 0,
         }
     }
 }
