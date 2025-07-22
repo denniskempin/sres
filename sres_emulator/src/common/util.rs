@@ -7,7 +7,7 @@ use std::io::Write;
 use bitcode::Decode;
 use bitcode::Encode;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RingBuffer<T, const N: usize> {
     pub stack: VecDeque<T>,
 }

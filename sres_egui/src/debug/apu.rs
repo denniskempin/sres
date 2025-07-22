@@ -2,7 +2,9 @@ use egui::Color32;
 use egui::Context;
 use egui::Stroke;
 use egui::Ui;
+use sres_emulator::components::s_dsp::voice::AudioRingBuffer;
 use sres_emulator::components::s_dsp::voice::GainMode;
+use sres_emulator::components::s_dsp::voice::OUTX_BUFFER_SIZE;
 use sres_emulator::System;
 
 pub struct ApuDebugWindow {
@@ -145,6 +147,11 @@ fn voice_detail_widget(
             // Envelope visualization
             envelope_widget(ui, envx);
 
+            // Waveform visualization
+            ui.vertical(|ui| {
+                waveform_widget(ui, &voice.outx_buffer);
+            });
+
             // Sample directory info
             if sample_source != 0 {
                 let dir_offset = dsp.sample_directory() as usize * 0x100;
@@ -284,6 +291,49 @@ fn envelope_widget(ui: &mut Ui, envx: u8) {
         format!("{}", envx),
         egui::FontId::monospace(10.0),
         Color32::WHITE,
+    );
+}
+
+fn waveform_widget(ui: &mut Ui, buffer: &AudioRingBuffer<OUTX_BUFFER_SIZE>) {
+    let size = egui::Vec2::new(120.0, 40.0);
+    let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
+
+    let bg_color = Color32::from_gray(20);
+    let line_color = Color32::LIGHT_GREEN;
+
+    ui.painter().rect_filled(rect, 2.0, bg_color);
+
+    // Draw center line
+    let center_y = rect.center().y;
+    ui.painter().line_segment(
+        [
+            egui::Pos2::new(rect.min.x, center_y),
+            egui::Pos2::new(rect.max.x, center_y),
+        ],
+        Stroke::new(1.0, Color32::from_gray(60)),
+    );
+
+    // Draw waveform
+    let mut prev_point: Option<egui::Pos2> = None;
+
+    for (i, &sample) in buffer.iter().enumerate() {
+        let x = rect.min.x + (i as f32 / (OUTX_BUFFER_SIZE - 1) as f32) * rect.width();
+        let normalized = (sample as f32) / 32768.0; // Normalize i16 to [-1, 1]
+        let y = center_y - normalized * (rect.height() / 2.0);
+        let point = egui::Pos2::new(x, y.clamp(rect.min.y, rect.max.y));
+
+        if let Some(prev) = prev_point {
+            ui.painter()
+                .line_segment([prev, point], Stroke::new(1.0, line_color));
+        }
+        prev_point = Some(point);
+    }
+
+    ui.painter().rect_stroke(
+        rect,
+        2.0,
+        Stroke::new(1.0, Color32::WHITE),
+        egui::StrokeKind::Inside,
     );
 }
 
