@@ -216,6 +216,11 @@ impl Ppu {
         &self.state.framebuffer
     }
 
+    /// Swap the current framebuffer with a provided buffer to avoid copying
+    pub fn swap_framebuffer(&mut self, buffer: &mut Framebuffer) {
+        std::mem::swap(&mut self.state.framebuffer, buffer);
+    }
+
     pub fn load_state(&mut self, encoded: &[u8]) -> anyhow::Result<()> {
         self.state = bitcode::decode(encoded)?;
         Ok(())

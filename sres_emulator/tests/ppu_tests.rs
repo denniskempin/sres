@@ -15,6 +15,7 @@ use sres_emulator::common::image::Rgba32;
 use sres_emulator::common::logging;
 use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::components::ppu::BackgroundId;
+use sres_emulator::components::ppu::Framebuffer;
 use sres_emulator::components::ppu::Ppu;
 use sres_emulator::components::ppu::VramRenderSelection;
 use sres_emulator::System;
@@ -69,10 +70,10 @@ fn run_framebuffer_test(test_name: &str, frame: u64) -> System {
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.execute_frames(frame);
     let framebuffer_path = test_dir().join(format!("{test_name}-framebuffer"));
-    compare_to_golden(
-        &system.pending_rgba_video_frame::<TestImageImpl>().unwrap(),
-        &framebuffer_path,
-    );
+
+    let mut video_frame = Framebuffer::default();
+    system.swap_video_frame(&mut video_frame);
+    compare_to_golden(&video_frame.to_rgba::<TestImageImpl>(), &framebuffer_path);
     system
 }
 

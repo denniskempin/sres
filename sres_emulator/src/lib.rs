@@ -17,7 +17,6 @@ use crate::apu::Apu;
 use crate::apu::ApuDebug;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
-use crate::common::image::Image;
 use crate::components::cartridge::Cartridge;
 use crate::components::cpu::Cpu;
 use crate::components::cpu::MainBus;
@@ -40,7 +39,8 @@ pub struct System {
     debugger: DebuggerRef,
     debugger_enabled: bool,
     vblank_detector: EdgeDetector,
-    pending_video_frame: Option<Framebuffer>,
+    has_pending_video_frame: bool,
+    pending_video_frame: Framebuffer,
 }
 
 impl System {
@@ -64,7 +64,8 @@ impl System {
             debugger,
             debugger_enabled: false,
             vblank_detector: EdgeDetector::new(),
-            pending_video_frame: None,
+            has_pending_video_frame: false,
+            pending_video_frame: Framebuffer::default(),
         }
     }
 
@@ -132,12 +133,18 @@ impl System {
         self.cpu.bus.update_joypads(joy1, joy2);
     }
 
-    pub fn pending_rgba_video_frame<ImageT: Image>(&self) -> Option<ImageT> {
-        self.pending_video_frame.as_ref().map(|fb| fb.to_rgba())
+    pub fn swap_video_frame(&mut self, buffer: &mut Framebuffer) -> bool {
+        if self.has_pending_video_frame {
+            std::mem::swap(&mut self.pending_video_frame, buffer);
+            self.has_pending_video_frame = false;
+            true
+        } else {
+            false
+        }
     }
 
-    pub fn take_audio_samples(&mut self) -> Vec<i16> {
-        self.cpu.bus.apu.inner.take_audio_samples()
+    pub fn swap_audio_buffer(&mut self, buffer: &mut Vec<i16>) {
+        self.cpu.bus.apu.inner.swap_audio_buffer(buffer)
     }
 
     pub fn ppu(&mut self) -> &mut Ppu {
@@ -184,8 +191,12 @@ impl System {
         if self.vblank_detector.consume_rise() {
             self.cpu.bus.ppu.sync();
             self.cpu.bus.apu.sync();
-            // TODO: Unnecessary clone, should use re-usable buffers or double buffering
-            self.pending_video_frame = Some(self.cpu.bus.ppu.inner.framebuffer().clone());
+            self.cpu
+                .bus
+                .ppu
+                .inner
+                .swap_framebuffer(&mut self.pending_video_frame);
+            self.has_pending_video_frame = true;
         }
     }
 

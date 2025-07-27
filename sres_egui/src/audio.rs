@@ -12,6 +12,7 @@ use cpal::Stream;
 use cpal::StreamConfig;
 use log::error;
 use log::info;
+use sres_emulator::apu::AUDIO_BUFFER_CAPACITY;
 use sres_emulator::System;
 
 const TARGET_BUFFER_SIZE: usize = 1024;
@@ -19,6 +20,7 @@ const TARGET_BUFFER_SIZE: usize = 1024;
 /// Audio output handler that manages playback of SNES APU audio samples
 pub struct AudioOutput {
     stream: Option<Stream>,
+    sample_buffer: Vec<i16>,
     buffer_queue: Arc<Mutex<AudioBufferQueue>>,
 }
 
@@ -32,6 +34,7 @@ impl AudioOutput {
     pub fn new() -> Self {
         Self {
             stream: None,
+            sample_buffer: Vec::with_capacity(AUDIO_BUFFER_CAPACITY),
             buffer_queue: Arc::new(Mutex::new(AudioBufferQueue::default())),
         }
     }
@@ -121,9 +124,10 @@ impl AudioOutput {
             return;
         }
 
+        emulator.swap_audio_buffer(&mut self.sample_buffer);
+        // TODO: Consider some other datastructure here that is lock-free and could avoid the copy
         if let Ok(mut queue) = self.buffer_queue.lock() {
-            let samples = emulator.take_audio_samples();
-            queue.push_buffer(samples);
+            queue.push_buffer(self.sample_buffer.clone());
         }
     }
 

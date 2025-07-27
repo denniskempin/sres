@@ -18,6 +18,7 @@ use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
 use sres_emulator::components::cartridge::Cartridge;
+use sres_emulator::components::ppu::Framebuffer;
 use sres_emulator::controller::StandardController;
 use sres_emulator::System;
 
@@ -35,6 +36,7 @@ pub struct EmulatorApp {
     debug_ui: DebugUi,
     past_frame_times: RingBuffer<Duration, 60>,
     audio_output: AudioOutput,
+    video_frame_buffer: Framebuffer,
 
     input_recording_active: bool,
     input_recording_last: u16,
@@ -57,6 +59,7 @@ impl EmulatorApp {
             debug_ui: DebugUi::new(cc),
             past_frame_times: RingBuffer::default(),
             audio_output: AudioOutput::new(),
+            video_frame_buffer: Framebuffer::default(),
             input_recording: HashMap::new(),
             input_recording_last: 0,
             input_recording_active: false,
@@ -155,7 +158,8 @@ impl EmulatorApp {
     }
 
     fn main_display(&mut self, ui: &mut Ui) {
-        if let Some(video_frame) = self.emulator.pending_rgba_video_frame::<EguiImageImpl>() {
+        if self.emulator.swap_video_frame(&mut self.video_frame_buffer) {
+            let video_frame = self.video_frame_buffer.to_rgba::<EguiImageImpl>();
             self.framebuffer_texture
                 .set(video_frame, TextureOptions::default());
         }

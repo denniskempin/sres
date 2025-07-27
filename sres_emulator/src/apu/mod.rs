@@ -53,12 +53,11 @@ impl Apu {
         ApuDebug(self)
     }
 
-    /// Take a specific number of audio samples from the buffer
-    /// Returns None if not enough samples are available
-    pub fn take_audio_samples(&mut self) -> Vec<i16> {
-        let mut new_buffer = Vec::<i16>::with_capacity(AUDIO_BUFFER_CAPACITY);
-        std::mem::swap(&mut self.sample_buffer, &mut new_buffer);
-        new_buffer
+    /// Swap the current audio sample buffer with a provided buffer
+    /// This avoids copying samples by exchanging buffers directly
+    pub fn swap_audio_buffer(&mut self, buffer: &mut Vec<i16>) {
+        std::mem::swap(&mut self.sample_buffer, buffer);
+        self.sample_buffer.clear();
     }
 
     pub fn sample_buffer_size(&self) -> usize {
