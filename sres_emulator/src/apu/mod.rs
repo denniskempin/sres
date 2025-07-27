@@ -2,8 +2,6 @@
 mod apu_bus;
 mod test;
 
-use std::collections::VecDeque;
-
 use log::debug;
 use log::error;
 
@@ -24,71 +22,16 @@ pub const MASTER_CLOCK_FREQUENCY: u64 = 21477272;
 // Number of master clock cycles per audio sample
 pub const CYCLES_PER_SAMPLE: u64 = MASTER_CLOCK_FREQUENCY / APU_SAMPLE_RATE as u64;
 
-// Buffer size for audio samples (about 1/4 second at 32kHz)
-pub const AUDIO_BUFFER_SIZE: usize = 8192;
-// Maximum number of buffers that can be queued (about 1 second of audio)
-pub const MAX_BUFFER_QUEUE_SIZE: usize = 32;
+// Maximum audio buffer size (about 1 second at 32kHz)
+pub const MAX_AUDIO_BUFFER_SIZE: usize = 32000;
 
-/// A queue of audio sample buffers
-pub struct BufferQueue<T> {
-    buffers: VecDeque<T>,
-    /// Whether the buffer queue has overflowed
-    overflow: bool,
-}
-
-impl<T> Default for BufferQueue<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T> BufferQueue<T> {
-    pub fn new() -> Self {
-        Self {
-            buffers: VecDeque::new(),
-            overflow: false,
-        }
-    }
-
-    pub fn push(&mut self, buffer: T) -> bool {
-        if self.buffers.len() < MAX_BUFFER_QUEUE_SIZE {
-            self.buffers.push_back(buffer);
-            self.overflow = false;
-            true
-        } else {
-            if !self.overflow {
-                self.overflow = true;
-                error!("APU audio buffer queue overflow - dropping samples");
-            }
-            false
-        }
-    }
-
-    pub fn pop(&mut self) -> Option<T> {
-        self.overflow = false;
-        self.buffers.pop_front()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.buffers.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.buffers.len()
-    }
-
-    pub fn clear(&mut self) {
-        self.buffers.clear();
-        self.overflow = false;
-    }
-}
+// Roughly 2 frames worth of audio samples, so we should rarely exceed this.
+pub const AUDIO_BUFFER_CAPACITY: usize = 1024;
 
 pub struct Apu {
     pub spc700: Spc700<ApuBus>,
-    /// Current buffer being filled with audio samples
+    /// Audio sample buffer that grows as samples are generated
     sample_buffer: Vec<i16>,
-    /// Queue of completed audio sample buffers
-    buffer_queue: BufferQueue<Vec<i16>>,
     /// Last master clock cycle when a sample was generated
     last_sample_cycle: u64,
 }
@@ -101,8 +44,7 @@ impl Apu {
                 ApuBus::new(DebugEventCollectorRef(debugger.clone())),
                 DebugEventCollectorRef(debugger.clone()),
             ),
-            sample_buffer: Vec::with_capacity(AUDIO_BUFFER_SIZE),
-            buffer_queue: BufferQueue::new(),
+            sample_buffer: Vec::with_capacity(AUDIO_BUFFER_CAPACITY),
             last_sample_cycle: 0,
         }
     }
@@ -111,9 +53,12 @@ impl Apu {
         ApuDebug(self)
     }
 
-    /// Take the next available audio sample buffer from the queue
-    pub fn take_pending_audio_buffer(&mut self) -> Option<Vec<i16>> {
-        self.buffer_queue.pop()
+    /// Take a specific number of audio samples from the buffer
+    /// Returns None if not enough samples are available
+    pub fn take_audio_samples(&mut self) -> Vec<i16> {
+        let mut new_buffer = Vec::<i16>::with_capacity(AUDIO_BUFFER_CAPACITY);
+        std::mem::swap(&mut self.sample_buffer, &mut new_buffer);
+        new_buffer
     }
 
     // Generate a single audio sample
@@ -147,27 +92,20 @@ impl Apu {
             self.spc700.catch_up_to_master_clock(new_clock.master_clock);
 
             let sample = self.generate_sample();
-            if self.sample_buffer.len() < AUDIO_BUFFER_SIZE {
-                self.sample_buffer.push(sample);
-            } else {
-                // Buffer is full, create a new one and enqueue the full buffer
-                let mut new_buffer = Vec::with_capacity(AUDIO_BUFFER_SIZE);
-                std::mem::swap(&mut self.sample_buffer, &mut new_buffer);
 
-                // Try to push the buffer to the queue
-                self.buffer_queue.push(new_buffer);
-
-                // Add the new sample to the fresh buffer
-                self.sample_buffer.push(sample);
+            // Add sample to buffer, dropping oldest samples if buffer gets too large
+            if self.sample_buffer.len() >= MAX_AUDIO_BUFFER_SIZE {
+                error!("APU audio buffer overflow - dropping oldest samples");
+                self.sample_buffer.drain(0..MAX_AUDIO_BUFFER_SIZE / 2);
             }
+            self.sample_buffer.push(sample);
         }
         self.spc700.catch_up_to_master_clock(new_clock.master_clock);
     }
 
     fn reset(&mut self) {
         self.last_sample_cycle = 0;
-        self.sample_buffer = Vec::with_capacity(AUDIO_BUFFER_SIZE);
-        self.buffer_queue.clear();
+        self.sample_buffer.clear();
     }
 }
 
