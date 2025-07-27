@@ -109,9 +109,15 @@ impl System {
         self.execute_until(|cpu| cpu.bus.clock_info().v >= target_scanline)
     }
 
-    pub fn execute_for_duration(&mut self, _seconds: f64) -> ExecutionResult {
-        // TODO: Implement frame skip/doubling if not running at 60fps
-        self.execute_frames(1)
+    pub fn execute_cycles(&mut self, count: u64) -> ExecutionResult {
+        let target_master_clock = self.cpu.bus.clock_info().master_clock + count;
+        self.execute_until(|cpu| cpu.bus.clock_info().master_clock >= target_master_clock)
+    }
+
+    pub fn execute_for_duration(&mut self, seconds: f64) -> ExecutionResult {
+        use crate::apu::MASTER_CLOCK_FREQUENCY;
+        let target_cycles = (seconds * MASTER_CLOCK_FREQUENCY as f64) as u64;
+        self.execute_cycles(target_cycles)
     }
 
     pub fn clock_info(&self) -> ClockInfo {

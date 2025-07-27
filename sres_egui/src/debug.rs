@@ -61,13 +61,13 @@ impl DebugUi {
         &mut self,
         emulator: &mut System,
         command: DebugCommand,
-        _delta_t: f64,
+        delta_t: f64,
     ) -> ExecutionResult {
         match command {
             DebugCommand::Pause => ExecutionResult::Normal,
             DebugCommand::Run => {
                 let start = Instant::now();
-                let result = emulator.execute_frames(1);
+                let result = emulator.execute_for_duration(delta_t);
                 if let ExecutionResult::Normal = result {
                     self.past_emulation_times.push(start.elapsed());
                 }
