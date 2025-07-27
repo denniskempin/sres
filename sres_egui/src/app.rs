@@ -192,15 +192,14 @@ impl EmulatorApp {
             self.update_keys(input);
         });
 
-        let (stable_dt, unstable_dt) =
-            ctx.input(|input| (input.stable_dt as f64, input.unstable_dt as f64));
+        let stable_dt = ctx.input(|input| input.stable_dt as f64);
 
         if !self.emulator.debugger().enabled() {
             puffin::set_scopes_on(false);
             self.emulator.execute_for_duration(stable_dt);
         } else {
             puffin::set_scopes_on(self.debug_ui.show_profiler);
-            self.debug_ui.run_emulator(&mut self.emulator, unstable_dt);
+            self.debug_ui.run_emulator(&mut self.emulator, stable_dt);
 
             egui::SidePanel::right("right_debug_panel")
                 .resizable(false)
