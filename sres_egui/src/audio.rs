@@ -111,9 +111,7 @@ impl AudioOutput {
         }
 
         if let Ok(mut queue) = self.buffer_queue.lock() {
-            while let Some(buffer) = emulator.take_pending_audio_buffer() {
-                queue.push_buffer(buffer);
-            }
+            queue.push_buffer(emulator.take_audio_samples());
         }
     }
 
