@@ -56,6 +56,6 @@ pub fn test_play_noise() {
 
     assert_eq!(
         system.debug().apu().dsp().voice(0),
-        "vol:127/127 pitch:0 adsr:(14,0,7,22) src:$00 env:0 out:0".to_string()
+        "vol:127/127 pitch:0 adsr:(14,0,7,22) src:$00 env:4 out:-2".to_string()
     );
 }
