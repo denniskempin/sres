@@ -74,7 +74,7 @@ fn voice_detail_widget(
 
             // Voice header with activity indicator
             ui.horizontal(|ui| {
-                ui.heading(format!("Voice {}", voice_id));
+                ui.heading(format!("Voice {voice_id}"));
                 let is_active = envx > 0 || outx != 0;
                 let activity_color = if is_active {
                     Color32::GREEN
@@ -102,8 +102,7 @@ fn voice_detail_widget(
 
             // Sample, envelope, output in compact format
             ui.label(format!(
-                "Src:${:02X} Env:{} Out:{:+4}",
-                sample_source, envx, outx
+                "Src:${sample_source:02X} Env:{envx} Out:{outx:+4}"
             ));
 
             // ADSR/Gain settings (compact)
@@ -119,11 +118,11 @@ fn voice_detail_widget(
                 ui.label(format!(
                     "GAIN: {}",
                     match gain.mode() {
-                        GainMode::Fixed(value) => format!("Fix {}", value),
-                        GainMode::LinearDecay(rate) => format!("LDec {}", rate),
-                        GainMode::ExponentialDecay(rate) => format!("EDec {}", rate),
-                        GainMode::LinearIncrease(rate) => format!("LInc {}", rate),
-                        GainMode::BentIncrease(rate) => format!("BInc {}", rate),
+                        GainMode::Fixed(value) => format!("Fix {value}"),
+                        GainMode::LinearDecay(rate) => format!("LDec {rate}"),
+                        GainMode::ExponentialDecay(rate) => format!("EDec {rate}"),
+                        GainMode::LinearIncrease(rate) => format!("LInc {rate}"),
+                        GainMode::BentIncrease(rate) => format!("BInc {rate}"),
                     }
                 ));
             }
@@ -143,8 +142,8 @@ fn voice_detail_widget(
                     let start_addr = u16::from_le_bytes([ram[source_addr], ram[source_addr + 1]]);
                     let loop_addr =
                         u16::from_le_bytes([ram[source_addr + 2], ram[source_addr + 3]]);
-                    ui.label(format!("Start:${:04X}", start_addr));
-                    ui.label(format!("Loop:${:04X}", loop_addr));
+                    ui.label(format!("Start:${start_addr:04X}"));
+                    ui.label(format!("Loop:${loop_addr:04X}"));
                 }
             }
         });
@@ -181,7 +180,7 @@ fn global_dsp_state_widget(
             let on = (kon & (1 << i)) != 0;
             ui.colored_label(
                 if on { Color32::GREEN } else { Color32::GRAY },
-                format!("{}", i),
+                format!("{i}"),
             );
         }
     });
@@ -193,7 +192,7 @@ fn global_dsp_state_widget(
             let off = (kof & (1 << i)) != 0;
             ui.colored_label(
                 if off { Color32::RED } else { Color32::GRAY },
-                format!("{}", i),
+                format!("{i}"),
             );
         }
     });
@@ -210,7 +209,7 @@ fn global_dsp_state_widget(
                 } else {
                     Color32::GRAY
                 },
-                format!("{}", i),
+                format!("{i}"),
             );
         }
     });
@@ -269,7 +268,7 @@ fn envelope_widget(ui: &mut Ui, envx: u8) {
     ui.painter().text(
         rect.center(),
         egui::Align2::CENTER_CENTER,
-        format!("{}", envx),
+        format!("{envx}"),
         egui::FontId::monospace(10.0),
         Color32::WHITE,
     );

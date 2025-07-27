@@ -156,10 +156,10 @@ pub fn label_cpu_effective_addr(
     let response = if ADDR_ANNOTATIONS.contains_key(&addr_u32) {
         let hover_text = addr.to_string();
         let label_text = format!("[{}]", ADDR_ANNOTATIONS[&addr_u32]);
-        label_addr(ui, format!("{:<13}", label_text)).on_hover_text(hover_text)
+        label_addr(ui, format!("{label_text:<13}")).on_hover_text(hover_text)
     } else {
-        let label_text = format!("[{}]", addr.to_string());
-        label_addr(ui, format!("{:<13}", label_text))
+        let label_text = format!("[{addr}]");
+        label_addr(ui, format!("{label_text:<13}"))
     };
     if response.clicked() {
         *selected = InternalLink::CpuMemory(addr);

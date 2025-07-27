@@ -119,22 +119,21 @@ impl DspEnvelope {
 
                     // Check if we've reached sustain level
                     let sustain_level = (adsr2.sustain_level().value() as u16 + 1) << 8;
-                    if self.value <= sustain_level as u16 {
+                    if self.value <= sustain_level {
                         self.state = EnvelopeState::Sustain;
                     }
                 }
             }
             EnvelopeState::Sustain => {
                 let sustain_rate = adsr2.release_rate().value();
-                if sustain_rate > 0 {
-                    if self.should_update_at_rate(global_counter, sustain_rate) {
+                if sustain_rate > 0
+                    && self.should_update_at_rate(global_counter, sustain_rate) {
                         // Exponential decrease: envelope -= 1, then envelope -= envelope >> 8
                         if self.value > 0 {
                             self.value -= 1;
                             self.value -= self.value >> 8;
                         }
                     }
-                }
             }
             EnvelopeState::Release => {
                 // Linear decrease at fixed rate of -8 every sample
@@ -365,7 +364,7 @@ impl Voice {
         // Apply envelope to sample
         let enveloped_sample = ((sample as i32) * (self.envelope.value() as i32)) >> 11;
         self.outx = (enveloped_sample >> 8) as i8;
-        self.outx_buffer.push(sample as i16);
+        self.outx_buffer.push(sample);
 
         // Apply volume
         let left = (enveloped_sample * (self.vol_l as i32)) >> 7;
