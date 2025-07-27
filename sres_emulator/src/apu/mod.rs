@@ -61,6 +61,10 @@ impl Apu {
         new_buffer
     }
 
+    pub fn sample_buffer_size(&self) -> usize {
+        self.sample_buffer.len()
+    }
+
     // Generate a single audio sample
     pub fn generate_sample(&mut self) -> i16 {
         let memory = &self.spc700.bus.ram;
