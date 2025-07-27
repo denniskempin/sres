@@ -114,6 +114,10 @@ impl System {
         self.execute_until(|cpu| cpu.bus.clock_info().master_clock >= target_master_clock)
     }
 
+    pub fn execute_for_audio_samples(&mut self, count: usize) -> ExecutionResult {
+        self.execute_until(|cpu| cpu.bus.apu.inner.sample_buffer_size() >= count)
+    }
+
     pub fn execute_for_duration(&mut self, seconds: f64) -> ExecutionResult {
         use crate::apu::MASTER_CLOCK_FREQUENCY;
         let target_cycles = (seconds * MASTER_CLOCK_FREQUENCY as f64) as u64;

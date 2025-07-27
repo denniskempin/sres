@@ -14,6 +14,8 @@ use log::error;
 use log::info;
 use sres_emulator::System;
 
+const TARGET_BUFFER_SIZE: usize = 1024;
+
 /// Audio output handler that manages playback of SNES APU audio samples
 pub struct AudioOutput {
     stream: Option<Stream>,
@@ -79,6 +81,15 @@ impl AudioOutput {
         }
     }
 
+    pub fn samples_needed_to_maintain_buffer_capacity(&self) -> usize {
+        let buffer_size = self.buffer_queue.lock().unwrap().len();
+        if buffer_size > TARGET_BUFFER_SIZE {
+            0
+        } else {
+            TARGET_BUFFER_SIZE - buffer_size
+        }
+    }
+
     fn build_stream<T: SampleConverter>(
         &self,
         device: &cpal::Device,
@@ -111,7 +122,8 @@ impl AudioOutput {
         }
 
         if let Ok(mut queue) = self.buffer_queue.lock() {
-            queue.push_buffer(emulator.take_audio_samples());
+            let samples = emulator.take_audio_samples();
+            queue.push_buffer(samples);
         }
     }
 
@@ -135,6 +147,14 @@ impl AudioBufferQueue {
         if !buffer.is_empty() {
             self.buffers.push_back(buffer);
         }
+    }
+
+    fn len(&self) -> usize {
+        self.buffers
+            .iter()
+            .map(|buffer| buffer.len())
+            .sum::<usize>()
+            - self.cursor
     }
 
     fn next_sample(&mut self) -> Option<i16> {

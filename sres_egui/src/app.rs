@@ -196,7 +196,10 @@ impl EmulatorApp {
 
         if !self.emulator.debugger().enabled() {
             puffin::set_scopes_on(false);
-            self.emulator.execute_for_duration(stable_dt);
+            self.emulator.execute_for_audio_samples(
+                self.audio_output
+                    .samples_needed_to_maintain_buffer_capacity(),
+            );
         } else {
             puffin::set_scopes_on(self.debug_ui.show_profiler);
             self.debug_ui.run_emulator(&mut self.emulator, stable_dt);
