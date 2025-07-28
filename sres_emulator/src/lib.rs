@@ -15,6 +15,7 @@ use components::ppu::PpuDebug;
 
 use crate::apu::Apu;
 use crate::apu::ApuDebug;
+use crate::apu::AudioBuffer;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::cartridge::Cartridge;
@@ -116,7 +117,8 @@ impl System {
     }
 
     pub fn execute_for_audio_samples(&mut self, count: usize) -> ExecutionResult {
-        self.execute_until(|cpu| cpu.bus.apu.inner.sample_buffer_size() >= count)
+        let target_sample_count = self.cpu.bus.apu.inner.sample_buffer_size() + count;
+        self.execute_until(|cpu| cpu.bus.apu.inner.sample_buffer_size() >= target_sample_count)
     }
 
     pub fn execute_for_duration(&mut self, seconds: f64) -> ExecutionResult {
@@ -143,7 +145,7 @@ impl System {
         }
     }
 
-    pub fn swap_audio_buffer(&mut self, buffer: &mut Vec<i16>) {
+    pub fn swap_audio_buffer(&mut self, buffer: &mut AudioBuffer) {
         self.cpu.bus.apu.inner.swap_audio_buffer(buffer)
     }
 

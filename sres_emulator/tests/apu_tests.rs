@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
+use sres_emulator::apu::AudioBuffer;
 use sres_emulator::common::test_util::compare_wav_against_golden;
 use sres_emulator::common::util::format_memory;
 use sres_emulator::components::cartridge::Cartridge;
@@ -26,12 +27,15 @@ pub fn test_play_brr_sample() {
         system.debug().apu().dsp().voice(0),
         "vol:127/127 pitch:4096 adsr:(10,7,7,0) src:$00 env:0 out:0".to_string()
     );
+    // Clear audio buffer
+    let mut samples = AudioBuffer::new();
+    system.swap_audio_buffer(&mut samples);
 
+    // Execute for length of BRR sample and collect generated audio samples
     const NUM_SAMPLES: usize = 7936; // Length of the play_brr_sample sample
-    let output: Vec<i16> = (0..NUM_SAMPLES)
-        .map(|_| system.apu().generate_sample())
-        .collect();
-    compare_wav_against_golden(&output, &path_prefix)
+    system.execute_for_audio_samples(NUM_SAMPLES);
+    system.swap_audio_buffer(&mut samples);
+    compare_wav_against_golden(&samples.into_vec(), &path_prefix)
 }
 
 #[test]
