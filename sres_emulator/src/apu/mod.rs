@@ -1,6 +1,7 @@
 //! Dummy implementation of the audio processing unit.
 mod apu_bus;
 mod test;
+mod timers;
 
 use log::debug;
 use log::error;
