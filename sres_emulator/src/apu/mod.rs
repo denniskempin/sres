@@ -190,6 +190,10 @@ impl AudioBuffer {
     pub fn into_vec(self) -> Vec<i16> {
         self.samples
     }
+
+    pub fn iter(&self) -> std::slice::Iter<i16> {
+        self.samples.iter()
+    }
 }
 
 impl std::ops::Index<usize> for AudioBuffer {

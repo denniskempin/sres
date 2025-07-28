@@ -63,3 +63,23 @@ pub fn test_play_noise() {
         "vol:127/127 pitch:0 adsr:(14,0,7,22) src:$00 env:4 out:-2".to_string()
     );
 }
+
+#[test]
+pub fn test_ffvii_prelude() {
+    let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let path_prefix = root_dir.join("tests/apu_tests/ffvii_prelude");
+
+    let mut system = System::with_cartridge(
+        &Cartridge::with_sfc_file(&path_prefix.with_extension("sfc")).unwrap(),
+    );
+
+    // Execute for 5 seconds and collect all audio samples
+    let mut all_samples = Vec::<i16>::with_capacity(32000 * 5);
+    let mut buffer = AudioBuffer::new();
+    for _ in 0..5 {
+        system.execute_frames(60);
+        system.swap_audio_buffer(&mut buffer);
+        all_samples.extend(buffer.iter());
+    }
+    compare_wav_against_golden(&all_samples, &path_prefix)
+}
