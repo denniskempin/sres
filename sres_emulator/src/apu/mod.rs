@@ -31,7 +31,7 @@ pub const AUDIO_BUFFER_CAPACITY: usize = 1024;
 pub struct Apu {
     pub spc700: Spc700<ApuBus>,
     /// Audio sample buffer that grows as samples are generated
-    sample_buffer: Vec<i16>,
+    sample_buffer: AudioBuffer,
     /// Last master clock cycle when a sample was generated
     last_sample_cycle: u64,
 }
@@ -44,7 +44,7 @@ impl Apu {
                 ApuBus::new(DebugEventCollectorRef(debugger.clone())),
                 DebugEventCollectorRef(debugger.clone()),
             ),
-            sample_buffer: Vec::with_capacity(AUDIO_BUFFER_CAPACITY),
+            sample_buffer: AudioBuffer::new(),
             last_sample_cycle: 0,
         }
     }
@@ -55,9 +55,8 @@ impl Apu {
 
     /// Swap the current audio sample buffer with a provided buffer
     /// This avoids copying samples by exchanging buffers directly
-    pub fn swap_audio_buffer(&mut self, buffer: &mut Vec<i16>) {
-        std::mem::swap(&mut self.sample_buffer, buffer);
-        self.sample_buffer.clear();
+    pub fn swap_audio_buffer(&mut self, buffer: &mut AudioBuffer) {
+        self.sample_buffer.swap(buffer);
     }
 
     pub fn sample_buffer_size(&self) -> usize {
@@ -98,10 +97,10 @@ impl Apu {
 
             // Add sample to buffer, dropping oldest samples if buffer gets too large
             if self.sample_buffer.len() >= MAX_AUDIO_BUFFER_SIZE {
-                error!("APU audio buffer overflow - dropping oldest samples");
-                self.sample_buffer.drain(0..MAX_AUDIO_BUFFER_SIZE / 2);
+                error!("APU audio buffer overflow - dropping samples");
+                self.sample_buffer.clear();
             }
-            self.sample_buffer.push(sample);
+            self.sample_buffer.push_sample(sample);
         }
         self.spc700.catch_up_to_master_clock(new_clock.master_clock);
     }
@@ -145,5 +144,57 @@ impl<'a> ApuDebug<'a> {
 
     pub fn ram(&self) -> &[u8] {
         &self.0.spc700.bus.ram
+    }
+}
+
+/// A typed wrapper around Vec<i16> for audio samples with proper capacity management
+#[derive(Default)]
+pub struct AudioBuffer {
+    samples: Vec<i16>,
+}
+
+impl AudioBuffer {
+    /// Create a new AudioBuffer with the default capacity
+    pub fn new() -> Self {
+        Self {
+            samples: Vec::with_capacity(AUDIO_BUFFER_CAPACITY),
+        }
+    }
+
+    /// Add a single audio sample to the buffer
+    pub fn push_sample(&mut self, sample: i16) {
+        self.samples.push(sample);
+    }
+
+    /// Get the number of samples in the buffer
+    pub fn len(&self) -> usize {
+        self.samples.len()
+    }
+
+    /// Check if the buffer is empty
+    pub fn is_empty(&self) -> bool {
+        self.samples.is_empty()
+    }
+
+    /// Clear all samples from the buffer, keeping capacity
+    pub fn clear(&mut self) {
+        self.samples.clear();
+    }
+
+    /// Swap contents with another AudioBuffer
+    pub fn swap(&mut self, other: &mut AudioBuffer) {
+        std::mem::swap(&mut self.samples, &mut other.samples);
+    }
+
+    pub fn into_vec(self) -> Vec<i16> {
+        self.samples
+    }
+}
+
+impl std::ops::Index<usize> for AudioBuffer {
+    type Output = i16;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.samples[index]
     }
 }

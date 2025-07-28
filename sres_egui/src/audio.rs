@@ -12,7 +12,7 @@ use cpal::Stream;
 use cpal::StreamConfig;
 use log::error;
 use log::info;
-use sres_emulator::apu::AUDIO_BUFFER_CAPACITY;
+use sres_emulator::apu::AudioBuffer;
 use sres_emulator::System;
 
 const TARGET_BUFFER_SIZE: usize = 1024;
@@ -20,7 +20,6 @@ const TARGET_BUFFER_SIZE: usize = 1024;
 /// Audio output handler that manages playback of SNES APU audio samples
 pub struct AudioOutput {
     stream: Option<Stream>,
-    sample_buffer: Vec<i16>,
     buffer_queue: Arc<Mutex<AudioBufferQueue>>,
 }
 
@@ -34,7 +33,6 @@ impl AudioOutput {
     pub fn new() -> Self {
         Self {
             stream: None,
-            sample_buffer: Vec::with_capacity(AUDIO_BUFFER_CAPACITY),
             buffer_queue: Arc::new(Mutex::new(AudioBufferQueue::default())),
         }
     }
@@ -84,7 +82,7 @@ impl AudioOutput {
         }
     }
 
-    pub fn samples_needed_to_maintain_buffer_capacity(&self) -> usize {
+    pub fn samples_needed_to_maintain_buffer(&self) -> usize {
         let buffer_size = self.buffer_queue.lock().unwrap().len();
         if buffer_size > TARGET_BUFFER_SIZE {
             0
@@ -124,10 +122,10 @@ impl AudioOutput {
             return;
         }
 
-        emulator.swap_audio_buffer(&mut self.sample_buffer);
-        // TODO: Consider some other datastructure here that is lock-free and could avoid the copy
         if let Ok(mut queue) = self.buffer_queue.lock() {
-            queue.push_buffer(self.sample_buffer.clone());
+            let mut buffer = queue.get_recycled_buffer();
+            emulator.swap_audio_buffer(&mut buffer);
+            queue.push_buffer(buffer);
         }
     }
 
@@ -140,14 +138,16 @@ impl AudioOutput {
 }
 
 /// A queue of audio sample buffers with a cursor tracking the current playback position
+/// and a recycling pool to reduce allocations
 #[derive(Default)]
 struct AudioBufferQueue {
-    buffers: VecDeque<Vec<i16>>,
+    buffers: VecDeque<AudioBuffer>,
     cursor: usize,
+    recycled_buffers: Vec<AudioBuffer>,
 }
 
 impl AudioBufferQueue {
-    fn push_buffer(&mut self, buffer: Vec<i16>) {
+    fn push_buffer(&mut self, buffer: AudioBuffer) {
         if !buffer.is_empty() {
             self.buffers.push_back(buffer);
         }
@@ -164,13 +164,32 @@ impl AudioBufferQueue {
     fn next_sample(&mut self) -> Option<i16> {
         let buffer = self.buffers.front()?;
         if self.cursor >= buffer.len() {
-            self.buffers.pop_front();
+            // Move the consumed buffer to the recycling pool
+            if let Some(mut consumed_buffer) = self.buffers.pop_front() {
+                consumed_buffer.clear();
+                self.recycle_buffer(consumed_buffer);
+            }
             self.cursor = 0;
             return self.next_sample();
         }
         let sample = buffer[self.cursor];
         self.cursor += 1;
         Some(sample)
+    }
+
+    /// Add a buffer to the recycling pool for reuse
+    /// Keeps a limited number of buffers to avoid unbounded memory growth
+    fn recycle_buffer(&mut self, buffer: AudioBuffer) {
+        const MAX_RECYCLED_BUFFERS: usize = 8;
+        if self.recycled_buffers.len() < MAX_RECYCLED_BUFFERS {
+            self.recycled_buffers.push(buffer);
+        }
+        // If we have too many recycled buffers, just drop this one
+    }
+
+    /// Get a recycled buffer if available, otherwise create a new one
+    fn get_recycled_buffer(&mut self) -> AudioBuffer {
+        self.recycled_buffers.pop().unwrap_or_else(AudioBuffer::new)
     }
 }
 
