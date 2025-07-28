@@ -5,6 +5,7 @@ use crate::common::bus::Bus;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
+use super::timers::ApuTimers;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ApuBusEvent {
@@ -18,7 +19,7 @@ pub struct ApuBus {
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
     pub channel_out: [u8; 4],
-    pub timer: [u8; 3],
+    pub timers: ApuTimers,
     pub dsp_register_select: u8,
     pub dsp_register_readonly: bool,
     pub dsp: SDsp,
@@ -28,12 +29,12 @@ impl ApuBus {
     #[allow(clippy::new_without_default)]
     pub fn new(debug_event_collector: DebugEventCollectorRef<ApuBusEvent>) -> Self {
         Self {
-            debug_event_collector,
+            debug_event_collector: debug_event_collector.clone(),
             master_cycle: 0,
             ram: [0; 0x10000],
             channel_in: [0; 4],
             channel_out: [0; 4],
-            timer: [0x0F; 3],
+            timers: ApuTimers::new(debug_event_collector),
             dsp_register_readonly: false,
             dsp_register_select: 0,
             dsp: Default::default(),
@@ -44,10 +45,12 @@ impl ApuBus {
 impl Bus<AddressU16> for ApuBus {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         match addr.0 {
+            0x00F1 => Some(self.timers.read_control()),
             0x00F2 => Some(self.dsp_register_select.bits(0..=6)),
             0x00F3 => Some(self.dsp.read_register(self.dsp_register_select)),
             0x00F4..=0x00F7 => Some(self.channel_in[addr.0 as usize - 0x00F4]),
-            0x00FD..=0x00FF => Some(self.timer[addr.0 as usize - 0x00FD]),
+            0x00FA..=0x00FC => Some(0), // Timer targets are write-only
+            0x00FD..=0x00FF => Some(self.timers.peek_output(addr.0 as usize - 0x00FD)),
             0xFFC0..=0xFFFF => Some(IPL_BOOT_ROM[(addr.0 - 0xFFC0) as usize]),
             _ => Some(self.ram[addr.0 as usize]),
         }
@@ -55,13 +58,28 @@ impl Bus<AddressU16> for ApuBus {
 
     fn cycle_io(&mut self) {
         self.master_cycle += 21;
+        // Update timers with 1 SPC cycle
+        self.timers.update(1);
     }
 
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
         self.master_cycle += 21;
-        let value = self.peek_u8(addr).unwrap_or_default();
+        
+        // Handle timer output reads specially (they reset on read)
+        let value = match addr.0 {
+            0x00FD..=0x00FF => {
+                let timer_id = addr.0 as usize - 0x00FD;
+                self.timers.read_output(timer_id)
+            }
+            _ => self.peek_u8(addr).unwrap_or_default(),
+        };
+        
         self.debug_event_collector
             .on_event(ApuBusEvent::Read(addr, value));
+        
+        // Update timers with 1 SPC cycle
+        self.timers.update(1);
+        
         value
     }
 
@@ -70,8 +88,9 @@ impl Bus<AddressU16> for ApuBus {
             .on_event(ApuBusEvent::Write(addr, value));
 
         self.master_cycle += 21;
-        #[allow(clippy::single_match)]
+        
         match addr.0 {
+            0x00F1 => self.timers.write_control(value),
             0x00F2 => {
                 self.dsp_register_readonly = value.bit(7);
                 self.dsp_register_select = value.bits(0..=6);
@@ -83,11 +102,21 @@ impl Bus<AddressU16> for ApuBus {
                 self.dsp.write_register(self.dsp_register_select, value);
             }
             0x00F4..=0x00F7 => self.channel_out[addr.0 as usize - 0x00F4] = value,
+            0x00FA..=0x00FC => {
+                let timer_id = addr.0 as usize - 0x00FA;
+                self.timers.write_target(timer_id, value);
+            }
+            0x00FD..=0x00FF => {}, // Timer outputs are read-only
             _ => self.ram[addr.0 as usize] = value,
         }
+        
+        // Update timers with 1 SPC cycle
+        self.timers.update(1);
     }
 
-    fn reset(&mut self) {}
+    fn reset(&mut self) {
+        self.timers.reset();
+    }
 }
 
 impl Spc700Bus for ApuBus {
