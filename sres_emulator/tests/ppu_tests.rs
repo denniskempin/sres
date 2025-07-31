@@ -62,6 +62,30 @@ pub fn test_krom_interlace_rpg() {
     run_framebuffer_test("krom_interlace_rpg", 10);
 }
 
+#[test]
+pub fn test_colourmath() {
+    logging::test_init(true);
+
+    let rom_path = test_dir().join(format!("colourmath.sfc"));
+    let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
+    system.execute_frames(30);
+
+    // The test rom shows 5 different scenes with different color math operations.
+    for test_id in 0..5 {
+        let framebuffer_path = test_dir().join(format!("colourmath-{test_id}"));
+
+        let mut video_frame = Framebuffer::default();
+        system.swap_video_frame(&mut video_frame);
+        compare_to_golden(&video_frame.to_rgba::<TestImageImpl>(), &framebuffer_path);
+
+        // Advance to next test by simulating a button press.
+        system.update_joypads(64, 0);
+        system.execute_frames(1);
+        system.update_joypads(0, 0);
+        system.execute_frames(5);
+    }
+}
+
 /// Renders the framebuffer at `frame` and compares against previously stored golden image.
 fn run_framebuffer_test(test_name: &str, frame: u64) -> System {
     logging::test_init(true);
