@@ -1,11 +1,11 @@
 use intbits::Bits;
 
+use super::timers::ApuTimers;
 use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
-use super::timers::ApuTimers;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ApuBusEvent {
@@ -23,6 +23,7 @@ pub struct ApuBus {
     pub dsp_register_select: u8,
     pub dsp_register_readonly: bool,
     pub dsp: SDsp,
+    pub control: ApuControlRegister,
 }
 
 impl ApuBus {
@@ -34,10 +35,29 @@ impl ApuBus {
             ram: [0; 0x10000],
             channel_in: [0; 4],
             channel_out: [0; 4],
-            timers: ApuTimers::new(debug_event_collector),
+            timers: ApuTimers::new(),
             dsp_register_readonly: false,
             dsp_register_select: 0,
             dsp: Default::default(),
+            control: ApuControlRegister::default(),
+        }
+    }
+
+    fn write_control(&mut self, value: u8) {
+        self.timers.update_timer_enable_flags(value.bits(0..2));
+        self.control.0 = value;
+        // Wiki is a little unclear on the exact behavior. It seems that for 1/2
+        // both channels are cleared. For 3/4 only the input channel
+        // See https://snes.nesdev.org/wiki/S-SMP#CONTROL_-_Control_register_($F1,_write-only)
+        if self.control.clear_apuio12() {
+            self.channel_in[0] = 0;
+            self.channel_in[1] = 0;
+            self.channel_out[0] = 0;
+            self.channel_out[2] = 0;
+        }
+        if self.control.clear_apuio34() {
+            self.channel_in[2] = 0;
+            self.channel_in[3] = 0;
         }
     }
 }
@@ -45,13 +65,19 @@ impl ApuBus {
 impl Bus<AddressU16> for ApuBus {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         match addr.0 {
-            0x00F1 => Some(self.timers.read_control()),
+            0x00F1 => Some(self.control.0),
             0x00F2 => Some(self.dsp_register_select.bits(0..=6)),
             0x00F3 => Some(self.dsp.read_register(self.dsp_register_select)),
             0x00F4..=0x00F7 => Some(self.channel_in[addr.0 as usize - 0x00F4]),
             0x00FA..=0x00FC => Some(0), // Timer targets are write-only
             0x00FD..=0x00FF => Some(self.timers.peek_output(addr.0 as usize - 0x00FD)),
-            0xFFC0..=0xFFFF => Some(IPL_BOOT_ROM[(addr.0 - 0xFFC0) as usize]),
+            0xFFC0..=0xFFFF => {
+                if self.control.ipl_rom_enabled() {
+                    Some(IPL_BOOT_ROM[(addr.0 - 0xFFC0) as usize])
+                } else {
+                    Some(self.ram[addr.0 as usize])
+                }
+            }
             _ => Some(self.ram[addr.0 as usize]),
         }
     }
@@ -64,7 +90,7 @@ impl Bus<AddressU16> for ApuBus {
 
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
         self.master_cycle += 21;
-        
+
         // Handle timer output reads specially (they reset on read)
         let value = match addr.0 {
             0x00FD..=0x00FF => {
@@ -73,13 +99,13 @@ impl Bus<AddressU16> for ApuBus {
             }
             _ => self.peek_u8(addr).unwrap_or_default(),
         };
-        
+
         self.debug_event_collector
             .on_event(ApuBusEvent::Read(addr, value));
-        
+
         // Update timers with 1 SPC cycle
         self.timers.update(1);
-        
+
         value
     }
 
@@ -88,9 +114,9 @@ impl Bus<AddressU16> for ApuBus {
             .on_event(ApuBusEvent::Write(addr, value));
 
         self.master_cycle += 21;
-        
+
         match addr.0 {
-            0x00F1 => self.timers.write_control(value),
+            0x00F1 => self.write_control(value),
             0x00F2 => {
                 self.dsp_register_readonly = value.bit(7);
                 self.dsp_register_select = value.bits(0..=6);
@@ -106,15 +132,16 @@ impl Bus<AddressU16> for ApuBus {
                 let timer_id = addr.0 as usize - 0x00FA;
                 self.timers.write_target(timer_id, value);
             }
-            0x00FD..=0x00FF => {}, // Timer outputs are read-only
+            0x00FD..=0x00FF => {} // Timer outputs are read-only
             _ => self.ram[addr.0 as usize] = value,
         }
-        
+
         // Update timers with 1 SPC cycle
         self.timers.update(1);
     }
 
     fn reset(&mut self) {
+        self.control = ApuControlRegister::default();
         self.timers.reset();
     }
 }
@@ -122,6 +149,28 @@ impl Bus<AddressU16> for ApuBus {
 impl Spc700Bus for ApuBus {
     fn master_cycle(&self) -> u64 {
         self.master_cycle
+    }
+}
+
+pub struct ApuControlRegister(pub u8);
+
+impl ApuControlRegister {
+    pub fn ipl_rom_enabled(&self) -> bool {
+        self.0.bit(7)
+    }
+
+    pub fn clear_apuio12(&self) -> bool {
+        self.0.bit(4)
+    }
+
+    pub fn clear_apuio34(&self) -> bool {
+        self.0.bit(5)
+    }
+}
+
+impl Default for ApuControlRegister {
+    fn default() -> Self {
+        Self(0xB0)
     }
 }
 

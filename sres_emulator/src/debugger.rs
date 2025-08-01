@@ -42,6 +42,7 @@ pub enum EventFilter {
     CpuMemoryWrite(Range<u32>),
     ExecutionError,
     Interrupt(Option<NativeVectorTable>),
+    Spc700Step,
     Spc700ProgramCounter(Range<u16>),
     Spc700MemoryRead(Range<u16>),
     Spc700MemoryWrite(Range<u16>),
@@ -72,6 +73,7 @@ impl EventFilter {
                     true
                 }
             }
+            (Spc700Step, Spc700(Spc700Event::Step(_))) => true,
             (Spc700ProgramCounter(range), Spc700(Spc700Event::Step(spc))) => {
                 range.contains(&spc.instruction.address.0)
             }
@@ -103,6 +105,7 @@ impl FromStr for EventFilter {
             "r" => CpuMemoryRead(parse_range(arg)?),
             "w" => CpuMemoryWrite(parse_range(arg)?),
             "s-pc" => Spc700ProgramCounter(parse_range(arg)?),
+            "s-step" => Spc700Step,
             &_ => CpuInstruction(s.to_string()),
         })
     }
@@ -124,6 +127,7 @@ impl Display for EventFilter {
                     write!(f, "irq")
                 }
             }
+            Spc700Step => write!(f, "s-step"),
             Spc700ProgramCounter(range) => write!(f, "spc-pc{}", format_range(range)),
             Spc700MemoryRead(range) => write!(f, "spc-r{}", format_range(range)),
             Spc700MemoryWrite(range) => write!(f, "spc-w{}", format_range(range)),
