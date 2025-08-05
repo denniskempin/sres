@@ -70,6 +70,9 @@ impl<BusT: MainBus> CpuDebug<'_, BusT> {
 }
 
 /// Represents a snapshot of the Cpu state for debugging purposes
+/// It formats into a string compatible with BSNES traces. Since the format changes
+/// slightly between versions, this implementation is designed to be compatible with
+/// bsnes-plus-v05.105. All traces in tests are generated with this version.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CpuState {
     pub instruction: InstructionMeta<AddressU24>,
@@ -144,7 +147,10 @@ impl FromStr for CpuState {
 
         // BSNES can output h in clocks instead of pixels. This will require an additional character
         // for H: and shifts F: by one index.
-        if s[94..=95].trim() != "F:" {
+        if &s[31..=32] != "A:" {
+            bail!("Invalid trace format.")
+        }
+        if &s[94..=95] != "F:" {
             bail!("Trace format using h lines instead of h dots.");
         }
         let operand_str = s[11..21].trim().to_string();

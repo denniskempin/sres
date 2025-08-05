@@ -25,7 +25,7 @@ use crate::components::cpu::NativeVectorTable;
 use crate::components::spc700::Spc700Event;
 use crate::main_bus::MainBusEvent;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, strum::Display)]
 pub enum DebugEvent {
     Cpu(CpuEvent),
     MainBus(MainBusEvent),
