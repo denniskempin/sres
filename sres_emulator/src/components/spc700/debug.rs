@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 
@@ -35,6 +36,7 @@ impl<BusT: Spc700Bus> Spc700Debug<'_, BusT> {
     }
 }
 
+/// The Spc700State formats into a string compatible with BSNES traces.
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Spc700State {
     pub instruction: InstructionMeta<AddressU16>,
@@ -53,6 +55,9 @@ impl FromStr for Spc700State {
         //
         // ..ffe2 mov   ($000)+y, a       A:8f X:cc Y:f9 SP:01ef YA:f98f N......C
         // 0      7     13                  33   38   43    49      57   62
+        if &s[31..=32] != "A:" {
+            bail!("Invalid trace format.")
+        }
         Ok(Self {
             instruction: InstructionMeta {
                 address: AddressU16(u16::from_str_radix(&s[2..6], 16).with_context(|| "pc")?),

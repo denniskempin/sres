@@ -443,8 +443,7 @@ impl AddressMode {
         }
     }
 }
-
-#[derive(Clone, Copy, PartialEq, strum::Display)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Register {
     A,
     X,
@@ -452,4 +451,18 @@ pub enum Register {
     YA,
     Psw,
     Sp,
+}
+
+impl std::fmt::Display for Register {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Register::A => "a",
+            Register::X => "x",
+            Register::Y => "y",
+            Register::YA => "ya",
+            Register::Psw => "psw",
+            Register::Sp => "sp",
+        };
+        write!(f, "{}", s)
+    }
 }
