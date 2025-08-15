@@ -4,6 +4,7 @@ use std::str::FromStr;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use itertools::Itertools;
 
 use super::Cpu;
 use super::MainBus;
@@ -86,127 +87,155 @@ pub struct CpuState {
 }
 
 impl CpuState {
-    /// Parse a BSNES trace line into a CpuState object
-    pub fn from_bsnes_trace(s: &str) -> Result<Self> {
+    /// Parse a Mesen trace line into a CpuState object
+    pub fn from_mesen_trace(s: &str) -> Result<Self> {
         // The trace format has a fixed width, which allows us to use direct indexing to parse
         // instead of much slower regex or nom parsing.
         //
         // Example with indices of the start of each item:
         //
-        // 00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:236 F:32
-        // 0      7   11          23        33     40     47     54     61      69 72         83    89    95
+        // 00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC Cycle:11791952
+        // 0       8   12                           41     48     55     62     69      77   82             97
 
-        // BSNES can output h in clocks instead of pixels. This will require an additional character
-        // for H: and shifts F: by one index.
-        if &s[31..=32] != "A:" {
-            bail!("Invalid trace format.")
+        if &s[39..=40] != "A:" {
+            bail!("Invalid Mesen trace format - missing A: field");
         }
-        if &s[94..=95] != "F:" {
-            bail!("Trace format using h lines instead of h dots.");
+        if &s[80..=81] != "P:" {
+            bail!("Invalid Mesen trace format - missing P: field");
         }
-        let operand_str = s[11..21].trim().to_string();
+        if !s.contains("Cycle:") {
+            bail!("Invalid Mesen trace format - missing Cycle: field");
+        }
+
+        let (operation, operand_str, io) = Self::parse_disassembly(s[8..39].trim())?;
         Ok(CpuState {
             instruction: InstructionMeta {
                 address: u32::from_str_radix(&s[0..6], 16)
                     .with_context(|| "pc")?
                     .into(),
-                operation: s[7..10].trim().to_string(),
-                operand_str: if operand_str.is_empty() {
-                    None
-                } else {
-                    Some(operand_str)
-                },
-                effective_addr: {
-                    let addr = s[23..29].trim();
-                    if addr.is_empty() {
-                        None
-                    } else {
-                        Some(
-                            u32::from_str_radix(addr, 16)
-                                .with_context(|| "operand_addr")?
-                                .into(),
-                        )
-                    }
-                },
+                operation,
+                operand_str,
+                effective_addr: io.map(|(addr, _)| addr),
             },
-            a: u16::from_str_radix(&s[33..37], 16).with_context(|| "a")?,
-            x: u16::from_str_radix(&s[40..44], 16).with_context(|| "x")?,
-            y: u16::from_str_radix(&s[47..51], 16).with_context(|| "y")?,
-            s: u16::from_str_radix(&s[54..58], 16).with_context(|| "s")?,
-            d: u16::from_str_radix(&s[61..65], 16).with_context(|| "d")?,
-            db: u8::from_str_radix(&s[69..71], 16).with_context(|| "db")?,
+            a: u16::from_str_radix(&s[41..45], 16).with_context(|| "a")?,
+            x: u16::from_str_radix(&s[48..52], 16).with_context(|| "x")?,
+            y: u16::from_str_radix(&s[55..59], 16).with_context(|| "y")?,
+            s: u16::from_str_radix(&s[62..66], 16).with_context(|| "s")?,
+            d: u16::from_str_radix(&s[69..73], 16).with_context(|| "d")?,
+            db: u8::from_str_radix(&s[77..79], 16).with_context(|| "db")?,
             status: {
-                let status_str = s[72..80].trim();
+                let status_str = &s[82..90];
                 if status_str.len() != 8 {
                     bail!("StatusFlags string must be 8 characters long");
                 }
                 let mut chars = status_str.chars();
                 StatusFlags {
-                    negative: chars.next().unwrap() != '.',
-                    overflow: chars.next().unwrap() != '.',
-                    accumulator_register_size: chars.next().unwrap() != '.',
-                    index_register_size_or_break: chars.next().unwrap() != '.',
-                    decimal: chars.next().unwrap() != '.',
-                    irq_disable: chars.next().unwrap() != '.',
-                    zero: chars.next().unwrap() != '.',
-                    carry: chars.next().unwrap() != '.',
+                    negative: chars.next().unwrap().is_uppercase(),
+                    overflow: chars.next().unwrap().is_uppercase(),
+                    accumulator_register_size: chars.next().unwrap().is_uppercase(),
+                    index_register_size_or_break: chars.next().unwrap().is_uppercase(),
+                    decimal: chars.next().unwrap().is_uppercase(),
+                    irq_disable: chars.next().unwrap().is_uppercase(),
+                    zero: chars.next().unwrap().is_uppercase(),
+                    carry: chars.next().unwrap().is_uppercase(),
                 }
             },
-            clock: ClockInfo::from_vhf(
-                u64::from_str(s[83..86].trim()).with_context(|| "v")?,
-                u64::from_str(s[89..94].trim()).with_context(|| "h")?,
-                u64::from_str(s[96..].trim()).with_context(|| "f")?,
+            clock: ClockInfo::from_master_clock(
+                u64::from_str(&s[97..].trim()).with_context(|| "cycle")?,
             ),
         })
     }
 
-    /// Format a CpuState into a BSNES trace line
-    pub fn to_bsnes_trace(&self) -> String {
-        let mut result = format!(
-            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} ",
+    pub fn parse_disassembly(
+        disassembly: &str,
+    ) -> Result<(String, Option<String>, Option<(AddressU24, u8)>)> {
+        let pieces = disassembly.trim().split_ascii_whitespace().collect_vec();
+        match pieces.len() {
+            // e.g. "NMI"
+            1 => Ok((pieces[0].to_string(), None, None)),
+            // e.g. "BPL $1234"
+            2 => Ok((pieces[0].to_string(), Some(pieces[1].to_string()), None)),
+            // e.g. LDA $1234 [001234] = 42
+            5 => {
+                let effective_addr = AddressU24::from(
+                    u32::from_str_radix(pieces[2].trim_matches(&['[', ']']), 16)
+                        .with_context(|| "effective_addr")?,
+                );
+                Ok((
+                    pieces[0].to_string(),
+                    Some(pieces[1].to_string()),
+                    Some((
+                        effective_addr,
+                        u8::from_str_radix(pieces[4], 16).with_context(|| "value")?,
+                    )),
+                ))
+            }
+            _ => {
+                bail!("Invalid disassembly format `{disassembly}`")
+            }
+        }
+    }
+
+    pub fn format_disassembly(
+        operation: &str,
+        operand_str: &Option<String>,
+        io: &Option<(AddressU24, u8)>,
+    ) -> String {
+        match (operand_str, io) {
+            (None, None) => operation.to_string(),
+            (Some(operand_str), None) => format!("{operation} {operand_str}"),
+            (Some(operand_str), Some((addr, value))) => {
+                let addr: u32 = (*addr).into();
+                format!("{operation} {operand_str} [{addr:06X}] = {value:02X}")
+            }
+            (None, Some(_)) => panic!("Cannot format disassembly: No operand but IO info"),
+        }
+    }
+
+    /// Format a CpuState into a Mesen trace line
+    pub fn to_mesen_trace(&self) -> String {
+        format!(
+            "{:06x}  {:<30} A:{:04X} X:{:04X} Y:{:04X} S:{:04X} D:{:04X} DB:{:02X} P:{} Cycle:{}",
             u32::from(self.instruction.address),
-            self.instruction.operation,
-            self.instruction.operand_str.as_deref().unwrap_or_default(),
-            if let Some(addr) = &self.instruction.effective_addr {
-                format!("[{:06x}]", u32::from(*addr))
-            } else {
-                "".to_string()
-            },
+            Self::format_disassembly(
+                &self.instruction.operation,
+                &self.instruction.operand_str,
+                &None
+            ),
             self.a,
             self.x,
             self.y,
             self.s,
             self.d,
             self.db,
-        );
-        result.push(if self.status.negative { 'N' } else { '.' });
-        result.push(if self.status.overflow { 'V' } else { '.' });
-        result.push(if self.status.accumulator_register_size {
-            'M'
-        } else {
-            '.'
-        });
-        result.push(if self.status.index_register_size_or_break {
-            'X'
-        } else {
-            '.'
-        });
-        result.push(if self.status.decimal { 'D' } else { '.' });
-        result.push(if self.status.irq_disable { 'I' } else { '.' });
-        result.push(if self.status.zero { 'Z' } else { '.' });
-        result.push(if self.status.carry { 'C' } else { '.' });
-        result.push_str(&format!(
-            " V:{:03} H:{:04} F:{:02}",
-            self.clock.v, self.clock.h_counter, self.clock.f,
-        ));
-        result
+            format!(
+                "{}{}{}{}{}{}{}{}",
+                if self.status.negative { 'N' } else { 'n' },
+                if self.status.overflow { 'V' } else { 'v' },
+                if self.status.accumulator_register_size {
+                    'M'
+                } else {
+                    'm'
+                },
+                if self.status.index_register_size_or_break {
+                    'X'
+                } else {
+                    'x'
+                },
+                if self.status.decimal { 'D' } else { 'd' },
+                if self.status.irq_disable { 'I' } else { 'i' },
+                if self.status.zero { 'Z' } else { 'z' },
+                if self.status.carry { 'C' } else { 'c' }
+            ),
+            self.clock.master_clock
+        )
     }
 }
 
 impl Display for CpuState {
     /// Format a trace object into a BSNES trace line
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_bsnes_trace())
+        write!(f, "{}", self.to_mesen_trace())
     }
 }
 
@@ -215,7 +244,7 @@ impl FromStr for CpuState {
 
     /// Parse a BSNES trace line into a CpuState object
     fn from_str(s: &str) -> Result<Self> {
-        Self::from_bsnes_trace(s)
+        Self::from_mesen_trace(s)
     }
 }
 
@@ -228,14 +257,14 @@ impl FromStr for StatusFlags {
         }
         let mut chars = s.chars();
         Ok(StatusFlags {
-            negative: chars.next().unwrap() != '.',
-            overflow: chars.next().unwrap() != '.',
-            accumulator_register_size: chars.next().unwrap() != '.',
-            index_register_size_or_break: chars.next().unwrap() != '.',
-            decimal: chars.next().unwrap() != '.',
-            irq_disable: chars.next().unwrap() != '.',
-            zero: chars.next().unwrap() != '.',
-            carry: chars.next().unwrap() != '.',
+            negative: chars.next().unwrap().is_ascii_uppercase(),
+            overflow: chars.next().unwrap().is_ascii_uppercase(),
+            accumulator_register_size: chars.next().unwrap().is_ascii_uppercase(),
+            index_register_size_or_break: chars.next().unwrap().is_ascii_uppercase(),
+            decimal: chars.next().unwrap().is_ascii_uppercase(),
+            irq_disable: chars.next().unwrap().is_ascii_uppercase(),
+            zero: chars.next().unwrap().is_ascii_uppercase(),
+            carry: chars.next().unwrap().is_ascii_uppercase(),
         })
     }
 }
@@ -246,7 +275,7 @@ mod tests {
 
     use super::*;
 
-    static EXAMPLE_BSNES_TRACE: &str = r"00e811 bpl $e80e      [00e80e] A:9901 X:0100 Y:0000 S:1ff3 D:0000 DB:00 .VM..IZC V:261 H:0236 F:32";
+    static EXAMPLE_MESEN_TRACE: &str = r"00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC Cycle:11791952";
 
     fn example_trace() -> CpuState {
         CpuState {
@@ -255,12 +284,9 @@ mod tests {
                     bank: 0,
                     offset: 0xe811,
                 },
-                operation: "bpl".to_string(),
-                operand_str: Some("$e80e".to_string()),
-                effective_addr: Some(AddressU24 {
-                    bank: 0,
-                    offset: 0xe80e,
-                }),
+                operation: "BPL".to_string(),
+                operand_str: Some("$E80E".to_string()),
+                effective_addr: None,
             },
             a: 0x9901,
             x: 0x0100,
@@ -290,13 +316,23 @@ mod tests {
     #[test]
     pub fn test_from_str() {
         assert_eq!(
-            EXAMPLE_BSNES_TRACE.parse::<CpuState>().unwrap(),
+            EXAMPLE_MESEN_TRACE.parse::<CpuState>().unwrap(),
             example_trace()
         );
     }
 
     #[test]
     pub fn test_to_str() {
-        assert_eq!(format!("{}", example_trace()), EXAMPLE_BSNES_TRACE);
+        assert_eq!(format!("{}", example_trace()), EXAMPLE_MESEN_TRACE);
+    }
+
+    #[test]
+    pub fn test_disassembly_roundtrip() {
+        let cases = ["CLC", "BPL $1234", "LDA $1234 [001234] = 00"];
+        for case in cases {
+            let (operation, operand_str, io) = CpuState::parse_disassembly(case).unwrap();
+            let formatted = CpuState::format_disassembly(&operation, &operand_str, &io);
+            assert_eq!(formatted, case);
+        }
     }
 }
