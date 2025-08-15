@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use std::fmt::Write;
 use std::str::FromStr;
 
 use anyhow::bail;
@@ -86,57 +85,9 @@ pub struct CpuState {
     pub clock: ClockInfo,
 }
 
-impl Display for CpuState {
-    /// Format a trace object into a BSNES trace line
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} ",
-            u32::from(self.instruction.address),
-            self.instruction.operation,
-            self.instruction.operand_str.as_deref().unwrap_or_default(),
-            if let Some(addr) = &self.instruction.effective_addr {
-                format!("[{:06x}]", u32::from(*addr))
-            } else {
-                "".to_string()
-            },
-            self.a,
-            self.x,
-            self.y,
-            self.s,
-            self.d,
-            self.db,
-        )?;
-        f.write_char(if self.status.negative { 'N' } else { '.' })?;
-        f.write_char(if self.status.overflow { 'V' } else { '.' })?;
-        f.write_char(if self.status.accumulator_register_size {
-            'M'
-        } else {
-            '.'
-        })?;
-        f.write_char(if self.status.index_register_size_or_break {
-            'X'
-        } else {
-            '.'
-        })?;
-        f.write_char(if self.status.decimal { 'D' } else { '.' })?;
-        f.write_char(if self.status.irq_disable { 'I' } else { '.' })?;
-        f.write_char(if self.status.zero { 'Z' } else { '.' })?;
-        f.write_char(if self.status.carry { 'C' } else { '.' })?;
-        write!(
-            f,
-            " V:{:03} H:{:04} F:{:02}",
-            self.clock.v, self.clock.h_counter, self.clock.f,
-        )?;
-        Ok(())
-    }
-}
-
-impl FromStr for CpuState {
-    type Err = anyhow::Error;
-
-    /// Parse a BSNES trace line into a Trace object
-    fn from_str(s: &str) -> Result<Self> {
+impl CpuState {
+    /// Parse a BSNES trace line into a CpuState object
+    pub fn from_bsnes_trace(s: &str) -> Result<Self> {
         // The trace format has a fixed width, which allows us to use direct indexing to parse
         // instead of much slower regex or nom parsing.
         //
@@ -184,13 +135,87 @@ impl FromStr for CpuState {
             s: u16::from_str_radix(&s[54..58], 16).with_context(|| "s")?,
             d: u16::from_str_radix(&s[61..65], 16).with_context(|| "d")?,
             db: u8::from_str_radix(&s[69..71], 16).with_context(|| "db")?,
-            status: s[72..80].trim().parse().with_context(|| "status")?,
+            status: {
+                let status_str = s[72..80].trim();
+                if status_str.len() != 8 {
+                    bail!("StatusFlags string must be 8 characters long");
+                }
+                let mut chars = status_str.chars();
+                StatusFlags {
+                    negative: chars.next().unwrap() != '.',
+                    overflow: chars.next().unwrap() != '.',
+                    accumulator_register_size: chars.next().unwrap() != '.',
+                    index_register_size_or_break: chars.next().unwrap() != '.',
+                    decimal: chars.next().unwrap() != '.',
+                    irq_disable: chars.next().unwrap() != '.',
+                    zero: chars.next().unwrap() != '.',
+                    carry: chars.next().unwrap() != '.',
+                }
+            },
             clock: ClockInfo::from_vhf(
                 u64::from_str(s[83..86].trim()).with_context(|| "v")?,
                 u64::from_str(s[89..94].trim()).with_context(|| "h")?,
                 u64::from_str(s[96..].trim()).with_context(|| "f")?,
             ),
         })
+    }
+
+    /// Format a CpuState into a BSNES trace line
+    pub fn to_bsnes_trace(&self) -> String {
+        let mut result = format!(
+            "{:06x} {} {:<10} {:8} A:{:04x} X:{:04x} Y:{:04x} S:{:04x} D:{:04x} DB:{:02x} ",
+            u32::from(self.instruction.address),
+            self.instruction.operation,
+            self.instruction.operand_str.as_deref().unwrap_or_default(),
+            if let Some(addr) = &self.instruction.effective_addr {
+                format!("[{:06x}]", u32::from(*addr))
+            } else {
+                "".to_string()
+            },
+            self.a,
+            self.x,
+            self.y,
+            self.s,
+            self.d,
+            self.db,
+        );
+        result.push(if self.status.negative { 'N' } else { '.' });
+        result.push(if self.status.overflow { 'V' } else { '.' });
+        result.push(if self.status.accumulator_register_size {
+            'M'
+        } else {
+            '.'
+        });
+        result.push(if self.status.index_register_size_or_break {
+            'X'
+        } else {
+            '.'
+        });
+        result.push(if self.status.decimal { 'D' } else { '.' });
+        result.push(if self.status.irq_disable { 'I' } else { '.' });
+        result.push(if self.status.zero { 'Z' } else { '.' });
+        result.push(if self.status.carry { 'C' } else { '.' });
+        result.push_str(&format!(
+            " V:{:03} H:{:04} F:{:02}",
+            self.clock.v, self.clock.h_counter, self.clock.f,
+        ));
+        result
+    }
+}
+
+impl Display for CpuState {
+    /// Format a trace object into a BSNES trace line
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_bsnes_trace())
+    }
+}
+
+impl FromStr for CpuState {
+    type Err = anyhow::Error;
+
+    /// Parse a BSNES trace line into a CpuState object
+    fn from_str(s: &str) -> Result<Self> {
+        Self::from_bsnes_trace(s)
     }
 }
 
@@ -243,7 +268,16 @@ mod tests {
             s: 0x1ff3,
             d: 0x0000,
             db: 0x00,
-            status: ".VM..IZC".parse().unwrap(),
+            status: StatusFlags {
+                negative: false,
+                overflow: true,
+                accumulator_register_size: true,
+                index_register_size_or_break: false,
+                decimal: false,
+                irq_disable: true,
+                zero: true,
+                carry: true,
+            },
             clock: ClockInfo {
                 master_clock: 11791952,
                 v: 261,
