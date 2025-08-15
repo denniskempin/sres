@@ -33,22 +33,22 @@ impl std::fmt::Display for StatusFlags {
         write!(
             f,
             "{}{}{}{}{}{}{}{}",
-            if self.negative { "N" } else { "-" },
-            if self.overflow { "V" } else { "-" },
+            if self.negative { "N" } else { "n" },
+            if self.overflow { "V" } else { "v" },
             if self.accumulator_register_size {
                 "M"
             } else {
-                "-"
+                "m"
             },
             if self.index_register_size_or_break {
                 "X"
             } else {
-                "-"
+                "x"
             },
-            if self.decimal { "D" } else { "-" },
-            if self.irq_disable { "I" } else { "-" },
-            if self.zero { "Z" } else { "-" },
-            if self.carry { "C" } else { "-" }
+            if self.decimal { "D" } else { "d" },
+            if self.irq_disable { "I" } else { "i" },
+            if self.zero { "Z" } else { "z" },
+            if self.carry { "C" } else { "c" }
         )
     }
 }
