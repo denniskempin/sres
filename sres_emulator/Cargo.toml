@@ -25,6 +25,7 @@ strum = { version = "0.27", features = ["derive"] }
 bilge = "0.2"
 bitcode = "0.6.6"
 hound = "3.5"
+lazy_static = "1.5"
 
 [dev-dependencies]
 tempfile = "3.10"

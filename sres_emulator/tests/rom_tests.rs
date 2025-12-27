@@ -24,7 +24,6 @@ use sres_emulator::CpuT;
 use sres_emulator::System;
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_adc() {
     run_rom_test("krom_adc");
 }
@@ -189,6 +188,7 @@ fn run_rom_test(test_name: &str) {
 
     for (line_num, expected_line) in trace_log_from_xz_file(&trace_path).unwrap().enumerate() {
         let actual_line = system.cpu.debug().state();
+        println!("{line_num:<6} {actual_line}");
         assert_cpu_trace_eq(line_num, expected_line.unwrap(), actual_line);
         system.execute_one_instruction();
     }
@@ -247,31 +247,13 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
     }
 }
 
-fn assert_cpu_trace_eq(i: usize, mut expected: CpuState, mut actual: CpuState) {
-    // Disassembly for branch instructions prints the absolute operand address, not the
-    // relative address.
-    if expected.instruction.operation.starts_with('b') && expected.instruction.operation != "bit" {
-        actual.instruction.operand_str = None;
-        expected.instruction.operand_str = None;
-    }
-    // `per` instruction prints relative address as effective address, not the calculated
-    // absolute address.
-    if expected.instruction.operation == "per" {
-        actual.instruction.operand_str = None;
-        expected.instruction.operand_str = None;
-        actual.instruction.effective_addr = None;
-        expected.instruction.effective_addr = None;
-    }
-    // `jmp` instructions in bsnes print an inconsistent effective address. Skip comparison.
-    if expected.instruction.operation.starts_with('j') {
-        actual.instruction.effective_addr = None;
-        expected.instruction.effective_addr = None;
-    }
+fn assert_cpu_trace_eq(_i: usize, mut expected: CpuState, mut actual: CpuState) {
+    // TODO: This emulator does not implement open bus reads, which means that memory values shown
+    // in the trace on write-only MMIO registers will not be correct.
+    actual.instruction.effective_addr_and_value = None;
+    expected.instruction.effective_addr_and_value = None;
 
-    if actual != expected {
-        error!("Assertion failed at instruction {i}");
-        assert_eq!(actual.to_string(), expected.to_string());
-    }
+    assert_eq!(actual.to_string(), expected.to_string());
 }
 
 fn assert_spc_trace_eq(i: usize, expected: Spc700State, actual: Spc700State) {

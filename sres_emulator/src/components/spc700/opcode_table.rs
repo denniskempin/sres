@@ -29,7 +29,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                             address: instruction_addr,
                             operation: stringify!($method).to_string(),
                             operand_str: None,
-                            effective_addr: None,
+                            effective_addr_and_value: None,
                         },
                         instruction_addr.add(1_u8, Wrap::NoWrap),
                     )
@@ -51,7 +51,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                             address: instruction_addr,
                             operation: stringify!($method).to_string(),
                             operand_str: Some(operand),
-                            effective_addr: None,
+                            effective_addr_and_value: None,
                         },
                         next_addr,
                     )
@@ -74,7 +74,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                             address: instruction_addr,
                             operation: stringify!($method).to_string(),
                             operand_str: Some(format!("{}, {}", left, right)),
-                            effective_addr: None,
+                            effective_addr_and_value: None,
                         },
                         next_addr,
                     )
@@ -91,7 +91,7 @@ pub fn build_opcode_table<BusT: Spc700Bus>() -> [InstructionDef<BusT>; 256] {
                     address: instruction_addr,
                     operation: "ill".to_string(),
                     operand_str: None,
-                    effective_addr: None,
+                    effective_addr_and_value: None,
                 },
                 instruction_addr.add(1_u8, Wrap::NoWrap),
             )

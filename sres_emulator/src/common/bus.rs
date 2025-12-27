@@ -11,8 +11,8 @@ use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
 use crate::common::clock::ClockInfo;
-use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
+use crate::common::uint::UIntSize;
 
 /// Generic trait shared by all bus implementations.
 pub trait Bus<AddressT: Address> {
@@ -48,16 +48,16 @@ pub trait Bus<AddressT: Address> {
     #[inline]
     fn cycle_read_generic<T: UInt>(&mut self, addr: AddressT, wrap: Wrap) -> T {
         match T::SIZE {
-            RegisterSize::U8 => T::from_u8(self.cycle_read_u8(addr)),
-            RegisterSize::U16 => T::from_u16(self.cycle_read_u16(addr, wrap)),
+            UIntSize::U8 => T::from_u8(self.cycle_read_u8(addr)),
+            UIntSize::U16 => T::from_u16(self.cycle_read_u16(addr, wrap)),
         }
     }
 
     #[inline]
     fn cycle_write_generic<T: UInt>(&mut self, addr: AddressT, value: T, wrap: Wrap) {
         match T::SIZE {
-            RegisterSize::U8 => self.cycle_write_u8(addr, value.to_u8()),
-            RegisterSize::U16 => self.cycle_write_u16(addr, value.to_u16(), wrap),
+            UIntSize::U8 => self.cycle_write_u8(addr, value.to_u8()),
+            UIntSize::U16 => self.cycle_write_u16(addr, value.to_u16(), wrap),
         }
     }
 

@@ -10,6 +10,7 @@ use intbits::Bits;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U32Ext;
 use crate::common::uint::UIntTruncate;
+pub use crate::common::uint::VariableLengthUInt;
 
 /// Address types enforce that the wrapping behavior for each calculation is explicitly specified.
 pub trait Address: Eq + Hash + Display + Ord + Copy + Clone + From<u32> + Into<u32> {
@@ -249,5 +250,5 @@ pub struct InstructionMeta<AddressT: Address> {
     pub address: AddressT,
     pub operation: String,
     pub operand_str: Option<String>,
-    pub effective_addr: Option<AddressT>,
+    pub effective_addr_and_value: Option<(AddressT, VariableLengthUInt)>,
 }

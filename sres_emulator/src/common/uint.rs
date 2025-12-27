@@ -11,9 +11,23 @@ use num_traits::PrimInt;
 use num_traits::WrappingAdd;
 use num_traits::WrappingSub;
 
-pub enum RegisterSize {
+pub enum UIntSize {
     U8,
     U16,
+}
+
+/// Enum representing either an 8-bit or 16-bit unsigned integer value.
+/// Used for values that can be either size depending on processor state.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum VariableLengthUInt {
+    U8(u8),
+    U16(u16),
+}
+
+impl Default for VariableLengthUInt {
+    fn default() -> Self {
+        VariableLengthUInt::U8(0)
+    }
 }
 
 pub trait UIntTruncate {
@@ -40,7 +54,7 @@ pub trait UInt:
 {
     const N_BITS: usize;
     const N_BYTES: usize;
-    const SIZE: RegisterSize;
+    const SIZE: UIntSize;
 
     fn bit(&self, index: usize) -> bool;
     fn set_bit(&mut self, index: usize, value: bool);
@@ -91,7 +105,7 @@ impl UIntTruncate for u8 {
 impl UInt for u8 {
     const N_BITS: usize = 8;
     const N_BYTES: usize = 1;
-    const SIZE: RegisterSize = RegisterSize::U8;
+    const SIZE: UIntSize = UIntSize::U8;
 
     fn bit(&self, index: usize) -> bool {
         Bits::bit(*self, index)
@@ -175,7 +189,7 @@ impl UIntTruncate for u16 {
 impl UInt for u16 {
     const N_BITS: usize = 16;
     const N_BYTES: usize = 2;
-    const SIZE: RegisterSize = RegisterSize::U16;
+    const SIZE: UIntSize = UIntSize::U16;
 
     fn bit(&self, index: usize) -> bool {
         Bits::bit(*self, index)

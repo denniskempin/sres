@@ -13,6 +13,7 @@ use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
 use crate::common::address::Wrap;
+use crate::common::uint::UIntSize;
 
 /// An entry in the opcode table
 pub struct Instruction<BusT: MainBus> {
@@ -31,6 +32,21 @@ enum Register {
     Y,
 }
 
+impl Register {
+    pub fn size(&self, cpu: &Cpu<impl MainBus>) -> UIntSize {
+        let is_u8 = match self {
+            Register::A => cpu.status.accumulator_register_size,
+            Register::X => cpu.status.index_register_size_or_break,
+            Register::Y => cpu.status.index_register_size_or_break,
+        };
+        if is_u8 {
+            UIntSize::U8
+        } else {
+            UIntSize::U16
+        }
+    }
+}
+
 pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
     macro_rules! instruction {
         // Operand-less instruction
@@ -44,9 +60,9 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                     (
                         InstructionMeta {
                             address: instruction_addr,
-                            operation: stringify!($method).to_string(),
+                            operation: stringify!($method).to_uppercase(),
                             operand_str: None,
-                            effective_addr: None,
+                            effective_addr_and_value: None,
                         },
                         instruction_addr.add(1_u8, Wrap::WrapBank),
                     )
@@ -58,21 +74,17 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
             Instruction::<BusT> {
                 execute: |cpu| {
                     let (operand, next_addr) = Operand::decode(cpu, $address_mode, $access_mode);
-
                     cpu.pc = next_addr;
                     $method(cpu, &operand);
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) =
-                        Operand::peek(cpu, instruction_addr, $address_mode, $access_mode);
-                    (
-                        InstructionMeta {
-                            address: instruction_addr,
-                            operation: stringify!($method).to_string(),
-                            operand_str: Some(operand.format()),
-                            effective_addr: operand.effective_addr(),
-                        },
-                        next_addr,
+                    Operand::peek_instruction_meta(
+                        cpu,
+                        instruction_addr,
+                        $address_mode,
+                        $access_mode,
+                        stringify!($method).to_uppercase(),
+                        UIntSize::U8,
                     )
                 },
             }
@@ -83,28 +95,19 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                 execute: |cpu| {
                     let (operand, next_addr) = Operand::decode(cpu, $address_mode, $access_mode);
                     cpu.pc = next_addr;
-                    let is_u8 = match $register {
-                        Register::A => cpu.status.accumulator_register_size,
-                        Register::X => cpu.status.index_register_size_or_break,
-                        Register::Y => cpu.status.index_register_size_or_break,
-                    };
-                    if is_u8 {
-                        $method::<u8>(cpu, &operand);
-                    } else {
-                        $method::<u16>(cpu, &operand);
+                    match $register.size(cpu) {
+                        UIntSize::U8 => $method::<u8>(cpu, &operand),
+                        UIntSize::U16 => $method::<u16>(cpu, &operand),
                     }
                 },
                 meta: |cpu, instruction_addr| {
-                    let (operand, next_addr) =
-                        Operand::peek(cpu, instruction_addr, $address_mode, $access_mode);
-                    (
-                        InstructionMeta {
-                            address: instruction_addr,
-                            operation: stringify!($method).to_string(),
-                            operand_str: Some(operand.format()),
-                            effective_addr: operand.effective_addr(),
-                        },
-                        next_addr,
+                    Operand::peek_instruction_meta(
+                        cpu,
+                        instruction_addr,
+                        $address_mode,
+                        $access_mode,
+                        stringify!($method).to_uppercase(),
+                        $register.size(cpu),
                     )
                 },
             }
@@ -119,7 +122,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                     address: instruction_addr,
                     operation: "ill".to_string(),
                     operand_str: None,
-                    effective_addr: None,
+                    effective_addr_and_value: None,
                 },
                 instruction_addr,
             )
