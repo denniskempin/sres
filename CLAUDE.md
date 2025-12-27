@@ -30,8 +30,11 @@ SRES is a SNES (Super Nintendo Entertainment System) emulator written in Rust. I
 
 ### Building and Testing
 ```bash
-# Run all tests
+# Run all tests (requires cargo-nextest: cargo install cargo-nextest)
 cargo nextest run
+
+# Run all tests with regular cargo test
+cargo test
 
 # Build native GUI
 cargo build
@@ -53,16 +56,15 @@ cargo nextest run -p sres_emulator
 cargo nextest run -p sres_egui
 
 # Run single test
-cargo test test_specific_function
+cargo nextest run -E 'test(test_specific_function)'
 
-# Run CPU instruction tests
-cargo test cpu
+# Run specific test module
+cargo nextest run rom_tests
+cargo nextest run ppu_tests
+cargo nextest run apu_tests
 
-# Run PPU rendering tests
-cargo test ppu
-
-# Run APU audio tests
-cargo test apu
+# Run benchmarks
+cargo bench
 ```
 
 ### Code Quality

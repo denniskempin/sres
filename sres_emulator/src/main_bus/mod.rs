@@ -220,7 +220,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> Bus<AddressU24> for MainBusImpl<Ppu
     fn reset(&mut self) {
         self.clock = Clock::default();
         self.ppu.reset();
-        self.advance_master_clock(186);
+        self.advance_master_clock(194);
     }
 }
 

@@ -22,8 +22,8 @@ use crate::common::bus::Bus;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
-use crate::common::uint::RegisterSize;
 use crate::common::uint::UInt;
+use crate::common::uint::UIntSize;
 
 pub struct Cpu<BusT: MainBus> {
     pub bus: BusT,
@@ -142,10 +142,10 @@ impl<BusT: MainBus> Cpu<BusT> {
 
     fn stack_push<T: UInt>(&mut self, value: T) {
         match T::SIZE {
-            RegisterSize::U8 => {
+            UIntSize::U8 => {
                 self.stack_push_u8(value.to_u8());
             }
-            RegisterSize::U16 => {
+            UIntSize::U16 => {
                 self.stack_push_u16(value.to_u16());
             }
         }
@@ -171,8 +171,8 @@ impl<BusT: MainBus> Cpu<BusT> {
 
     fn stack_pop<T: UInt>(&mut self) -> T {
         match T::SIZE {
-            RegisterSize::U8 => T::from_u8(self.stack_pop_u8()),
-            RegisterSize::U16 => T::from_u16(self.stack_pop_u16()),
+            UIntSize::U8 => T::from_u8(self.stack_pop_u8()),
+            UIntSize::U16 => T::from_u16(self.stack_pop_u16()),
         }
     }
 
@@ -208,10 +208,10 @@ struct VariableLengthRegister {
 impl VariableLengthRegister {
     fn set<T: UInt>(&mut self, value: T) {
         match T::SIZE {
-            RegisterSize::U8 => {
+            UIntSize::U8 => {
                 self.value.set_bits(0..8, value.to_u8() as u16);
             }
-            RegisterSize::U16 => {
+            UIntSize::U16 => {
                 self.value = value.to_u16();
             }
         }

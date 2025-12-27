@@ -3984,6 +3984,7 @@ dependencies = [
  "image",
  "intbits",
  "itertools 0.14.0",
+ "lazy_static",
  "log",
  "num-traits",
  "packed_struct",

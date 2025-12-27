@@ -56,7 +56,7 @@ impl Clock {
             0x4210 => self.peek_rdnmi(),
             0x4211 => self.peek_timeup(),
             0x4212 => self.peek_hvbjoy(),
-            _ => unreachable!(),
+            _ => None,
         }
     }
 

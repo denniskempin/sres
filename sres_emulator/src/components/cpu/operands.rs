@@ -7,9 +7,12 @@ use super::MainBus;
 use super::STACK_BASE;
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
+use crate::common::address::InstructionMeta;
+use crate::common::address::VariableLengthUInt;
 use crate::common::address::Wrap;
 use crate::common::uint::U16Ext;
 use crate::common::uint::UInt;
+use crate::common::uint::UIntSize;
 
 /// The address mode describes how to load the operand for an instruction.
 #[derive(Clone, Copy, PartialEq)]
@@ -92,6 +95,48 @@ impl Operand {
         rwm: AccessMode,
     ) -> (Self, AddressU24) {
         Self::decode_impl(&mut PeekWrapper(cpu), instruction_addr, mode, rwm)
+    }
+
+    #[inline]
+    pub fn peek_instruction_meta(
+        cpu: &Cpu<impl MainBus>,
+        instruction_addr: AddressU24,
+        mode: AddressMode,
+        rwm: AccessMode,
+        operation: String,
+        register_size: UIntSize,
+    ) -> (InstructionMeta<AddressU24>, AddressU24) {
+        let (operand, next_addr) = Self::peek(cpu, instruction_addr, mode, rwm);
+        let effective_addr_and_value = match operand {
+            Self::Implied
+            | Self::Accumulator
+            | Self::ImmediateU8(_)
+            | Self::ImmediateU16(_)
+            | Self::MoveAddressPair(_, _) => None,
+            Self::Address(_, address_mode, addr) => {
+                let wrap = if matches!(address_mode, AddressMode::DirectPage) {
+                    Wrap::WrapBank
+                } else {
+                    Wrap::NoWrap
+                };
+                Some((
+                    addr,
+                    match register_size {
+                        UIntSize::U8 => VariableLengthUInt::U8(cpu.bus.peek_u8(addr).unwrap_or(0)),
+                        UIntSize::U16 => {
+                            VariableLengthUInt::U16(cpu.bus.peek_u16(addr, wrap).unwrap_or(0))
+                        }
+                    },
+                ))
+            }
+        };
+        let meta = InstructionMeta {
+            address: instruction_addr,
+            operation,
+            operand_str: Some(operand.format()),
+            effective_addr_and_value,
+        };
+        (meta, next_addr)
     }
 
     /// Decodes an operand from the bus.
@@ -459,31 +504,31 @@ impl Operand {
     pub fn format(&self) -> String {
         match self {
             Self::Implied | Self::Accumulator => "".to_string(),
-            Self::ImmediateU8(value) => format!("#${value:02x}"),
-            Self::ImmediateU16(value) => format!("#${value:04x}"),
-            Self::MoveAddressPair(s, d) => format!("${s:02x}, ${d:02x}"),
-            Self::Address(value, mode, _) => match mode {
-                AddressMode::AbsoluteData => format!("${value:04x}"),
-                AddressMode::AbsoluteJump => format!("${value:04x}"),
-                AddressMode::AbsoluteLong => format!("${value:06x}"),
-                AddressMode::AbsoluteXIndexed => format!("${value:04x},x"),
-                AddressMode::AbsoluteXIndexedLong => format!("${value:06x},x"),
-                AddressMode::AbsoluteYIndexed => format!("${value:04x},y"),
-                AddressMode::AbsoluteIndirectJump => format!("(${value:04x})"),
-                AddressMode::AbsoluteIndirectLong => format!("[${value:04x}]"),
-                AddressMode::AbsoluteXIndexedIndirectJump => format!("(${value:04x},x)"),
-                AddressMode::StackRelative => format!("${value:02x},s"),
-                AddressMode::StackRelativeIndirectYIndexed => format!("(${value:02x},s),y"),
-                AddressMode::Relative => format!("{:+}", *value as i8),
-                AddressMode::RelativeLong => format!("{:+}", *value as i16),
-                AddressMode::DirectPage => format!("${value:02x}"),
-                AddressMode::DirectPageIndirect => format!("(${value:02x})"),
-                AddressMode::DirectPageIndirectLong => format!("[${value:02x}]"),
-                AddressMode::DirectPageXIndexed => format!("${value:02x},x"),
-                AddressMode::DirectPageXIndexedIndirect => format!("(${value:02x},x)"),
-                AddressMode::DirectPageIndirectYIndexed => format!("(${value:02x}),y"),
-                AddressMode::DirectPageIndirectYIndexedLong => format!("[${value:02x}],y"),
-                AddressMode::DirectPageYIndexed => format!("${value:02x},y"),
+            Self::ImmediateU8(value) => format!("#${value:02X}"),
+            Self::ImmediateU16(value) => format!("#${value:04X}"),
+            Self::MoveAddressPair(s, d) => format!("${s:02X}, ${d:02X}"),
+            Self::Address(value, mode, effective_addr) => match mode {
+                AddressMode::AbsoluteData => format!("${value:04X}"),
+                AddressMode::AbsoluteJump => format!("${value:04X}"),
+                AddressMode::AbsoluteLong => format!("${value:06X}"),
+                AddressMode::AbsoluteXIndexed => format!("${value:04X},x"),
+                AddressMode::AbsoluteXIndexedLong => format!("${value:06X},x"),
+                AddressMode::AbsoluteYIndexed => format!("${value:04X},y"),
+                AddressMode::AbsoluteIndirectJump => format!("(${value:04X})"),
+                AddressMode::AbsoluteIndirectLong => format!("[${value:04X}]"),
+                AddressMode::AbsoluteXIndexedIndirectJump => format!("(${value:04X},x)"),
+                AddressMode::StackRelative => format!("${value:02X},s"),
+                AddressMode::StackRelativeIndirectYIndexed => format!("(${value:02X},s),y"),
+                AddressMode::Relative => format!("{}", effective_addr),
+                AddressMode::RelativeLong => format!("{}", effective_addr),
+                AddressMode::DirectPage => format!("${value:02X}"),
+                AddressMode::DirectPageIndirect => format!("(${value:02X})"),
+                AddressMode::DirectPageIndirectLong => format!("[${value:02X}]"),
+                AddressMode::DirectPageXIndexed => format!("${value:02X},x"),
+                AddressMode::DirectPageXIndexedIndirect => format!("(${value:02X},x)"),
+                AddressMode::DirectPageIndirectYIndexed => format!("(${value:02X}),y"),
+                AddressMode::DirectPageIndirectYIndexedLong => format!("[${value:02X}],y"),
+                AddressMode::DirectPageYIndexed => format!("${value:02X},y"),
                 AddressMode::Implied
                 | AddressMode::ImmediateU8
                 | AddressMode::ImmediateA

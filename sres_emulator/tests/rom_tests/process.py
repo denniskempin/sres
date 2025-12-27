@@ -16,10 +16,11 @@ def trim_infinite_loop(path: Path):
     lines: List[str] = []
     for line in path.open("r").readlines():
         lines.append(line)
-        mnemonic = line[7:10]
+        mnemonic = line[8:11]
         pc = line[0:6]
-        operand_effective_address = line[23:29]
-        if mnemonic == "jmp" and pc == operand_effective_address:
+        operand_effective_address = line[20:26]
+        print(mnemonic, pc, operand_effective_address)
+        if mnemonic == "JMP" and pc == operand_effective_address:
             break
     path.write_text("".join(lines))
 
@@ -31,4 +32,3 @@ for f in Path(__file__).parent.glob('*.log'):
 for f in Path(__file__).parent.glob('*.asm'):
     print(f"Processing rom {f}")
     subprocess.run(['bass', f])
-
