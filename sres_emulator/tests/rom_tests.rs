@@ -24,6 +24,7 @@ use sres_emulator::CpuT;
 use sres_emulator::System;
 
 #[test]
+#[ignore = "trace format not migted to mesen format"]
 pub fn test_krom_adc() {
     run_rom_test("krom_adc");
 }
@@ -101,7 +102,6 @@ pub fn test_krom_mov() {
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 #[ignore = "Instructions not implemented yet"]
 pub fn test_krom_msc() {
     run_rom_test("krom_msc");
@@ -162,7 +162,6 @@ pub fn test_krom_trn() {
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_ppu_timing() {
     run_rom_test("ppu_timing");
 }

@@ -171,9 +171,28 @@ impl CpuState {
             1 => Ok((pieces[0].to_string(), None, None)),
             // e.g. "BPL $1234"
             2 => Ok((pieces[0].to_string(), Some(pieces[1].to_string()), None)),
+            // e.g. LDA $1234 [001234]
+            3 => {
+                let effective_addr_str = pieces[2].trim_matches(&['[', ']', '$']);
+                let effective_addr = if let Ok(addr) = u32::from_str_radix(effective_addr_str, 16) {
+                    AddressU24::from(addr)
+                } else {
+                    if ADDR_ANNOTATIONS_REVERSE.contains_key(effective_addr_str) {
+                        AddressU24::from(ADDR_ANNOTATIONS_REVERSE[effective_addr_str])
+                    } else {
+                        bail!("Invalid address `{effective_addr_str}` in `{disassembly}`")
+                    }
+                };
+
+                Ok((
+                    pieces[0].to_string(),
+                    Some(pieces[1].to_string()),
+                    Some((effective_addr, VariableLengthUInt::U8(0))),
+                ))
+            }
             // e.g. LDA $1234 [001234] = 42
             5 => {
-                let effective_addr_str = pieces[2].trim_matches(&['[', ']']);
+                let effective_addr_str = pieces[2].trim_matches(&['[', ']']).trim_matches('$');
                 let effective_addr = if let Ok(addr) = u32::from_str_radix(effective_addr_str, 16) {
                     AddressU24::from(addr)
                 } else {
