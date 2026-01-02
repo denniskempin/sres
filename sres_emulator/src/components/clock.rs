@@ -261,9 +261,10 @@ impl Clock {
         // may jump over it when jumping to the next scanline.
         self.update_timer_detector();
 
-        // Line 240 of each odd frame is 4 cycles shorter.
+        // Line 240 of each even frame (2,4,6,...) is 4 cycles shorter.
+        // With vblank-based frame boundary, even frames have the short scanline.
         // See: https://snes.nesdev.org/wiki/Timing#Short_and_Long_Scanlines
-        let h_duration = if self.v == 240 && self.f % 2 == 1 {
+        let h_duration = if self.v == 240 && self.f % 2 == 0 && self.f > 0 {
             1360
         } else {
             1364
@@ -272,12 +273,15 @@ impl Clock {
             self.hv_timer_detector.update_signal(false);
             self.h_counter -= h_duration;
             self.v += 1;
+            // Frame increments when v reaches 225 (vblank start)
+            if self.v == 225 {
+                self.f += 1;
+            }
             self.dram_refresh_position = 538 - ((self.master_clock - self.h_counter) & 7);
         }
 
         if self.v >= 262 {
             self.v -= 262;
-            self.f += 1;
         }
 
         self.vblank_detector.update_signal(self.v >= 225);
