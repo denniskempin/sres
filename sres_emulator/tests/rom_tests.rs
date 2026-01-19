@@ -263,7 +263,6 @@ fn assert_spc_trace_eq(i: usize, expected: Spc700State, actual: Spc700State) {
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_dma_vram() {
     // This rom will generate a test sequence 0x00..0xFF in WRAM at 0x0000, then copies it into VRAM via
     // a DMA transfer and copies it back into WRAM at 0x0100.
@@ -284,7 +283,6 @@ pub fn test_dma_vram() {
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_dma_cgram() {
     // This rom will generate a test sequence 0x00..0xFF in WRAM at 0x0000, then copies it into CGRAM via
     // a DMA transfer and copies it back into WRAM at 0x0100.
@@ -305,7 +303,6 @@ pub fn test_dma_cgram() {
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_dma_oam() {
     // This rom will generate a test sequence 0x00..0xFF in WRAM at 0x0000, then copies it into OAM via
     // a DMA transfer and copies it back into WRAM at 0x0100.
