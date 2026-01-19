@@ -24,7 +24,6 @@ use sres_emulator::CpuT;
 use sres_emulator::System;
 
 #[test]
-#[ignore = "trace format not migted to mesen format"]
 pub fn test_krom_adc() {
     run_rom_test("krom_adc");
 }
@@ -185,10 +184,28 @@ fn run_rom_test(test_name: &str) {
     system.cpu.bus.cycle_write_u8(0x000000.into(), 0x93);
     system.cpu.reset();
 
+    let mut prev_clock: Option<u64> = None;
+
     for (line_num, expected_line) in trace_log_from_xz_file(&trace_path).unwrap().enumerate() {
         let actual_line = system.cpu.debug().state();
+        let expected_line = expected_line.unwrap();
         println!("{line_num:<6} {actual_line}");
-        assert_cpu_trace_eq(line_num, expected_line.unwrap(), actual_line);
+
+        // Check timing separately
+        if let Some(prev) = prev_clock {
+            let actual_delta = actual_line.clock.master_clock - prev;
+            let expected_delta = expected_line.clock.master_clock - prev;
+            if actual_delta != expected_delta {
+                error!(
+                    "Instruction duration mismatch: actual={actual_delta} cycles, expected={expected_delta} cycles. SRES is off by {} cycles",
+                    (expected_delta as i64) - (actual_delta as i64)
+                );
+            }
+        }
+
+        prev_clock = Some(actual_line.clock.master_clock);
+
+        assert_cpu_trace_eq(line_num, expected_line, actual_line);
         system.execute_one_instruction();
     }
 }
