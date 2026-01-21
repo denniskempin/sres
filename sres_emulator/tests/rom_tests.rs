@@ -359,7 +359,9 @@ pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result
     let file = File::open(path)?;
     let decoder = XzDecoder::new(file);
     let trace_reader = io::BufReader::new(decoder);
-    Ok(trace_reader.lines().map(|l| l?.parse()))
+    Ok(trace_reader
+        .lines()
+        .map(|l| CpuState::parse_mesen_trace(&l?)))
 }
 
 #[derive(Debug, PartialEq)]
@@ -387,7 +389,7 @@ fn mixed_trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Resu
         Ok(if l.starts_with("..") {
             MixedTrace::Spc700(l.parse::<Spc700State>()?)
         } else {
-            MixedTrace::Cpu(l.parse::<CpuState>()?)
+            MixedTrace::Cpu(CpuState::parse_mesen_trace(&l)?)
         })
     }))
 }
