@@ -90,7 +90,7 @@ pub struct CpuState {
 
 impl CpuState {
     /// Parse a Mesen trace line into a CpuState object
-    pub fn from_mesen_trace(s: &str) -> Result<Self> {
+    pub fn parse_mesen_trace(s: &str) -> Result<Self> {
         // The trace format has a fixed width, which allows us to use direct indexing to parse
         // instead of much slower regex or nom parsing.
         //
@@ -150,12 +150,69 @@ impl CpuState {
                     carry: chars.next().unwrap().is_uppercase(),
                 }
             },
-            clock: ClockInfo::from_vhf(
+            clock: ClockInfo::from_master_clock(Self::mesen_vhf_to_master_clock(
                 u64::from_str(&s[93..96].trim()).with_context(|| "v")?,
                 u64::from_str(&s[99..103].trim()).with_context(|| "h")?,
                 u64::from_str(&s[106..].trim()).with_context(|| "f")?,
-            ),
+            )),
         })
+    }
+
+    // Mesen increments the frame number at the start of vblank (v=225), which complicates the
+    // logic to determine which master clock we are at.
+    pub fn mesen_vhf_to_master_clock(v: u64, h_counter: u64, f: u64) -> u64 {
+        // Short scanline at v=240:
+        // - Odd frames (1,3,5,...) have vblank from original even frames: NO short scanline
+        // - Even frames (2,4,6,...) have vblank from original odd frames: HAS short scanline
+
+        if f == 0 {
+            // Frame 0: only active display v=0-224
+            return v * 1364 + h_counter;
+        }
+
+        // Calculate cycles before frame f starts
+        // Frame 0: 225 * 1364 = 306900 cycles
+        // Frame 1: 262 * 1364 = 357368 cycles (no short scanline)
+        // Frame 2: 262 * 1364 - 4 = 357364 cycles (has short scanline)
+        // Pattern repeats: odd frames 357368, even frames 357364
+        let frame0_length: u64 = 225 * 1364;
+        let odd_frame_length: u64 = 357368;
+        let even_frame_length: u64 = 357364;
+        let frame_pair_length: u64 = odd_frame_length + even_frame_length;
+
+        let pairs = (f - 1) / 2;
+        let mut f_cycles = frame0_length + pairs * frame_pair_length;
+        if f % 2 == 0 {
+            f_cycles += odd_frame_length;
+        }
+
+        // Calculate cycles within frame f
+        // If v >= 225: in vblank portion
+        // If v < 225: in active portion (after 37 vblank scanlines)
+        let has_short_scanline = f % 2 == 0; // even frames have short scanline
+
+        let v_cycles = if v >= 225 {
+            // In vblank portion (v=225-261 maps to offset 0-36)
+            let vblank_v = v - 225;
+            // Short scanline is at v=240 (vblank_v = 15)
+            if has_short_scanline && vblank_v > 15 {
+                vblank_v * 1364 - 4
+            } else {
+                vblank_v * 1364
+            }
+        } else {
+            // In active portion, after 37 vblank scanlines
+            let vblank_cycles: u64 = if has_short_scanline {
+                37 * 1364 - 4
+            } else {
+                37 * 1364
+            };
+            vblank_cycles + v * 1364
+        };
+
+        // The master clock lags behind 8 cycles in mesen. Unsure why exactly, but it can be
+        // observed in the first cycle executed in the trace, master_clock will be 186 and h_counter will be 194.
+        f_cycles + v_cycles + h_counter
     }
 
     pub fn parse_disassembly(
@@ -246,11 +303,14 @@ impl CpuState {
             (None, Some(_)) => panic!("Cannot format disassembly: No operand but IO info"),
         }
     }
+}
 
-    /// Format a CpuState into a Mesen trace line
-    pub fn to_mesen_trace(&self) -> String {
-        format!(
-            "{:06x}  {:<30} A:{:04X} X:{:04X} Y:{:04X} S:{:04X} D:{:04X} DB:{:02X} P:{} V:{:3} H:{:4} F:{}",
+impl Display for CpuState {
+    /// Format a trace object into a BSNES trace line
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f,
+            "{:08}: {:06x}  {:<30} A:{:04X} X:{:04X} Y:{:04X} S:{:04X} D:{:04X} DB:{:02X} P:{} V:{:3} H:{:4} F:{}",
+            self.clock.master_clock,
             u32::from(self.instruction.address),
             Self::format_disassembly(
                 &self.instruction.operation,
@@ -289,22 +349,6 @@ impl CpuState {
     }
 }
 
-impl Display for CpuState {
-    /// Format a trace object into a BSNES trace line
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_mesen_trace())
-    }
-}
-
-impl FromStr for CpuState {
-    type Err = anyhow::Error;
-
-    /// Parse a BSNES trace line into a CpuState object
-    fn from_str(s: &str) -> Result<Self> {
-        Self::from_mesen_trace(s)
-    }
-}
-
 impl FromStr for StatusFlags {
     type Err = anyhow::Error;
 
@@ -332,7 +376,32 @@ mod tests {
 
     use super::*;
 
-    static EXAMPLE_MESEN_TRACE: &str = r"00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC V:123 H:1234 F:1";
+    #[test]
+    fn test_mesen_vhf_to_master_clock() {
+        // Frame 0, start
+        assert_eq!(CpuState::mesen_vhf_to_master_clock(0, 0, 0), 0);
+
+        // Frame 0, h=194. First cycle after bootup.
+        assert_eq!(CpuState::mesen_vhf_to_master_clock(0, 194, 0), 194);
+
+        // Frame 0, at v=224 (just before vblank)
+        assert_eq!(CpuState::mesen_vhf_to_master_clock(224, 0, 0), 305536);
+
+        // Frame 0, at v=225 (vblank start). In mesen, this will be frame 1.
+        assert_eq!(CpuState::mesen_vhf_to_master_clock(225, 0, 1), 306900);
+
+        // Frame 0, at v=261 (last scanline of frame 0)
+        assert_eq!(CpuState::mesen_vhf_to_master_clock(261, 0, 1), 356004);
+
+        // Frame 0, end of last scanline
+        assert_eq!(CpuState::mesen_vhf_to_master_clock(261, 1363, 1), 357367);
+
+        // Frame 1, start (v=0, h=0, f=1)
+        assert_eq!(CpuState::mesen_vhf_to_master_clock(0, 0, 1), 357368);
+    }
+
+    static EXAMPLE_MESEN_TRACE: &str = r"00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC V:123 H:1226 F:1";
+    static EXAMPLE_SRES_TRACE: &str = r"00526366: 00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC V:123 H:1226 F:1";
 
     fn example_trace() -> CpuState {
         CpuState {
@@ -362,25 +431,25 @@ mod tests {
                 carry: true,
             },
             clock: ClockInfo {
-                master_clock: 526374,
+                master_clock: 526366,
                 v: 123,
-                h_counter: 1234,
+                h_counter: 1226,
                 f: 1,
             },
         }
     }
 
     #[test]
-    pub fn test_from_str() {
+    pub fn test_from_mesen_trace() {
         assert_eq!(
-            EXAMPLE_MESEN_TRACE.parse::<CpuState>().unwrap(),
+            CpuState::parse_mesen_trace(&EXAMPLE_MESEN_TRACE).unwrap(),
             example_trace()
         );
     }
 
     #[test]
     pub fn test_to_str() {
-        assert_eq!(format!("{}", example_trace()), EXAMPLE_MESEN_TRACE);
+        assert_eq!(format!("{}", example_trace()), EXAMPLE_SRES_TRACE);
     }
 
     #[test]
