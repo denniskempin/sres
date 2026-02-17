@@ -189,7 +189,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> Bus<AddressU24> for MainBusImpl<Ppu
 
     fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
         self.clock_speed = memory_access_speed(addr);
-        trace!(target: "cycles", "cycle read {addr} ({} cycles)", self.clock_speed);
+        trace!(target: "cycles", "{:08} cycle read {addr} ({} cycles)", self.clock.clock_info().master_clock, self.clock_speed);
         // TODO: Ugly. Cannot use self.advance_master_clock here because it may be using bus read/write during dma
         self.clock.advance_master_clock(self.clock_speed - 6);
         self.ppu.update_clock(self.clock.clock_info());
@@ -204,7 +204,8 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> Bus<AddressU24> for MainBusImpl<Ppu
         self.advance_master_clock(self.clock_speed);
         trace!(
             target: "cycles",
-            "cycle write {addr} = {val:02x} ({} cycles)",
+            "{:08} cycle write {addr} = {val:02x} ({} cycles)",
+            self.clock.clock_info().master_clock,
             self.clock_speed
         );
 
@@ -212,7 +213,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> Bus<AddressU24> for MainBusImpl<Ppu
     }
 
     fn cycle_io(&mut self) {
-        trace!(target: "cycles", "cycle io (6 cycles)");
+        trace!(target: "cycles", "{:08} cycle io (6 cycles)", self.clock.clock_info().master_clock);
         self.clock_speed = 6;
         self.advance_master_clock(self.clock_speed);
     }

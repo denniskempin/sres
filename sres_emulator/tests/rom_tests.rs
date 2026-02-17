@@ -25,7 +25,6 @@ use sres_emulator::CpuT;
 use sres_emulator::System;
 
 #[test]
-#[ignore = "Fixing DMA timing issue with this test is WIP"]
 pub fn test_krom_adc() {
     run_rom_test("krom_adc");
 }
@@ -202,7 +201,6 @@ fn run_rom_test(test_name: &str) {
         }
         let actual_line = actual_state_log.pop_front().unwrap();
         let expected_line = expected_line.unwrap();
-        println!("{line_num:<6} {actual_line}");
 
         // Check timing separately
         if let Some(prev) = prev_clock {

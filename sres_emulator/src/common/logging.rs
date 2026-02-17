@@ -72,10 +72,10 @@ impl Log for SresLogger {
         } else {
             if !trace_logs.is_empty() {
                 if trace_logs.len() == TRACE_CONTEXT_LINES {
-                    println!("{}", "...".dimmed());
+                    println!("T {}", "...".dimmed());
                 }
                 for log in trace_logs.drain(0..).rev() {
-                    println!("{log}");
+                    println!("T {}", log.dimmed());
                 }
             }
             println!("{record_str}");
@@ -97,9 +97,9 @@ pub fn test_init(verbose: bool) {
     ONCE_INIT.call_once(|| {
         let filter_config = std::env::var("SRES_LOG").unwrap_or(
             if verbose {
-                "info,cpu_state=trace"
+                "trace"
             } else {
-                "warn"
+                "warn,cpu_step=info"
             }
             .to_string(),
         );

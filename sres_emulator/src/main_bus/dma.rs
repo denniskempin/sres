@@ -47,7 +47,8 @@ impl DmaController {
             return None;
         }
 
-        let mut duration = 16 - master_clock % 8;
+        let pre_overhead = 16 - master_clock % 8;
+        let mut transfer_duration = 0;
         let mut transfers: Vec<(AddressU24, AddressU24)> = Vec::new();
         for channel_idx in 0..8_usize {
             if self.dma_pending.bit(channel_idx) {
@@ -91,11 +92,19 @@ impl DmaController {
                         channel.bus_a_address.add_signed(increment, Wrap::NoWrap);
                 }
 
-                duration += 8 + 8 * length as u64;
+                transfer_duration += 8 + 8 * length as u64;
             }
         }
 
-        duration += clock_speed - duration % clock_speed;
+        let post_overhead = clock_speed - (pre_overhead + transfer_duration) % clock_speed;
+        let duration = pre_overhead + transfer_duration + post_overhead;
+
+        println!("DMA timing:");
+        println!("  Master clock: {master_clock}");
+        println!("  Pre-overhead: {pre_overhead}");
+        println!("  Transfer duration: {transfer_duration}");
+        println!("  Post-overhead: {post_overhead}");
+        println!("  Total duration: {duration}");
 
         Some((transfers, duration))
     }

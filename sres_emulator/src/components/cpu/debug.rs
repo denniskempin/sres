@@ -309,7 +309,7 @@ impl Display for CpuState {
     /// Format a trace object into a BSNES trace line
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f,
-            "{:08}: {:06x}  {:<30} A:{:04X} X:{:04X} Y:{:04X} S:{:04X} D:{:04X} DB:{:02X} P:{} V:{:3} H:{:4} F:{}",
+            "{:08} [{:06x}]  {:<30} A:{:04X} X:{:04X} Y:{:04X} S:{:04X} D:{:04X} DB:{:02X} P:{} V:{:3} H:{:4} F:{}",
             self.clock.master_clock,
             u32::from(self.instruction.address),
             Self::format_disassembly(
