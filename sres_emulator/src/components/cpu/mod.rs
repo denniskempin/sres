@@ -83,11 +83,11 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
+        let opcode = self.bus.cycle_read_u8(self.pc);
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.debug_event_collector
                 .on_event(CpuEvent::Step(self.debug().state()));
         }
-        let opcode = self.bus.cycle_read_u8(self.pc);
         (self.instruction_table[opcode as usize].execute)(self);
 
         if self.bus.consume_nmi_interrupt() {

@@ -273,15 +273,12 @@ impl Clock {
             self.hv_timer_detector.update_signal(false);
             self.h_counter -= h_duration;
             self.v += 1;
-            // Frame increments when v reaches 225 (vblank start)
-            if self.v == 225 {
-                self.f += 1;
-            }
             self.dram_refresh_position = 538 - ((self.master_clock - self.h_counter) & 7);
         }
 
         if self.v >= 262 {
             self.v -= 262;
+            self.f += 1;
         }
 
         self.vblank_detector.update_signal(self.v >= 225);
