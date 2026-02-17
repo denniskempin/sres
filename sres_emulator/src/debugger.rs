@@ -39,6 +39,7 @@ pub enum EventFilter {
     CpuProgramCounter(Range<u32>),
     CpuInstruction(String),
     CpuMemoryRead(Range<u32>),
+    CpuStep,
     CpuMemoryWrite(Range<u32>),
     ExecutionError,
     Interrupt(Option<NativeVectorTable>),
@@ -53,6 +54,7 @@ impl EventFilter {
         use DebugEvent::*;
         use EventFilter::*;
         match (self, event) {
+            (CpuStep, Cpu(CpuEvent::Step(_))) => true,
             (CpuProgramCounter(range), Cpu(CpuEvent::Step(cpu))) => {
                 range.contains(&u32::from(cpu.instruction.address))
             }
@@ -105,6 +107,7 @@ impl FromStr for EventFilter {
             "r" => CpuMemoryRead(parse_range(arg)?),
             "w" => CpuMemoryWrite(parse_range(arg)?),
             "s-pc" => Spc700ProgramCounter(parse_range(arg)?),
+            "step" => CpuStep,
             "s-step" => Spc700Step,
             &_ => CpuInstruction(s.to_string()),
         })
@@ -115,6 +118,7 @@ impl Display for EventFilter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use EventFilter::*;
         match self {
+            CpuStep => write!(f, "step"),
             CpuProgramCounter(range) => write!(f, "pc{}", format_range(range)),
             CpuInstruction(s) => write!(f, "{s}"),
             CpuMemoryRead(range) => write!(f, "r{}", format_range(range)),
