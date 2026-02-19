@@ -164,8 +164,6 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
     }
 
     fn advance_master_clock(&mut self, cycles: u64) {
-        self.clock.advance_master_clock(cycles);
-
         if let Some((transfers, duration)) = self
             .dma_controller
             .pending_transfers(self.clock_info().master_clock, self.clock_speed)
@@ -177,6 +175,8 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             }
         }
         self.dma_controller.update_state();
+
+        self.clock.advance_master_clock(cycles);
         self.ppu.update_clock(self.clock.clock_info());
         self.apu.update_clock(self.clock.clock_info());
     }
@@ -190,11 +190,11 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> Bus<AddressU24> for MainBusImpl<Ppu
     fn cycle_read_u8(&mut self, addr: AddressU24) -> u8 {
         self.clock_speed = memory_access_speed(addr);
         trace!(target: "cycles", "{:08} cycle read {addr} ({} cycles)", self.clock.clock_info().master_clock, self.clock_speed);
-        // TODO: Ugly. Cannot use self.advance_master_clock here because it may be using bus read/write during dma
-        self.clock.advance_master_clock(self.clock_speed - 6);
-        self.ppu.update_clock(self.clock.clock_info());
+        self.advance_master_clock(self.clock_speed - 6);
         let value = self.bus_read(addr);
-        self.advance_master_clock(6);
+        self.clock.advance_master_clock(6);
+        self.ppu.update_clock(self.clock.clock_info());
+        self.apu.update_clock(self.clock.clock_info());
         value
     }
 

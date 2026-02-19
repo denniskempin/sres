@@ -10,7 +10,6 @@ use std::sync::atomic::Ordering;
 
 use intbits::Bits;
 use log::info;
-use log::trace;
 
 pub use self::debug::CpuDebug;
 pub use self::debug::CpuEvent;

@@ -261,10 +261,9 @@ impl Clock {
         // may jump over it when jumping to the next scanline.
         self.update_timer_detector();
 
-        // Line 240 of each even frame (2,4,6,...) is 4 cycles shorter.
-        // With vblank-based frame boundary, even frames have the short scanline.
+        // Line 240 of each odd frame is 4 cycles shorter.
         // See: https://snes.nesdev.org/wiki/Timing#Short_and_Long_Scanlines
-        let h_duration = if self.v == 240 && self.f % 2 == 0 && self.f > 0 {
+        let h_duration = if self.v == 240 && self.f % 2 == 1 {
             1360
         } else {
             1364
