@@ -135,7 +135,7 @@ pub fn label_cpu_disassembly(
     } else {
         ui.label("         ");
     }
-    if let Some((effective_addr, _)) = meta.effective_addr_and_value {
+    if let Some(effective_addr) = meta.effective_addr {
         label_cpu_effective_addr(ui, effective_addr, selected);
     } else {
         ui.label("             ");

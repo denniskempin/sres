@@ -62,7 +62,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                             address: instruction_addr,
                             operation: stringify!($method).to_uppercase(),
                             operand_str: None,
-                            effective_addr_and_value: None,
+                            effective_addr: None,
                         },
                         instruction_addr.add(1_u8, Wrap::WrapBank),
                     )
@@ -84,7 +84,6 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                         $address_mode,
                         $access_mode,
                         stringify!($method).to_uppercase(),
-                        UIntSize::U8,
                     )
                 },
             }
@@ -107,7 +106,6 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                         $address_mode,
                         $access_mode,
                         stringify!($method).to_uppercase(),
-                        $register.size(cpu),
                     )
                 },
             }
@@ -122,7 +120,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
                     address: instruction_addr,
                     operation: "ill".to_string(),
                     operand_str: None,
-                    effective_addr_and_value: None,
+                    effective_addr: None,
                 },
                 instruction_addr,
             )

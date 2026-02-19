@@ -14,7 +14,6 @@ use super::NativeVectorTable;
 use super::StatusFlags;
 use crate::common::address::AddressU24;
 use crate::common::address::InstructionMeta;
-use crate::common::address::VariableLengthUInt;
 use crate::common::clock::ClockInfo;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,7 +73,7 @@ impl<BusT: MainBus> CpuDebug<'_, BusT> {
 
 /// Represents a snapshot of the Cpu state for debugging purposes
 /// It formats into a string compatible with MESEN using the following custom format string:
-/// [Disassembly][EffectiveAddress] [MemoryValue,h][Align,38] A:[A,4h] X:[X,4h] Y:[Y,4h] S:[SP,4h] D:[D,4h] DB:[DB,2h] P:[P,8] V:[Scanline,3] H:[HClock,4] F:[FrameCount]
+/// [Disassembly][EffectiveAddress][Align,38] A:[A,4h] X:[X,4h] Y:[Y,4h] S:[SP,4h] D:[D,4h] DB:[DB,2h] P:[P,8] V:[Scanline,3] H:[HClock,4] F:[FrameCount]
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CpuState {
     pub instruction: InstructionMeta<AddressU24>,
@@ -98,7 +97,6 @@ impl CpuState {
         //n
         // 00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC V:123 H:1234 F:1
         // 0       8   12                           41     48     55     62     69      77   82         93    99     105
-
         if &s[39..=40] != "A:" {
             bail!("Invalid Mesen trace format - missing A: field");
         }
@@ -116,8 +114,7 @@ impl CpuState {
             bail!("Invalid Mesen trace format - missing F: field");
         }
 
-        let (operation, operand_str, effective_addr_and_value) =
-            Self::parse_disassembly(s[8..39].trim())?;
+        let (operation, operand_str, effective_addr) = Self::parse_disassembly(s[8..39].trim())?;
         Ok(CpuState {
             instruction: InstructionMeta {
                 address: u32::from_str_radix(&s[0..6], 16)
@@ -125,7 +122,7 @@ impl CpuState {
                     .into(),
                 operation,
                 operand_str,
-                effective_addr_and_value,
+                effective_addr,
             },
             a: u16::from_str_radix(&s[41..45], 16).with_context(|| "a")?,
             x: u16::from_str_radix(&s[48..52], 16).with_context(|| "x")?,
@@ -217,11 +214,7 @@ impl CpuState {
 
     pub fn parse_disassembly(
         disassembly: &str,
-    ) -> Result<(
-        String,
-        Option<String>,
-        Option<(AddressU24, VariableLengthUInt)>,
-    )> {
+    ) -> Result<(String, Option<String>, Option<AddressU24>)> {
         let pieces = disassembly.trim().split_ascii_whitespace().collect_vec();
         match pieces.len() {
             // e.g. "NMI"
@@ -244,38 +237,7 @@ impl CpuState {
                 Ok((
                     pieces[0].to_string(),
                     Some(pieces[1].to_string()),
-                    Some((effective_addr, VariableLengthUInt::U8(0))),
-                ))
-            }
-            // e.g. LDA $1234 [001234] = 42
-            5 => {
-                let effective_addr_str = pieces[2].trim_matches(&['[', ']']).trim_matches('$');
-                let effective_addr = if let Ok(addr) = u32::from_str_radix(effective_addr_str, 16) {
-                    AddressU24::from(addr)
-                } else {
-                    if ADDR_ANNOTATIONS_REVERSE.contains_key(effective_addr_str) {
-                        AddressU24::from(ADDR_ANNOTATIONS_REVERSE[effective_addr_str])
-                    } else {
-                        bail!("Invalid address `{effective_addr_str}`")
-                    }
-                };
-
-                let value_str = pieces[4].trim_matches(&['$']).trim();
-                let effective_addr_and_value = match value_str.len() {
-                    2 => {
-                        let value = u8::from_str_radix(value_str, 16).with_context(|| "value")?;
-                        Some((effective_addr, VariableLengthUInt::U8(value)))
-                    }
-                    4 => {
-                        let value = u16::from_str_radix(value_str, 16).with_context(|| "value")?;
-                        Some((effective_addr, VariableLengthUInt::U16(value)))
-                    }
-                    _ => bail!("Invalid memory value `{value_str}`"),
-                };
-                Ok((
-                    pieces[0].to_string(),
-                    Some(pieces[1].to_string()),
-                    effective_addr_and_value,
+                    Some(effective_addr),
                 ))
             }
             _ => {
@@ -287,18 +249,14 @@ impl CpuState {
     pub fn format_disassembly(
         operation: &str,
         operand_str: &Option<String>,
-        effective_addr_and_value: &Option<(AddressU24, VariableLengthUInt)>,
+        effective_addr: &Option<AddressU24>,
     ) -> String {
-        match (operand_str, effective_addr_and_value) {
+        match (operand_str, effective_addr) {
             (None, None) => operation.to_string(),
             (Some(operand_str), None) => format!("{operation} {operand_str}"),
-            (Some(operand_str), Some((addr, value))) => {
+            (Some(operand_str), Some(addr)) => {
                 let addr: u32 = (*addr).into();
-                let value_str = match value {
-                    VariableLengthUInt::U8(v) => format!("${v:02X}"),
-                    VariableLengthUInt::U16(v) => format!("${v:04X}"),
-                };
-                format!("{operation} {operand_str} [{addr:06X}] = {value_str}")
+                format!("{operation} {operand_str} [{addr:06X}]")
             }
             (None, Some(_)) => panic!("Cannot format disassembly: No operand but IO info"),
         }
@@ -315,7 +273,7 @@ impl Display for CpuState {
             Self::format_disassembly(
                 &self.instruction.operation,
                 &self.instruction.operand_str,
-                &self.instruction.effective_addr_and_value
+                &self.instruction.effective_addr
             ),
             self.a,
             self.x,
@@ -401,7 +359,7 @@ mod tests {
     }
 
     static EXAMPLE_MESEN_TRACE: &str = r"00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC V:123 H:1226 F:1";
-    static EXAMPLE_SRES_TRACE: &str = r"00526366: 00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC V:123 H:1226 F:1";
+    static EXAMPLE_SRES_TRACE: &str = r"00526366 [00e811]  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC V:123 H:1226 F:1";
 
     fn example_trace() -> CpuState {
         CpuState {
@@ -412,7 +370,7 @@ mod tests {
                 },
                 operation: "BPL".to_string(),
                 operand_str: Some("$E80E".to_string()),
-                effective_addr_and_value: None,
+                effective_addr: None,
             },
             a: 0x9901,
             x: 0x0100,
@@ -454,12 +412,7 @@ mod tests {
 
     #[test]
     pub fn test_disassembly_roundtrip() {
-        let cases = [
-            "CLC",
-            "BPL $1234",
-            "LDA $1234 [001234] = $5678",
-            "LDA $1234 [001234] = $56",
-        ];
+        let cases = ["CLC", "BPL $1234", "LDA $1234 [001234]"];
         for case in cases {
             let (operation, operand_str, io) = CpuState::parse_disassembly(case).unwrap();
             let formatted = CpuState::format_disassembly(&operation, &operand_str, &io);

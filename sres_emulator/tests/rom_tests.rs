@@ -173,7 +173,7 @@ pub fn test_play_noise() {
 }
 
 fn run_rom_test(test_name: &str) {
-    logging::test_init(true);
+    logging::test_init(false);
 
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let trace_path = root_dir.join(format!("tests/rom_tests/{test_name}-trace.log.xz"));
@@ -221,7 +221,7 @@ fn run_rom_test(test_name: &str) {
 }
 
 fn run_rom_test_with_spc700_trace(test_name: &str) {
-    logging::test_init(true);
+    logging::test_init(false);
 
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let trace_path = root_dir.join(format!("tests/rom_tests/{test_name}-trace.log.xz"));
@@ -276,8 +276,8 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
 fn assert_cpu_trace_eq(_i: usize, mut expected: CpuState, mut actual: CpuState) {
     // TODO: This emulator does not implement open bus reads, which means that memory values shown
     // in the trace on write-only MMIO registers will not be correct.
-    actual.instruction.effective_addr_and_value = None;
-    expected.instruction.effective_addr_and_value = None;
+    actual.instruction.effective_addr = None;
+    expected.instruction.effective_addr = None;
 
     assert_eq!(actual.to_string(), expected.to_string());
 }
