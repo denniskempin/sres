@@ -250,5 +250,5 @@ pub struct InstructionMeta<AddressT: Address> {
     pub address: AddressT,
     pub operation: String,
     pub operand_str: Option<String>,
-    pub effective_addr_and_value: Option<(AddressT, VariableLengthUInt)>,
+    pub effective_addr: Option<AddressT>,
 }
