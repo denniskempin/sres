@@ -97,6 +97,12 @@ pub struct ApuTimers {
     timers: [ApuTimer; 3],
 }
 
+impl Default for ApuTimers {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ApuTimers {
     pub fn new() -> Self {
         Self {

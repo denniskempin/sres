@@ -126,14 +126,13 @@ impl DspEnvelope {
             }
             EnvelopeState::Sustain => {
                 let sustain_rate = adsr2.release_rate().value();
-                if sustain_rate > 0
-                    && self.should_update_at_rate(global_counter, sustain_rate) {
-                        // Exponential decrease: envelope -= 1, then envelope -= envelope >> 8
-                        if self.value > 0 {
-                            self.value -= 1;
-                            self.value -= self.value >> 8;
-                        }
+                if sustain_rate > 0 && self.should_update_at_rate(global_counter, sustain_rate) {
+                    // Exponential decrease: envelope -= 1, then envelope -= envelope >> 8
+                    if self.value > 0 {
+                        self.value -= 1;
+                        self.value -= self.value >> 8;
                     }
+                }
             }
             EnvelopeState::Release => {
                 // Linear decrease at fixed rate of -8 every sample

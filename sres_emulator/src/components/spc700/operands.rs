@@ -463,6 +463,6 @@ impl std::fmt::Display for Register {
             Register::Psw => "psw",
             Register::Sp => "sp",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
