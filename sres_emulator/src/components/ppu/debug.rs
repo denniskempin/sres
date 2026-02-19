@@ -49,13 +49,46 @@ impl PpuDebug<'_> {
         image
     }
 
-    pub fn render_vram<ImageT: Image>(
+    pub fn render_vram<ImageT: Image>(&self, selection: VramRenderSelection) -> ImageT {
+        let (bit_depth, tileset_addr, palette_addr) = self.vram_selection_params(selection);
+        let num_rows = Self::vram_num_rows(bit_depth, tileset_addr);
+        let mut image = ImageT::new(16 * 8, num_rows * 8);
+        match bit_depth {
+            BitDepth::Bpp2 => self.debug_render_vram_impl::<Bpp2Decoder>(
+                &mut image,
+                num_rows,
+                tileset_addr,
+                palette_addr,
+            ),
+            BitDepth::Bpp4 => self.debug_render_vram_impl::<Bpp4Decoder>(
+                &mut image,
+                num_rows,
+                tileset_addr,
+                palette_addr,
+            ),
+            BitDepth::Bpp8 => self.debug_render_vram_impl::<Bpp8Decoder>(
+                &mut image,
+                num_rows,
+                tileset_addr,
+                palette_addr,
+            ),
+            _ => (),
+        };
+        image
+    }
+
+    pub fn vram_tile_info(&self, selection: VramRenderSelection, tile_idx: u32) -> String {
+        let (bit_depth, tileset_addr, _) = self.vram_selection_params(selection);
+        let words_per_tile = Self::words_per_tile(bit_depth);
+        let tile_word_addr = tileset_addr.0 as u32 + tile_idx * words_per_tile;
+        format!("Tile #{tile_idx}\nVRAM word addr: 0x{tile_word_addr:04X}")
+    }
+
+    fn vram_selection_params(
         &self,
-        num_rows: u32,
-        offset: i32,
         selection: VramRenderSelection,
-    ) -> ImageT {
-        let (bit_depth, tileset_addr, palette_addr) = match selection {
+    ) -> (BitDepth, AddressU15, u8) {
+        match selection {
             VramRenderSelection::Background(id) => {
                 let background = self.0.state.backgrounds[id as usize];
                 (
@@ -66,40 +99,30 @@ impl PpuDebug<'_> {
             }
             VramRenderSelection::Sprite0 => (BitDepth::Bpp4, self.0.state.oam.nametables.0, 128),
             VramRenderSelection::Sprite1 => (BitDepth::Bpp4, self.0.state.oam.nametables.1, 128),
-        };
-        let mut image = ImageT::new(16 * 8, num_rows * 8);
+        }
+    }
+
+    fn words_per_tile(bit_depth: BitDepth) -> u32 {
         match bit_depth {
-            BitDepth::Bpp2 => self.debug_render_vram_impl::<Bpp2Decoder>(
-                &mut image,
-                num_rows,
-                offset,
-                tileset_addr,
-                palette_addr,
-            ),
-            BitDepth::Bpp4 => self.debug_render_vram_impl::<Bpp4Decoder>(
-                &mut image,
-                num_rows,
-                offset,
-                tileset_addr,
-                palette_addr,
-            ),
-            BitDepth::Bpp8 => self.debug_render_vram_impl::<Bpp8Decoder>(
-                &mut image,
-                num_rows,
-                offset,
-                tileset_addr,
-                palette_addr,
-            ),
-            _ => (),
-        };
-        image
+            BitDepth::Bpp2 => 8,
+            BitDepth::Bpp4 => 16,
+            BitDepth::Bpp8 => 32,
+            _ => 16,
+        }
+    }
+
+    fn vram_num_rows(bit_depth: BitDepth, tileset_addr: AddressU15) -> u32 {
+        const VRAM_SIZE: u32 = 0x8000;
+        let words_per_tile = Self::words_per_tile(bit_depth);
+        let remaining_words = VRAM_SIZE.saturating_sub(tileset_addr.0 as u32);
+        let total_tiles = remaining_words / words_per_tile;
+        (total_tiles + 15) / 16
     }
 
     fn debug_render_vram_impl<TileDecoderT: TileDecoder>(
         &self,
         image: &mut impl Image,
         num_rows: u32,
-        offset: i32,
         tileset_addr: AddressU15,
         palette_addr: u8,
     ) {
@@ -107,7 +130,7 @@ impl PpuDebug<'_> {
             for coarse_y in 0..num_rows {
                 let tile_idx = coarse_y * 16 + coarse_x;
                 let tile = Tile::<TileDecoderT>::from_tileset_index(
-                    AddressU15(tileset_addr.0.saturating_add_signed(offset as i16)),
+                    tileset_addr,
                     tile_idx,
                     false,
                     false,
@@ -178,7 +201,7 @@ impl PpuDebug<'_> {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum VramRenderSelection {
     Background(BackgroundId),
     Sprite0,
