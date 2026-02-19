@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 use intbits::Bits;
 use log::info;
+use log::trace;
 use log::warn;
 use packed_struct::prelude::*;
 
@@ -47,8 +48,11 @@ impl DmaController {
             return None;
         }
 
-        let pre_overhead = 16 - master_clock % 8;
+        let start_sync_overhead = 8 - master_clock % 8;
+        let dma_overhead = 8;
+
         let mut transfer_duration = 0;
+        let mut channel_overhead: u64 = 0;
         let mut transfers: Vec<(AddressU24, AddressU24)> = Vec::new();
         for channel_idx in 0..8_usize {
             if self.dma_pending.bit(channel_idx) {
@@ -92,21 +96,28 @@ impl DmaController {
                         channel.bus_a_address.add_signed(increment, Wrap::NoWrap);
                 }
 
-                transfer_duration += 8 + 8 * length as u64;
+                transfer_duration += 8 * length as u64;
+                channel_overhead += 8;
             }
         }
 
-        let post_overhead = clock_speed - (pre_overhead + transfer_duration) % clock_speed;
-        let duration = pre_overhead + transfer_duration + post_overhead;
+        let total_dma_duration =
+            start_sync_overhead + dma_overhead + transfer_duration + channel_overhead;
+        let end_sync_overhead = clock_speed - total_dma_duration % clock_speed;
+        let total_duration = total_dma_duration + end_sync_overhead;
 
-        println!("DMA timing:");
-        println!("  Master clock: {master_clock}");
-        println!("  Pre-overhead: {pre_overhead}");
-        println!("  Transfer duration: {transfer_duration}");
-        println!("  Post-overhead: {post_overhead}");
-        println!("  Total duration: {duration}");
+        // TODO: Remove once stabilized.
+        trace!("DMA timing:");
+        trace!("  Master clock: {master_clock}");
+        trace!("  start sync overhead: {start_sync_overhead}");
+        trace!("  dma overhead: {dma_overhead}");
+        trace!("  Transfer duration: {transfer_duration}");
+        trace!("  channel overhead: {channel_overhead}");
+        trace!("  total dma duration: {total_dma_duration}");
+        trace!("  end sync overhead: {end_sync_overhead}");
+        trace!("  Total duration: {total_duration}");
 
-        Some((transfers, duration))
+        Some((transfers, total_duration))
     }
 
     pub fn bus_read(&mut self, addr: AddressU24) -> u8 {
