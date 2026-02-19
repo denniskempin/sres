@@ -148,9 +148,9 @@ impl CpuState {
                 }
             },
             clock: ClockInfo::from_master_clock(Self::mesen_vhf_to_master_clock(
-                u64::from_str(&s[93..96].trim()).with_context(|| "v")?,
-                u64::from_str(&s[99..103].trim()).with_context(|| "h")?,
-                u64::from_str(&s[106..].trim()).with_context(|| "f")?,
+                u64::from_str(s[93..96].trim()).with_context(|| "v")?,
+                u64::from_str(s[99..103].trim()).with_context(|| "h")?,
+                u64::from_str(s[106..].trim()).with_context(|| "f")?,
             )),
         })
     }
@@ -223,15 +223,13 @@ impl CpuState {
             2 => Ok((pieces[0].to_string(), Some(pieces[1].to_string()), None)),
             // e.g. LDA $1234 [001234]
             3 => {
-                let effective_addr_str = pieces[2].trim_matches(&['[', ']', '$']);
+                let effective_addr_str = pieces[2].trim_matches(['[', ']', '$']);
                 let effective_addr = if let Ok(addr) = u32::from_str_radix(effective_addr_str, 16) {
                     AddressU24::from(addr)
+                } else if ADDR_ANNOTATIONS_REVERSE.contains_key(effective_addr_str) {
+                    AddressU24::from(ADDR_ANNOTATIONS_REVERSE[effective_addr_str])
                 } else {
-                    if ADDR_ANNOTATIONS_REVERSE.contains_key(effective_addr_str) {
-                        AddressU24::from(ADDR_ANNOTATIONS_REVERSE[effective_addr_str])
-                    } else {
-                        bail!("Invalid address `{effective_addr_str}` in `{disassembly}`")
-                    }
+                    bail!("Invalid address `{effective_addr_str}` in `{disassembly}`")
                 };
 
                 Ok((
@@ -281,7 +279,7 @@ impl Display for CpuState {
             self.s,
             self.d,
             self.db,
-            format!(
+            format_args!(
                 "{}{}{}{}{}{}{}{}",
                 if self.status.negative { 'N' } else { 'n' },
                 if self.status.overflow { 'V' } else { 'v' },

@@ -101,9 +101,7 @@ fn voice_detail_widget(
             ));
 
             // Sample, envelope, output in compact format
-            ui.label(format!(
-                "Src:${sample_source:02X} Env:{envx} Out:{outx:+4}"
-            ));
+            ui.label(format!("Src:${sample_source:02X} Env:{envx} Out:{outx:+4}"));
 
             // ADSR/Gain settings (compact)
             if adsr1.enable() {

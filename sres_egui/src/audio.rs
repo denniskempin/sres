@@ -84,11 +84,7 @@ impl AudioOutput {
 
     pub fn samples_needed_to_maintain_buffer(&self) -> usize {
         let buffer_size = self.buffer_queue.lock().unwrap().len();
-        if buffer_size > TARGET_BUFFER_SIZE {
-            0
-        } else {
-            TARGET_BUFFER_SIZE - buffer_size
-        }
+        TARGET_BUFFER_SIZE.saturating_sub(buffer_size)
     }
 
     fn build_stream<T: SampleConverter>(
@@ -189,7 +185,7 @@ impl AudioBufferQueue {
 
     /// Get a recycled buffer if available, otherwise create a new one
     fn get_recycled_buffer(&mut self) -> AudioBuffer {
-        self.recycled_buffers.pop().unwrap_or_else(AudioBuffer::new)
+        self.recycled_buffers.pop().unwrap_or_default()
     }
 }
 
