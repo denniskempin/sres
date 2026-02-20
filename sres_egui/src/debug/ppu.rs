@@ -134,6 +134,43 @@ fn tilemap_widget(ui: &mut Ui, tilemap_texture: &TextureHandle) {
     ui.image((tilemap_texture.id(), Vec2::new(512.0, 512.0)));
 }
 
+#[cfg(test)]
+mod tests {
+    use sres_emulator::common::clock::ClockInfo;
+
+    use super::*;
+
+    #[test]
+    fn clock_info_zero() {
+        crate::test_utils::widget_snapshot("ppu/clock_info_zero", |ui| {
+            clock_info_widget(ui, ClockInfo::default());
+        });
+    }
+
+    #[test]
+    fn clock_info_mid_frame() {
+        crate::test_utils::widget_snapshot("ppu/clock_info_mid_frame", |ui| {
+            clock_info_widget(ui, ClockInfo::from_master_clock(500_000));
+        });
+    }
+
+    #[test]
+    fn tabs_first_selected() {
+        crate::test_utils::widget_snapshot("ppu/tabs_first_selected", |ui| {
+            let mut selected = "Alpha";
+            tabs_widget(ui, &["Alpha", "Beta", "Gamma"], &mut selected);
+        });
+    }
+
+    #[test]
+    fn tabs_last_selected() {
+        crate::test_utils::widget_snapshot("ppu/tabs_last_selected", |ui| {
+            let mut selected = "Gamma";
+            tabs_widget(ui, &["Alpha", "Beta", "Gamma"], &mut selected);
+        });
+    }
+}
+
 struct PpuSpritesWidget {
     sprite_id: usize,
     sprite_texture: TextureHandle,
