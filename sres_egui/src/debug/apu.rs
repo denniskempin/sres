@@ -319,3 +319,80 @@ fn pitch_to_frequency(pitch: u16) -> f32 {
     // SNES pitch calculation: frequency = (pitch / 4096) * 32000 Hz
     (pitch as f32 / 4096.0) * 32000.0
 }
+
+#[cfg(test)]
+mod tests {
+    use sres_emulator::components::s_dsp::voice::{AudioRingBuffer, OUTX_BUFFER_SIZE};
+
+    use super::*;
+
+    #[test]
+    fn volume_bar_positive() {
+        crate::test_utils::widget_snapshot("apu/volume_bar_positive", |ui| {
+            volume_bar_widget(ui, 0.75, false);
+        });
+    }
+
+    #[test]
+    fn volume_bar_negative() {
+        crate::test_utils::widget_snapshot("apu/volume_bar_negative", |ui| {
+            volume_bar_widget(ui, 0.5, true);
+        });
+    }
+
+    #[test]
+    fn volume_bar_empty() {
+        crate::test_utils::widget_snapshot("apu/volume_bar_empty", |ui| {
+            volume_bar_widget(ui, 0.0, false);
+        });
+    }
+
+    #[test]
+    fn volume_bar_full() {
+        crate::test_utils::widget_snapshot("apu/volume_bar_full", |ui| {
+            volume_bar_widget(ui, 1.0, false);
+        });
+    }
+
+    #[test]
+    fn envelope_half() {
+        crate::test_utils::widget_snapshot("apu/envelope_half", |ui| {
+            envelope_widget(ui, 64);
+        });
+    }
+
+    #[test]
+    fn envelope_empty() {
+        crate::test_utils::widget_snapshot("apu/envelope_empty", |ui| {
+            envelope_widget(ui, 0);
+        });
+    }
+
+    #[test]
+    fn envelope_full() {
+        crate::test_utils::widget_snapshot("apu/envelope_full", |ui| {
+            envelope_widget(ui, 127);
+        });
+    }
+
+    #[test]
+    fn waveform_silent() {
+        let buffer = AudioRingBuffer::<OUTX_BUFFER_SIZE>::default();
+        crate::test_utils::widget_snapshot("apu/waveform_silent", move |ui| {
+            waveform_widget(ui, &buffer);
+        });
+    }
+
+    #[test]
+    fn waveform_sine() {
+        let mut buffer = AudioRingBuffer::<OUTX_BUFFER_SIZE>::default();
+        for i in 0..OUTX_BUFFER_SIZE {
+            let phase = i as f32 / OUTX_BUFFER_SIZE as f32;
+            let sample = ((phase * 2.0 * std::f32::consts::PI).sin() * 16000.0) as i16;
+            buffer.push(sample);
+        }
+        crate::test_utils::widget_snapshot("apu/waveform_sine", move |ui| {
+            waveform_widget(ui, &buffer);
+        });
+    }
+}

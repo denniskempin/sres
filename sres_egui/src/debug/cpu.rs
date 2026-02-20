@@ -45,6 +45,39 @@ fn run_button_widget(ui: &mut Ui, paused: bool) -> egui::Response {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_button_paused() {
+        crate::test_utils::widget_snapshot("cpu/run_button_paused", |ui| {
+            run_button_widget(ui, true);
+        });
+    }
+
+    #[test]
+    fn run_button_running() {
+        crate::test_utils::widget_snapshot("cpu/run_button_running", |ui| {
+            run_button_widget(ui, false);
+        });
+    }
+
+    #[test]
+    fn debug_controls_paused() {
+        crate::test_utils::widget_snapshot("cpu/debug_controls_paused", |ui| {
+            debug_controls_widget(ui, DebugCommand::Pause);
+        });
+    }
+
+    #[test]
+    fn debug_controls_running() {
+        crate::test_utils::widget_snapshot("cpu/debug_controls_running", |ui| {
+            debug_controls_widget(ui, DebugCommand::Run);
+        });
+    }
+}
+
 pub fn debug_controls_widget(ui: &mut Ui, current_command: DebugCommand) -> Option<DebugCommand> {
     let mut new_command = None;
 
