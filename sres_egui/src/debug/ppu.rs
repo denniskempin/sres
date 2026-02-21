@@ -164,10 +164,23 @@ mod tests {
 struct PpuSpritesWidget {
     selected_id: usize,
     sprite_texture: TextureHandle,
+    sprite_thumbnails: Vec<TextureHandle>,
 }
+
+const SPRITE_THUMBNAIL_SIZE: f32 = 32.0;
 
 impl PpuSpritesWidget {
     pub fn new(cc: &CreationContext) -> Self {
+        let placeholder = ColorImage::example();
+        let sprite_thumbnails = (0..128)
+            .map(|i| {
+                cc.egui_ctx.load_texture(
+                    format!("SpriteThumbnail{i}"),
+                    placeholder.clone(),
+                    TextureOptions::NEAREST,
+                )
+            })
+            .collect();
         PpuSpritesWidget {
             selected_id: 0,
             sprite_texture: cc.egui_ctx.load_texture(
@@ -175,6 +188,7 @@ impl PpuSpritesWidget {
                 ColorImage::example(),
                 Default::default(),
             ),
+            sprite_thumbnails,
         }
     }
 
@@ -191,70 +205,95 @@ impl PpuSpritesWidget {
         let sprites = ppu.sprites();
 
         // Scrollable table of all sprites
-        let row_height = 18.0;
-        let table_height = row_height * 10.0 + 20.0;
+        let row_height = SPRITE_THUMBNAIL_SIZE + 4.0;
+        let table_height = row_height * 8.0 + 20.0;
         TableBuilder::new(ui)
             .striped(true)
             .resizable(false)
             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-            .column(Column::auto())
-            .column(Column::auto())
-            .column(Column::auto())
-            .column(Column::auto())
-            .column(Column::auto())
-            .column(Column::auto())
-            .column(Column::auto())
-            .column(Column::auto())
-            .column(Column::auto())
+            .column(Column::auto()) // thumbnail
+            .column(Column::auto()) // #
+            .column(Column::auto()) // X
+            .column(Column::auto()) // Y
+            .column(Column::auto()) // Size
+            .column(Column::auto()) // Tile
+            .column(Column::auto()) // Pal
+            .column(Column::auto()) // Pri
+            .column(Column::auto()) // H
+            .column(Column::auto()) // V
             .min_scrolled_height(table_height)
             .max_scroll_height(table_height)
             .header(20.0, |mut header| {
-                for label in &["#", "X", "Y", "Size", "Tile", "Pal", "Pri", "H", "V"] {
+                for label in &["", "#", "X", "Y", "Size", "Tile", "Pal", "Pri", "H", "V"] {
                     header.col(|ui| {
                         ui.strong(*label);
                     });
                 }
             })
-            .body(|mut body| {
-                for sprite in &sprites {
+            .body(|body| {
+                // Use rows() for virtual scrolling: only visible rows call the closure.
+                body.rows(row_height, sprites.len(), |mut row| {
+                    let row_index = row.index();
+                    let sprite = &sprites[row_index];
                     let sprite_id = sprite.id as usize;
                     let is_selected = sprite_id == self.selected_id;
-                    body.row(row_height, |mut row| {
-                        row.set_selected(is_selected);
-                        row.col(|ui| {
-                            if ui
-                                .selectable_label(is_selected, format!("{:3}", sprite.id))
-                                .clicked()
-                            {
-                                self.selected_id = sprite_id;
-                            }
-                        });
-                        row.col(|ui| {
-                            ui.label(format!("{:3}", sprite.x));
-                        });
-                        row.col(|ui| {
-                            ui.label(format!("{:3}", sprite.y));
-                        });
-                        row.col(|ui| {
-                            ui.label(sprite.size.to_string());
-                        });
-                        row.col(|ui| {
-                            ui.label(format!("${:02X}", sprite.tile));
-                        });
-                        row.col(|ui| {
-                            ui.label(format!("{}", sprite.palette));
-                        });
-                        row.col(|ui| {
-                            ui.label(format!("{}", sprite.priority));
-                        });
-                        row.col(|ui| {
-                            ui.label(if sprite.hflip { "H" } else { "" });
-                        });
-                        row.col(|ui| {
-                            ui.label(if sprite.vflip { "V" } else { "" });
-                        });
+
+                    // Update only this row's thumbnail (lazy, visible rows only).
+                    self.sprite_thumbnails[sprite_id].set(
+                        ppu.render_sprite::<EguiImageImpl>(sprite_id),
+                        TextureOptions::NEAREST,
+                    );
+
+                    row.set_selected(is_selected);
+                    row.col(|ui| {
+                        let tex = &self.sprite_thumbnails[sprite_id];
+                        let tex_size = tex.size_vec2();
+                        let max_dim = tex_size.x.max(tex_size.y).max(1.0);
+                        let scale = SPRITE_THUMBNAIL_SIZE / max_dim;
+                        let display_size = Vec2::new(tex_size.x * scale, tex_size.y * scale);
+                        if ui
+                            .add(
+                                egui::Image::new((tex.id(), display_size))
+                                    .sense(egui::Sense::click()),
+                            )
+                            .clicked()
+                        {
+                            self.selected_id = sprite_id;
+                        }
                     });
-                }
+                    row.col(|ui| {
+                        if ui
+                            .selectable_label(is_selected, format!("{:3}", sprite.id))
+                            .clicked()
+                        {
+                            self.selected_id = sprite_id;
+                        }
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{:3}", sprite.x));
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{:3}", sprite.y));
+                    });
+                    row.col(|ui| {
+                        ui.label(sprite.size.to_string());
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("${:02X}", sprite.tile));
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{}", sprite.palette));
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{}", sprite.priority));
+                    });
+                    row.col(|ui| {
+                        ui.label(if sprite.hflip { "H" } else { "" });
+                    });
+                    row.col(|ui| {
+                        ui.label(if sprite.vflip { "V" } else { "" });
+                    });
+                });
             });
 
         ui.separator();
@@ -262,7 +301,7 @@ impl PpuSpritesWidget {
         // Detail panel for the selected sprite
         ui.horizontal(|ui| {
             let tex_size = self.sprite_texture.size_vec2();
-            let scale = (64.0 / tex_size.x.max(tex_size.y)).max(1.0) * 4.0;
+            let scale = (64.0 / tex_size.x.max(tex_size.y).max(1.0)).max(1.0) * 4.0;
             ui.image((
                 self.sprite_texture.id(),
                 Vec2::new(tex_size.x * scale, tex_size.y * scale),
