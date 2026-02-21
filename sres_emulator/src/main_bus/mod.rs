@@ -38,6 +38,7 @@ pub struct MainBusImpl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> {
     joy1: u16,
     joy2: u16,
     mapping_mode: MappingMode,
+    last_hdma_scanline: u64,
 
     debug_event_collector: DebugEventCollectorRef<MainBusEvent>,
 }
@@ -63,6 +64,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             joy1: 0,
             joy2: 0,
             mapping_mode: cartridge.header.mapping_mode,
+            last_hdma_scanline: 0,
         }
     }
 
@@ -177,8 +179,51 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
         self.dma_controller.update_state();
 
         self.clock.advance_master_clock(cycles);
+
+        // Process HDMA on scanline transitions
+        let current_v = self.clock.clock_info().v;
+        if current_v != self.last_hdma_scanline {
+            self.process_hdma(current_v);
+            self.last_hdma_scanline = current_v;
+        }
+
         self.ppu.update_clock(self.clock.clock_info());
         self.apu.update_clock(self.clock.clock_info());
+    }
+
+    fn process_hdma(&mut self, scanline: u64) {
+        if scanline == 0 {
+            // HDMA init at the start of each frame
+            let this = self as *mut Self;
+            self.dma_controller.hdma_init_process(&mut |addr| {
+                // Safety: We need to read from the bus while the DMA controller has a mutable
+                // reference. The bus_read does not modify dma_controller state.
+                unsafe { (*this).hdma_bus_read(addr) }
+            });
+        }
+        if scanline < 225 {
+            // HDMA transfer on each visible scanline
+            let this = self as *mut Self;
+            let transfers = self
+                .dma_controller
+                .hdma_transfer(&mut |addr| unsafe { (*this).hdma_bus_read(addr) });
+            for (source, destination) in transfers {
+                let value = self.bus_read(source);
+                self.bus_write(destination, value);
+            }
+        }
+    }
+
+    /// Read from the bus for HDMA operations. This bypasses the debug event collector
+    /// to avoid noise in the event log and does not use cycle-accurate reads since
+    /// HDMA reads happen at specific points in the scanline.
+    fn hdma_bus_read(&self, addr: AddressU24) -> u8 {
+        match self.memory_map(addr) {
+            MemoryBlock::Ram(offset) => self.wram[offset],
+            MemoryBlock::Rom(offset) => self.rom[offset],
+            MemoryBlock::Sram(offset) => self.sram[offset],
+            _ => 0,
+        }
     }
 }
 
