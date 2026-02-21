@@ -162,8 +162,6 @@ mod tests {
 }
 
 struct PpuSpritesWidget {
-    selected_id: usize,
-    sprite_texture: TextureHandle,
     sprite_thumbnails: Vec<TextureHandle>,
 }
 
@@ -181,32 +179,13 @@ impl PpuSpritesWidget {
                 )
             })
             .collect();
-        PpuSpritesWidget {
-            selected_id: 0,
-            sprite_texture: cc.egui_ctx.load_texture(
-                "Sprite",
-                ColorImage::example(),
-                Default::default(),
-            ),
-            sprite_thumbnails,
-        }
-    }
-
-    pub fn update_textures(&mut self, ppu: &PpuDebug<'_>) {
-        self.sprite_texture.set(
-            ppu.render_sprite::<EguiImageImpl>(self.selected_id),
-            TextureOptions::NEAREST,
-        );
+        PpuSpritesWidget { sprite_thumbnails }
     }
 
     pub fn show(&mut self, ui: &mut Ui, ppu: &PpuDebug<'_>) {
-        self.update_textures(ppu);
-
         let sprites = ppu.sprites();
 
-        // Scrollable table of all sprites
         let row_height = SPRITE_THUMBNAIL_SIZE + 4.0;
-        let table_height = row_height * 8.0 + 20.0;
         TableBuilder::new(ui)
             .striped(true)
             .resizable(false)
@@ -221,8 +200,6 @@ impl PpuSpritesWidget {
             .column(Column::auto()) // Pri
             .column(Column::auto()) // H
             .column(Column::auto()) // V
-            .min_scrolled_height(table_height)
-            .max_scroll_height(table_height)
             .header(20.0, |mut header| {
                 for label in &["", "#", "X", "Y", "Size", "Tile", "Pal", "Pri", "H", "V"] {
                     header.col(|ui| {
@@ -236,7 +213,6 @@ impl PpuSpritesWidget {
                     let row_index = row.index();
                     let sprite = &sprites[row_index];
                     let sprite_id = sprite.id as usize;
-                    let is_selected = sprite_id == self.selected_id;
 
                     // Update only this row's thumbnail (lazy, visible rows only).
                     self.sprite_thumbnails[sprite_id].set(
@@ -244,30 +220,16 @@ impl PpuSpritesWidget {
                         TextureOptions::NEAREST,
                     );
 
-                    row.set_selected(is_selected);
                     row.col(|ui| {
                         let tex = &self.sprite_thumbnails[sprite_id];
                         let tex_size = tex.size_vec2();
                         let max_dim = tex_size.x.max(tex_size.y).max(1.0);
                         let scale = SPRITE_THUMBNAIL_SIZE / max_dim;
                         let display_size = Vec2::new(tex_size.x * scale, tex_size.y * scale);
-                        if ui
-                            .add(
-                                egui::Image::new((tex.id(), display_size))
-                                    .sense(egui::Sense::click()),
-                            )
-                            .clicked()
-                        {
-                            self.selected_id = sprite_id;
-                        }
+                        ui.add(egui::Image::new((tex.id(), display_size)));
                     });
                     row.col(|ui| {
-                        if ui
-                            .selectable_label(is_selected, format!("{:3}", sprite.id))
-                            .clicked()
-                        {
-                            self.selected_id = sprite_id;
-                        }
+                        ui.label(format!("{:3}", sprite.id));
                     });
                     row.col(|ui| {
                         ui.label(format!("{:3}", sprite.x));
@@ -295,21 +257,6 @@ impl PpuSpritesWidget {
                     });
                 });
             });
-
-        ui.separator();
-
-        // Detail panel for the selected sprite
-        ui.horizontal(|ui| {
-            let tex_size = self.sprite_texture.size_vec2();
-            let scale = (64.0 / tex_size.x.max(tex_size.y).max(1.0)).max(1.0) * 4.0;
-            ui.image((
-                self.sprite_texture.id(),
-                Vec2::new(tex_size.x * scale, tex_size.y * scale),
-            ));
-            ui.vertical(|ui| {
-                ui.label(ppu.sprite_info(self.selected_id));
-            });
-        });
     }
 }
 
