@@ -5,6 +5,8 @@ use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
 use egui::Vec2;
+use egui_extras::Column;
+use egui_extras::TableBuilder;
 use sres_emulator::common::clock::ClockInfo;
 use sres_emulator::components::ppu::BackgroundId;
 use sres_emulator::components::ppu::PpuDebug;
@@ -160,53 +162,101 @@ mod tests {
 }
 
 struct PpuSpritesWidget {
-    sprite_id: usize,
-    sprite_texture: TextureHandle,
+    sprite_thumbnails: Vec<TextureHandle>,
 }
+
+const SPRITE_THUMBNAIL_SIZE: f32 = 32.0;
 
 impl PpuSpritesWidget {
     pub fn new(cc: &CreationContext) -> Self {
-        PpuSpritesWidget {
-            sprite_id: 0,
-            sprite_texture: cc.egui_ctx.load_texture(
-                "Sprite",
-                ColorImage::example(),
-                Default::default(),
-            ),
-        }
-    }
-
-    pub fn update_textures(&mut self, ppu: &PpuDebug<'_>) {
-        self.sprite_texture.set(
-            ppu.render_sprite::<EguiImageImpl>(self.sprite_id),
-            TextureOptions::default(),
-        );
+        let placeholder = ColorImage::example();
+        let sprite_thumbnails = (0..128)
+            .map(|i| {
+                cc.egui_ctx.load_texture(
+                    format!("SpriteThumbnail{i}"),
+                    placeholder.clone(),
+                    TextureOptions::NEAREST,
+                )
+            })
+            .collect();
+        PpuSpritesWidget { sprite_thumbnails }
     }
 
     pub fn show(&mut self, ui: &mut Ui, ppu: &PpuDebug<'_>) {
-        self.update_textures(ppu);
+        let sprites = ppu.sprites();
 
-        ui.horizontal(|ui| {
-            ui.label("Sprite:".to_string());
-            if ui.button("-").clicked() && self.sprite_id > 0 {
-                self.sprite_id -= 1;
-            }
-            ui.label(format!("{}", self.sprite_id));
-            if ui.button("+").clicked() && self.sprite_id < 255 {
-                self.sprite_id += 1;
-            }
-        });
+        let row_height = SPRITE_THUMBNAIL_SIZE + 4.0;
+        TableBuilder::new(ui)
+            .striped(true)
+            .resizable(false)
+            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+            .column(Column::auto()) // thumbnail
+            .column(Column::auto()) // #
+            .column(Column::auto()) // X
+            .column(Column::auto()) // Y
+            .column(Column::auto()) // Size
+            .column(Column::auto()) // Tile
+            .column(Column::auto()) // Pal
+            .column(Column::auto()) // Pri
+            .column(Column::auto()) // H
+            .column(Column::remainder()) // V
+            .header(20.0, |mut header| {
+                for label in &["", "#", "X", "Y", "Size", "Tile", "Pal", "Pri", "H", "V"] {
+                    header.col(|ui| {
+                        ui.strong(*label);
+                    });
+                }
+            })
+            .body(|body| {
+                // Use rows() for virtual scrolling: only visible rows call the closure.
+                body.rows(row_height, sprites.len(), |mut row| {
+                    let row_index = row.index();
+                    let sprite = &sprites[row_index];
+                    let sprite_id = sprite.id as usize;
 
-        ui.horizontal(|ui| {
-            ui.label(ppu.sprite_info(self.sprite_id));
-            ui.image((
-                self.sprite_texture.id(),
-                Vec2::new(
-                    self.sprite_texture.size_vec2().x * 4.0,
-                    self.sprite_texture.size_vec2().y * 4.0,
-                ),
-            ));
-        });
+                    // Update only this row's thumbnail (lazy, visible rows only).
+                    self.sprite_thumbnails[sprite_id].set(
+                        ppu.render_sprite::<EguiImageImpl>(sprite_id),
+                        TextureOptions::NEAREST,
+                    );
+
+                    row.col(|ui| {
+                        let tex = &self.sprite_thumbnails[sprite_id];
+                        let tex_size = tex.size_vec2();
+                        let max_dim = tex_size.x.max(tex_size.y).max(1.0);
+                        let scale = SPRITE_THUMBNAIL_SIZE / max_dim;
+                        let display_size = Vec2::new(tex_size.x * scale, tex_size.y * scale);
+                        ui.add(egui::Image::new((tex.id(), display_size)));
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{:3}", sprite.id));
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{:3}", sprite.x));
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{:3}", sprite.y));
+                    });
+                    row.col(|ui| {
+                        ui.label(sprite.size.to_string());
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("${:02X}", sprite.tile));
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{}", sprite.palette));
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{}", sprite.priority));
+                    });
+                    row.col(|ui| {
+                        ui.label(if sprite.hflip { "H" } else { "" });
+                    });
+                    row.col(|ui| {
+                        ui.label(if sprite.vflip { "V" } else { "" });
+                    });
+                });
+            });
     }
 }
 

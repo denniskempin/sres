@@ -19,8 +19,11 @@ impl PpuDebug<'_> {
     }
 
     pub fn sprite_info(&self, sprite_id: usize) -> String {
-        let sprite = self.0.state.oam.get_sprite(sprite_id as u32);
-        format!("({}, {})", sprite.x, sprite.y)
+        self.0.state.oam.get_sprite(sprite_id as u32).to_string()
+    }
+
+    pub fn sprites(&self) -> Vec<super::oam::Sprite> {
+        (0..128).map(|id| self.0.state.oam.get_sprite(id)).collect()
     }
 
     pub fn render_sprite<ImageT: Image>(&self, sprite_id: usize) -> ImageT {
