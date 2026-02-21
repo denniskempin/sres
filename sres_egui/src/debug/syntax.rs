@@ -221,6 +221,93 @@ pub fn label_strong(ui: &mut Ui, text: impl Into<String>) -> egui::Response {
     ui.label(RichText::new(text.into()).color(Color32::WHITE).strong())
 }
 
+#[cfg(test)]
+mod tests {
+    use sres_emulator::common::address::{AddressU16, AddressU24, InstructionMeta};
+    use sres_emulator::components::cpu::NativeVectorTable;
+    use sres_emulator::components::spc700::Spc700State;
+
+    use super::*;
+    use crate::debug::InternalLink;
+
+    /// One log_line row for every DebugEvent variant, covering all syntax-highlight paths.
+    #[test]
+    fn log_line_events() {
+        let events: Vec<DebugEvent> = vec![
+            // MainBus reads – one with a known address annotation, one plain hex
+            DebugEvent::MainBus(sres_emulator::main_bus::MainBusEvent::Read(
+                AddressU24::new(0x00, 0x2100), // annotated: INIDISP
+                0x0F,
+            )),
+            DebugEvent::MainBus(sres_emulator::main_bus::MainBusEvent::Read(
+                AddressU24::new(0x7E, 0x0100), // plain hex address
+                0xAB,
+            )),
+            // MainBus write
+            DebugEvent::MainBus(sres_emulator::main_bus::MainBusEvent::Write(
+                AddressU24::new(0x00, 0x2118), // annotated: VMDATAL
+                0x42,
+            )),
+            // CPU step without effective address
+            DebugEvent::Cpu(CpuEvent::Step(CpuState {
+                instruction: InstructionMeta {
+                    address: AddressU24::new(0x00, 0x8010),
+                    operation: "BPL".to_string(),
+                    operand_str: Some("+5".to_string()),
+                    effective_addr: None,
+                },
+                a: 0x0042,
+                x: 0x0001,
+                ..CpuState::default()
+            })),
+            // CPU step with effective address
+            DebugEvent::Cpu(CpuEvent::Step(CpuState {
+                instruction: InstructionMeta {
+                    address: AddressU24::new(0x00, 0x8000),
+                    operation: "LDA".to_string(),
+                    operand_str: Some("$2100".to_string()),
+                    effective_addr: Some(AddressU24::new(0x00, 0x2100)),
+                },
+                a: 0xFF00,
+                ..CpuState::default()
+            })),
+            // CPU interrupt (NMI)
+            DebugEvent::Cpu(CpuEvent::Interrupt(NativeVectorTable::Nmi)),
+            // SPC700 step
+            DebugEvent::Spc700(sres_emulator::components::spc700::Spc700Event::Step(
+                Spc700State {
+                    instruction: InstructionMeta {
+                        address: AddressU16(0xFFC0),
+                        operation: "mov".to_string(),
+                        operand_str: Some("($00)+y,a".to_string()),
+                        effective_addr: None,
+                    },
+                    a: 0x8F,
+                    x: 0xCC,
+                    y: 0xF9,
+                    sp: AddressU16(0x01EF),
+                    status: "N.....ZC".to_string(),
+                },
+            )),
+            // APU bus read
+            DebugEvent::ApuBus(sres_emulator::apu::ApuBusEvent::Read(AddressU16(0x00F2), 0x5D)),
+            // APU bus write
+            DebugEvent::ApuBus(sres_emulator::apu::ApuBusEvent::Write(AddressU16(0x00F3), 0x20)),
+            // Error
+            DebugEvent::Error("Unexpected opcode 0xFF at 00:8042".to_string()),
+        ];
+
+        crate::test_utils::widget_snapshot("syntax/syntax_widgets", |ui| {
+            let mut selected = InternalLink::None;
+            ui.vertical(|ui| {
+                for event in &events {
+                    log_line(ui, event, &mut selected);
+                }
+            });
+        });
+    }
+}
+
 lazy_static! {
     pub static ref ADDR_ANNOTATIONS: HashMap<u32, &'static str> = {
         [

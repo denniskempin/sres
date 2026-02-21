@@ -39,5 +39,8 @@ wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Storage"] }
 puffin = { version = "0.19", features = ["web"] }
 
+[dev-dependencies]
+egui_kittest = { version = "0.33", features = ["wgpu", "snapshot"] }
+
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ['-O4']

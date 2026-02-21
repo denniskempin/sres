@@ -134,6 +134,31 @@ fn tilemap_widget(ui: &mut Ui, tilemap_texture: &TextureHandle) {
     ui.image((tilemap_texture.id(), Vec2::new(512.0, 512.0)));
 }
 
+#[cfg(test)]
+mod tests {
+    use sres_emulator::common::clock::ClockInfo;
+
+    use super::*;
+
+    /// All stateless PPU widgets in one combined snapshot.
+    #[test]
+    fn ppu_widgets() {
+        crate::test_utils::widget_snapshot("ppu/ppu_widgets", |ui| {
+            ui.vertical(|ui| {
+                ui.label("── clock_info_widget ──");
+                clock_info_widget(ui, ClockInfo::default()); // V=0, H=0
+                clock_info_widget(ui, ClockInfo::from_master_clock(500_000)); // mid-frame
+
+                ui.label("── tabs_widget ──");
+                let mut first = "Alpha";
+                tabs_widget(ui, &["Alpha", "Beta", "Gamma"], &mut first); // first selected
+                let mut last = "Gamma";
+                tabs_widget(ui, &["Alpha", "Beta", "Gamma"], &mut last); // last selected
+            });
+        });
+    }
+}
+
 struct PpuSpritesWidget {
     sprite_id: usize,
     sprite_texture: TextureHandle,

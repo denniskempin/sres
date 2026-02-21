@@ -45,6 +45,31 @@ fn run_button_widget(ui: &mut Ui, paused: bool) -> egui::Response {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// All stateless CPU debug widgets in one combined snapshot.
+    #[test]
+    fn cpu_widgets() {
+        crate::test_utils::widget_snapshot("cpu/cpu_widgets", |ui| {
+            ui.vertical(|ui| {
+                ui.label("── run_button_widget ──");
+                ui.horizontal(|ui| {
+                    run_button_widget(ui, true); // paused → shows "Run"
+                    run_button_widget(ui, false); // running → shows "Pause"
+                });
+
+                ui.label("── debug_controls_widget (paused) ──");
+                debug_controls_widget(ui, DebugCommand::Pause);
+
+                ui.label("── debug_controls_widget (running) ──");
+                debug_controls_widget(ui, DebugCommand::Run);
+            });
+        });
+    }
+}
+
 pub fn debug_controls_widget(ui: &mut Ui, current_command: DebugCommand) -> Option<DebugCommand> {
     let mut new_command = None;
 
