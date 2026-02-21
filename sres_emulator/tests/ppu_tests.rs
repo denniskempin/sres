@@ -242,19 +242,19 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
 // Sprite rendering tests
 // ============================================================================
 //
-// These tests verify sprite rendering for each supported sprite size format.
-// Each test sets up the PPU directly (without a ROM), writes tile data to VRAM,
-// configures a palette in CGRAM, places a single sprite in OAM, and renders all
-// scanlines. The resulting framebuffer is compared against a golden PNG image.
+// A single test (`test_sprite_rendering`) covers all six SNES sprite size
+// formats (8×8, 16×16, 32×32, 64×64, 16×32, 32×64) and produces one golden
+// image showing all of them.
 //
-// On the first run (no golden file present) the test auto-creates the golden.
-// On subsequent runs the golden is compared pixel-by-pixel.
+// Because the OBJSEL register selects exactly two sizes simultaneously,
+// three render passes are needed (one per size-pair mode). Each pass places
+// the small and large variants side-by-side. The top rows of each pass are
+// cropped and stacked vertically into a single 256×144 composite.
 //
-// Tile pattern: each 8×8 sub-tile within the sprite receives a unique solid
-// color (palette index 1-15) based on its (column, row) position, making it
-// easy to visually verify correct size, layout, and ordering of tiles.
+// Tile graphics are stored in sprite_tiles.bin (checked into the repo).
+// To regenerate it, run: cargo test generate_sprite_tiles_bin -- --ignored
 
-/// 16-entry palette written starting at CGRAM index 128 (sprite palette 0).
+/// 16-entry palette written to CGRAM starting at index 128 (sprite palette 0).
 /// Color 0 is transparent; colors 1-15 are visually distinct hues.
 /// SNES color format: 0bBBBBB_GGGGG_RRRRR (15-bit BGR).
 const SPRITE_PALETTE: [u16; 16] = [
@@ -276,168 +276,165 @@ const SPRITE_PALETTE: [u16; 16] = [
     0x2108, // 15: Light gray
 ];
 
-/// Builds a VRAM word array containing 4bpp tile data for a sprite made of
-/// `coarse_w × coarse_h` 8×8 tiles.
+/// Loads the pre-generated VRAM tile data from `sprite_tiles.bin`.
 ///
-/// Tile layout in VRAM follows SNES conventions:
-/// - Tile index T is located at word address `T * 16`.
-/// - Within a sprite, sub-tile (cx, cy) maps to tile index `cy * 16 + cx`.
-/// - Each tile stores 8 rows; row R occupies two words at offsets R and R+8
-///   within the tile block (planes 0/1 in the low word, planes 2/3 in the
-///   high word).
+/// The file contains 1920 little-endian u16 words covering tile indices 0-119.
+/// Each 8×8 tile at grid position (cx, cy) is filled with a solid color
+/// `(cy * 8 + cx) % 15 + 1`, giving each sub-tile a distinct palette entry.
 ///
-/// Every sub-tile is filled with a single solid color chosen from 1-15 by
-/// `(cy * coarse_w + cx) % 15 + 1`, so adjacent tiles are always different.
-fn make_sprite_tile_data(coarse_w: u32, coarse_h: u32) -> Vec<u16> {
-    // The highest tile index needed is (coarse_h-1)*16 + (coarse_w-1).
-    let max_tile_idx = (coarse_h - 1) * 16 + (coarse_w - 1);
-    let num_words = (max_tile_idx as usize + 1) * 16;
-    let mut data = vec![0u16; num_words];
+/// Regenerate the file with: cargo test generate_sprite_tiles_bin -- --ignored
+fn load_sprite_tile_data() -> Vec<u16> {
+    let path = test_dir().join("sprite_tiles.bin");
+    let bytes = std::fs::read(&path)
+        .unwrap_or_else(|_| panic!("Missing {path:?} — run generate_sprite_tiles_bin first"));
+    bytes
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .collect()
+}
 
-    for cy in 0..coarse_h {
-        for cx in 0..coarse_w {
-            let tile_idx = (cy * 16 + cx) as usize;
-            // Unique color 1-15 for each sub-tile position.
-            let color = ((cy * coarse_w + cx) % 15 + 1) as u8;
+/// Generates `sprite_tiles.bin` in the test data directory.
+///
+/// The file encodes a 8×8-tile grid (sufficient for the largest 64×64 sprite)
+/// with each tile filled by a unique solid 4bpp colour derived from its
+/// (column, row) position within the grid.
+#[test]
+#[ignore = "only run to regenerate sprite_tiles.bin"]
+fn generate_sprite_tiles_bin() {
+    // Tile index T = row*16 + col lives at VRAM word offset T*16.
+    // The 8-wide grid uses columns 0-7; columns 8-15 are left at zero.
+    let max_tile_idx: usize = 7 * 16 + 7; // tile 119
+    let num_words = (max_tile_idx + 1) * 16; // 1920 words = 3840 bytes
+    let mut words = vec![0u16; num_words];
 
-            // Decompose color into bitplanes (4bpp).
+    for cy in 0..8_usize {
+        for cx in 0..8_usize {
+            let tile_idx = cy * 16 + cx;
+            let color = ((cy * 8 + cx) % 15 + 1) as u8;
+
             let plane0: u8 = if color & 1 != 0 { 0xFF } else { 0x00 };
             let plane1: u8 = if color & 2 != 0 { 0xFF } else { 0x00 };
             let plane2: u8 = if color & 4 != 0 { 0xFF } else { 0x00 };
             let plane3: u8 = if color & 8 != 0 { 0xFF } else { 0x00 };
 
-            // Each VRAM word packs two planes: low byte = plane N, high byte = plane N+1.
-            let low_word = (plane1 as u16) << 8 | plane0 as u16; // planes 0 & 1
-            let high_word = (plane3 as u16) << 8 | plane2 as u16; // planes 2 & 3
-
+            // Low word holds planes 0 & 1; high word (offset +8) holds planes 2 & 3.
+            let low_word = (plane1 as u16) << 8 | plane0 as u16;
+            let high_word = (plane3 as u16) << 8 | plane2 as u16;
             let base = tile_idx * 16;
             for row in 0..8_usize {
-                data[base + row] = low_word; // row word for planes 0/1
-                data[base + 8 + row] = high_word; // row word for planes 2/3
+                words[base + row] = low_word;
+                words[base + 8 + row] = high_word;
             }
         }
     }
 
-    data
+    let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
+    std::fs::write(test_dir().join("sprite_tiles.bin"), bytes).unwrap();
 }
 
-/// Creates a `Ppu` configured with a single sprite ready for rendering.
+/// Renders one OBJSEL size-pair mode with two sprites (small + large) placed
+/// side-by-side and returns the full 256×224 framebuffer as an `RgbaImage`.
 ///
-/// Parameters:
-/// - `objsel`: full OBJSEL byte ($2101); bits 7-5 select the size-pair mode,
-///   bits 4-3 select the second nametable offset, bits 2-0 the base address.
-/// - `oam_high_attr`: byte written to OAM high-table entry 0 ($200).
-///   Bit 1 selects secondary size for sprite 0 (0 = small, 1 = large).
-/// - `coarse_w`, `coarse_h`: sprite dimensions in 8×8 tile units, used to
-///   generate the right amount of tile data.
-fn setup_sprite_ppu(objsel: u8, oam_high_attr: u8, coarse_w: u32, coarse_h: u32) -> Ppu {
+/// `objsel` encodes the size-pair in bits 7-5 (see OBJSEL register docs).
+/// `small_pos` and `large_pos` are the (x, y) screen positions for each sprite.
+/// OAM high-table byte 0x200 is set so sprite 0 = small, sprite 1 = large.
+fn render_size_pair(
+    vram_data: &[u16],
+    objsel: u8,
+    small_pos: (u8, u8),
+    large_pos: (u8, u8),
+) -> RgbaImage {
     let mut ppu = Ppu::new();
-
-    // Helper: write a single byte to a PPU register via the bus interface.
     let wr = |ppu: &mut Ppu, offset: u16, value: u8| {
         ppu.write(AddressU24::new(0, offset), value);
     };
 
-    // --- Object size and nametable configuration ---
-    wr(&mut ppu, 0x2101, objsel); // OBJSEL
+    // OBJSEL: sprite size pair + nametable at address 0
+    wr(&mut ppu, 0x2101, objsel);
 
-    // --- Write sprite tile data to VRAM ---
-    // VMAIN = 0x80: address auto-increments after writing the high byte ($2119).
+    // Write tile data to VRAM (increment after high byte, $2119)
     wr(&mut ppu, 0x2115, 0x80);
-    wr(&mut ppu, 0x2116, 0x00); // VMADDL: address low = 0
-    wr(&mut ppu, 0x2117, 0x00); // VMADDH: address high = 0
-
-    for word in make_sprite_tile_data(coarse_w, coarse_h) {
-        wr(&mut ppu, 0x2118, (word & 0xFF) as u8); // VMDATAL (low byte, no increment)
-        wr(&mut ppu, 0x2119, (word >> 8) as u8); // VMDATAH (high byte, then increment)
+    wr(&mut ppu, 0x2116, 0x00); // VMADDL
+    wr(&mut ppu, 0x2117, 0x00); // VMADDH
+    for &word in vram_data {
+        wr(&mut ppu, 0x2118, (word & 0xFF) as u8);
+        wr(&mut ppu, 0x2119, (word >> 8) as u8);
     }
 
-    // --- Write sprite palette to CGRAM ---
-    // Sprite palette 0 occupies CGRAM indices 128-143.
-    wr(&mut ppu, 0x2121, 128); // CGADD: start at index 128
+    // Write sprite palette 0 to CGRAM (indices 128-143)
+    wr(&mut ppu, 0x2121, 128);
     for &color in &SPRITE_PALETTE {
-        wr(&mut ppu, 0x2122, (color & 0xFF) as u8); // CGDATA low byte
-        wr(&mut ppu, 0x2122, (color >> 8) as u8); //  CGDATA high byte
+        wr(&mut ppu, 0x2122, (color & 0xFF) as u8);
+        wr(&mut ppu, 0x2122, (color >> 8) as u8);
     }
 
-    // --- Write sprite 0 to OAM (low table at byte address 0) ---
-    wr(&mut ppu, 0x2102, 0x00); // OAMADDL: word address 0 → byte address 0
-    wr(&mut ppu, 0x2103, 0x00); // OAMADDH: low OAM table
-    wr(&mut ppu, 0x2104, 0x00); // Byte 0: X position = 0
-    wr(&mut ppu, 0x2104, 0x00); // Byte 1: Y position = 0
-    wr(&mut ppu, 0x2104, 0x00); // Byte 2: tile index = 0
-    wr(&mut ppu, 0x2104, 0x30); // Byte 3: priority=3 (bits 4-5), palette=0, no flip
+    // Write sprites 0 (small) and 1 (large) to OAM low table
+    wr(&mut ppu, 0x2102, 0x00); // OAMADDL
+    wr(&mut ppu, 0x2103, 0x00); // OAMADDH: low table
+    wr(&mut ppu, 0x2104, small_pos.0); // Sprite 0 X
+    wr(&mut ppu, 0x2104, small_pos.1); // Sprite 0 Y
+    wr(&mut ppu, 0x2104, 0x00); // Sprite 0 tile 0
+    wr(&mut ppu, 0x2104, 0x30); // Sprite 0 priority=3, palette=0
+    wr(&mut ppu, 0x2104, large_pos.0); // Sprite 1 X
+    wr(&mut ppu, 0x2104, large_pos.1); // Sprite 1 Y
+    wr(&mut ppu, 0x2104, 0x00); // Sprite 1 tile 0
+    wr(&mut ppu, 0x2104, 0x30); // Sprite 1 priority=3, palette=0
 
-    // --- Write sprite 0 size selector to OAM high table (byte address 0x200) ---
-    wr(&mut ppu, 0x2102, 0x00); // OAMADDL: reset address bits 0-8
-    wr(&mut ppu, 0x2103, 0x01); // OAMADDH: bit 0=1 → address = 0x200
-    wr(&mut ppu, 0x2104, oam_high_attr); // Bit 1 = size selector for sprite 0
+    // OAM high table: sprite 0 = small (bit 1=0), sprite 1 = large (bit 3=1)
+    wr(&mut ppu, 0x2102, 0x00);
+    wr(&mut ppu, 0x2103, 0x01); // Select high OAM table (address 0x200)
+    wr(&mut ppu, 0x2104, 0x08); // Bit 3 set → sprite 1 uses secondary (large) size
 
-    // --- Enable sprites on the main screen ---
-    wr(&mut ppu, 0x212C, 0x10); // TM: bit 4 = OBJ (sprites)
+    // Enable sprites on the main screen
+    wr(&mut ppu, 0x212C, 0x10);
 
-    ppu
-}
-
-/// Renders all 256 scanlines of `ppu` and compares the framebuffer to a golden.
-fn run_sprite_rendering_test(
-    test_name: &str,
-    objsel: u8,
-    oam_high_attr: u8,
-    coarse_w: u32,
-    coarse_h: u32,
-) {
-    logging::test_init(true);
-    let mut ppu = setup_sprite_ppu(objsel, oam_high_attr, coarse_w, coarse_h);
     for scanline in 0..256 {
         ppu.draw_scanline(scanline);
     }
+    ppu.framebuffer().to_rgba::<TestImageImpl>().inner
+}
+
+/// Renders all six SNES sprite size formats and validates them against a single
+/// golden image.
+///
+/// Three render passes are performed (one per OBJSEL size-pair mode). Each pass
+/// shows the small and large variants side-by-side. The top rows of each pass
+/// are cropped to the height of the tallest sprite in that pair and stacked
+/// vertically, producing a 256×144 composite:
+///
+///   rows   0- 15: 8×8  (left) and 16×16 (right)
+///   rows  16- 79: 32×32 (left) and 64×64 (right)
+///   rows  80-143: 16×32 (left) and 32×64 (right)
+#[test]
+fn test_sprite_rendering() {
+    logging::test_init(true);
+    let vram_data = load_sprite_tile_data();
+
+    // (objsel, small_x, large_x, strip_height)
+    // Sprites are placed at y=0; x chosen so neither overlaps the other.
+    let passes: &[(u8, u8, u8, u32)] = &[
+        (0x00, 0, 12, 16), // mode 0: 8×8  at x=0, 16×16 at x=12
+        (0xA0, 0, 36, 64), // mode 5: 32×32 at x=0, 64×64 at x=36
+        (0xC0, 0, 20, 64), // mode 6: 16×32 at x=0, 32×64 at x=20
+    ];
+
+    let total_h: u32 = passes.iter().map(|p| p.3).sum();
+    let mut combined = RgbaImage::new(256, total_h);
+    let mut y_offset = 0u32;
+    for &(objsel, small_x, large_x, strip_h) in passes {
+        let frame = render_size_pair(&vram_data, objsel, (small_x, 0), (large_x, 0));
+        for y in 0..strip_h {
+            for x in 0..256_u32 {
+                combined.put_pixel(x, y_offset + y, *frame.get_pixel(x, y));
+            }
+        }
+        y_offset += strip_h;
+    }
+
     compare_to_golden(
-        &ppu.framebuffer().to_rgba::<TestImageImpl>(),
-        &test_dir().join(test_name),
+        &TestImageImpl { inner: combined },
+        &test_dir().join("sprite_rendering"),
     );
-}
-
-/// 8×8 sprite: OBJSEL size mode 0 selects {8×8, 16×16}; OAM high-table bit 1 = 0
-/// picks the primary (8×8) size.
-#[test]
-fn test_sprite_8x8() {
-    run_sprite_rendering_test("sprite-8x8", 0x00, 0x00, 1, 1);
-}
-
-/// 16×16 sprite: OBJSEL size mode 0 selects {8×8, 16×16}; OAM high-table bit 1 = 1
-/// picks the secondary (16×16) size.
-#[test]
-fn test_sprite_16x16() {
-    run_sprite_rendering_test("sprite-16x16", 0x00, 0x02, 2, 2);
-}
-
-/// 32×32 sprite: OBJSEL size mode 5 selects {32×32, 64×64}; OAM high-table bit 1 = 0
-/// picks the primary (32×32) size.
-#[test]
-fn test_sprite_32x32() {
-    run_sprite_rendering_test("sprite-32x32", 0xA0, 0x00, 4, 4);
-}
-
-/// 64×64 sprite: OBJSEL size mode 5 selects {32×32, 64×64}; OAM high-table bit 1 = 1
-/// picks the secondary (64×64) size.
-#[test]
-fn test_sprite_64x64() {
-    run_sprite_rendering_test("sprite-64x64", 0xA0, 0x02, 8, 8);
-}
-
-/// 16×32 sprite: OBJSEL size mode 6 selects {16×32, 32×64}; OAM high-table bit 1 = 0
-/// picks the primary (16×32) size.
-#[test]
-fn test_sprite_16x32() {
-    run_sprite_rendering_test("sprite-16x32", 0xC0, 0x00, 2, 4);
-}
-
-/// 32×64 sprite: OBJSEL size mode 6 selects {16×32, 32×64}; OAM high-table bit 1 = 1
-/// picks the secondary (32×64) size.
-#[test]
-fn test_sprite_32x64() {
-    run_sprite_rendering_test("sprite-32x64", 0xC0, 0x02, 4, 8);
 }
 
 fn test_dir() -> PathBuf {
