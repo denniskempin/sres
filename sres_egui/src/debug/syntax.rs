@@ -228,95 +228,66 @@ mod tests {
     use super::*;
     use crate::debug::InternalLink;
 
+    /// All syntax / label widgets in one combined snapshot.
     #[test]
-    fn label_addr_widget() {
-        crate::test_utils::widget_snapshot("syntax/label_addr", |ui| {
-            label_addr(ui, "FF:ABCD");
-        });
-    }
-
-    #[test]
-    fn label_cpu_widget() {
-        crate::test_utils::widget_snapshot("syntax/label_cpu", |ui| {
-            label_cpu(ui);
-        });
-    }
-
-    #[test]
-    fn label_spc_widget() {
-        crate::test_utils::widget_snapshot("syntax/label_spc", |ui| {
-            label_spc(ui);
-        });
-    }
-
-    #[test]
-    fn label_read_write_widgets() {
-        crate::test_utils::widget_snapshot("syntax/label_read_write", |ui| {
-            ui.horizontal(|ui| {
-                label_read(ui, "R");
-                label_write(ui, "W");
-            });
-        });
-    }
-
-    /// Tests each operand color variant: immediate (#), address ($), relative (+/-), plain.
-    #[test]
-    fn label_operand_variants() {
-        crate::test_utils::widget_snapshot("syntax/label_operand_variants", |ui| {
+    fn syntax_widgets() {
+        crate::test_utils::widget_snapshot("syntax/syntax_widgets", |ui| {
+            let mut selected = InternalLink::None;
             ui.vertical(|ui| {
-                label_operand(ui, "#$42"); // green – immediate
-                label_operand(ui, "$ABCD"); // yellow – address
-                label_operand(ui, "[dp]"); // yellow – indirect
-                label_operand(ui, "+5"); // red – positive branch offset
-                label_operand(ui, "-3"); // red – negative branch offset
-                label_operand(ui, "A"); // no special color – accumulator
+                ui.label("── label_addr ──");
+                label_addr(ui, "FF:ABCD");
+
+                ui.label("── label_cpu / label_spc ──");
+                ui.horizontal(|ui| {
+                    label_cpu(ui);
+                    label_spc(ui);
+                });
+
+                ui.label("── label_read / label_write ──");
+                ui.horizontal(|ui| {
+                    label_read(ui, "R");
+                    label_write(ui, "W");
+                });
+
+                ui.label("── label_operand variants ──");
+                ui.horizontal(|ui| {
+                    label_operand(ui, "#$42"); // immediate – green
+                    label_operand(ui, "$ABCD"); // address – yellow
+                    label_operand(ui, "[dp]"); // indirect – yellow
+                    label_operand(ui, "+5"); // branch positive – red
+                    label_operand(ui, "-3"); // branch negative – red
+                    label_operand(ui, "A"); // plain
+                });
+
+                ui.label("── label_error ──");
+                label_error(ui, "Unexpected opcode at 00:8000");
+
+                ui.label("── label_normal / label_strong ──");
+                ui.horizontal(|ui| {
+                    label_normal(ui, "normal");
+                    label_strong(ui, "strong");
+                });
+
+                ui.label("── label_cpu_effective_addr ──");
+                ui.horizontal(|ui| {
+                    label_cpu_effective_addr(
+                        ui,
+                        AddressU24::new(0x00, 0x2100), // annotated (INIDISP)
+                        &mut selected,
+                    );
+                    label_cpu_effective_addr(
+                        ui,
+                        AddressU24::new(0x7E, 0x0100), // raw hex
+                        &mut selected,
+                    );
+                });
+
+                ui.label("── label_cpu_pc ──");
+                label_cpu_pc(ui, AddressU24::new(0x00, 0x8000), &mut selected);
+
+                ui.label("── label_spc700_pc ──");
+                label_spc700_pc(ui, AddressU16(0x0200), &mut selected);
             });
-        });
-    }
-
-    #[test]
-    fn label_error_widget() {
-        crate::test_utils::widget_snapshot("syntax/label_error", |ui| {
-            label_error(ui, "Unexpected opcode at 00:8000");
-        });
-    }
-
-    #[test]
-    fn label_normal_and_strong_widgets() {
-        crate::test_utils::widget_snapshot("syntax/label_normal_strong", |ui| {
-            ui.horizontal(|ui| {
-                label_normal(ui, "normal");
-                label_strong(ui, "strong");
-            });
-        });
-    }
-
-    #[test]
-    fn label_cpu_effective_addr_widget() {
-        crate::test_utils::widget_snapshot("syntax/label_cpu_effective_addr", |ui| {
-            let mut selected = InternalLink::None;
-            ui.horizontal(|ui| {
-                // Known annotated address (INIDISP) – shows annotation label
-                label_cpu_effective_addr(ui, AddressU24::new(0x00, 0x2100), &mut selected);
-                // Unknown address – shows raw hex address
-                label_cpu_effective_addr(ui, AddressU24::new(0x7E, 0x0100), &mut selected);
-            });
-        });
-    }
-
-    #[test]
-    fn label_cpu_pc_widget() {
-        crate::test_utils::widget_snapshot("syntax/label_cpu_pc", |ui| {
-            let mut selected = InternalLink::None;
-            label_cpu_pc(ui, AddressU24::new(0x00, 0x8000), &mut selected);
-        });
-    }
-
-    #[test]
-    fn label_spc700_pc_widget() {
-        crate::test_utils::widget_snapshot("syntax/label_spc700_pc", |ui| {
-            let mut selected = InternalLink::None;
-            label_spc700_pc(ui, AddressU16(0x0200), &mut selected);
         });
     }
 }

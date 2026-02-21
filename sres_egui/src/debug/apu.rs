@@ -326,73 +326,38 @@ mod tests {
 
     use super::*;
 
+    /// All APU visualization widgets in one combined snapshot.
     #[test]
-    fn volume_bar_positive() {
-        crate::test_utils::widget_snapshot("apu/volume_bar_positive", |ui| {
-            volume_bar_widget(ui, 0.75, false);
-        });
-    }
-
-    #[test]
-    fn volume_bar_negative() {
-        crate::test_utils::widget_snapshot("apu/volume_bar_negative", |ui| {
-            volume_bar_widget(ui, 0.5, true);
-        });
-    }
-
-    #[test]
-    fn volume_bar_empty() {
-        crate::test_utils::widget_snapshot("apu/volume_bar_empty", |ui| {
-            volume_bar_widget(ui, 0.0, false);
-        });
-    }
-
-    #[test]
-    fn volume_bar_full() {
-        crate::test_utils::widget_snapshot("apu/volume_bar_full", |ui| {
-            volume_bar_widget(ui, 1.0, false);
-        });
-    }
-
-    #[test]
-    fn envelope_half() {
-        crate::test_utils::widget_snapshot("apu/envelope_half", |ui| {
-            envelope_widget(ui, 64);
-        });
-    }
-
-    #[test]
-    fn envelope_empty() {
-        crate::test_utils::widget_snapshot("apu/envelope_empty", |ui| {
-            envelope_widget(ui, 0);
-        });
-    }
-
-    #[test]
-    fn envelope_full() {
-        crate::test_utils::widget_snapshot("apu/envelope_full", |ui| {
-            envelope_widget(ui, 127);
-        });
-    }
-
-    #[test]
-    fn waveform_silent() {
-        let buffer = AudioRingBuffer::<OUTX_BUFFER_SIZE>::default();
-        crate::test_utils::widget_snapshot("apu/waveform_silent", move |ui| {
-            waveform_widget(ui, &buffer);
-        });
-    }
-
-    #[test]
-    fn waveform_sine() {
-        let mut buffer = AudioRingBuffer::<OUTX_BUFFER_SIZE>::default();
+    fn apu_widgets() {
+        let silent = AudioRingBuffer::<OUTX_BUFFER_SIZE>::default();
+        let mut sine = AudioRingBuffer::<OUTX_BUFFER_SIZE>::default();
         for i in 0..OUTX_BUFFER_SIZE {
             let phase = i as f32 / OUTX_BUFFER_SIZE as f32;
             let sample = ((phase * 2.0 * std::f32::consts::PI).sin() * 16000.0) as i16;
-            buffer.push(sample);
+            sine.push(sample);
         }
-        crate::test_utils::widget_snapshot("apu/waveform_sine", move |ui| {
-            waveform_widget(ui, &buffer);
+
+        crate::test_utils::widget_snapshot("apu/apu_widgets", move |ui| {
+            ui.vertical(|ui| {
+                ui.label("── volume_bar_widget ──");
+                ui.horizontal(|ui| {
+                    volume_bar_widget(ui, 0.0, false); // empty
+                    volume_bar_widget(ui, 0.5, true); // negative
+                    volume_bar_widget(ui, 0.75, false); // positive
+                    volume_bar_widget(ui, 1.0, false); // full
+                });
+
+                ui.label("── envelope_widget ──");
+                ui.horizontal(|ui| {
+                    envelope_widget(ui, 0); // empty
+                    envelope_widget(ui, 64); // half
+                    envelope_widget(ui, 127); // full
+                });
+
+                ui.label("── waveform_widget ──");
+                waveform_widget(ui, &silent); // flat line
+                waveform_widget(ui, &sine); // sine wave
+            });
         });
     }
 }
