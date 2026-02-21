@@ -140,13 +140,22 @@ fn solid_tile(color: u8) -> [[u8; 4]; 8] {
 }
 
 /// Programs the PPU with sprite data for `test_sprites`.
+///
+/// Register formats are as documented by the SNES NESdev Wiki:
+/// - OAM 4-byte sprite format: <https://snes.nesdev.org/wiki/Sprites>
+/// - OBJSEL ($2101): <https://snes.nesdev.org/wiki/PPU_registers>
+/// - Priority ordering (3=front … 0=back): <https://snes.nesdev.org/wiki/Sprites>
+/// - 4bpp tile bit-plane layout (bit 7 = leftmost pixel):
+///   <https://snes.nesdev.org/wiki/Tiles>
 fn setup_sprite_test(ppu: &mut Ppu) {
     // Enable OBJ on the main screen (TM bit 4).
     ppu_write(ppu, 0x212C, 0x10);
 
-    // OBJSEL: small = 8×8, large = 16×16.
-    // Nametable 0 base = word 0x0000; nametable 1 base = word 0x1000
-    // (name-select bits = 0b00, so offset = (0+1)×0x1000).
+    // OBJSEL ($2101): small = 8×8, large = 16×16.
+    // Bits 5-7 (SSS) = 0 → 8×8 / 16×16 size pair.
+    // Bits 3-4 (NN)  = 0 → name-select offset = (0+1) × 0x1000 = word 0x1000.
+    // Bits 0-1 (bBB) = 0 → nametable 0 base = word 0x0000.
+    // Therefore nametable 1 starts at word 0x0000 + 0x1000 = 0x1000.
     ppu_write(ppu, 0x2101, 0x00);
 
     // -----------------------------------------------------------------
@@ -249,8 +258,9 @@ fn setup_sprite_test(ppu: &mut Ppu) {
     // OAM – sprite attributes
     // -----------------------------------------------------------------
 
-    // OAM attribute byte format (byte 3 of each 4-byte sprite record):
-    //   vflip[7] | hflip[6] | priority[5:4] | palette[3:1] | nametable[0]
+    // OAM attribute byte format (byte 3, VHPP CCCt per the SNES NESdev Wiki):
+    //   vflip[7] | hflip[6] | priority[5:4] | palette[3:1] | name-select[0]
+    // Priority: 3 = highest (front), 0 = lowest (back).
 
     // Initialise all 128 sprites to off-screen (Y=240) so unused slots are hidden.
     ppu_write(ppu, 0x2102, 0x00); // OAMADDL
@@ -320,8 +330,9 @@ fn setup_sprite_test(ppu: &mut Ppu) {
     ppu_write(ppu, 0x2104, 0);
     ppu_write(ppu, 0x2104, 0x36); // pri=3, pal=3
 
-    // Priority overlap: sprite 8 (low priority) partially hidden by sprite 9 (high priority).
-    // At pixels x=60..63 sprite 9 (which has a later OAM index and higher priority) wins.
+    // Priority overlap: sprite 8 (priority 0) is partially behind sprite 9 (priority 3).
+    // Per the SNES NESdev Wiki, when sprites with different priority levels overlap the one
+    // with the higher priority value (3 = front, 0 = back) wins, regardless of OAM index.
 
     // Sprite 8: priority 0, palette 0, at (56, 32)
     ppu_write(ppu, 0x2104, 56);
