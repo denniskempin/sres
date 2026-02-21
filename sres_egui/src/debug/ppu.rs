@@ -199,7 +199,7 @@ impl PpuSpritesWidget {
             .column(Column::auto()) // Pal
             .column(Column::auto()) // Pri
             .column(Column::auto()) // H
-            .column(Column::auto()) // V
+            .column(Column::remainder()) // V
             .header(20.0, |mut header| {
                 for label in &["", "#", "X", "Y", "Size", "Tile", "Pal", "Pri", "H", "V"] {
                     header.col(|ui| {
