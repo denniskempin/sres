@@ -140,33 +140,21 @@ mod tests {
 
     use super::*;
 
+    /// All stateless PPU widgets in one combined snapshot.
     #[test]
-    fn clock_info_zero() {
-        crate::test_utils::widget_snapshot("ppu/clock_info_zero", |ui| {
-            clock_info_widget(ui, ClockInfo::default());
-        });
-    }
+    fn ppu_widgets() {
+        crate::test_utils::widget_snapshot("ppu/ppu_widgets", |ui| {
+            ui.vertical(|ui| {
+                ui.label("── clock_info_widget ──");
+                clock_info_widget(ui, ClockInfo::default()); // V=0, H=0
+                clock_info_widget(ui, ClockInfo::from_master_clock(500_000)); // mid-frame
 
-    #[test]
-    fn clock_info_mid_frame() {
-        crate::test_utils::widget_snapshot("ppu/clock_info_mid_frame", |ui| {
-            clock_info_widget(ui, ClockInfo::from_master_clock(500_000));
-        });
-    }
-
-    #[test]
-    fn tabs_first_selected() {
-        crate::test_utils::widget_snapshot("ppu/tabs_first_selected", |ui| {
-            let mut selected = "Alpha";
-            tabs_widget(ui, &["Alpha", "Beta", "Gamma"], &mut selected);
-        });
-    }
-
-    #[test]
-    fn tabs_last_selected() {
-        crate::test_utils::widget_snapshot("ppu/tabs_last_selected", |ui| {
-            let mut selected = "Gamma";
-            tabs_widget(ui, &["Alpha", "Beta", "Gamma"], &mut selected);
+                ui.label("── tabs_widget ──");
+                let mut first = "Alpha";
+                tabs_widget(ui, &["Alpha", "Beta", "Gamma"], &mut first); // first selected
+                let mut last = "Gamma";
+                tabs_widget(ui, &["Alpha", "Beta", "Gamma"], &mut last); // last selected
+            });
         });
     }
 }
