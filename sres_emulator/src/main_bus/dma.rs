@@ -320,7 +320,7 @@ impl DmaController {
             // Decrement line counter and determine next do_transfer state
             let dma = &self.dma_channels[channel_idx];
             let hdma = &mut self.hdma_channels[channel_idx];
-            hdma.line_counter -= 1;
+            hdma.line_counter = hdma.line_counter.saturating_sub(1);
 
             if hdma.line_counter == 0 {
                 // Read next header byte
@@ -571,7 +571,7 @@ pub struct DmaParameters {
 struct HdmaChannel {
     /// Current position in the HDMA table (A2An)
     table_address: AddressU24,
-    /// Current indirect address (DASn for HDMA indirect mode)
+    /// Current indirect address for HDMA (constructed from DASBn bank + table pointer data)
     indirect_address: AddressU24,
     /// Bank byte for indirect HDMA (DASBn)
     indirect_bank: u8,
