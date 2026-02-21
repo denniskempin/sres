@@ -58,7 +58,7 @@ pub struct EguiImageImpl {
 impl Image for EguiImageImpl {
     fn new(width: u32, height: u32) -> Self {
         EguiImageImpl {
-            inner: ColorImage::new([width as usize, height as usize], Color32::TRANSPARENT),
+            inner: ColorImage::filled([width as usize, height as usize], Color32::TRANSPARENT),
         }
     }
 

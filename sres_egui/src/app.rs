@@ -53,7 +53,7 @@ impl EmulatorApp {
             loaded_cartridge: None,
             framebuffer_texture: cc.egui_ctx.load_texture(
                 "Framebuffer",
-                ColorImage::new([32, 32], Color32::BLACK),
+                ColorImage::filled([32, 32], Color32::BLACK),
                 Default::default(),
             ),
             debug_ui: DebugUi::new(cc),

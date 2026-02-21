@@ -7,12 +7,10 @@ use std::sync::atomic::AtomicBool;
 pub static DEBUG_EVENTS_ENABLED: AtomicBool = AtomicBool::new(false);
 
 pub trait DebugErrorCollector {
-    #[cold]
     fn on_error(&mut self, message: String);
 }
 
 pub trait DebugEventCollector<EventT>: DebugErrorCollector {
-    #[cold]
     fn on_event(&mut self, event: EventT);
 }
 
@@ -24,12 +22,14 @@ pub trait DebugEventCollector<EventT>: DebugErrorCollector {
 pub struct DebugEventCollectorRef<EventT>(pub Rc<RefCell<dyn DebugEventCollector<EventT>>>);
 
 impl<EventT> DebugEventCollectorRef<EventT> {
+    #[cold]
     pub fn on_event(&self, event: EventT) {
         if DEBUG_EVENTS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
             self.0.deref().borrow_mut().on_event(event);
         }
     }
 
+    #[cold]
     pub fn on_error(&self, message: String) {
         if DEBUG_EVENTS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
             self.0.deref().borrow_mut().on_error(message);

@@ -191,7 +191,7 @@ impl AudioBuffer {
         self.samples
     }
 
-    pub fn iter(&self) -> std::slice::Iter<i16> {
+    pub fn iter(&self) -> std::slice::Iter<'_, i16> {
         self.samples.iter()
     }
 }
