@@ -5,6 +5,8 @@ use egui::TextureHandle;
 use egui::TextureOptions;
 use egui::Ui;
 use egui::Vec2;
+use egui_extras::Column;
+use egui_extras::TableBuilder;
 use sres_emulator::common::clock::ClockInfo;
 use sres_emulator::components::ppu::BackgroundId;
 use sres_emulator::components::ppu::PpuDebug;
@@ -160,14 +162,14 @@ mod tests {
 }
 
 struct PpuSpritesWidget {
-    sprite_id: usize,
+    selected_id: usize,
     sprite_texture: TextureHandle,
 }
 
 impl PpuSpritesWidget {
     pub fn new(cc: &CreationContext) -> Self {
         PpuSpritesWidget {
-            sprite_id: 0,
+            selected_id: 0,
             sprite_texture: cc.egui_ctx.load_texture(
                 "Sprite",
                 ColorImage::example(),
@@ -178,34 +180,96 @@ impl PpuSpritesWidget {
 
     pub fn update_textures(&mut self, ppu: &PpuDebug<'_>) {
         self.sprite_texture.set(
-            ppu.render_sprite::<EguiImageImpl>(self.sprite_id),
-            TextureOptions::default(),
+            ppu.render_sprite::<EguiImageImpl>(self.selected_id),
+            TextureOptions::NEAREST,
         );
     }
 
     pub fn show(&mut self, ui: &mut Ui, ppu: &PpuDebug<'_>) {
         self.update_textures(ppu);
 
-        ui.horizontal(|ui| {
-            ui.label("Sprite:".to_string());
-            if ui.button("-").clicked() && self.sprite_id > 0 {
-                self.sprite_id -= 1;
-            }
-            ui.label(format!("{}", self.sprite_id));
-            if ui.button("+").clicked() && self.sprite_id < 255 {
-                self.sprite_id += 1;
-            }
-        });
+        let sprites = ppu.sprites();
 
+        // Scrollable table of all sprites
+        let row_height = 18.0;
+        let table_height = row_height * 10.0 + 20.0;
+        TableBuilder::new(ui)
+            .striped(true)
+            .resizable(false)
+            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+            .column(Column::auto())
+            .column(Column::auto())
+            .column(Column::auto())
+            .column(Column::auto())
+            .column(Column::auto())
+            .column(Column::auto())
+            .column(Column::auto())
+            .column(Column::auto())
+            .column(Column::auto())
+            .min_scrolled_height(table_height)
+            .max_scroll_height(table_height)
+            .header(20.0, |mut header| {
+                for label in &["#", "X", "Y", "Size", "Tile", "Pal", "Pri", "H", "V"] {
+                    header.col(|ui| {
+                        ui.strong(*label);
+                    });
+                }
+            })
+            .body(|mut body| {
+                for sprite in &sprites {
+                    let sprite_id = sprite.id as usize;
+                    let is_selected = sprite_id == self.selected_id;
+                    body.row(row_height, |mut row| {
+                        row.set_selected(is_selected);
+                        row.col(|ui| {
+                            if ui
+                                .selectable_label(is_selected, format!("{:3}", sprite.id))
+                                .clicked()
+                            {
+                                self.selected_id = sprite_id;
+                            }
+                        });
+                        row.col(|ui| {
+                            ui.label(format!("{:3}", sprite.x));
+                        });
+                        row.col(|ui| {
+                            ui.label(format!("{:3}", sprite.y));
+                        });
+                        row.col(|ui| {
+                            ui.label(sprite.size.to_string());
+                        });
+                        row.col(|ui| {
+                            ui.label(format!("${:02X}", sprite.tile));
+                        });
+                        row.col(|ui| {
+                            ui.label(format!("{}", sprite.palette));
+                        });
+                        row.col(|ui| {
+                            ui.label(format!("{}", sprite.priority));
+                        });
+                        row.col(|ui| {
+                            ui.label(if sprite.hflip { "H" } else { "" });
+                        });
+                        row.col(|ui| {
+                            ui.label(if sprite.vflip { "V" } else { "" });
+                        });
+                    });
+                }
+            });
+
+        ui.separator();
+
+        // Detail panel for the selected sprite
         ui.horizontal(|ui| {
-            ui.label(ppu.sprite_info(self.sprite_id));
+            let tex_size = self.sprite_texture.size_vec2();
+            let scale = (64.0 / tex_size.x.max(tex_size.y)).max(1.0) * 4.0;
             ui.image((
                 self.sprite_texture.id(),
-                Vec2::new(
-                    self.sprite_texture.size_vec2().x * 4.0,
-                    self.sprite_texture.size_vec2().y * 4.0,
-                ),
+                Vec2::new(tex_size.x * scale, tex_size.y * scale),
             ));
+            ui.vertical(|ui| {
+                ui.label(ppu.sprite_info(self.selected_id));
+            });
         });
     }
 }

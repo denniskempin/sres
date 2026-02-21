@@ -14,6 +14,8 @@ use self::cgram::CgRam;
 pub use self::debug::PpuDebug;
 pub use self::debug::VramRenderSelection;
 use self::oam::Oam;
+pub use self::oam::Sprite;
+pub use self::oam::SpriteSize;
 use self::vram::Vram;
 use crate::common::address::AddressU15;
 use crate::common::address::AddressU24;
