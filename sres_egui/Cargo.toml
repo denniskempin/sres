@@ -8,10 +8,10 @@ rust-version = "1.72"
 [dependencies]
 anyhow = "1.0"
 argh = "0.1"
-eframe = "0.31"
-egui = "0.31"
-egui_extras = { version = "0.31", features = ["image"] }
-egui_hooks = "0.8"
+eframe = "0.33"
+egui = "0.33"
+egui_extras = { version = "0.33", features = ["image"] }
+egui_hooks = "0.10"
 image = { version = "0.25", features = ["png"] }
 itertools = "0.14"
 puffin = "0.19"
@@ -21,7 +21,7 @@ sres_emulator = { path = "../sres_emulator" }
 strum = { version = "0.27", features = ["derive"] }
 log = "0.4"
 lazy_static = "1.5.0"
-cpal = "0.15.3"
+cpal = "0.16.0"
 
 [build-dependencies]
 sres_emulator = { path = "../sres_emulator" }

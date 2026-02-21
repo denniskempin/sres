@@ -282,36 +282,42 @@ impl Debugger {
 }
 
 impl DebugErrorCollector for Debugger {
+    #[cold]
     fn on_error(&mut self, message: String) {
         self.collect_debug_event(DebugEvent::Error(message));
     }
 }
 
 impl DebugEventCollector<ApuBusEvent> for Debugger {
+    #[cold]
     fn on_event(&mut self, event: ApuBusEvent) {
         self.collect_debug_event(DebugEvent::ApuBus(event));
     }
 }
 
 impl DebugEventCollector<Spc700Event> for Debugger {
+    #[cold]
     fn on_event(&mut self, event: Spc700Event) {
         self.collect_debug_event(DebugEvent::Spc700(event));
     }
 }
 
 impl DebugEventCollector<CpuEvent> for Debugger {
+    #[cold]
     fn on_event(&mut self, event: CpuEvent) {
         self.collect_debug_event(DebugEvent::Cpu(event));
     }
 }
 
 impl DebugEventCollector<MainBusEvent> for Debugger {
+    #[cold]
     fn on_event(&mut self, event: MainBusEvent) {
         self.collect_debug_event(DebugEvent::MainBus(event));
     }
 }
 
 impl DebugEventCollector<()> for Debugger {
+    #[cold]
     fn on_event(&mut self, _event: ()) {}
 }
 

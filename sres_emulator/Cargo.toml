@@ -18,24 +18,24 @@ packed_struct = "0.10"
 num-traits = "0.2"
 env_logger = "0.11"
 log = "0.4"
-colored = "3"
+colored = "2"
 puffin = "0.19"
 itertools = "0.14"
 strum = { version = "0.27", features = ["derive"] }
-bilge = "0.2"
-bitcode = "0.6.6"
+bilge = "0.3"
+bitcode = "0.6.9"
 hound = "3.5"
 lazy_static = "1.5"
 
 [dev-dependencies]
-tempfile = "3.10"
+tempfile = "3.25"
 pretty_assertions = "1.4"
-criterion = "0.6"
+criterion = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 xz2 = "0.1"
 image = { version = "0.25", features = ["png"] }
-rasciigraph = "0.2"
+rasciigraph = "0.3"
 
 [[bench]]
 name = "rom_benches"
