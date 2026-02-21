@@ -319,3 +319,45 @@ fn pitch_to_frequency(pitch: u16) -> f32 {
     // SNES pitch calculation: frequency = (pitch / 4096) * 32000 Hz
     (pitch as f32 / 4096.0) * 32000.0
 }
+
+#[cfg(test)]
+mod tests {
+    use sres_emulator::components::s_dsp::voice::{AudioRingBuffer, OUTX_BUFFER_SIZE};
+
+    use super::*;
+
+    /// All APU visualization widgets in one combined snapshot.
+    #[test]
+    fn apu_widgets() {
+        let silent = AudioRingBuffer::<OUTX_BUFFER_SIZE>::default();
+        let mut sine = AudioRingBuffer::<OUTX_BUFFER_SIZE>::default();
+        for i in 0..OUTX_BUFFER_SIZE {
+            let phase = i as f32 / OUTX_BUFFER_SIZE as f32;
+            let sample = ((phase * 2.0 * std::f32::consts::PI).sin() * 16000.0) as i16;
+            sine.push(sample);
+        }
+
+        crate::test_utils::widget_snapshot("apu/apu_widgets", move |ui| {
+            ui.vertical(|ui| {
+                ui.label("── volume_bar_widget ──");
+                ui.horizontal(|ui| {
+                    volume_bar_widget(ui, 0.0, false); // empty
+                    volume_bar_widget(ui, 0.5, true); // negative
+                    volume_bar_widget(ui, 0.75, false); // positive
+                    volume_bar_widget(ui, 1.0, false); // full
+                });
+
+                ui.label("── envelope_widget ──");
+                ui.horizontal(|ui| {
+                    envelope_widget(ui, 0); // empty
+                    envelope_widget(ui, 64); // half
+                    envelope_widget(ui, 127); // full
+                });
+
+                ui.label("── waveform_widget ──");
+                waveform_widget(ui, &silent); // flat line
+                waveform_widget(ui, &sine); // sine wave
+            });
+        });
+    }
+}
