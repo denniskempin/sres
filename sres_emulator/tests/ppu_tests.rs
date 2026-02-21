@@ -123,15 +123,15 @@ pub fn test_krom_interlace_rpg_debug_render() {
     let background_path = test_dir().join("krom_interlace_rpg-bg0");
     compare_to_golden(&ppu.render_background(BackgroundId::BG1), &background_path);
 
-    // Debug render portion of VRAM
+    // Debug render VRAM
     let vram_bg0_path = test_dir().join("krom_interlace_rpg-vram-bg1");
     compare_to_golden(
-        &ppu.render_vram(32, 0, VramRenderSelection::Background(BackgroundId::BG1)),
+        &ppu.render_vram(VramRenderSelection::Background(BackgroundId::BG1)),
         &vram_bg0_path,
     );
     let vram_sprite_path = test_dir().join("krom_interlace_rpg-vram-sprite");
     compare_to_golden(
-        &ppu.render_vram(32, 0, VramRenderSelection::Sprite0),
+        &ppu.render_vram(VramRenderSelection::Sprite0),
         &vram_sprite_path,
     );
 }

@@ -185,8 +185,10 @@ impl PpuSpritesWidget {
     }
 }
 
+const VRAM_TILE_SCALE: f32 = 3.0;
+const VRAM_TILES_PER_ROW: f32 = 16.0;
+
 struct PpuVramWidget {
-    offset: i32,
     selection: VramRenderSelection,
     vram_texture: TextureHandle,
 }
@@ -194,20 +196,19 @@ struct PpuVramWidget {
 impl PpuVramWidget {
     pub fn new(cc: &CreationContext) -> Self {
         PpuVramWidget {
-            offset: 0,
             selection: VramRenderSelection::Background(BackgroundId::BG1),
             vram_texture: cc.egui_ctx.load_texture(
                 "Vram",
                 ColorImage::example(),
-                Default::default(),
+                TextureOptions::NEAREST,
             ),
         }
     }
 
     pub fn update_textures(&mut self, ppu: &PpuDebug<'_>) {
         self.vram_texture.set(
-            ppu.render_vram::<EguiImageImpl>(32, self.offset, self.selection),
-            TextureOptions::default(),
+            ppu.render_vram::<EguiImageImpl>(self.selection),
+            TextureOptions::NEAREST,
         );
     }
 
@@ -215,7 +216,7 @@ impl PpuVramWidget {
         self.update_textures(ppu);
 
         ui.horizontal(|ui| {
-            for selection in &[
+            for &sel in &[
                 VramRenderSelection::Background(BackgroundId::BG1),
                 VramRenderSelection::Background(BackgroundId::BG2),
                 VramRenderSelection::Background(BackgroundId::BG3),
@@ -223,13 +224,49 @@ impl PpuVramWidget {
                 VramRenderSelection::Sprite0,
                 VramRenderSelection::Sprite1,
             ] {
-                if ui.button(selection.to_string()).clicked() {
-                    self.selection = *selection;
-                    self.offset = 0;
+                if ui
+                    .selectable_label(self.selection == sel, sel.to_string())
+                    .clicked()
+                {
+                    self.selection = sel;
                 }
             }
         });
-        ui.image((self.vram_texture.id(), Vec2::new(512.0, 512.0)));
+
+        let tex_size = self.vram_texture.size_vec2();
+        let display_size = tex_size * VRAM_TILE_SCALE;
+
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                let response = ui.image((self.vram_texture.id(), display_size));
+
+                if response.hovered() {
+                    if let Some(pos) = ui.input(|i| i.pointer.hover_pos()) {
+                        let rel = pos - response.rect.min;
+                        let tile_px = 8.0 * VRAM_TILE_SCALE;
+                        if rel.x >= 0.0
+                            && rel.y >= 0.0
+                            && rel.x < display_size.x
+                            && rel.y < display_size.y
+                        {
+                            let tile_x = (rel.x / tile_px) as u32;
+                            let tile_y = (rel.y / tile_px) as u32;
+                            let tile_idx =
+                                tile_y * VRAM_TILES_PER_ROW as u32 + tile_x;
+                            let info = ppu.vram_tile_info(self.selection, tile_idx);
+                            egui::show_tooltip_at_pointer(
+                                ui.ctx(),
+                                ui.layer_id(),
+                                egui::Id::new("vram_tile_tooltip"),
+                                |ui| {
+                                    ui.label(info);
+                                },
+                            );
+                        }
+                    }
+                }
+            });
     }
 }
 
