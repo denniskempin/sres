@@ -38,6 +38,7 @@ pub struct MainBusImpl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> {
     joy1: u16,
     joy2: u16,
     mapping_mode: MappingMode,
+    last_hdma_scanline: u64,
 
     debug_event_collector: DebugEventCollectorRef<MainBusEvent>,
 }
@@ -63,6 +64,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             joy1: 0,
             joy2: 0,
             mapping_mode: cartridge.header.mapping_mode,
+            last_hdma_scanline: 0,
         }
     }
 
@@ -177,8 +179,43 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
         self.dma_controller.update_state();
 
         self.clock.advance_master_clock(cycles);
+
+        // Process HDMA on scanline transitions
+        let current_v = self.clock.clock_info().v;
+        if current_v != self.last_hdma_scanline {
+            self.process_hdma(current_v);
+            self.last_hdma_scanline = current_v;
+        }
+
         self.ppu.update_clock(self.clock.clock_info());
         self.apu.update_clock(self.clock.clock_info());
+    }
+
+    fn process_hdma(&mut self, scanline: u64) {
+        if scanline == 0 {
+            // HDMA init at the start of each frame
+            let wram = &self.wram;
+            let rom = &self.rom;
+            let sram = &self.sram;
+            let mapping_mode = self.mapping_mode;
+            self.dma_controller.hdma_init_process(&mut |addr| {
+                hdma_mem_read(mapping_mode, wram, rom, sram, addr)
+            });
+        }
+        if scanline < 225 {
+            // HDMA transfer on each visible scanline (0 through 224 inclusive)
+            let wram = &self.wram;
+            let rom = &self.rom;
+            let sram = &self.sram;
+            let mapping_mode = self.mapping_mode;
+            let transfers = self.dma_controller.hdma_transfer(&mut |addr| {
+                hdma_mem_read(mapping_mode, wram, rom, sram, addr)
+            });
+            for (source, destination) in transfers {
+                let value = self.bus_read(source);
+                self.bus_write(destination, value);
+            }
+        }
     }
 }
 
@@ -246,6 +283,27 @@ enum MemoryBlock {
     Sram(usize),
     Register,
     Unmapped,
+}
+
+/// Read from memory for HDMA table/data reads, bypassing the debug event collector
+/// and cycle-accurate timing. HDMA reads only access RAM/ROM/SRAM.
+fn hdma_mem_read(
+    mapping_mode: MappingMode,
+    wram: &[u8],
+    rom: &[u8],
+    sram: &[u8],
+    addr: AddressU24,
+) -> u8 {
+    let block = match mapping_mode {
+        MappingMode::LoRom => lorom_memory_map(addr),
+        MappingMode::HiRom => hirom_memory_map(addr),
+    };
+    match block {
+        MemoryBlock::Ram(offset) => wram[offset],
+        MemoryBlock::Rom(offset) => rom[offset],
+        MemoryBlock::Sram(offset) => sram[offset],
+        _ => 0,
+    }
 }
 
 /// Memory access speed as per memory map. See:
