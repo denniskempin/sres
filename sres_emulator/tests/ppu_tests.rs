@@ -236,6 +236,22 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
     }
 }
 
+/// Tests sprite rendering with one of each major sprite configuration:
+/// - 8x8 basic sprite
+/// - 8x8 sprite with a different palette
+/// - 8x8 sprite with horizontal flip
+/// - 8x8 sprite with vertical flip
+/// - 16x16 large sprite
+/// - 8x8 sprite from the second sprite nametable
+/// - 8x8 sprite with a non-default priority
+///
+/// The test ROM (`sprite_rendering.sfc`) programs the PPU via CPU+DMA and then loops
+/// indefinitely, allowing the PPU to render the configured sprites each frame.
+#[test]
+pub fn test_sprite_rendering() {
+    run_framebuffer_test("sprite_rendering", 1);
+}
+
 fn test_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/ppu_tests")
 }
