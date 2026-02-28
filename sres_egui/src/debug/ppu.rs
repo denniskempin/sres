@@ -327,8 +327,7 @@ impl PpuVramWidget {
                         {
                             let tile_x = (rel.x / tile_px) as u32;
                             let tile_y = (rel.y / tile_px) as u32;
-                            let tile_idx =
-                                tile_y * VRAM_TILES_PER_ROW as u32 + tile_x;
+                            let tile_idx = tile_y * VRAM_TILES_PER_ROW as u32 + tile_x;
                             let info = ppu.vram_tile_info(self.selection, tile_idx);
                             egui::show_tooltip_at_pointer(
                                 ui.ctx(),

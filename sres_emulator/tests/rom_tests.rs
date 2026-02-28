@@ -30,73 +30,61 @@ pub fn test_krom_adc() {
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_and() {
     run_rom_test("krom_and");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_asl() {
     run_rom_test("krom_asl");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_bit() {
     run_rom_test("krom_bit");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_bra() {
     run_rom_test("krom_bra");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_cmp() {
     run_rom_test("krom_cmp");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_dec() {
     run_rom_test("krom_dec");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_eor() {
     run_rom_test("krom_eor");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_inc() {
     run_rom_test("krom_inc");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_jmp() {
     run_rom_test("krom_jmp");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_ldr() {
     run_rom_test("krom_ldr");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_lsr() {
     run_rom_test("krom_lsr");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_mov() {
     run_rom_test("krom_mov");
 }
@@ -108,55 +96,46 @@ pub fn test_krom_msc() {
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_ora() {
     run_rom_test("krom_ora");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_phl() {
     run_rom_test("krom_phl");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_psr() {
     run_rom_test("krom_psr");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_ret() {
     run_rom_test("krom_ret");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_rol() {
     run_rom_test("krom_rol");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_ror() {
     run_rom_test("krom_ror");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_sbc() {
     run_rom_test("krom_sbc");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_str() {
     run_rom_test("krom_str");
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
 pub fn test_krom_trn() {
     run_rom_test("krom_trn");
 }
@@ -167,7 +146,7 @@ pub fn test_ppu_timing() {
 }
 
 #[test]
-#[ignore = "trace format not migrated to mesen format"]
+#[ignore = "SPC700 emulation not accurate enough yet"]
 pub fn test_play_noise() {
     run_rom_test_with_spc700_trace("play_noise");
 }

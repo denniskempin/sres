@@ -25,10 +25,12 @@ def trim_infinite_loop(path: Path):
     path.write_text("".join(lines))
 
 
-for f in Path(__file__).parent.glob("*.log"):
-    print(f"Processing trace {f}")
-    trim_infinite_loop(f)
-    subprocess.run(["xz", "--compress", "--force", f])
+for f in Path(__file__).parent.glob("*.txt"):
+    new_name = f.with_name(f.stem + "-trace.log")
+    f.rename(new_name)
+    print(f"Processing trace {new_name}")
+    trim_infinite_loop(new_name)
+    subprocess.run(["xz", "--compress", "--force", new_name])
 
 """
 for f in Path(__file__).parent.glob("*.asm"):

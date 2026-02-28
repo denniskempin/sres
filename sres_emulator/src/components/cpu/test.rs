@@ -168,6 +168,7 @@ fn run_tomharte_test(test_name: &str) {
             "Cycles: {}",
             Comparison::new(&actual_state.bus.cycles, &test_case.cycles())
         );
+        break;
     }
 
     if !failed_opcodes.is_empty() {
