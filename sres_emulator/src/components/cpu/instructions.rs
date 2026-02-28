@@ -267,10 +267,8 @@ pub fn bvs(cpu: &mut Cpu<impl MainBus>, operand: &Operand) {
     }
 }
 
-pub fn brk(cpu: &mut Cpu<impl MainBus>) {
-    // read signature byte, even though it is unused.
-    cpu.bus.cycle_read_u8(cpu.pc.add(1_u8, Wrap::WrapBank));
-    cpu.stack_push_u24(u32::from(cpu.pc.add(2_u8, Wrap::WrapBank)));
+pub fn brk(cpu: &mut Cpu<impl MainBus>, _operand: &Operand) {
+    cpu.stack_push_u24(u32::from(cpu.pc));
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
     cpu.status.decimal = false;
@@ -288,7 +286,7 @@ pub fn brk(cpu: &mut Cpu<impl MainBus>) {
             )
         },
     );
-    cpu.pc = address.sub(1_u8, Wrap::NoWrap);
+    cpu.pc = address;
 }
 
 pub fn cop(cpu: &mut Cpu<impl MainBus>, _: &Operand) {
@@ -335,7 +333,8 @@ pub fn xce(cpu: &mut Cpu<impl MainBus>) {
 }
 
 pub fn pea(cpu: &mut Cpu<impl MainBus>, operand: &Operand) {
-    cpu.stack_push_u16(operand.effective_addr().unwrap().offset);
+    let value: u16 = operand.load(cpu);
+    cpu.stack_push_u16(value);
 }
 
 pub fn pei(cpu: &mut Cpu<impl MainBus>, operand: &Operand) {

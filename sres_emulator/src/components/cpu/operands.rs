@@ -17,6 +17,7 @@ use crate::common::uint::UInt;
 pub enum AddressMode {
     Implied,
     ImmediateU8,
+    ImmediateU16,
     ImmediateA,  // Immediate value based on accumulator register size
     ImmediateXY, // Immediate value based on index register size
     Accumulator,
@@ -41,6 +42,7 @@ pub enum AddressMode {
     DirectPageIndirectYIndexedLong,
     DirectPageIndirect,
     DirectPageIndirectLong,
+    DirectPagePei, // Used by PEI - same as DirectPageIndirect but formatted without parens
     MoveAddressPair, // Used by MVN and MVP
 }
 
@@ -138,6 +140,7 @@ impl Operand {
             AddressMode::Implied => 0,
             AddressMode::Accumulator => 0,
             AddressMode::ImmediateU8 => 1,
+            AddressMode::ImmediateU16 => 2,
             AddressMode::ImmediateA => {
                 if bus.cpu().status.accumulator_register_size {
                     1
@@ -173,6 +176,7 @@ impl Operand {
             AddressMode::DirectPageIndirectYIndexedLong => 1,
             AddressMode::DirectPageIndirect => 1,
             AddressMode::DirectPageIndirectLong => 1,
+            AddressMode::DirectPagePei => 1,
             AddressMode::MoveAddressPair => 2,
         };
 
@@ -191,6 +195,7 @@ impl Operand {
             AddressMode::Implied => Operand::Implied,
             AddressMode::Accumulator => Operand::Accumulator,
             AddressMode::ImmediateU8 => Operand::ImmediateU8(operand_data as u8),
+            AddressMode::ImmediateU16 => Operand::ImmediateU16(operand_data as u16),
             AddressMode::ImmediateA => {
                 if bus.cpu().status.accumulator_register_size {
                     Operand::ImmediateU8(operand_data as u8)
@@ -341,7 +346,7 @@ impl Operand {
                             .add(operand_data, Wrap::WrapBank)
                             .add(bus.cpu().y.value, Wrap::WrapBank)
                     }
-                    AddressMode::DirectPageIndirect => {
+                    AddressMode::DirectPageIndirect | AddressMode::DirectPagePei => {
                         if bus.cpu().d.low_byte() > 0 {
                             bus.cycle_io();
                         }
@@ -411,6 +416,7 @@ impl Operand {
                     }
                     AddressMode::Implied
                     | AddressMode::ImmediateU8
+                    | AddressMode::ImmediateU16
                     | AddressMode::ImmediateA
                     | AddressMode::ImmediateXY
                     | AddressMode::Accumulator
@@ -488,7 +494,7 @@ impl Operand {
             Self::Implied | Self::Accumulator => "".to_string(),
             Self::ImmediateU8(value) => format!("#${value:02X}"),
             Self::ImmediateU16(value) => format!("#${value:04X}"),
-            Self::MoveAddressPair(s, d) => format!("${s:02X}, ${d:02X}"),
+            Self::MoveAddressPair(s, d) => format!("${s:02X},${d:02X}"),
             Self::Address(value, mode, effective_addr) => match mode {
                 AddressMode::AbsoluteData => format!("${value:04X}"),
                 AddressMode::AbsoluteJump => format!("${value:04X}"),
@@ -506,6 +512,7 @@ impl Operand {
                 AddressMode::DirectPage => format!("${value:02X}"),
                 AddressMode::DirectPageIndirect => format!("(${value:02X})"),
                 AddressMode::DirectPageIndirectLong => format!("[${value:02X}]"),
+                AddressMode::DirectPagePei => format!("${value:02X}"),
                 AddressMode::DirectPageXIndexed => format!("${value:02X},X"),
                 AddressMode::DirectPageXIndexedIndirect => format!("(${value:02X},X)"),
                 AddressMode::DirectPageIndirectYIndexed => format!("(${value:02X}),Y"),
@@ -513,6 +520,7 @@ impl Operand {
                 AddressMode::DirectPageYIndexed => format!("${value:02X},Y"),
                 AddressMode::Implied
                 | AddressMode::ImmediateU8
+                | AddressMode::ImmediateU16
                 | AddressMode::ImmediateA
                 | AddressMode::ImmediateXY
                 | AddressMode::Accumulator

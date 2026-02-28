@@ -132,7 +132,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
     use Register::*;
 
     use super::instructions::*;
-    opcodes[0x00] = instruction!(brk);
+    opcodes[0x00] = instruction!(brk, ImmediateU8, Read);
     opcodes[0x01] = instruction!(ora, DirectPageXIndexedIndirect, Read, A);
     opcodes[0x02] = instruction!(cop, ImmediateU8, Read);
     opcodes[0x03] = instruction!(ora, StackRelative, Read, A);
@@ -347,7 +347,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
     opcodes[0xD1] = instruction!(cmp, DirectPageIndirectYIndexed, Read, A);
     opcodes[0xD2] = instruction!(cmp, DirectPageIndirect, Read, A);
     opcodes[0xD3] = instruction!(cmp, StackRelativeIndirectYIndexed, Read, A);
-    opcodes[0xD4] = instruction!(pei, DirectPageIndirect, Read);
+    opcodes[0xD4] = instruction!(pei, DirectPagePei, Read);
     opcodes[0xD5] = instruction!(cmp, DirectPageXIndexed, Read, A);
     opcodes[0xD6] = instruction!(dec, DirectPageXIndexed, Write, A);
     opcodes[0xD7] = instruction!(cmp, DirectPageIndirectYIndexedLong, Read, A);
@@ -355,7 +355,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
     opcodes[0xD9] = instruction!(cmp, AbsoluteYIndexed, Read, A);
     opcodes[0xDA] = instruction!(phx, Implied, Read, X);
     opcodes[0xDB] = instruction!(stp);
-    opcodes[0xDC] = instruction!(jmp, AbsoluteIndirectLong, Read);
+    opcodes[0xDC] = instruction!(jml, AbsoluteIndirectLong, Read);
     opcodes[0xDD] = instruction!(cmp, AbsoluteXIndexed, Read, A);
     opcodes[0xDE] = instruction!(dec, AbsoluteXIndexed, Write, A);
     opcodes[0xDF] = instruction!(cmp, AbsoluteXIndexedLong, Read, A);
@@ -380,7 +380,7 @@ pub fn build_opcode_table<BusT: MainBus>() -> [Instruction<BusT>; 256] {
     opcodes[0xF1] = instruction!(sbc, DirectPageIndirectYIndexed, Read, A);
     opcodes[0xF2] = instruction!(sbc, DirectPageIndirect, Read, A);
     opcodes[0xF3] = instruction!(sbc, StackRelativeIndirectYIndexed, Read, A);
-    opcodes[0xF4] = instruction!(pea, AbsoluteData, Read);
+    opcodes[0xF4] = instruction!(pea, ImmediateU16, Read);
     opcodes[0xF5] = instruction!(sbc, DirectPageXIndexed, Read, A);
     opcodes[0xF6] = instruction!(inc, DirectPageXIndexed, Modify, A);
     opcodes[0xF7] = instruction!(sbc, DirectPageIndirectYIndexedLong, Read, A);
