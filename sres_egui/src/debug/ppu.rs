@@ -329,14 +329,15 @@ impl PpuVramWidget {
                             let tile_y = (rel.y / tile_px) as u32;
                             let tile_idx = tile_y * VRAM_TILES_PER_ROW as u32 + tile_x;
                             let info = ppu.vram_tile_info(self.selection, tile_idx);
-                            egui::show_tooltip_at_pointer(
-                                ui.ctx(),
+                            egui::Tooltip::always_open(
+                                ui.ctx().clone(),
                                 ui.layer_id(),
                                 egui::Id::new("vram_tile_tooltip"),
-                                |ui| {
-                                    ui.label(info);
-                                },
-                            );
+                                egui::PopupAnchor::Pointer,
+                            )
+                            .show(|ui| {
+                                ui.label(info);
+                            });
                         }
                     }
                 }

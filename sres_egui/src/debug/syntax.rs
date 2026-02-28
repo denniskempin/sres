@@ -223,7 +223,9 @@ pub fn label_strong(ui: &mut Ui, text: impl Into<String>) -> egui::Response {
 
 #[cfg(test)]
 mod tests {
-    use sres_emulator::common::address::{AddressU16, AddressU24, InstructionMeta};
+    use sres_emulator::common::address::AddressU16;
+    use sres_emulator::common::address::AddressU24;
+    use sres_emulator::common::address::InstructionMeta;
     use sres_emulator::components::cpu::NativeVectorTable;
     use sres_emulator::components::spc700::Spc700State;
 
@@ -290,9 +292,15 @@ mod tests {
                 },
             )),
             // APU bus read
-            DebugEvent::ApuBus(sres_emulator::apu::ApuBusEvent::Read(AddressU16(0x00F2), 0x5D)),
+            DebugEvent::ApuBus(sres_emulator::apu::ApuBusEvent::Read(
+                AddressU16(0x00F2),
+                0x5D,
+            )),
             // APU bus write
-            DebugEvent::ApuBus(sres_emulator::apu::ApuBusEvent::Write(AddressU16(0x00F3), 0x20)),
+            DebugEvent::ApuBus(sres_emulator::apu::ApuBusEvent::Write(
+                AddressU16(0x00F3),
+                0x20,
+            )),
             // Error
             DebugEvent::Error("Unexpected opcode 0xFF at 00:8042".to_string()),
         ];

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
-use egui_kittest::{Harness, SnapshotOptions};
+use egui_kittest::Harness;
+use egui_kittest::SnapshotOptions;
 
 /// Returns [`SnapshotOptions`] pointing to `sres_egui/tests/snapshots/`.
 ///
