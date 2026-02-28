@@ -3,9 +3,9 @@ pub mod audio;
 pub mod debug;
 pub mod embedded_roms;
 pub mod home;
-pub mod util;
 #[cfg(test)]
 mod test_utils;
+pub mod util;
 
 use app::EmulatorApp;
 

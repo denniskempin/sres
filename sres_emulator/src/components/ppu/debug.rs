@@ -87,10 +87,7 @@ impl PpuDebug<'_> {
         format!("Tile #{tile_idx}\nVRAM word addr: 0x{tile_word_addr:04X}")
     }
 
-    fn vram_selection_params(
-        &self,
-        selection: VramRenderSelection,
-    ) -> (BitDepth, AddressU15, u8) {
+    fn vram_selection_params(&self, selection: VramRenderSelection) -> (BitDepth, AddressU15, u8) {
         match selection {
             VramRenderSelection::Background(id) => {
                 let background = self.0.state.backgrounds[id as usize];
@@ -132,12 +129,8 @@ impl PpuDebug<'_> {
         for coarse_x in 0..16 {
             for coarse_y in 0..num_rows {
                 let tile_idx = coarse_y * 16 + coarse_x;
-                let tile = Tile::<TileDecoderT>::from_tileset_index(
-                    tileset_addr,
-                    tile_idx,
-                    false,
-                    false,
-                );
+                let tile =
+                    Tile::<TileDecoderT>::from_tileset_index(tileset_addr, tile_idx, false, false);
                 for (row_idx, row) in tile.rows(&self.0.state.vram) {
                     for (col_idx, pixel) in row.pixels() {
                         let color = self.0.state.cgram[palette_addr + pixel];

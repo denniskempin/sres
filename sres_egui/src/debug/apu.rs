@@ -322,7 +322,8 @@ fn pitch_to_frequency(pitch: u16) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use sres_emulator::components::s_dsp::voice::{AudioRingBuffer, OUTX_BUFFER_SIZE};
+    use sres_emulator::components::s_dsp::voice::AudioRingBuffer;
+    use sres_emulator::components::s_dsp::voice::OUTX_BUFFER_SIZE;
 
     use super::*;
 
