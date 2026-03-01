@@ -49,14 +49,14 @@ impl Display for Spc700StatusFlags {
         write!(
             f,
             "{}{}{}{}{}{}{}{}",
-            if self.negative { "N" } else { "." },
-            if self.overflow { "V" } else { "." },
-            if self.direct_page { "D" } else { "." },
-            if self.break_command { "B" } else { "." },
-            if self.half_carry { "H" } else { "." },
-            if self.irq_enable { "I" } else { "." },
-            if self.zero { "Z" } else { "." },
-            if self.carry { "C" } else { "." },
+            if self.negative { "N" } else { "n" },
+            if self.overflow { "V" } else { "v" },
+            if self.direct_page { "P" } else { "p" },
+            if self.break_command { "B" } else { "b" },
+            if self.half_carry { "H" } else { "h" },
+            if self.irq_enable { "I" } else { "i" },
+            if self.zero { "Z" } else { "z" },
+            if self.carry { "C" } else { "c" },
         )
     }
 }
@@ -70,14 +70,14 @@ impl FromStr for Spc700StatusFlags {
         }
         let mut chars = s.chars();
         Ok(Self {
-            negative: chars.next().unwrap() != '.',
-            overflow: chars.next().unwrap() != '.',
-            direct_page: chars.next().unwrap() != '.',
-            break_command: chars.next().unwrap() != '.',
-            half_carry: chars.next().unwrap() != '.',
-            irq_enable: chars.next().unwrap() != '.',
-            zero: chars.next().unwrap() != '.',
-            carry: chars.next().unwrap() != '.',
+            negative: chars.next().unwrap() == 'N',
+            overflow: chars.next().unwrap() == 'V',
+            direct_page: chars.next().unwrap() == 'P',
+            break_command: chars.next().unwrap() == 'B',
+            half_carry: chars.next().unwrap() == 'H',
+            irq_enable: chars.next().unwrap() == 'I',
+            zero: chars.next().unwrap() == 'Z',
+            carry: chars.next().unwrap() == 'C',
         })
     }
 }
