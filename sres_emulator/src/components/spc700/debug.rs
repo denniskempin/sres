@@ -9,6 +9,7 @@ use super::Spc700;
 use super::Spc700Bus;
 use crate::common::address::AddressU16;
 use crate::common::address::InstructionMeta;
+use crate::common::clock::ClockInfo;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Spc700Event {
@@ -26,6 +27,7 @@ impl<BusT: Spc700Bus> Spc700Debug<'_, BusT> {
             y: self.0.y,
             sp: AddressU16(0x0100 + self.0.sp as u16),
             status: self.0.status.to_string(),
+            clock: ClockInfo::from_master_clock(self.0.bus.master_cycle()),
         }
     }
 
@@ -44,32 +46,56 @@ pub struct Spc700State {
     pub x: u8,
     pub y: u8,
     pub sp: AddressU16,
+    // TODO: Replace with Spc700StatusFlags struct
     pub status: String,
+    pub clock: ClockInfo,
 }
 
-impl FromStr for Spc700State {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
+impl Spc700State {
+    pub fn parse_mesen_trace(s: &str) -> Result<Self> {
         // Example:
         //
-        // ..ffe2 mov   ($000)+y, a       A:8f X:cc Y:f9 SP:01ef YA:f98f N......C
-        // 0      7     13                  33   38   43    49      57   62
-        if &s[31..=32] != "A:" {
+        // FFC5  MOV (X),A [$00EF] = $71          A:00 X:EF Y:00 S:EF P:nvpbhiZc V:0   H:192  F:0
+        // 0     6   10                           39   44   49   54   59         70    76     83
+        if &s[39..=40] != "A:" {
             bail!("Invalid trace format.")
         }
+
+        let disassembly: Vec<&str> = s[6..39].split_whitespace().collect();
+        let operation = disassembly[0];
+        let operand_str = if disassembly.len() > 1 {
+            Some(disassembly[1].to_string())
+        } else {
+            None
+        };
+        let effective_addr = if disassembly.len() > 2 {
+            let effective_addr_str = disassembly[2].trim_matches(['[', ']', '$']);
+            if let Ok(addr) = u32::from_str_radix(effective_addr_str, 16) {
+                Some(AddressU16(addr as u16))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         Ok(Self {
             instruction: InstructionMeta {
-                address: AddressU16(u16::from_str_radix(&s[2..6], 16).with_context(|| "pc")?),
-                operation: s[7..13].trim().to_string(),
-                operand_str: Some(s[13..30].trim().to_string()),
-                effective_addr: None,
+                address: AddressU16(u16::from_str_radix(&s[0..4], 16).with_context(|| "pc")?),
+                operation: operation.to_string(),
+                operand_str,
+                effective_addr,
             },
-            a: u8::from_str_radix(&s[33..35], 16).with_context(|| "a")?,
-            x: u8::from_str_radix(&s[38..40], 16).with_context(|| "x")?,
-            y: u8::from_str_radix(&s[43..45], 16).with_context(|| "y")?,
-            sp: AddressU16(u16::from_str_radix(&s[49..53], 16).with_context(|| "y")?),
-            status: s[62..70].to_string(),
+            a: u8::from_str_radix(&s[41..43], 16).with_context(|| "a")?,
+            x: u8::from_str_radix(&s[46..48], 16).with_context(|| "x")?,
+            y: u8::from_str_radix(&s[51..53], 16).with_context(|| "y")?,
+            sp: AddressU16(0x0100 + u16::from_str_radix(&s[56..58], 16).with_context(|| "s")?),
+            status: s[61..69].to_string(),
+            clock: ClockInfo::from_mesen_vhf(
+                u64::from_str(s[72..75].trim()).with_context(|| "v")?,
+                u64::from_str(s[78..82].trim()).with_context(|| "h")?,
+                u64::from_str(s[85..].trim()).with_context(|| "f")?,
+            ),
         })
     }
 }
@@ -77,19 +103,28 @@ impl FromStr for Spc700State {
 impl Display for Spc700State {
     /// Format a trace object into a BSNES trace line
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let operation = self.instruction.operation.to_uppercase();
+        let operand = self
+            .instruction
+            .operand_str
+            .as_deref()
+            .unwrap_or("")
+            .to_uppercase();
         write!(
             f,
-            "..{:04x} {:<5} {:<17} A:{:02x} X:{:02x} Y:{:02x} SP:{:04x} YA:{:02x}{:02x} {}",
+            "{:08} [{:04X}]  {:<3} {:<29} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:3} H:{:4} F:{}",
+            self.clock.master_clock,
             self.instruction.address.0,
-            self.instruction.operation,
-            self.instruction.operand_str.as_deref().unwrap_or(""),
+            operation,
+            operand,
             self.a,
             self.x,
             self.y,
-            self.sp.0,
-            self.y,
-            self.a,
+            self.sp.0 as u8,
             self.status,
+            self.clock.v,
+            self.clock.h_counter,
+            self.clock.f,
         )
     }
 }
@@ -98,29 +133,32 @@ impl Display for Spc700State {
 mod test {
     use super::*;
 
-    static EXAMPLE_SPC700_TRACE: &str =
-        r"..ffe2 mov   ($000)+y, a       A:8f X:cc Y:f9 SP:01ef YA:f98f N.....ZC";
+    static EXAMPLE_MESEN_TRACE: &str =
+        r"FFC5  MOV (X),A [$00EF] = $71          A:00 X:EF Y:00 S:EF P:nvpbhiZc V:0   H:192  F:0";
+
+    static EXAMPLE_SPC700_TRACE: &str = r"00000192 [FFC5]  MOV (X),A                         A:00 X:EF Y:00 S:EF P:nvpbhiZc V:  0 H: 192 F:0";
 
     fn example_spc700_trace() -> Spc700State {
         Spc700State {
             instruction: InstructionMeta {
-                address: AddressU16(0xffe2),
-                operation: "mov".to_string(),
-                operand_str: Some("($000)+y, a".to_string()),
-                effective_addr: None,
+                address: AddressU16(0xffC5),
+                operation: "MOV".to_string(),
+                operand_str: Some("(X),A".to_string()),
+                effective_addr: Some(AddressU16::from(0x00EF)),
             },
-            a: 0x8f,
-            x: 0xcc,
-            y: 0xf9,
+            a: 0x00,
+            x: 0xEF,
+            y: 0x00,
             sp: AddressU16(0x01ef),
-            status: "N.....ZC".to_string(),
+            status: "nvpbhiZc".to_string(),
+            clock: ClockInfo::from_master_clock(192),
         }
     }
 
     #[test]
-    pub fn test_spc700_from_str() {
+    pub fn test_parse_mesen_trace() {
         assert_eq!(
-            EXAMPLE_SPC700_TRACE.parse::<Spc700State>().unwrap(),
+            Spc700State::parse_mesen_trace(&EXAMPLE_MESEN_TRACE).unwrap(),
             example_spc700_trace()
         );
     }

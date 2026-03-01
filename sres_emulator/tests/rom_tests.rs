@@ -146,7 +146,7 @@ pub fn test_ppu_timing() {
 }
 
 #[test]
-#[ignore = "SPC700 emulation not accurate enough yet"]
+#[ignore = "WIP"]
 pub fn test_play_noise() {
     run_rom_test_with_spc700_trace("play_noise");
 }
@@ -375,8 +375,8 @@ fn mixed_trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Resu
     let trace_reader = io::BufReader::new(decoder);
     Ok(trace_reader.lines().map(|l| {
         let l = l?;
-        Ok(if l.starts_with("..") {
-            MixedTrace::Spc700(l.parse::<Spc700State>()?)
+        Ok(if l.len() < 100 {
+            MixedTrace::Spc700(Spc700State::parse_mesen_trace(&l)?)
         } else {
             MixedTrace::Cpu(CpuState::parse_mesen_trace(&l)?)
         })
