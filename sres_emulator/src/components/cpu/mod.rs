@@ -6,7 +6,6 @@ mod operands;
 mod status;
 mod test;
 
-use std::sync::atomic::Ordering;
 
 use intbits::Bits;
 use log::info;
@@ -22,7 +21,6 @@ use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
-use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::uint::UInt;
 use crate::common::uint::UIntSize;
 
@@ -85,10 +83,8 @@ impl<BusT: MainBus> Cpu<BusT> {
 
     pub fn step(&mut self) {
         let opcode = self.bus.cycle_read_u8(self.pc);
-        if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
-            self.debug_event_collector
-                .on_event(CpuEvent::Step(self.debug().state()));
-        }
+        self.debug_event_collector
+            .on_event(CpuEvent::Step(self.debug().state()));
         if log::log_enabled!(target: "cpu_step", log::Level::Info) {
             info!(target: "cpu_step", "{}", self.debug().state());
         }

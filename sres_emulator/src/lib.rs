@@ -5,9 +5,10 @@ pub mod controller;
 pub mod debugger;
 pub mod main_bus;
 
-use std::cell::RefMut;
 use std::ops::Deref;
+use std::sync::MutexGuard;
 
+use common::bus::AsyncBusDeviceU24;
 use common::bus::BatchedBusDeviceU24;
 use common::bus::ManagedBusDeviceU24;
 use common::bus::SyncBusDevice;
@@ -43,6 +44,32 @@ pub type BatchedSystem = SystemImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU2
 
 /// System using synchronous PPU and APU updates on every cycle.
 pub type SyncSystem = SystemImpl<SyncBusDevice<Ppu>, SyncBusDevice<Apu>>;
+
+impl AsyncSystem {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self::with_cartridge(&Cartridge::default())
+    }
+
+    pub fn with_cartridge(cartridge: &Cartridge) -> Self {
+        let debugger = Debugger::new();
+        Self::with_cpu(
+            Cpu::new(
+                MainBusImpl::new(
+                    cartridge,
+                    BatchedBusDeviceU24::new(Ppu::new()),
+                    AsyncBusDeviceU24::new(Apu::new(debugger.clone())),
+                    debugger.clone(),
+                ),
+                DebugEventCollectorRef(debugger.clone()),
+            ),
+            debugger,
+        )
+    }
+}
+
+/// System running the APU on a separate thread.
+pub type AsyncSystem = SystemImpl<BatchedBusDeviceU24<Ppu>, AsyncBusDeviceU24<Apu>>;
 
 /// Default implementation used in UI
 pub type System = BatchedSystem;
@@ -257,8 +284,8 @@ impl<PpuT: ManagedBusDeviceU24<Ppu>, ApuT: ManagedBusDeviceU24<Apu>> SystemImpl<
     }
 
     /// Exposes an interactive debugger to set break and log points.
-    pub fn debugger(&self) -> RefMut<'_, Debugger> {
-        self.debugger.deref().borrow_mut()
+    pub fn debugger(&self) -> MutexGuard<'_, Debugger> {
+        self.debugger.deref().lock().unwrap()
     }
 }
 

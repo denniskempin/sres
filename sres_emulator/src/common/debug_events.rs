@@ -1,8 +1,9 @@
 //! TODO Add documentation
-use std::cell::RefCell;
 use std::ops::Deref;
-use std::rc::Rc;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 pub static DEBUG_EVENTS_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -19,21 +20,31 @@ pub trait DebugEventCollector<EventT>: DebugErrorCollector {
 /// This is used by emulator components to generate events, which can then be
 /// collected by the debugger.
 #[derive(Clone)]
-pub struct DebugEventCollectorRef<EventT>(pub Rc<RefCell<dyn DebugEventCollector<EventT>>>);
+pub struct DebugEventCollectorRef<EventT>(pub Arc<Mutex<dyn DebugEventCollector<EventT> + Send>>);
 
 impl<EventT> DebugEventCollectorRef<EventT> {
-    #[cold]
+    #[inline(always)]
     pub fn on_event(&self, event: EventT) {
-        if DEBUG_EVENTS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
-            self.0.deref().borrow_mut().on_event(event);
+        if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
+            self.dispatch_event(event);
+        }
+    }
+
+    #[inline(always)]
+    pub fn on_error(&self, message: String) {
+        if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
+            self.dispatch_error(message);
         }
     }
 
     #[cold]
-    pub fn on_error(&self, message: String) {
-        if DEBUG_EVENTS_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
-            self.0.deref().borrow_mut().on_error(message);
-        }
+    fn dispatch_event(&self, event: EventT) {
+        self.0.deref().lock().unwrap().on_event(event);
+    }
+
+    #[cold]
+    fn dispatch_error(&self, message: String) {
+        self.0.deref().lock().unwrap().on_error(message);
     }
 }
 
@@ -42,7 +53,7 @@ pub mod test {
     use super::*;
 
     pub fn mock_collector<EventT>() -> DebugEventCollectorRef<EventT> {
-        DebugEventCollectorRef(Rc::new(RefCell::new(MockDebugEventCollector {})))
+        DebugEventCollectorRef(Arc::new(Mutex::new(MockDebugEventCollector {})))
     }
 
     struct MockDebugEventCollector {}
