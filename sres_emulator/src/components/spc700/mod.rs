@@ -6,7 +6,6 @@ mod operands;
 mod status;
 mod test;
 
-use std::sync::atomic::Ordering;
 
 pub use self::debug::Spc700Debug;
 pub use self::debug::Spc700Event;
@@ -20,7 +19,6 @@ use crate::common::address::AddressU16;
 use crate::common::address::Wrap;
 use crate::common::bus::Bus;
 use crate::common::debug_events::DebugEventCollectorRef;
-use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
 use crate::common::uint::UInt;
 
 pub trait Spc700Bus: Bus<AddressU16> {
@@ -74,10 +72,8 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
 
     pub fn step(&mut self) {
         let opcode = self.bus.cycle_read_u8(self.pc);
-        if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
-            self.debug_event_collector
-                .on_event(Spc700Event::Step(self.debug().state()));
-        }
+        self.debug_event_collector
+            .on_event(Spc700Event::Step(self.debug().state()));
         let instruction = &self.opcode_table[opcode as usize];
         (instruction.execute)(self);
     }
