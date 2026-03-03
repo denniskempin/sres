@@ -8,10 +8,6 @@ pub mod main_bus;
 use std::ops::Deref;
 use std::sync::MutexGuard;
 
-use common::bus::AsyncBusDeviceU24;
-use common::bus::BatchedBusDeviceU24;
-use common::bus::ManagedBusDeviceU24;
-use common::bus::SyncBusDevice;
 use common::util::EdgeDetector;
 use components::ppu::Framebuffer;
 use components::ppu::PpuDebug;
@@ -29,6 +25,10 @@ use crate::debugger::BreakReason;
 use crate::debugger::Debugger;
 use crate::debugger::DebuggerRef;
 use crate::debugger::EventFilter;
+use crate::main_bus::devices::AsyncBusDeviceU24;
+use crate::main_bus::devices::BatchedBusDeviceU24;
+use crate::main_bus::devices::ManagedBusDeviceU24;
+use crate::main_bus::devices::SyncBusDevice;
 use crate::main_bus::MainBusImpl;
 
 pub enum ExecutionResult {
