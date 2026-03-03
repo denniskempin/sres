@@ -214,7 +214,7 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
 
     let rom_path = test_dir().join(format!("{rom_name}.sfc"));
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
-    system.ppu().force_headless();
+    system.force_headless();
 
     let last_frame = snapshots.iter().map(|(_, frame)| frame).max().unwrap();
     for frame in 0..=*last_frame {
@@ -229,7 +229,7 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
         {
             std::fs::write(
                 test_dir().join(format!("{rom_name}-{test_name}.snapshot")),
-                system.ppu().save_state(),
+                system.save_ppu_state(),
             )
             .unwrap();
         }

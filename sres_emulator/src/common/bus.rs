@@ -1,10 +1,13 @@
 //! Generic Bus trait that can be used with both U16 and U24 addresses.
 
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::ops::RangeInclusive;
 use std::sync::mpsc::sync_channel;
 use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::MutexGuard;
 use std::thread;
 
 use crate::common::address::Address;
@@ -78,6 +81,77 @@ pub trait BusDeviceU24 {
     fn reset(&mut self);
 }
 
+/// A wrapper around a `BusDeviceU24` that manages when the inner device is updated.
+/// Implementations include batched, async, and synchronous (no-op) variants.
+pub trait ManagedBusDeviceU24<InnerT: BusDeviceU24>: BusDeviceU24 {
+    type InnerRef<'a>: Deref<Target = InnerT>
+    where
+        Self: 'a;
+    type InnerRefMut<'a>: DerefMut<Target = InnerT>
+    where
+        Self: 'a;
+
+    fn inner(&self) -> Self::InnerRef<'_>;
+    fn inner_mut(&mut self) -> Self::InnerRefMut<'_>;
+    fn sync(&mut self);
+}
+
+/// A no-op wrapper that passes all bus operations directly to the inner device.
+pub struct SyncBusDevice<DeviceT: BusDeviceU24> {
+    pub inner: DeviceT,
+}
+
+impl<DeviceT: BusDeviceU24> SyncBusDevice<DeviceT> {
+    pub fn new(inner: DeviceT) -> Self {
+        Self { inner }
+    }
+}
+
+impl<DeviceT: BusDeviceU24> BusDeviceU24 for SyncBusDevice<DeviceT> {
+    const NAME: &'static str = DeviceT::NAME;
+
+    fn peek(&self, addr: AddressU24) -> Option<u8> {
+        self.inner.peek(addr)
+    }
+
+    fn read(&mut self, addr: AddressU24) -> u8 {
+        self.inner.read(addr)
+    }
+
+    fn write(&mut self, addr: AddressU24, value: u8) {
+        self.inner.write(addr, value)
+    }
+
+    fn update_clock(&mut self, new_clock: ClockInfo) {
+        self.inner.update_clock(new_clock)
+    }
+
+    fn reset(&mut self) {
+        self.inner.reset()
+    }
+}
+
+impl<DeviceT: BusDeviceU24> ManagedBusDeviceU24<DeviceT> for SyncBusDevice<DeviceT> {
+    type InnerRef<'a>
+        = &'a DeviceT
+    where
+        Self: 'a;
+    type InnerRefMut<'a>
+        = &'a mut DeviceT
+    where
+        Self: 'a;
+
+    fn inner(&self) -> &DeviceT {
+        &self.inner
+    }
+
+    fn inner_mut(&mut self) -> &mut DeviceT {
+        &mut self.inner
+    }
+
+    fn sync(&mut self) {}
+}
+
 const CACHE_SIZE: usize = 32 * 1024;
 
 enum BusAction {
@@ -100,13 +174,13 @@ impl<DeviceT: BusDeviceU24> BusDeviceU24 for BatchedBusDeviceU24<DeviceT> {
     }
 
     fn read(&mut self, addr: AddressU24) -> u8 {
-        self.sync();
+        self.flush();
         self.inner.read(addr)
     }
 
     fn write(&mut self, addr: AddressU24, value: u8) {
         if self.cache.len() >= CACHE_SIZE {
-            self.sync();
+            self.flush();
         }
         self.cache
             .push(BusAction::Write(self.current_clock, addr, value))
@@ -136,7 +210,7 @@ impl<DeviceT: BusDeviceU24> BatchedBusDeviceU24<DeviceT> {
         }
     }
 
-    pub fn sync(&mut self) {
+    pub fn flush(&mut self) {
         let cache_size = format!("{} {}", DeviceT::NAME, self.cache.len());
         puffin::profile_function!(&cache_size);
         for action in self.cache.drain(..) {
@@ -151,6 +225,29 @@ impl<DeviceT: BusDeviceU24> BatchedBusDeviceU24<DeviceT> {
             }
         }
         self.inner.update_clock(self.current_clock);
+    }
+}
+
+impl<DeviceT: BusDeviceU24> ManagedBusDeviceU24<DeviceT> for BatchedBusDeviceU24<DeviceT> {
+    type InnerRef<'a>
+        = &'a DeviceT
+    where
+        Self: 'a;
+    type InnerRefMut<'a>
+        = &'a mut DeviceT
+    where
+        Self: 'a;
+
+    fn inner(&self) -> &DeviceT {
+        &self.inner
+    }
+
+    fn inner_mut(&mut self) -> &mut DeviceT {
+        &mut self.inner
+    }
+
+    fn sync(&mut self) {
+        self.flush();
     }
 }
 
@@ -171,7 +268,7 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> BusDeviceU24 for AsyncBusDeviceU24<
 
     fn read(&mut self, addr: AddressU24) -> u8 {
         puffin::profile_function!(&DeviceT::NAME);
-        self.sync();
+        self.flush();
         self.inner.lock().unwrap().read(addr)
     }
 
@@ -220,7 +317,7 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
         }
     }
 
-    pub fn sync(&mut self) {
+    pub fn flush(&mut self) {
         puffin::profile_function!(&DeviceT::NAME);
         // Wait for lock to free after all actions have been processed
         // (I guess there could be a race condition if the thread has not yet started processing)
@@ -237,5 +334,30 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
                 inner.write(addr, value);
             }
         }
+    }
+}
+
+impl<DeviceT: BusDeviceU24 + Send + 'static> ManagedBusDeviceU24<DeviceT>
+    for AsyncBusDeviceU24<DeviceT>
+{
+    type InnerRef<'a>
+        = MutexGuard<'a, DeviceT>
+    where
+        Self: 'a;
+    type InnerRefMut<'a>
+        = MutexGuard<'a, DeviceT>
+    where
+        Self: 'a;
+
+    fn inner(&self) -> MutexGuard<'_, DeviceT> {
+        self.inner.lock().unwrap()
+    }
+
+    fn inner_mut(&mut self) -> MutexGuard<'_, DeviceT> {
+        self.inner.lock().unwrap()
+    }
+
+    fn sync(&mut self) {
+        self.flush();
     }
 }
