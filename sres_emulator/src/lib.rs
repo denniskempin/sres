@@ -45,31 +45,8 @@ pub type BatchedSystem = SystemImpl<BatchedBusDeviceU24<Ppu>, BatchedBusDeviceU2
 /// System using synchronous PPU and APU updates on every cycle.
 pub type SyncSystem = SystemImpl<SyncBusDevice<Ppu>, SyncBusDevice<Apu>>;
 
-impl AsyncSystem {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self::with_cartridge(&Cartridge::default())
-    }
-
-    pub fn with_cartridge(cartridge: &Cartridge) -> Self {
-        let debugger = Debugger::new();
-        Self::with_cpu(
-            Cpu::new(
-                MainBusImpl::new(
-                    cartridge,
-                    BatchedBusDeviceU24::new(Ppu::new()),
-                    AsyncBusDeviceU24::new(Apu::new(debugger.clone())),
-                    debugger.clone(),
-                ),
-                DebugEventCollectorRef(debugger.clone()),
-            ),
-            debugger,
-        )
-    }
-}
-
 /// System running the APU on a separate thread.
-pub type AsyncSystem = SystemImpl<BatchedBusDeviceU24<Ppu>, AsyncBusDeviceU24<Apu>>;
+pub type AsyncSystem = SystemImpl<AsyncBusDeviceU24<Ppu>, AsyncBusDeviceU24<Apu>>;
 
 /// Default implementation used in UI
 pub type System = BatchedSystem;
@@ -133,6 +110,29 @@ impl SyncSystem {
                     cartridge,
                     SyncBusDevice::new(Ppu::new()),
                     SyncBusDevice::new(Apu::new(debugger.clone())),
+                    debugger.clone(),
+                ),
+                DebugEventCollectorRef(debugger.clone()),
+            ),
+            debugger,
+        )
+    }
+}
+
+impl AsyncSystem {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self::with_cartridge(&Cartridge::default())
+    }
+
+    pub fn with_cartridge(cartridge: &Cartridge) -> Self {
+        let debugger = Debugger::new();
+        Self::with_cpu(
+            Cpu::new(
+                MainBusImpl::new(
+                    cartridge,
+                    AsyncBusDeviceU24::new(Ppu::new()),
+                    AsyncBusDeviceU24::new(Apu::new(debugger.clone())),
                     debugger.clone(),
                 ),
                 DebugEventCollectorRef(debugger.clone()),
