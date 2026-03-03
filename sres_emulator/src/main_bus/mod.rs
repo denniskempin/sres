@@ -1,4 +1,6 @@
 //! Main bus used by the 65816 CPU.
+pub mod devices;
+
 mod dma;
 mod multiplication;
 
