@@ -4,7 +4,6 @@ use std::fmt::Display;
 use intbits::Bits;
 use log::info;
 use log::trace;
-use log::warn;
 use packed_struct::prelude::*;
 
 use crate::common::address::Address;
@@ -18,6 +17,8 @@ pub struct DmaController {
     dma_channels: [DmaChannel; 8],
     dma_pending: u8,
     dma_active: bool,
+    hdma_enabled: u8,
+    hdma_channels: [HdmaChannel; 8],
     debug_event_collector: DebugEventCollectorRef<()>,
 }
 
@@ -27,6 +28,8 @@ impl DmaController {
             dma_channels: Default::default(),
             dma_pending: 0,
             dma_active: false,
+            hdma_enabled: 0,
+            hdma_channels: Default::default(),
             debug_event_collector,
         }
     }
@@ -144,6 +147,10 @@ impl DmaController {
                     0x4 => Some(self.peek_a1bn(channel)),
                     0x5 => Some(self.peek_dasnl(channel)),
                     0x6 => Some(self.peek_dasnh(channel)),
+                    0x7 => Some(self.peek_dasbn(channel)),
+                    0x8 => Some(self.peek_a2anl(channel)),
+                    0x9 => Some(self.peek_a2anh(channel)),
+                    0xA => Some(self.peek_nltrn(channel)),
                     _ => None,
                 }
             }
@@ -166,7 +173,10 @@ impl DmaController {
                     0x4 => self.write_a1bn(channel, value),
                     0x5 => self.write_dasnl(channel, value),
                     0x6 => self.write_dasnh(channel, value),
-                    0x7 => log::warn!("HDMA not implemented."),
+                    0x7 => self.write_dasbn(channel, value),
+                    0x8 => self.write_a2anl(channel, value),
+                    0x9 => self.write_a2anh(channel, value),
+                    0xA => self.write_nltrn(channel, value),
                     _ => {
                         self.debug_event_collector
                             .on_error(format!("Invalid write to {addr}"));
@@ -211,7 +221,137 @@ impl DmaController {
     /// |+-------- Channel 6 HDMA enable
     /// +--------- Channel 7 HDMA enable
     fn write_hdmaen(&mut self, value: u8) {
-        warn!("HDMAEN={value:02X} not implemented");
+        self.hdma_enabled = value;
+    }
+
+    /// Initialize HDMA channels at the start of each frame (scanline 0).
+    pub fn hdma_init_process(&mut self, read_fn: &mut dyn FnMut(AddressU24) -> u8) {
+        for channel_idx in 0..8_usize {
+            if !self.hdma_enabled.bit(channel_idx) {
+                self.hdma_channels[channel_idx].terminated = true;
+                continue;
+            }
+
+            let dma = &self.dma_channels[channel_idx];
+            let hdma = &mut self.hdma_channels[channel_idx];
+
+            // Copy A1Tn (table start address) to A2An (current table pointer)
+            hdma.table_address = dma.bus_a_address;
+            hdma.terminated = false;
+            hdma.do_transfer = true;
+
+            // Read the header byte
+            let header = read_fn(hdma.table_address);
+            hdma.table_address = hdma.table_address.add(1u16, Wrap::NoWrap);
+
+            if header == 0 {
+                hdma.terminated = true;
+                continue;
+            }
+
+            // Parse the header byte:
+            // Bit 7: repeat flag
+            // Bits 0-6: line count
+            hdma.repeat = header & 0x80 != 0;
+            hdma.line_counter = header & 0x7F;
+
+            // If indirect mode, read 2-byte pointer from the table
+            if dma.parameters.indirect {
+                let low = read_fn(hdma.table_address);
+                hdma.table_address = hdma.table_address.add(1u16, Wrap::NoWrap);
+                let high = read_fn(hdma.table_address);
+                hdma.table_address = hdma.table_address.add(1u16, Wrap::NoWrap);
+                hdma.indirect_address =
+                    AddressU24::new(hdma.indirect_bank, u16::from_le_bytes([low, high]));
+            }
+        }
+    }
+
+    /// Perform HDMA transfers for the current scanline.
+    /// Returns a list of (source, destination) transfer pairs.
+    pub fn hdma_transfer(
+        &mut self,
+        read_fn: &mut dyn FnMut(AddressU24) -> u8,
+    ) -> Vec<(AddressU24, AddressU24)> {
+        let mut transfers: Vec<(AddressU24, AddressU24)> = Vec::new();
+
+        for channel_idx in 0..8_usize {
+            if !self.hdma_enabled.bit(channel_idx) || self.hdma_channels[channel_idx].terminated {
+                continue;
+            }
+            let do_transfer = self.hdma_channels[channel_idx].do_transfer;
+
+            // Transfer data if do_transfer is set
+            if do_transfer {
+                let dma = &self.dma_channels[channel_idx];
+                let hdma = &mut self.hdma_channels[channel_idx];
+
+                let bus_b_pattern: Vec<u8> = match dma.parameters.transfer_pattern {
+                    DmaTransferPattern::Pattern_0 => vec![0],
+                    DmaTransferPattern::Pattern_0_1 => vec![0, 1],
+                    DmaTransferPattern::Pattern_0_0 => vec![0, 0],
+                    DmaTransferPattern::Pattern_0_0_1_1 => vec![0, 0, 1, 1],
+                    DmaTransferPattern::Pattern_0_1_2_3 => vec![0, 1, 2, 3],
+                    DmaTransferPattern::Undocumented_0_1_0_1 => vec![0, 1, 0, 1],
+                    DmaTransferPattern::Undocumented_0_0 => vec![0, 0],
+                    DmaTransferPattern::Undocumented_0_0_1_1 => vec![0, 0, 1, 1],
+                };
+
+                for offset in &bus_b_pattern {
+                    let bus_b_address = dma.bus_b_address.add(*offset, Wrap::NoWrap);
+                    let source_addr = if dma.parameters.indirect {
+                        let addr = hdma.indirect_address;
+                        hdma.indirect_address = hdma.indirect_address.add(1u16, Wrap::NoWrap);
+                        addr
+                    } else {
+                        let addr = hdma.table_address;
+                        hdma.table_address = hdma.table_address.add(1u16, Wrap::NoWrap);
+                        addr
+                    };
+
+                    if dma.parameters.direction {
+                        transfers.push((bus_b_address, source_addr));
+                    } else {
+                        transfers.push((source_addr, bus_b_address));
+                    }
+                }
+            }
+
+            // Decrement line counter and determine next do_transfer state
+            let dma = &self.dma_channels[channel_idx];
+            let hdma = &mut self.hdma_channels[channel_idx];
+            hdma.line_counter = hdma.line_counter.saturating_sub(1);
+
+            if hdma.line_counter == 0 {
+                // Read next header byte
+                let header = read_fn(hdma.table_address);
+                hdma.table_address = hdma.table_address.add(1u16, Wrap::NoWrap);
+
+                if header == 0 {
+                    hdma.terminated = true;
+                    continue;
+                }
+
+                hdma.repeat = header & 0x80 != 0;
+                hdma.line_counter = header & 0x7F;
+
+                // If indirect mode, read 2-byte pointer
+                if dma.parameters.indirect {
+                    let low = read_fn(hdma.table_address);
+                    hdma.table_address = hdma.table_address.add(1u16, Wrap::NoWrap);
+                    let high = read_fn(hdma.table_address);
+                    hdma.table_address = hdma.table_address.add(1u16, Wrap::NoWrap);
+                    hdma.indirect_address =
+                        AddressU24::new(hdma.indirect_bank, u16::from_le_bytes([low, high]));
+                }
+
+                hdma.do_transfer = true;
+            } else {
+                hdma.do_transfer = hdma.repeat;
+            }
+        }
+
+        transfers
     }
 
     /// Register 43N0: DMAPn - DMA channel N control
@@ -297,6 +437,50 @@ impl DmaController {
     fn peek_dasnh(&self, channel: usize) -> u8 {
         self.dma_channels[channel].byte_count.high_byte()
     }
+
+    /// Register 43N7: DASBn - HDMA channel N indirect bank
+    fn write_dasbn(&mut self, channel: usize, value: u8) {
+        self.hdma_channels[channel].indirect_bank = value;
+    }
+
+    fn peek_dasbn(&self, channel: usize) -> u8 {
+        self.hdma_channels[channel].indirect_bank
+    }
+
+    /// Register 43N8: A2AnL - HDMA channel N table address low
+    fn write_a2anl(&mut self, channel: usize, value: u8) {
+        self.hdma_channels[channel]
+            .table_address
+            .offset
+            .set_low_byte(value);
+    }
+
+    fn peek_a2anl(&self, channel: usize) -> u8 {
+        self.hdma_channels[channel].table_address.offset.low_byte()
+    }
+
+    /// Register 43N9: A2AnH - HDMA channel N table address high
+    fn write_a2anh(&mut self, channel: usize, value: u8) {
+        self.hdma_channels[channel]
+            .table_address
+            .offset
+            .set_high_byte(value);
+    }
+
+    fn peek_a2anh(&self, channel: usize) -> u8 {
+        self.hdma_channels[channel].table_address.offset.high_byte()
+    }
+
+    /// Register 43NA: NLTRn - HDMA channel N line counter
+    fn write_nltrn(&mut self, channel: usize, value: u8) {
+        self.hdma_channels[channel].repeat = value & 0x80 != 0;
+        self.hdma_channels[channel].line_counter = value & 0x7F;
+    }
+
+    fn peek_nltrn(&self, channel: usize) -> u8 {
+        let hdma = &self.hdma_channels[channel];
+        (if hdma.repeat { 0x80 } else { 0 }) | hdma.line_counter
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -380,4 +564,37 @@ pub struct DmaParameters {
     // Pick one of 8 transfer patterns for the B bus address
     #[packed_field(size_bits = "3", ty = "enum")]
     pub transfer_pattern: DmaTransferPattern,
+}
+
+/// HDMA channel state, separate from DMA channel registers.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct HdmaChannel {
+    /// Current position in the HDMA table (A2An)
+    table_address: AddressU24,
+    /// Current indirect address for HDMA (constructed from DASBn bank + table pointer data)
+    indirect_address: AddressU24,
+    /// Bank byte for indirect HDMA (DASBn)
+    indirect_bank: u8,
+    /// Remaining scanlines for current entry
+    line_counter: u8,
+    /// Whether to repeat the transfer each scanline
+    repeat: bool,
+    /// Whether to perform a transfer on the next scanline
+    do_transfer: bool,
+    /// Whether this channel has been terminated for this frame
+    terminated: bool,
+}
+
+impl Default for HdmaChannel {
+    fn default() -> Self {
+        Self {
+            table_address: AddressU24::default(),
+            indirect_address: AddressU24::default(),
+            indirect_bank: 0,
+            line_counter: 0,
+            repeat: false,
+            do_transfer: false,
+            terminated: true,
+        }
+    }
 }
