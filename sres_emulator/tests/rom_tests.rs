@@ -21,6 +21,7 @@ use sres_emulator::components::spc700::Spc700Event;
 use sres_emulator::components::spc700::Spc700State;
 use sres_emulator::debugger::DebugEvent;
 use sres_emulator::debugger::EventFilter;
+use sres_emulator::AsyncSystem;
 use sres_emulator::CpuT;
 use sres_emulator::System;
 
