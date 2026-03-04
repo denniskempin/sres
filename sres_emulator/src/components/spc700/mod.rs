@@ -6,6 +6,7 @@ mod operands;
 mod status;
 mod test;
 
+use log::info;
 
 pub use self::debug::Spc700Debug;
 pub use self::debug::Spc700Event;
@@ -71,9 +72,13 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     }
 
     pub fn step(&mut self) {
-        let opcode = self.bus.cycle_read_u8(self.pc);
         self.debug_event_collector
             .on_event(Spc700Event::Step(self.debug().state()));
+        if log::log_enabled!(target: "spc700_step", log::Level::Info) {
+            info!(target: "spc700_step", "{}", self.debug().state());
+        }
+
+        let opcode = self.bus.cycle_read_u8(self.pc);
         let instruction = &self.opcode_table[opcode as usize];
         (instruction.execute)(self);
     }
