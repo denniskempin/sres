@@ -126,7 +126,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
     }
 
     #[allow(clippy::single_match)]
-    fn bus_write(&mut self, addr: AddressU24, value: u8) {
+    pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
         self.debug_event_collector
             .on_event(MainBusEvent::Write(addr, value));
         match self.memory_map(addr) {

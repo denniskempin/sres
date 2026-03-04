@@ -62,14 +62,16 @@ pub struct SystemImpl<PpuT: ManagedBusDeviceU24<Ppu>, ApuT: ManagedBusDeviceU24<
 
 impl<PpuT: ManagedBusDeviceU24<Ppu>, ApuT: ManagedBusDeviceU24<Apu>> SystemImpl<PpuT, ApuT> {
     pub fn with_cpu(cpu: Cpu<MainBusImpl<PpuT, ApuT>>, debugger: DebuggerRef) -> Self {
-        SystemImpl {
+        let mut system = SystemImpl {
             cpu,
             debugger,
             debugger_enabled: false,
             vblank_detector: EdgeDetector::new(),
             has_pending_video_frame: false,
             pending_video_frame: Framebuffer::default(),
-        }
+        };
+        system.cpu.reset();
+        system
     }
 }
 
