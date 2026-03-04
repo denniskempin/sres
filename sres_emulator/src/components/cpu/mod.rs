@@ -6,7 +6,6 @@ mod operands;
 mod status;
 mod test;
 
-
 use intbits::Bits;
 use log::info;
 
@@ -44,7 +43,7 @@ const STACK_BASE: u16 = 0;
 
 impl<BusT: MainBus> Cpu<BusT> {
     pub fn new(bus: BusT, debug_event_collector: DebugEventCollectorRef<CpuEvent>) -> Self {
-        let mut cpu = Self {
+        Self {
             bus,
             a: Default::default(),
             x: Default::default(),
@@ -58,9 +57,7 @@ impl<BusT: MainBus> Cpu<BusT> {
             halt: false,
             instruction_table: build_opcode_table(),
             debug_event_collector,
-        };
-        cpu.reset();
-        cpu
+        }
     }
 
     pub fn halted(&self) -> bool {
