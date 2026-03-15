@@ -275,7 +275,7 @@ impl TestCase {
 }
 
 impl Spc700Bus for TestBus<AddressU16> {
-    fn master_cycle(&self) -> u64 {
+    fn spc_cycle(&self) -> u64 {
         0
     }
 }

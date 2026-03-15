@@ -229,11 +229,24 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
         // Each emulator step may generate multiple spc instructions.
         if actual_state_log.is_empty() {
             system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
+            system.execute_one_instruction();
             actual_state_log.extend(system.debugger().log.drain().filter_map(|e| match e {
                 DebugEvent::Spc700(Spc700Event::Step(state)) => Some(MixedTrace::Spc700(state)),
                 DebugEvent::Cpu(CpuEvent::Step(state)) => Some(MixedTrace::Cpu(state)),
                 _ => None,
             }));
+            for log in &actual_state_log {
+                println!("> {log:}");
+            }
         }
         let expected_line = expected_line.unwrap();
         let actual_state = actual_state_log.pop_back().unwrap();
