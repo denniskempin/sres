@@ -22,6 +22,8 @@ pub const APU_SAMPLE_RATE: u32 = 32000;
 pub const MASTER_CLOCK_FREQUENCY: u64 = 21477272;
 // Number of master clock cycles per audio sample
 pub const CYCLES_PER_SAMPLE: u64 = MASTER_CLOCK_FREQUENCY / APU_SAMPLE_RATE as u64;
+// SPC700 CPU clock frequency (2.048 MHz = 32000 * 64)
+pub const SPC_CLOCK_FREQUENCY: u64 = APU_SAMPLE_RATE as u64 * 64;
 
 // Maximum audio buffer size (about 1 second at 32kHz)
 pub const MAX_AUDIO_BUFFER_SIZE: usize = 32000;
