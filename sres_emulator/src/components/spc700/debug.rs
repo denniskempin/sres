@@ -27,7 +27,9 @@ impl<BusT: Spc700Bus> Spc700Debug<'_, BusT> {
             y: self.0.y,
             sp: AddressU16(0x0100 + self.0.sp as u16),
             status: self.0.status.to_string(),
-            clock: ClockInfo::from_master_clock(self.0.bus.master_cycle()),
+            clock: ClockInfo::from_master_clock(
+                self.0.bus.spc_cycle() * 21_477_272 / (32000 * 64),
+            ),
         }
     }
 

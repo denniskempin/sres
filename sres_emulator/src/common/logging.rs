@@ -23,14 +23,16 @@ struct SresLogger {
     /// Contains the last `TRACE_CONTEXT_LINES` of trace-level logs.
     trace_logs: Mutex<VecDeque<String>>,
     logger: Logger,
+    trace_as_context_only: bool,
 }
 
 impl SresLogger {
-    pub fn new(logger: Logger) -> Self {
+    pub fn new(logger: Logger, trace_as_context_only: bool) -> Self {
         log::set_max_level(logger.filter());
         Self {
             trace_logs: Mutex::new(VecDeque::new()),
             logger,
+            trace_as_context_only: trace_as_context_only,
         }
     }
 
@@ -66,7 +68,7 @@ impl Log for SresLogger {
         }
         let record_str = self.format_record(record);
         let mut trace_logs = self.trace_logs.lock().unwrap();
-        if record.level() == LevelFilter::Trace {
+        if self.trace_as_context_only && record.level() == LevelFilter::Trace {
             trace_logs.push_front(record_str);
             trace_logs.truncate(TRACE_CONTEXT_LINES);
         } else {
@@ -89,7 +91,7 @@ pub fn init() {
     ONCE_INIT.call_once(|| {
         let filter_config = std::env::var("SRES_LOG").unwrap_or("error".to_string());
         let filter = env_logger::builder().parse_filters(&filter_config).build();
-        log::set_boxed_logger(Box::new(SresLogger::new(filter))).unwrap();
+        log::set_boxed_logger(Box::new(SresLogger::new(filter, true))).unwrap();
     });
 }
 
@@ -104,6 +106,6 @@ pub fn test_init(verbose: bool) {
             .to_string(),
         );
         let filter = env_logger::builder().parse_filters(&filter_config).build();
-        log::set_boxed_logger(Box::new(SresLogger::new(filter))).unwrap();
+        log::set_boxed_logger(Box::new(SresLogger::new(filter, !verbose))).unwrap();
     });
 }
