@@ -290,6 +290,7 @@ mod tests {
                     sp: AddressU16(0x01EF),
                     status: "N.....ZC".to_string(),
                     clock: Default::default(),
+                    spc_cycle: 0,
                 },
             )),
             // APU bus read

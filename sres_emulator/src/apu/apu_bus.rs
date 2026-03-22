@@ -17,6 +17,7 @@ pub enum ApuBusEvent {
 pub struct ApuBus {
     pub debug_event_collector: DebugEventCollectorRef<ApuBusEvent>,
     pub spc_cycle: u64,
+    pub master_clock: u64,
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
     pub channel_out: [u8; 4],
@@ -32,7 +33,8 @@ impl ApuBus {
     pub fn new(debug_event_collector: DebugEventCollectorRef<ApuBusEvent>) -> Self {
         Self {
             debug_event_collector: debug_event_collector.clone(),
-            spc_cycle: 7,
+            spc_cycle: 4,
+            master_clock: 0,
             ram: [0; 0x10000],
             channel_in: [0; 4],
             channel_out: [0; 4],
@@ -61,10 +63,6 @@ impl ApuBus {
             self.channel_in[3] = 0;
         }
     }
-
-    fn master_cycle(&mut self) -> u64 {
-        ((self.spc_cycle as f64) * 21_477_272_f64 / (32000_f64 * 64_f64)) as u64
-    }
 }
 
 impl Bus<AddressU16> for ApuBus {
@@ -88,14 +86,14 @@ impl Bus<AddressU16> for ApuBus {
     }
 
     fn cycle_io(&mut self) {
-        trace!("{:08} [SPC] io", self.master_cycle());
+        trace!("{:08} [SPC] io", self.master_clock);
         self.spc_cycle += 2;
         // Update timers with 1 SPC cycle
         self.timers.update(1);
     }
 
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
-        trace!("{:08} [SPC] read {addr}", self.master_cycle());
+        trace!("{:08} [SPC] read {addr}", self.master_clock);
         self.spc_cycle += 2;
 
         // Handle timer output reads specially (they reset on read)
@@ -119,7 +117,7 @@ impl Bus<AddressU16> for ApuBus {
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
         self.debug_event_collector
             .on_event(ApuBusEvent::Write(addr, value));
-        trace!("{:08} [SPC] write {addr:}", self.master_cycle());
+        trace!("{:08} [SPC] write {addr:}", self.master_clock);
 
         self.spc_cycle += 2;
 
@@ -157,6 +155,12 @@ impl Bus<AddressU16> for ApuBus {
 impl Spc700Bus for ApuBus {
     fn spc_cycle(&self) -> u64 {
         self.spc_cycle
+    }
+    fn master_clock(&self) -> u64 {
+        self.master_clock
+    }
+    fn update_master_clock(&mut self, new_master_clock: u64) {
+        self.master_clock = new_master_clock;
     }
 }
 
