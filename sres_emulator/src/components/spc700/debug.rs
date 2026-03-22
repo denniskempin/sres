@@ -27,9 +27,8 @@ impl<BusT: Spc700Bus> Spc700Debug<'_, BusT> {
             y: self.0.y,
             sp: AddressU16(0x0100 + self.0.sp as u16),
             status: self.0.status.to_string(),
-            clock: ClockInfo::from_master_clock(
-                self.0.bus.spc_cycle() * 21_477_272 / (32000 * 64),
-            ),
+            clock: ClockInfo::from_master_clock(self.0.bus.master_clock()),
+            spc_cycle: self.0.bus.spc_cycle(),
         }
     }
 
@@ -51,6 +50,7 @@ pub struct Spc700State {
     // TODO: Replace with Spc700StatusFlags struct
     pub status: String,
     pub clock: ClockInfo,
+    pub spc_cycle: u64,
 }
 
 impl Spc700State {
@@ -98,6 +98,7 @@ impl Spc700State {
                 u64::from_str(s[78..82].trim()).with_context(|| "h")?,
                 u64::from_str(s[85..].trim()).with_context(|| "f")?,
             ),
+            spc_cycle: 0,
         })
     }
 }
@@ -154,6 +155,7 @@ mod test {
             sp: AddressU16(0x01ef),
             status: "nvpbhiZc".to_string(),
             clock: ClockInfo::from_master_clock(192),
+            spc_cycle: 0,
         }
     }
 

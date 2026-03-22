@@ -1,6 +1,9 @@
 #![cfg(test)]
+
 use super::apu_bus::ApuBus;
+use crate::common::address::AddressU16;
 use crate::common::debug_events::test::mock_collector;
+use crate::common::logging;
 use crate::components::spc700::Spc700;
 use crate::components::spc700::Spc700Bus;
 use crate::components::spc700::Spc700State;
@@ -61,6 +64,53 @@ fn boot_rom_transfer_test() {
         ],
     );
 }
+
+/// Validates the spc cycle timing versus the master clock during initial spc700 boot.
+/// This is a little tricky, since a bunch of spc700 instructions are executed at once
+/// during reset before the standard emulation loop starts.
+#[test]
+fn boot_rom_spc_cycle_accuracy() {
+    logging::test_init(true);
+
+    let mut spc700 = Spc700::new(ApuBus::new(mock_collector()), mock_collector());
+    for (pc, spc_cycle, _) in INIT_TIMING {
+        let state = spc700.debug().state();
+        println!("(0x{pc:04X} {spc_cycle}): {state}");
+        assert_eq!(state.instruction.address, AddressU16(*pc));
+        assert_eq!(state.spc_cycle, *spc_cycle);
+        spc700.step();
+    }
+}
+
+#[test]
+fn boot_rom_master_clock_accuracy() {
+    logging::test_init(true);
+
+    // Skip the first two entries, which are before the SPC700 starts executing.
+    let mut spc700 = Spc700::new(ApuBus::new(mock_collector()), mock_collector());
+
+    // Each call to catch_up_to_master_clock advances the SPC700. Afterwards we will end up on the PC for
+    // the next instruction. See INIT_TIMING for the sequence.
+    let clock_pc_pairs = &[(186, 0xFFC5), (192, 0xFFC6), (276, 0xFFC7), (316, 0xFFC5)];
+    for (master_clock, pc) in clock_pc_pairs {
+        spc700.catch_up_to_master_clock(*master_clock);
+        assert_eq!(spc700.debug().state().instruction.address, AddressU16(*pc));
+    }
+}
+
+// Record of mesens timing of SPC700 boot ROM execution. Same instructions as INIT_TRACE.
+// The information is logged before the SPC700 loads the next op code.
+// The traces normally logged by mesen will log after the PC is loaded, so will be off by 2 cycles.
+static INIT_TIMING: &[(u16, u64, u64)] = &[
+    // PC, spc cycle, master clock
+    (0xFFC0, 4, 186),
+    (0xFFC2, 8, 186),
+    (0xFFC3, 12, 186),
+    (0xFFC5, 16, 192),
+    (0xFFC6, 24, 276),
+    (0xFFC7, 28, 316),
+    (0xFFC5, 36, 400),
+];
 
 /// Record of mesen booting the spc700. Executing this part of the boot rom:
 ///   MOV X, #$EF    ; *** INIT ***
