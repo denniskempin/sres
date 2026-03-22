@@ -24,6 +24,8 @@ use crate::common::uint::UInt;
 
 pub trait Spc700Bus: Bus<AddressU16> {
     fn spc_cycle(&self) -> u64;
+    fn master_clock(&self) -> u64;
+    fn update_master_clock(&mut self, cycles: u64);
 }
 
 pub struct Spc700<BusT: Spc700Bus> {
@@ -66,12 +68,13 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
     }
 
     pub fn catch_up_to_master_clock(&mut self, master_cycles: u64) {
+        self.bus.update_master_clock(master_cycles);
         // SPC700 runs at 2.048 MHz (32000 * 64), master clock at ~21.477 MHz
         const SPC_CLOCK_FREQUENCY: u64 = 32000 * 64;
         const MASTER_CLOCK_FREQUENCY: u64 = 21_477_272;
         let clock_ratio = SPC_CLOCK_FREQUENCY as f64 / MASTER_CLOCK_FREQUENCY as f64;
-        let target_spc_cycle = (master_cycles as f64 * clock_ratio).ceil() as u64;
-        while target_spc_cycle > self.bus.spc_cycle() {
+        let target_spc_cycle = (master_cycles as f64 * clock_ratio).floor() as u64 - 1;
+        while self.bus.spc_cycle() < target_spc_cycle {
             self.step();
         }
     }

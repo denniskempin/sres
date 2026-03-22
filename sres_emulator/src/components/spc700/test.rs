@@ -278,4 +278,8 @@ impl Spc700Bus for TestBus<AddressU16> {
     fn spc_cycle(&self) -> u64 {
         0
     }
+    fn master_clock(&self) -> u64 {
+        0
+    }
+    fn update_master_clock(&mut self, _cycles: u64) {}
 }
