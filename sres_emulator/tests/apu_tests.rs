@@ -10,6 +10,129 @@ use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::debugger::EventFilter;
 use sres_emulator::System;
 
+/// Helper: run a ROM until the SPC700 reaches `spc700_pc`, then return the formatted
+/// APUIO timing log. This is the primary tool for comparing CPU↔APU handshake timing
+/// against a reference emulator such as Mesen2.
+///
+/// # How to use for DKC debugging
+/// 1. Run your ROM and call `dump_apuio_timing_log(system, target_pc)`.
+/// 2. Do the same in Mesen2 (CPU trace + APU register log).
+/// 3. Diff the two logs — the first diverging entry shows where the timing breaks.
+///
+/// Expected format per line:
+/// `[cpu_clk=NNN spc_cycle=NNN] PORT N <R/W> XX`
+pub fn dump_apuio_timing_log(system: &mut System, spc700_pc: u16) -> String {
+    system.clear_apuio_log();
+    system.debug_until(EventFilter::Spc700ProgramCounter(spc700_pc..spc700_pc + 1));
+    system.debug().apu().format_apuio_log()
+}
+
+/// Verifies the CPU↔SPC700 APUIO timing during the IPL boot handshake and the
+/// first SPC program block upload. This exercises the same protocol used by DKC.
+///
+/// Key invariants checked:
+/// - The SPC700 must have run the full IPL RAM-clear loop (>= ~50 000 master cycles).
+/// - The CPU must have read $AA from port 0 at some point during boot.
+/// - Every CPU write of a sequence number to port 0 during the transfer loop must
+///   be echoed back by the SPC700 before the CPU writes the next sequence number.
+///
+/// If DKC hangs, run it with `RUST_LOG=sres_emulator::apu=debug` and compare the
+/// printed APUIO lines with a Mesen2 trace.
+#[test]
+pub fn test_apuio_timing_during_boot() {
+    let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let rom_path = root_dir.join("tests/apu_tests/play_brr_sample.sfc");
+
+    let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
+
+    // Run the full boot sequence: IPL boot + SPC upload + program start.
+    system.debug_until(EventFilter::Spc700ProgramCounter(0x02e9..0x02ea));
+
+    {
+        let cpu_clock = system.clock_info().master_clock;
+        let apu = system.apu();
+        println!(
+            "After boot: spc_master_cycle={}, cpu_clock={}",
+            apu.spc700.bus.master_cycle, cpu_clock
+        );
+
+        // The SPC700 must have run the full IPL RAM-clear loop (~50 000 master cycles).
+        assert!(
+            apu.spc700.bus.master_cycle >= 40_000,
+            "SPC700 should have run >= 40 000 master cycles for IPL boot, got {}",
+            apu.spc700.bus.master_cycle
+        );
+    }
+
+    let debug = system.debug();
+    let apu = debug.apu();
+    let accesses = apu.apuio_log();
+    assert!(!accesses.is_empty(), "APUIO log must not be empty after boot sequence");
+
+    // Print first 10 entries for diagnosis.
+    println!("First 10 APUIO log entries:");
+    for (i, a) in accesses.iter().take(10).enumerate() {
+        println!(
+            "  [{}] cpu_clk={} spc_cycle={} PORT {} {} {:#04X}",
+            i,
+            a.cpu_master_clock,
+            a.spc700_master_cycle,
+            a.port,
+            if a.is_write { "W" } else { "R" },
+            a.value
+        );
+    }
+
+    // Find the first CPU read returning $AA on port 0 — start of the handshake.
+    let first_aa_idx = accesses
+        .iter()
+        .position(|a| !a.is_write && a.port == 0 && a.value == 0xAA);
+    assert!(
+        first_aa_idx.is_some(),
+        "CPU must read $AA from port 0 at some point during boot"
+    );
+    let first_aa_idx = first_aa_idx.unwrap();
+    println!(
+        "First $AA read at log index {}, cpu_clk={}",
+        first_aa_idx, accesses[first_aa_idx].cpu_master_clock
+    );
+
+    // From the $AA read onwards, every CPU write of sequence number N to port 0
+    // must be echoed back by the SPC700 before the CPU writes N+1.
+    // This is the core timing invariant that breaks when CPU-APU synchronisation is wrong.
+    let mut unacked_writes: std::collections::VecDeque<(u8, u64)> =
+        std::collections::VecDeque::new();
+    let mut max_echo_lag: u64 = 0;
+    for access in accesses.iter().skip(first_aa_idx) {
+        if access.port == 0 {
+            if access.is_write {
+                unacked_writes.push_back((access.value, access.cpu_master_clock));
+            } else if let Some(&(expected, write_clock)) = unacked_writes.front() {
+                if access.value == expected {
+                    let lag = access.cpu_master_clock.saturating_sub(write_clock);
+                    max_echo_lag = max_echo_lag.max(lag);
+                    unacked_writes.pop_front();
+                }
+            }
+        }
+    }
+
+    // No written byte should remain unacknowledged at the end.
+    assert!(
+        unacked_writes.is_empty(),
+        "Some CPU writes to port 0 were never echoed back by SPC700: {:?}",
+        unacked_writes
+            .iter()
+            .map(|(v, _)| format!("{v:#04X}"))
+            .collect::<Vec<_>>()
+    );
+
+    // Print the worst-case echo latency — compare this against Mesen2 to tune timing.
+    drop(apu);
+    drop(debug);
+    println!("Max port-0 echo latency: {} master cycles", max_echo_lag);
+}
+
 #[test]
 pub fn test_play_brr_sample() {
     let root_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

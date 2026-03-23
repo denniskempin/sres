@@ -149,6 +149,11 @@ impl System {
         self.cpu.bus.apu.inner.swap_audio_buffer(buffer)
     }
 
+    /// Clears the APUIO timing log so a fresh trace can be collected from this point.
+    pub fn clear_apuio_log(&mut self) {
+        self.cpu.bus.apu.inner.apuio_log.clear();
+    }
+
     pub fn ppu(&mut self) -> &mut Ppu {
         &mut self.cpu.bus.ppu.inner
     }

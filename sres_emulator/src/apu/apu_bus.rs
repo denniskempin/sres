@@ -46,18 +46,20 @@ impl ApuBus {
     fn write_control(&mut self, value: u8) {
         self.timers.update_timer_enable_flags(value.bits(0..2));
         self.control.0 = value;
-        // Wiki is a little unclear on the exact behavior. It seems that for 1/2
-        // both channels are cleared. For 3/4 only the input channel
+        // Bit 4: clears APUIO0 and APUIO1 (both CPU-to-SPC and SPC-to-CPU directions)
+        // Bit 5: clears APUIO2 and APUIO3 (both directions)
         // See https://snes.nesdev.org/wiki/S-SMP#CONTROL_-_Control_register_($F1,_write-only)
         if self.control.clear_apuio12() {
             self.channel_in[0] = 0;
             self.channel_in[1] = 0;
             self.channel_out[0] = 0;
-            self.channel_out[2] = 0;
+            self.channel_out[1] = 0;
         }
         if self.control.clear_apuio34() {
             self.channel_in[2] = 0;
             self.channel_in[3] = 0;
+            self.channel_out[2] = 0;
+            self.channel_out[3] = 0;
         }
     }
 }

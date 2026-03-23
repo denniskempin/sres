@@ -29,13 +29,35 @@ pub const MAX_AUDIO_BUFFER_SIZE: usize = 32000;
 // Roughly 2 frames worth of audio samples, so we should rarely exceed this.
 pub const AUDIO_BUFFER_CAPACITY: usize = 1024;
 
+/// A single APUIO port access (CPU read or write of $2140-$2143) captured with timing.
+#[derive(Clone, Debug)]
+pub struct ApuioAccess {
+    /// Main CPU master clock at the time of the access.
+    pub cpu_master_clock: u64,
+    /// SPC700 internal master-cycle counter at the time of the access.
+    pub spc700_master_cycle: u64,
+    /// Port index 0-3 (maps to $2140-$2143 / $F4-$F7).
+    pub port: u8,
+    /// Value read or written.
+    pub value: u8,
+    /// `true` = CPU wrote this value into channel_in; `false` = CPU read channel_out.
+    pub is_write: bool,
+}
+
 pub struct Apu {
     pub spc700: Spc700<ApuBus>,
     /// Audio sample buffer that grows as samples are generated
     sample_buffer: AudioBuffer,
     /// Last master clock cycle when a sample was generated
     last_sample_cycle: u64,
+    /// Current CPU master clock, updated on every update_clock() call.
+    current_master_clock: u64,
+    /// Rolling log of recent APUIO accesses (up to MAX_APUIO_LOG_SIZE entries).
+    pub apuio_log: Vec<ApuioAccess>,
 }
+
+/// Maximum number of APUIO accesses retained in the log.
+pub const MAX_APUIO_LOG_SIZE: usize = 4096;
 
 impl Apu {
     #[allow(clippy::new_without_default)]
@@ -47,6 +69,8 @@ impl Apu {
             ),
             sample_buffer: AudioBuffer::new(),
             last_sample_cycle: 0,
+            current_master_clock: 0,
+            apuio_log: Vec::new(),
         }
     }
 
@@ -74,7 +98,11 @@ impl Apu {
     fn write_apuio(&mut self, addr: AddressU24, value: u8) {
         let channel_id = (addr.offset - 0x2140) as usize % 4;
         self.spc700.bus.channel_in[channel_id] = value;
-        debug!("APUIO[{:04X}] = {:02X}", addr.offset, value);
+        debug!(
+            "APUIO[{:04X}] = {:02X}  (cpu_clk={} spc_cycle={})",
+            addr.offset, value, self.current_master_clock, self.spc700.bus.master_cycle
+        );
+        self.push_apuio_access(channel_id as u8, value, true);
     }
 
     fn peek_apuio(&self, addr: AddressU24) -> u8 {
@@ -85,11 +113,29 @@ impl Apu {
     fn read_apuio(&mut self, addr: AddressU24) -> u8 {
         let channel_id = (addr.offset - 0x2140) as usize % 4;
         let value = self.spc700.bus.channel_out[channel_id];
-        debug!("APUIO[{:04X}] reads {:02X}", addr.offset, value);
+        debug!(
+            "APUIO[{:04X}] reads {:02X}  (cpu_clk={} spc_cycle={})",
+            addr.offset, value, self.current_master_clock, self.spc700.bus.master_cycle
+        );
+        self.push_apuio_access(channel_id as u8, value, false);
         value
     }
 
+    fn push_apuio_access(&mut self, port: u8, value: u8, is_write: bool) {
+        if self.apuio_log.len() >= MAX_APUIO_LOG_SIZE {
+            self.apuio_log.remove(0);
+        }
+        self.apuio_log.push(ApuioAccess {
+            cpu_master_clock: self.current_master_clock,
+            spc700_master_cycle: self.spc700.bus.master_cycle,
+            port,
+            value,
+            is_write,
+        });
+    }
+
     fn update_clock(&mut self, new_clock: ClockInfo) {
+        self.current_master_clock = new_clock.master_clock;
         while new_clock.master_clock - self.last_sample_cycle >= CYCLES_PER_SAMPLE {
             self.last_sample_cycle += CYCLES_PER_SAMPLE;
             self.spc700.catch_up_to_master_clock(new_clock.master_clock);
@@ -108,7 +154,9 @@ impl Apu {
 
     fn reset(&mut self) {
         self.last_sample_cycle = 0;
+        self.current_master_clock = 0;
         self.sample_buffer.clear();
+        self.apuio_log.clear();
     }
 }
 
@@ -145,6 +193,36 @@ impl<'a> ApuDebug<'a> {
 
     pub fn ram(&self) -> &[u8] {
         &self.0.spc700.bus.ram
+    }
+
+    /// Returns the rolling log of recent APUIO accesses with CPU and SPC700 timing.
+    /// Each entry records whether the CPU read or wrote an APUIO port ($2140-$2143),
+    /// the value transferred, and the master-clock timestamps for both processors.
+    ///
+    /// Use this to compare CPU↔APU handshake timing against a reference emulator
+    /// (e.g. Mesen2). Look for the first access where your emulator's value differs.
+    pub fn apuio_log(&self) -> &[ApuioAccess] {
+        &self.0.apuio_log
+    }
+
+    /// Formats the APUIO log as a human-readable string, one access per line:
+    /// `[cpu_clk=NNN spc_cycle=NNN] PORT N <R/W> value XX`
+    pub fn format_apuio_log(&self) -> String {
+        self.0
+            .apuio_log
+            .iter()
+            .map(|a| {
+                format!(
+                    "[cpu_clk={:>10} spc_cycle={:>10}] PORT {} {} {:02X}",
+                    a.cpu_master_clock,
+                    a.spc700_master_cycle,
+                    a.port,
+                    if a.is_write { "W" } else { "R" },
+                    a.value,
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 
