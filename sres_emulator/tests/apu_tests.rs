@@ -24,7 +24,9 @@ use sres_emulator::System;
 pub fn dump_apuio_timing_log(system: &mut System, spc700_pc: u16) -> String {
     system.clear_apuio_log();
     system.debug_until(EventFilter::Spc700ProgramCounter(spc700_pc..spc700_pc + 1));
-    system.debug().apu().format_apuio_log()
+    let debug = system.debug();
+    let apu = debug.apu();
+    apu.format_apuio_log()
 }
 
 /// Verifies the CPU↔SPC700 APUIO timing during the IPL boot handshake and the
