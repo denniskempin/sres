@@ -14,14 +14,14 @@ egui_extras = { version = "0.33", features = ["image"] }
 egui_hooks = "0.10"
 image = { version = "0.25", features = ["png"] }
 itertools = "0.14"
-puffin = "0.19"
+puffin = "0.20"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sres_emulator = { path = "../sres_emulator" }
-strum = { version = "0.27", features = ["derive"] }
+strum = { version = "0.28", features = ["derive"] }
 log = "0.4"
 lazy_static = "1.5.0"
-cpal = "0.16.0"
+cpal = "0.17"
 
 [build-dependencies]
 sres_emulator = { path = "../sres_emulator" }
@@ -37,7 +37,7 @@ tracing-wasm = "0.2"
 wasm-bindgen-futures = "0.4"
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Storage"] }
-puffin = { version = "0.19", features = ["web"] }
+puffin = { version = "0.20", features = ["web"] }
 
 [dev-dependencies]
 egui_kittest = { version = "0.33", features = ["wgpu", "snapshot"] }
