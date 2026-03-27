@@ -18,10 +18,10 @@ packed_struct = "0.10"
 num-traits = "0.2"
 env_logger = "0.11"
 log = "0.4"
-colored = "2"
-puffin = "0.19"
+colored = "3"
+puffin = "0.20"
 itertools = "0.14"
-strum = { version = "0.27", features = ["derive"] }
+strum = { version = "0.28", features = ["derive"] }
 bilge = "0.3"
 bitcode = "0.6.9"
 hound = "3.5"
@@ -30,7 +30,7 @@ lazy_static = "1.5"
 [dev-dependencies]
 tempfile = "3.25"
 pretty_assertions = "1.4"
-criterion = "0.5"
+criterion = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 xz2 = "0.1"

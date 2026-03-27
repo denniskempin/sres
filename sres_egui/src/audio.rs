@@ -70,7 +70,7 @@ impl AudioOutput {
 
         let config = StreamConfig {
             channels: 2,                          // Stereo output
-            sample_rate: cpal::SampleRate(32000), // SNES APU sample rate
+            sample_rate: 32000, // SNES APU sample rate
             buffer_size: cpal::BufferSize::Default,
         };
 
