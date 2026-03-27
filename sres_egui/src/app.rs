@@ -20,7 +20,7 @@ use egui::Ui;
 use sres_emulator::components::cartridge::Cartridge;
 use sres_emulator::components::ppu::Framebuffer;
 use sres_emulator::controller::StandardController;
-use sres_emulator::System;
+use sres_emulator::SyncSystem;
 
 use crate::audio::AudioOutput;
 use crate::debug::DebugUi;
@@ -30,7 +30,7 @@ use crate::util::Instant;
 use crate::util::RingBuffer;
 
 pub struct EmulatorApp {
-    emulator: System,
+    emulator: SyncSystem,
     loaded_cartridge: Option<Cartridge>,
     framebuffer_texture: TextureHandle,
     debug_ui: DebugUi,
@@ -49,7 +49,7 @@ impl EmulatorApp {
         egui_extras::install_image_loaders(&cc.egui_ctx);
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
         let mut app = EmulatorApp {
-            emulator: System::new(),
+            emulator: SyncSystem::new(),
             loaded_cartridge: None,
             framebuffer_texture: cc.egui_ctx.load_texture(
                 "Framebuffer",
@@ -72,7 +72,7 @@ impl EmulatorApp {
     }
 
     pub fn load_cartridge(&mut self, cartridge: Cartridge) {
-        self.emulator = System::with_cartridge(&cartridge);
+        self.emulator = SyncSystem::with_cartridge(&cartridge);
         self.emulator.debugger().enable();
         self.loaded_cartridge = Some(cartridge);
         // Start audio output when a cartridge is loaded
