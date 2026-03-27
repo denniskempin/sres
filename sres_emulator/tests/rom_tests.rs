@@ -216,52 +216,45 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
     system.debugger().add_log_point(EventFilter::Spc700Step);
     system.debugger().add_log_point(EventFilter::CpuStep);
 
-    let mut actual_state_log = VecDeque::new();
-    for (line_num, expected_line) in mixed_trace_log_from_xz_file(&trace_path)
-        .unwrap()
-        .enumerate()
-    {
-        // Only up to line 9 works so far. Things get out of sync after that.
-        // TODO: Fix remaining lines.
-        if line_num >= 9 {
-            break;
-        }
-        // Each emulator step may generate multiple spc instructions.
-        if actual_state_log.is_empty() {
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            system.execute_one_instruction();
-            actual_state_log.extend(system.debugger().log.drain().filter_map(|e| match e {
-                DebugEvent::Spc700(Spc700Event::Step(state)) => Some(MixedTrace::Spc700(state)),
-                DebugEvent::Cpu(CpuEvent::Step(state)) => Some(MixedTrace::Cpu(state)),
-                _ => None,
-            }));
-            for log in &actual_state_log {
-                println!("> {log:}");
-            }
-        }
-        let expected_line = expected_line.unwrap();
-        let actual_state = actual_state_log.pop_back().unwrap();
-        match (actual_state, expected_line) {
-            (MixedTrace::Cpu(actual_cpu), MixedTrace::Cpu(expected_cpu)) => {
-                assert_cpu_trace_eq(line_num, expected_cpu, actual_cpu);
-            }
-            (MixedTrace::Spc700(actual_spc), MixedTrace::Spc700(expected_spc)) => {
-                assert_spc_trace_eq(line_num, expected_spc, actual_spc);
-            }
-            (actual, expected) => {
-                assert_eq!(actual.to_string(), expected.to_string());
+    let mut expected_spc_pending = Vec::new();
+    let mut actual_spc_pending = Vec::new();
+    let mut cpu_line_num = 0usize;
+
+    for expected_line in mixed_trace_log_from_xz_file(&trace_path).unwrap() {
+        match expected_line.unwrap() {
+            MixedTrace::Spc700(expected_spc) => expected_spc_pending.push(expected_spc),
+            MixedTrace::Cpu(expected_cpu) => {
+                system.execute_one_instruction();
+                let mut actual_cpu = None;
+                for event in system.debugger().log.drain() {
+                    match event {
+                        DebugEvent::Spc700(Spc700Event::Step(state)) => {
+                            actual_spc_pending.push(state);
+                        }
+                        DebugEvent::Cpu(CpuEvent::Step(state)) => {
+                            assert!(
+                                actual_cpu.is_none(),
+                                "execute_one_instruction produced more than one CPU step"
+                            );
+                            actual_cpu = Some(state);
+                        }
+                        _ => {}
+                    }
+                }
+                let actual_cpu = actual_cpu.expect("execute_one_instruction produced no CPU step");
+
+                assert_cpu_trace_eq(cpu_line_num, expected_cpu, actual_cpu.clone());
+                if is_cpu_apuio_access(&actual_cpu) {
+                    assert_spc_pending_eq(cpu_line_num, &expected_spc_pending, &actual_spc_pending);
+                    expected_spc_pending.clear();
+                    actual_spc_pending.clear();
+                }
+                cpu_line_num += 1;
             }
         }
     }
+
+    assert_spc_pending_eq(cpu_line_num, &expected_spc_pending, &actual_spc_pending);
 }
 
 fn assert_cpu_trace_eq(_i: usize, mut expected: CpuState, mut actual: CpuState) {
@@ -277,6 +270,31 @@ fn assert_spc_trace_eq(_i: usize, mut expected: Spc700State, mut actual: Spc700S
     actual.instruction.operand_str = None;
     expected.instruction.operand_str = None;
     assert_eq!(actual.to_string(), expected.to_string());
+}
+
+fn is_cpu_apuio_access(cpu: &CpuState) -> bool {
+    cpu.instruction
+        .effective_addr
+        .map(|addr| (0x2140..=0x217F).contains(&addr.offset))
+        .unwrap_or(false)
+}
+
+fn assert_spc_pending_eq(cpu_line_num: usize, expected: &[Spc700State], actual: &[Spc700State]) {
+    assert_eq!(
+        actual.len(),
+        expected.len(),
+        "SPC checkpoint mismatch at CPU line {cpu_line_num}: actual {} steps, expected {} steps",
+        actual.len(),
+        expected.len()
+    );
+
+    for (spc_idx, (expected_spc, actual_spc)) in expected.iter().zip(actual.iter()).enumerate() {
+        assert_spc_trace_eq(
+            cpu_line_num * 100_000 + spc_idx,
+            expected_spc.clone(),
+            actual_spc.clone(),
+        );
+    }
 }
 
 #[test]
