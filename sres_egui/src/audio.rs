@@ -13,7 +13,7 @@ use cpal::StreamConfig;
 use log::error;
 use log::info;
 use sres_emulator::apu::AudioBuffer;
-use sres_emulator::System;
+use sres_emulator::SyncSystem;
 
 const TARGET_BUFFER_SIZE: usize = 1024;
 
@@ -113,7 +113,7 @@ impl AudioOutput {
         )
     }
 
-    pub fn update(&mut self, emulator: &mut System) {
+    pub fn update(&mut self, emulator: &mut SyncSystem) {
         if self.stream.is_none() {
             return;
         }

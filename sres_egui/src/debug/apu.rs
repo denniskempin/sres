@@ -5,7 +5,7 @@ use egui::Ui;
 use sres_emulator::components::s_dsp::voice::AudioRingBuffer;
 use sres_emulator::components::s_dsp::voice::GainMode;
 use sres_emulator::components::s_dsp::voice::OUTX_BUFFER_SIZE;
-use sres_emulator::System;
+use sres_emulator::SyncSystem;
 
 pub struct ApuDebugWindow {
     open: bool,
@@ -20,7 +20,7 @@ impl ApuDebugWindow {
         self.open = !self.open;
     }
 
-    pub fn show(&mut self, ctx: &Context, emulator: &System) {
+    pub fn show(&mut self, ctx: &Context, emulator: &SyncSystem) {
         egui::Window::new("APU Debug")
             .open(&mut self.open)
             .default_width(1200.0)

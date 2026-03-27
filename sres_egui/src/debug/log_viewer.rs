@@ -1,7 +1,7 @@
 use egui::Context;
 use egui::ScrollArea;
 use egui::TextStyle;
-use sres_emulator::System;
+use sres_emulator::SyncSystem;
 
 use super::event::event_filter_widget;
 use super::syntax::log_line;
@@ -20,7 +20,7 @@ impl LogViewer {
         self.is_open = !self.is_open;
     }
 
-    pub fn show(&mut self, ctx: &Context, emulator: &System, selected: &mut InternalLink) {
+    pub fn show(&mut self, ctx: &Context, emulator: &SyncSystem, selected: &mut InternalLink) {
         egui::Window::new("Log Viewer")
             .open(&mut self.is_open)
             .show(ctx, |ui| {
