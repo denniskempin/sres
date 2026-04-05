@@ -148,6 +148,11 @@ impl Oam {
         self.memory[usize::from(self.current_addr)]
     }
 
+    /// Sprites on this scanline, ordered for correct compositing: **higher OAM index first**.
+    ///
+    /// Hardware gives **lower OAM index priority** on overlapping opaque pixels. The renderer
+    /// overwrites per-pixel sprite data in this order, so the last writer wins — we therefore
+    /// return higher indices first and lower indices last.
     pub fn get_all_sprites_on_scanline(&self, scanline: u32) -> Vec<(Sprite, u32)> {
         let mut sprites = Vec::new();
         for sprite_id in 0..128 {
@@ -164,6 +169,7 @@ impl Oam {
                 break;
             }
         }
+        sprites.reverse();
         sprites
     }
 
@@ -354,5 +360,33 @@ mod tests {
             oam.get_sprite(0).to_string(),
             "Sprite 00: Tile00 Size16x16 from table $0000 at (119, 252) Pal0 Pri3"
         )
+    }
+
+    /// Lower OAM index must win on overlaps; the compositor overwrites in list order, so higher
+    /// indices must appear first in this list.
+    #[test]
+    fn scanline_sprite_order_high_oam_index_first() {
+        let mut oam = Oam::new();
+        let scanline = 100u32;
+        // Sprite 0: 8x8 at (10, 100)
+        oam.memory[0x00..0x04].copy_from_slice(&[10, 100, 0, 0]);
+        // Sprite 10: same position (overlapping)
+        oam.memory[40..44].copy_from_slice(&[10, 100, 0, 0]);
+        // Attribute bytes: sprites 0–3 in 0x200, 4–7 in 0x201, 8–11 in 0x202 — use 8x8 for both.
+        oam.memory[0x200] = 0;
+        oam.memory[0x202] = 0;
+
+        let ids: Vec<u32> = oam
+            .get_all_sprites_on_scanline(scanline)
+            .into_iter()
+            .map(|(s, _)| s.id)
+            .collect();
+
+        let pos0 = ids.iter().position(|&id| id == 0).expect("sprite 0");
+        let pos10 = ids.iter().position(|&id| id == 10).expect("sprite 10");
+        assert!(
+            pos10 < pos0,
+            "expected sprite 10 before sprite 0 in decode order, got {ids:?}"
+        );
     }
 }
