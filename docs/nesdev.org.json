@@ -1,0 +1,564 @@
+{
+  "api_base": "https://snes.nesdev.org/w/api.php",
+  "pages": {
+    "65C816": {
+      "filename": "65C816.md",
+      "kind": "article",
+      "pageid": 107,
+      "url": "https://snes.nesdev.org/wiki/65C816"
+    },
+    "65c816 for 6502 developers": {
+      "filename": "65c816_for_6502_developers.md",
+      "kind": "article",
+      "pageid": 11,
+      "url": "https://snes.nesdev.org/wiki/65c816_for_6502_developers"
+    },
+    "APU pinout": {
+      "filename": "APU_pinout.md",
+      "kind": "article",
+      "pageid": 7,
+      "url": "https://snes.nesdev.org/wiki/APU_pinout"
+    },
+    "APU register table": {
+      "filename": "APU_register_table.md",
+      "kind": "article",
+      "pageid": 179,
+      "url": "https://snes.nesdev.org/wiki/APU_register_table"
+    },
+    "APU register table/DSP global": {
+      "filename": "APU_register_table-DSP_global.md",
+      "kind": "article",
+      "pageid": 178,
+      "url": "https://snes.nesdev.org/wiki/APU_register_table/DSP_global"
+    },
+    "APU register table/DSP voice": {
+      "filename": "APU_register_table-DSP_voice.md",
+      "kind": "article",
+      "pageid": 177,
+      "url": "https://snes.nesdev.org/wiki/APU_register_table/DSP_voice"
+    },
+    "APU register table/SMP": {
+      "filename": "APU_register_table-SMP.md",
+      "kind": "article",
+      "pageid": 182,
+      "url": "https://snes.nesdev.org/wiki/APU_register_table/SMP"
+    },
+    "Audio drivers": {
+      "filename": "Audio_drivers.md",
+      "kind": "article",
+      "pageid": 173,
+      "url": "https://snes.nesdev.org/wiki/Audio_drivers"
+    },
+    "BRR samples": {
+      "filename": "BRR_samples.md",
+      "kind": "article",
+      "pageid": 109,
+      "url": "https://snes.nesdev.org/wiki/BRR_samples"
+    },
+    "Backgrounds": {
+      "filename": "Backgrounds.md",
+      "kind": "article",
+      "pageid": 73,
+      "url": "https://snes.nesdev.org/wiki/Backgrounds"
+    },
+    "Blargg SPC upload": {
+      "filename": "Blargg_SPC_upload.md",
+      "kind": "article",
+      "pageid": 110,
+      "url": "https://snes.nesdev.org/wiki/Blargg_SPC_upload"
+    },
+    "Booting the SPC700": {
+      "filename": "Booting_the_SPC700.md",
+      "kind": "article",
+      "pageid": 40,
+      "url": "https://snes.nesdev.org/wiki/Booting_the_SPC700"
+    },
+    "CIC Pinout": {
+      "filename": "CIC_Pinout.md",
+      "kind": "article",
+      "pageid": 186,
+      "url": "https://snes.nesdev.org/wiki/CIC_Pinout"
+    },
+    "CPU pinout": {
+      "filename": "CPU_pinout.md",
+      "kind": "article",
+      "pageid": 3,
+      "url": "https://snes.nesdev.org/wiki/CPU_pinout"
+    },
+    "CPU vectors": {
+      "filename": "CPU_vectors.md",
+      "kind": "article",
+      "pageid": 49,
+      "url": "https://snes.nesdev.org/wiki/CPU_vectors"
+    },
+    "CX4": {
+      "filename": "CX4.md",
+      "kind": "article",
+      "pageid": 152,
+      "url": "https://snes.nesdev.org/wiki/CX4"
+    },
+    "Cartridge connector": {
+      "filename": "Cartridge_connector.md",
+      "kind": "article",
+      "pageid": 2,
+      "url": "https://snes.nesdev.org/wiki/Cartridge_connector"
+    },
+    "Color math": {
+      "filename": "Color_math.md",
+      "kind": "article",
+      "pageid": 97,
+      "url": "https://snes.nesdev.org/wiki/Color_math"
+    },
+    "Controller connector": {
+      "filename": "Controller_connector.md",
+      "kind": "article",
+      "pageid": 92,
+      "url": "https://snes.nesdev.org/wiki/Controller_connector"
+    },
+    "Controller reading": {
+      "filename": "Controller_reading.md",
+      "kind": "article",
+      "pageid": 41,
+      "url": "https://snes.nesdev.org/wiki/Controller_reading"
+    },
+    "Copier": {
+      "filename": "Copier.md",
+      "kind": "article",
+      "pageid": 133,
+      "url": "https://snes.nesdev.org/wiki/Copier"
+    },
+    "DMA examples": {
+      "filename": "DMA_examples.md",
+      "kind": "article",
+      "pageid": 59,
+      "url": "https://snes.nesdev.org/wiki/DMA_examples"
+    },
+    "DMA registers": {
+      "filename": "DMA_registers.md",
+      "kind": "article",
+      "pageid": 19,
+      "url": "https://snes.nesdev.org/wiki/DMA_registers"
+    },
+    "DSP Expansion": {
+      "filename": "DSP_Expansion.md",
+      "kind": "article",
+      "pageid": 160,
+      "url": "https://snes.nesdev.org/wiki/DSP_Expansion"
+    },
+    "DSP Pinout": {
+      "filename": "DSP_Pinout.md",
+      "kind": "article",
+      "pageid": 184,
+      "url": "https://snes.nesdev.org/wiki/DSP_Pinout"
+    },
+    "DSP envelopes": {
+      "filename": "DSP_envelopes.md",
+      "kind": "article",
+      "pageid": 115,
+      "url": "https://snes.nesdev.org/wiki/DSP_envelopes"
+    },
+    "DSP-1": {
+      "filename": "DSP-1.md",
+      "kind": "article",
+      "pageid": 197,
+      "url": "https://snes.nesdev.org/wiki/DSP-1"
+    },
+    "Division": {
+      "filename": "Division.md",
+      "kind": "article",
+      "pageid": 36,
+      "url": "https://snes.nesdev.org/wiki/Division"
+    },
+    "Drawing window shapes": {
+      "filename": "Drawing_window_shapes.md",
+      "kind": "article",
+      "pageid": 91,
+      "url": "https://snes.nesdev.org/wiki/Drawing_window_shapes"
+    },
+    "Emulator tests": {
+      "filename": "Emulator_tests.md",
+      "kind": "article",
+      "pageid": 94,
+      "url": "https://snes.nesdev.org/wiki/Emulator_tests"
+    },
+    "Errata": {
+      "filename": "Errata.md",
+      "kind": "article",
+      "pageid": 37,
+      "url": "https://snes.nesdev.org/wiki/Errata"
+    },
+    "Glossary": {
+      "filename": "Glossary.md",
+      "kind": "article",
+      "pageid": 85,
+      "url": "https://snes.nesdev.org/wiki/Glossary"
+    },
+    "HDMA examples": {
+      "filename": "HDMA_examples.md",
+      "kind": "article",
+      "pageid": 105,
+      "url": "https://snes.nesdev.org/wiki/HDMA_examples"
+    },
+    "Init code": {
+      "filename": "Init_code.md",
+      "kind": "article",
+      "pageid": 24,
+      "url": "https://snes.nesdev.org/wiki/Init_code"
+    },
+    "MAD-1 Pinout": {
+      "filename": "MAD-1_Pinout.md",
+      "kind": "article",
+      "pageid": 185,
+      "url": "https://snes.nesdev.org/wiki/MAD-1_Pinout"
+    },
+    "MMIO register table": {
+      "filename": "MMIO_register_table.md",
+      "kind": "article",
+      "pageid": 42,
+      "url": "https://snes.nesdev.org/wiki/MMIO_register_table"
+    },
+    "MMIO register table/DMA": {
+      "filename": "MMIO_register_table-DMA.md",
+      "kind": "article",
+      "pageid": 45,
+      "url": "https://snes.nesdev.org/wiki/MMIO_register_table/DMA"
+    },
+    "MMIO register table/MMIO": {
+      "filename": "MMIO_register_table-MMIO.md",
+      "kind": "article",
+      "pageid": 44,
+      "url": "https://snes.nesdev.org/wiki/MMIO_register_table/MMIO"
+    },
+    "MMIO register table/PPU": {
+      "filename": "MMIO_register_table-PPU.md",
+      "kind": "article",
+      "pageid": 43,
+      "url": "https://snes.nesdev.org/wiki/MMIO_register_table/PPU"
+    },
+    "MMIO registers": {
+      "filename": "MMIO_registers.md",
+      "kind": "article",
+      "pageid": 39,
+      "url": "https://snes.nesdev.org/wiki/MMIO_registers"
+    },
+    "MVN and MVP block copy": {
+      "filename": "MVN_and_MVP_block_copy.md",
+      "kind": "article",
+      "pageid": 30,
+      "url": "https://snes.nesdev.org/wiki/MVN_and_MVP_block_copy"
+    },
+    "Memory map": {
+      "filename": "Memory_map.md",
+      "kind": "article",
+      "pageid": 18,
+      "url": "https://snes.nesdev.org/wiki/Memory_map"
+    },
+    "Mode 7 perspective effects": {
+      "filename": "Mode_7_perspective_effects.md",
+      "kind": "article",
+      "pageid": 96,
+      "url": "https://snes.nesdev.org/wiki/Mode_7_perspective_effects"
+    },
+    "Mode 7 transform": {
+      "filename": "Mode_7_transform.md",
+      "kind": "article",
+      "pageid": 80,
+      "url": "https://snes.nesdev.org/wiki/Mode_7_transform"
+    },
+    "Mouse": {
+      "filename": "Mouse.md",
+      "kind": "article",
+      "pageid": 13,
+      "url": "https://snes.nesdev.org/wiki/Mouse"
+    },
+    "Multiplication": {
+      "filename": "Multiplication.md",
+      "kind": "article",
+      "pageid": 35,
+      "url": "https://snes.nesdev.org/wiki/Multiplication"
+    },
+    "Multitap": {
+      "filename": "Multitap.md",
+      "kind": "article",
+      "pageid": 62,
+      "url": "https://snes.nesdev.org/wiki/Multitap"
+    },
+    "NTT Data Keypad": {
+      "filename": "NTT_Data_Keypad.md",
+      "kind": "article",
+      "pageid": 111,
+      "url": "https://snes.nesdev.org/wiki/NTT_Data_Keypad"
+    },
+    "OAM layout": {
+      "filename": "OAM_layout.md",
+      "kind": "article",
+      "pageid": 60,
+      "url": "https://snes.nesdev.org/wiki/OAM_layout"
+    },
+    "Offset-per-tile": {
+      "filename": "Offset-per-tile.md",
+      "kind": "article",
+      "pageid": 20,
+      "url": "https://snes.nesdev.org/wiki/Offset-per-tile"
+    },
+    "Open bus": {
+      "filename": "Open_bus.md",
+      "kind": "article",
+      "pageid": 162,
+      "url": "https://snes.nesdev.org/wiki/Open_bus"
+    },
+    "PPU pinout": {
+      "filename": "PPU_pinout.md",
+      "kind": "article",
+      "pageid": 5,
+      "url": "https://snes.nesdev.org/wiki/PPU_pinout"
+    },
+    "PPU registers": {
+      "filename": "PPU_registers.md",
+      "kind": "article",
+      "pageid": 9,
+      "url": "https://snes.nesdev.org/wiki/PPU_registers"
+    },
+    "Palettes": {
+      "filename": "Palettes.md",
+      "kind": "article",
+      "pageid": 67,
+      "url": "https://snes.nesdev.org/wiki/Palettes"
+    },
+    "ROM file formats": {
+      "filename": "ROM_file_formats.md",
+      "kind": "article",
+      "pageid": 122,
+      "url": "https://snes.nesdev.org/wiki/ROM_file_formats"
+    },
+    "ROM header": {
+      "filename": "ROM_header.md",
+      "kind": "article",
+      "pageid": 14,
+      "url": "https://snes.nesdev.org/wiki/ROM_header"
+    },
+    "Reading and writing PPU memory": {
+      "filename": "Reading_and_writing_PPU_memory.md",
+      "kind": "article",
+      "pageid": 145,
+      "url": "https://snes.nesdev.org/wiki/Reading_and_writing_PPU_memory"
+    },
+    "Register sizes in ca65": {
+      "filename": "Register_sizes_in_ca65.md",
+      "kind": "article",
+      "pageid": 79,
+      "url": "https://snes.nesdev.org/wiki/Register_sizes_in_ca65"
+    },
+    "S-CPUN Pinout": {
+      "filename": "S-CPUN_Pinout.md",
+      "kind": "article",
+      "pageid": 187,
+      "url": "https://snes.nesdev.org/wiki/S-CPUN_Pinout"
+    },
+    "S-DSP registers": {
+      "filename": "S-DSP_registers.md",
+      "kind": "article",
+      "pageid": 180,
+      "url": "https://snes.nesdev.org/wiki/S-DSP_registers"
+    },
+    "S-ENC Pinout": {
+      "filename": "S-ENC_Pinout.md",
+      "kind": "article",
+      "pageid": 189,
+      "url": "https://snes.nesdev.org/wiki/S-ENC_Pinout"
+    },
+    "S-MIX Pinout": {
+      "filename": "S-MIX_Pinout.md",
+      "kind": "article",
+      "pageid": 190,
+      "url": "https://snes.nesdev.org/wiki/S-MIX_Pinout"
+    },
+    "S-RGB Pinout": {
+      "filename": "S-RGB_Pinout.md",
+      "kind": "article",
+      "pageid": 188,
+      "url": "https://snes.nesdev.org/wiki/S-RGB_Pinout"
+    },
+    "S-SMP": {
+      "filename": "S-SMP.md",
+      "kind": "article",
+      "pageid": 106,
+      "url": "https://snes.nesdev.org/wiki/S-SMP"
+    },
+    "SA-1 Pinout": {
+      "filename": "SA-1_Pinout.md",
+      "kind": "article",
+      "pageid": 196,
+      "url": "https://snes.nesdev.org/wiki/SA-1_Pinout"
+    },
+    "SNES Development Manual": {
+      "filename": "SNES_Development_Manual.md",
+      "kind": "article",
+      "pageid": 28,
+      "url": "https://snes.nesdev.org/wiki/SNES_Development_Manual"
+    },
+    "SNES PPU for NES developers": {
+      "filename": "SNES_PPU_for_NES_developers.md",
+      "kind": "article",
+      "pageid": 12,
+      "url": "https://snes.nesdev.org/wiki/SNES_PPU_for_NES_developers"
+    },
+    "SNESdev Wiki": {
+      "filename": "SNESdev_Wiki.md",
+      "kind": "article",
+      "pageid": 1,
+      "url": "https://snes.nesdev.org/wiki/SNESdev_Wiki"
+    },
+    "SPC-700 instruction set": {
+      "filename": "SPC-700_instruction_set.md",
+      "kind": "article",
+      "pageid": 112,
+      "url": "https://snes.nesdev.org/wiki/SPC-700_instruction_set"
+    },
+    "Save file formats": {
+      "filename": "Save_file_formats.md",
+      "kind": "article",
+      "pageid": 131,
+      "url": "https://snes.nesdev.org/wiki/Save_file_formats"
+    },
+    "Scrolling a large map": {
+      "filename": "Scrolling_a_large_map.md",
+      "kind": "article",
+      "pageid": 34,
+      "url": "https://snes.nesdev.org/wiki/Scrolling_a_large_map"
+    },
+    "Signature byte": {
+      "filename": "Signature_byte.md",
+      "kind": "article",
+      "pageid": 146,
+      "url": "https://snes.nesdev.org/wiki/Signature_byte"
+    },
+    "Sprites": {
+      "filename": "Sprites.md",
+      "kind": "article",
+      "pageid": 56,
+      "url": "https://snes.nesdev.org/wiki/Sprites"
+    },
+    "Standard controller": {
+      "filename": "Standard_controller.md",
+      "kind": "article",
+      "pageid": 47,
+      "url": "https://snes.nesdev.org/wiki/Standard_controller"
+    },
+    "Struct register tradeoffs": {
+      "filename": "Struct_register_tradeoffs.md",
+      "kind": "article",
+      "pageid": 200,
+      "url": "https://snes.nesdev.org/wiki/Struct_register_tradeoffs"
+    },
+    "Subroutine call tradeoffs": {
+      "filename": "Subroutine_call_tradeoffs.md",
+      "kind": "article",
+      "pageid": 203,
+      "url": "https://snes.nesdev.org/wiki/Subroutine_call_tradeoffs"
+    },
+    "Super FX": {
+      "filename": "Super_FX.md",
+      "kind": "article",
+      "pageid": 149,
+      "url": "https://snes.nesdev.org/wiki/Super_FX"
+    },
+    "Super Scope": {
+      "filename": "Super_Scope.md",
+      "kind": "article",
+      "pageid": 191,
+      "url": "https://snes.nesdev.org/wiki/Super_Scope"
+    },
+    "Tilemaps": {
+      "filename": "Tilemaps.md",
+      "kind": "article",
+      "pageid": 52,
+      "url": "https://snes.nesdev.org/wiki/Tilemaps"
+    },
+    "Tiles": {
+      "filename": "Tiles.md",
+      "kind": "article",
+      "pageid": 51,
+      "url": "https://snes.nesdev.org/wiki/Tiles"
+    },
+    "Timing": {
+      "filename": "Timing.md",
+      "kind": "article",
+      "pageid": 50,
+      "url": "https://snes.nesdev.org/wiki/Timing"
+    },
+    "Tools": {
+      "filename": "Tools.md",
+      "kind": "article",
+      "pageid": 29,
+      "url": "https://snes.nesdev.org/wiki/Tools"
+    },
+    "Tricky-to-emulate games": {
+      "filename": "Tricky-to-emulate_games.md",
+      "kind": "article",
+      "pageid": 8,
+      "url": "https://snes.nesdev.org/wiki/Tricky-to-emulate_games"
+    },
+    "Tutorials": {
+      "filename": "Tutorials.md",
+      "kind": "article",
+      "pageid": 95,
+      "url": "https://snes.nesdev.org/wiki/Tutorials"
+    },
+    "UPD6376 Pinout": {
+      "filename": "UPD6376_Pinout.md",
+      "kind": "article",
+      "pageid": 199,
+      "url": "https://snes.nesdev.org/wiki/UPD6376_Pinout"
+    },
+    "Uncommon graphics mode games": {
+      "filename": "Uncommon_graphics_mode_games.md",
+      "kind": "article",
+      "pageid": 25,
+      "url": "https://snes.nesdev.org/wiki/Uncommon_graphics_mode_games"
+    },
+    "Using X as a pointer": {
+      "filename": "Using_X_as_a_pointer.md",
+      "kind": "article",
+      "pageid": 23,
+      "url": "https://snes.nesdev.org/wiki/Using_X_as_a_pointer"
+    },
+    "VBlank interrupts": {
+      "filename": "VBlank_interrupts.md",
+      "kind": "article",
+      "pageid": 82,
+      "url": "https://snes.nesdev.org/wiki/VBlank_interrupts"
+    },
+    "VBlank routine": {
+      "filename": "VBlank_routine.md",
+      "kind": "article",
+      "pageid": 83,
+      "url": "https://snes.nesdev.org/wiki/VBlank_routine"
+    },
+    "Variable width fonts": {
+      "filename": "Variable_width_fonts.md",
+      "kind": "article",
+      "pageid": 147,
+      "url": "https://snes.nesdev.org/wiki/Variable_width_fonts"
+    },
+    "Version differences": {
+      "filename": "Version_differences.md",
+      "kind": "article",
+      "pageid": 183,
+      "url": "https://snes.nesdev.org/wiki/Version_differences"
+    },
+    "WRAM pinout": {
+      "filename": "WRAM_pinout.md",
+      "kind": "article",
+      "pageid": 48,
+      "url": "https://snes.nesdev.org/wiki/WRAM_pinout"
+    },
+    "Windows": {
+      "filename": "Windows.md",
+      "kind": "article",
+      "pageid": 132,
+      "url": "https://snes.nesdev.org/wiki/Windows"
+    }
+  },
+  "retrieved_at": "2026-04-05T23:38:15.892282+00:00"
+}
