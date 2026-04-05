@@ -24,7 +24,7 @@ use sres_emulator::common::bus::Bus;
 use sres_emulator::common::util::RingBuffer;
 use sres_emulator::debugger::BreakReason;
 use sres_emulator::ExecutionResult;
-use sres_emulator::SyncSystem;
+use sres_emulator::System;
 
 use crate::util::Instant;
 
@@ -59,7 +59,7 @@ impl DebugUi {
 
     fn run_command(
         &mut self,
-        emulator: &mut SyncSystem,
+        emulator: &mut System,
         command: DebugCommand,
         delta_t: f64,
     ) -> ExecutionResult {
@@ -100,7 +100,7 @@ impl DebugUi {
         }
     }
 
-    pub fn run_emulator(&mut self, emulator: &mut SyncSystem, delta_t: f64) {
+    pub fn run_emulator(&mut self, emulator: &mut System, delta_t: f64) {
         puffin::profile_function!();
         if !matches!(self.command, DebugCommand::Pause) {
             match self.run_command(emulator, self.command, delta_t) {
@@ -117,7 +117,7 @@ impl DebugUi {
         }
     }
 
-    pub fn modals(&mut self, ctx: &Context, emulator: &mut SyncSystem) {
+    pub fn modals(&mut self, ctx: &Context, emulator: &mut System) {
         self.alert.render(ctx);
         self.ppu_debug.show(ctx, emulator);
         self.apu_debug.show(ctx, emulator);
@@ -143,7 +143,7 @@ impl DebugUi {
             .show(ctx, |addr| emulator.cpu.bus.peek_u8(addr));
     }
 
-    pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &SyncSystem) {
+    pub fn right_debug_panel(&mut self, ui: &mut Ui, emulator: &System) {
         self.perf_widget(ui);
         ui.separator();
         if let Some(command) = cpu::debug_controls_widget(ui, self.command) {
@@ -167,7 +167,7 @@ impl DebugUi {
         cpu::disassembly_widget(ui, emulator, &mut self.selected_memory_location);
     }
 
-    pub fn bottom_debug_panel(&mut self, ui: &mut Ui, _emulator: &SyncSystem) {
+    pub fn bottom_debug_panel(&mut self, ui: &mut Ui, _emulator: &System) {
         ui.horizontal(|ui| {
             if ui.button("PPU").clicked() {
                 self.ppu_debug.toggle();
