@@ -11,7 +11,7 @@ use sres_emulator::common::clock::ClockInfo;
 use sres_emulator::components::ppu::BackgroundId;
 use sres_emulator::components::ppu::PpuDebug;
 use sres_emulator::components::ppu::VramRenderSelection;
-use sres_emulator::SyncSystem;
+use sres_emulator::System;
 
 use crate::util::EguiImageImpl;
 
@@ -48,7 +48,7 @@ impl PpuDebugWindow {
         self.open = !self.open;
     }
 
-    pub fn show(&mut self, ctx: &Context, emulator: &SyncSystem) {
+    pub fn show(&mut self, ctx: &Context, emulator: &System) {
         egui::Window::new("PPU")
             .open(&mut self.open)
             .show(ctx, |ui| {

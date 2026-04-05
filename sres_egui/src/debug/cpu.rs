@@ -2,13 +2,13 @@ use egui::Button;
 use egui::Color32;
 use egui::RichText;
 use egui::Ui;
-use sres_emulator::SyncSystem;
+use sres_emulator::System;
 
 use super::syntax::cpu_disassembly_line;
 use super::InternalLink;
 use crate::debug::DebugCommand;
 
-pub fn cpu_state_widget(ui: &mut Ui, emulator: &SyncSystem) {
+pub fn cpu_state_widget(ui: &mut Ui, emulator: &System) {
     let trace = &emulator.cpu.debug().state();
 
     ui.label(RichText::new("CPU").strong());
@@ -27,7 +27,7 @@ pub fn cpu_state_widget(ui: &mut Ui, emulator: &SyncSystem) {
     ui.label(format!("PC: {:}", trace.instruction.address));
 }
 
-pub fn disassembly_widget(ui: &mut Ui, emulator: &SyncSystem, selected: &mut InternalLink) {
+pub fn disassembly_widget(ui: &mut Ui, emulator: &System, selected: &mut InternalLink) {
     ui.label(RichText::new("Operations").strong());
     for trace_line in emulator.debugger().cpu_trace().skip(100) {
         cpu_disassembly_line(ui, trace_line.instruction.clone(), false, selected);
