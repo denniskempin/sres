@@ -448,6 +448,8 @@ impl Ppu {
     }
 
     fn decode_obj(&self, screen_y: u32, obj_data: &mut [(u8, u8); 256]) {
+        // `get_all_sprites_on_scanline` returns high OAM index first so lower indices overwrite
+        // (matching hardware: lower OAM index wins on overlaps).
         let sprites = self.state.oam.get_all_sprites_on_scanline(screen_y);
         for (sprite, row) in sprites {
             let row_coarse = row / 8;
