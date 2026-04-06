@@ -28,6 +28,10 @@ All standard build/test/lint commands are documented in `CLAUDE.md`. Key ones:
 - **Full check**: `./check-all.sh`
 - **Auto-fix**: `./fix-all.sh`
 
+### Reference documentation
+
+The `docs/` directory contains useful reference information. Read `docs/index.md` for how to access the information.
+
 ### Non-obvious caveats
 
 - **Nightly toolchain required**: The project uses `build-std` (rebuilds stdlib from source), which requires the nightly channel specified in `rust-toolchain.toml`. The `rust-src` component must be installed.
