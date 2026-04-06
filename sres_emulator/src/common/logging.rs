@@ -32,7 +32,7 @@ impl SresLogger {
         Self {
             trace_logs: Mutex::new(VecDeque::new()),
             logger,
-            trace_as_context_only: trace_as_context_only,
+            trace_as_context_only,
         }
     }
 
