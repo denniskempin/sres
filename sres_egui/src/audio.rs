@@ -69,7 +69,7 @@ impl AudioOutput {
             .map_err(|_| BuildStreamError::StreamConfigNotSupported)?;
 
         let config = StreamConfig {
-            channels: 2,                          // Stereo output
+            channels: 2,        // Stereo output
             sample_rate: 32000, // SNES APU sample rate
             buffer_size: cpal::BufferSize::Default,
         };

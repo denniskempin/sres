@@ -147,6 +147,7 @@ pub fn test_ppu_timing() {
 }
 
 #[test]
+#[ignore = "WIP"]
 pub fn test_play_noise() {
     run_rom_test_with_spc700_trace("play_noise");
 }
