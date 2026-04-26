@@ -23,6 +23,7 @@ use crate::components::cpu::CpuEvent;
 use crate::components::cpu::CpuState;
 use crate::components::cpu::NativeVectorTable;
 use crate::components::spc700::Spc700Event;
+use crate::components::spc700::Spc700State;
 use crate::main_bus::MainBusEvent;
 
 #[derive(Clone, Debug, PartialEq, strum::Display)]
@@ -207,6 +208,34 @@ impl Debugger {
     pub fn cpu_trace(&self) -> impl Iterator<Item = &CpuState> {
         self.log.iter().filter_map(|line| match line {
             DebugEvent::Cpu(CpuEvent::Step(cpu)) => Some(cpu),
+            _ => None,
+        })
+    }
+
+    /// Removes matching events from the log (in order) and returns them. Events for which
+    /// `select` returns `None` are kept in the log.
+    pub fn drain_events<T>(&mut self, mut select: impl FnMut(&DebugEvent) -> Option<T>) -> Vec<T> {
+        let mut out = Vec::new();
+        self.log.stack.retain(|event| match select(event) {
+            Some(value) => {
+                out.push(value);
+                false
+            }
+            None => true,
+        });
+        out
+    }
+
+    pub fn drain_cpu_steps(&mut self) -> Vec<CpuState> {
+        self.drain_events(|e| match e {
+            DebugEvent::Cpu(CpuEvent::Step(state)) => Some(state.clone()),
+            _ => None,
+        })
+    }
+
+    pub fn drain_spc700_steps(&mut self) -> Vec<Spc700State> {
+        self.drain_events(|e| match e {
+            DebugEvent::Spc700(Spc700Event::Step(state)) => Some(state.clone()),
             _ => None,
         })
     }
