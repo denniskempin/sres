@@ -66,6 +66,14 @@ pub struct PpuState {
     mode7_latch: u8,
     m7a_mul: i16,
     m7b_mul: i8,
+    /// Mode 7 matrix and scroll (16-bit regs updated on paired writes like M7A).
+    m7a: i16,
+    m7b: i16,
+    m7c: i16,
+    m7d: i16,
+    m7x: u16,
+    m7y: u16,
+    m7sel: u8,
 
     counter_latch: bool,
     h_counter: u16,
@@ -94,6 +102,13 @@ impl Default for PpuState {
             mode7_latch: 0,
             m7a_mul: 0,
             m7b_mul: 0,
+            m7a: 0x0100,
+            m7b: 0,
+            m7c: 0,
+            m7d: 0x0100,
+            m7x: 0,
+            m7y: 0,
+            m7sel: 0,
             counter_latch: false,
             h_counter: 0,
             h_counter_latch: false,
@@ -165,8 +180,13 @@ impl BusDeviceU24 for Ppu {
             0x212D => self.write_ts(value),
             0x2131 => self.write_cdadsub(value),
             0x2132 => self.write_coldata(value),
+            0x211A => self.write_m7sel(value),
             0x211B => self.write_m7a(value),
             0x211C => self.write_m7b(value),
+            0x211D => self.write_m7c(value),
+            0x211E => self.write_m7d(value),
+            0x211F => self.write_m7x(value),
+            0x2120 => self.write_m7y(value),
             _ => log::warn!(
                 "PPU: Unhandled write to {:04X} = {:02X}",
                 addr.offset,
@@ -417,12 +437,87 @@ impl Ppu {
                 self.decode_bg::<Bpp4Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
                 &[S3, H1, S2, H2, S1, L1, S0, L2]
             }
+            BgMode::Mode4 => {
+                self.decode_bg::<Bpp8Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
+                self.decode_bg::<Bpp2Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG3, &mut (*bg_data)[2]);
+                &[S3, H1, S2, H2, S1, L1, S0, L2]
+            }
             BgMode::Mode5 => {
                 self.decode_bg::<Bpp4Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
                 self.decode_bg::<Bpp2Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
                 &[S3, H1, S2, H2, S1, L1, S0, L2]
             }
-            _ => panic!("Unsupported BG mode: {}", self.state.bgmode),
+            BgMode::Mode6 => {
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG1, &mut (*bg_data)[0]);
+                self.decode_bg::<Bpp4Decoder>(screen_y, BG3, &mut (*bg_data)[2]);
+                &[S3, H1, S2, S1, L1, S0]
+            }
+            BgMode::Mode7 => {
+                self.decode_mode7(screen_y, &mut (*bg_data)[0]);
+                &[S3, S2, S1, L1, S0]
+            }
+        }
+    }
+
+    /// Mode 7: affine map; 128×128 tilemap at VRAM word $0000, 8bpp tiles at word $4000+.
+    fn decode_mode7(&self, screen_y: u32, data: &mut [(u8, bool); 256]) {
+        let bg = self.state.backgrounds[BackgroundId::BG1 as usize];
+        if bg.bit_depth == BitDepth::Disabled || !(bg.main_enabled || bg.subscreen_enabled) {
+            return;
+        }
+
+        const MAP_SIDE: i32 = 128;
+        const CHR_WORD_BASE: u32 = MAP_SIDE as u32 * MAP_SIDE as u32;
+
+        let a = self.state.m7a as i32;
+        let b = self.state.m7b as i32;
+        let c = self.state.m7c as i32;
+        let d = self.state.m7d as i32;
+        let cx = self.state.m7x as i32;
+        let cy = self.state.m7y as i32;
+        let hscroll = (bg.h_offset as i32) & 0x1FFF;
+        let vscroll = (bg.v_offset as i32) & 0x1FFF;
+        let ly = screen_y as i32;
+        let h_flip = self.state.m7sel.bit(0);
+        let v_flip = self.state.m7sel.bit(1);
+
+        for screen_x in 0..256 {
+            let lx = if h_flip { 255 - screen_x } else { screen_x };
+            let ly_pix = if v_flip { 255 - ly } else { ly };
+
+            let rx = (lx << 8) - cx;
+            let ry = (ly_pix << 8) - cy;
+            let h = ((a * rx) >> 8) + ((b * ry) >> 8) + hscroll;
+            let v = ((c * rx) >> 8) + ((d * ry) >> 8) + vscroll;
+
+            let mx = (h >> 8) & (MAP_SIDE - 1);
+            let my = (v >> 8) & (MAP_SIDE - 1);
+            let map_word = self.state.vram[AddressU15((my * MAP_SIDE + mx) as u16)];
+            let tile_num = map_word.low_byte() as u32;
+            let attr = map_word.high_byte();
+            let priority = attr.bit(7);
+            let tile_vflip = attr.bit(6);
+            let tile_hflip = attr.bit(5);
+
+            let mut px = ((h >> 5) & 7) as u32;
+            let mut py = ((v >> 5) & 7) as u32;
+            if tile_hflip {
+                px = 7 - px;
+            }
+            if tile_vflip {
+                py = 7 - py;
+            }
+
+            let word_in_tile = py * 4 + (px >> 1);
+            let chr_addr = CHR_WORD_BASE + tile_num * 32 + word_in_tile;
+            let chr_word = self.state.vram[AddressU15(chr_addr as u16)];
+            let pixel = if px & 1 == 0 {
+                chr_word.low_byte()
+            } else {
+                chr_word.high_byte()
+            };
+            data[screen_x as usize] = (pixel, priority);
         }
     }
 
@@ -729,6 +824,11 @@ impl Ppu {
         }
     }
 
+    /// Register 211A: M7SEL - Mode 7 settings (h/v flip of the affine layer)
+    fn write_m7sel(&mut self, value: u8) {
+        self.state.m7sel = value;
+    }
+
     /// Register 211B: M7A - Mode 7 Matrix A
     /// 15  bit  8   7  bit  0
     ///  ---- ----   ---- ----
@@ -740,11 +840,13 @@ impl Ppu {
     /// On write: M7A = (value << 8) | mode7_latch
     ///           mode7_latch = value
     fn write_m7a(&mut self, value: u8) {
-        self.state.m7a_mul = (((value as u16) << 8) | self.state.mode7_latch as u16) as i16;
+        let full = (((value as u16) << 8) | self.state.mode7_latch as u16) as i16;
+        self.state.m7a = full;
+        self.state.m7a_mul = full;
         self.state.mode7_latch = value;
     }
 
-    /// Register 211C: M7A - Mode 7 Matrix B
+    /// Register 211C: M7B - Mode 7 Matrix B
     /// 15  bit  8   7  bit  0
     ///  ---- ----   ---- ----
     ///  DDDD DDDD   dddd dddd
@@ -755,7 +857,32 @@ impl Ppu {
     /// On write: M7B = (value << 8) | mode7_latch
     ///           mode7_latch = value
     fn write_m7b(&mut self, value: u8) {
+        self.state.m7b = (((value as u16) << 8) | self.state.mode7_latch as u16) as i16;
         self.state.m7b_mul = value as i8;
+        self.state.mode7_latch = value;
+    }
+
+    /// Register 211D: M7C
+    fn write_m7c(&mut self, value: u8) {
+        self.state.m7c = (((value as u16) << 8) | self.state.mode7_latch as u16) as i16;
+        self.state.mode7_latch = value;
+    }
+
+    /// Register 211E: M7D
+    fn write_m7d(&mut self, value: u8) {
+        self.state.m7d = (((value as u16) << 8) | self.state.mode7_latch as u16) as i16;
+        self.state.mode7_latch = value;
+    }
+
+    /// Register 211F: M7X
+    fn write_m7x(&mut self, value: u8) {
+        self.state.m7x = ((value as u16) << 8) | self.state.mode7_latch as u16;
+        self.state.mode7_latch = value;
+    }
+
+    /// Register 2120: M7Y
+    fn write_m7y(&mut self, value: u8) {
+        self.state.m7y = ((value as u16) << 8) | self.state.mode7_latch as u16;
         self.state.mode7_latch = value;
     }
 
