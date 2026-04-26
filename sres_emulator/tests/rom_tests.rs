@@ -142,7 +142,6 @@ pub fn test_ppu_timing() {
 }
 
 #[test]
-#[ignore = "WIP"]
 pub fn test_play_noise() {
     run_rom_test_with_spc700_trace("play_noise");
 }
@@ -195,11 +194,15 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
 
     let mut expected_spc_pending = Vec::new();
     let mut actual_spc_pending = Vec::new();
-    let mut cpu_line_num = 0usize;
 
-    for expected_line in mixed_trace_log_from_xz_file(&trace_path).unwrap() {
+    // The order of SPC and CPU steps is not guaranteed to be the same as in the reference. So we opportunistically validate SPC traces
+    // as they are produced. Only when we see an APUIO access, we validate to make sure SPC and CPU are in sync with events
+    // from the reference log.
+    for (i, expected_line) in mixed_trace_log_from_xz_file(&trace_path).unwrap().enumerate() {
         match expected_line.unwrap() {
-            MixedTrace::Spc700(expected_spc) => expected_spc_pending.push(expected_spc),
+            MixedTrace::Spc700(expected_spc) => {
+                expected_spc_pending.push((i, expected_spc));
+            }
             MixedTrace::Cpu(expected_cpu) => {
                 system.execute_one_instruction();
                 actual_spc_pending.extend(system.debugger().drain_spc700_steps());
@@ -209,19 +212,24 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
                     .into_iter()
                     .next()
                     .unwrap();
+                
+                // Check SPC trace if we have any pending
+                while !actual_spc_pending.is_empty() && !expected_spc_pending.is_empty() {
+                    let (pending_i, expected_spc) = expected_spc_pending.pop().unwrap();
+                    let actual_spc = actual_spc_pending.pop().unwrap();
+                    assert_spc_trace_eq(pending_i, expected_spc, actual_spc);
+                }
 
-                assert_cpu_trace_eq(cpu_line_num, expected_cpu, actual_cpu.clone());
+                assert_cpu_trace_eq(i, expected_cpu, actual_cpu.clone());
+                
                 if is_cpu_apuio_access(&actual_cpu) {
-                    assert_spc_pending_eq(cpu_line_num, &expected_spc_pending, &actual_spc_pending);
+                    assert_spc_pending_eq(i, &expected_spc_pending, &actual_spc_pending);
                     expected_spc_pending.clear();
                     actual_spc_pending.clear();
                 }
-                cpu_line_num += 1;
             }
         }
     }
-
-    assert_spc_pending_eq(cpu_line_num, &expected_spc_pending, &actual_spc_pending);
 }
 
 fn assert_cpu_trace_eq(_i: usize, mut expected: CpuState, mut actual: CpuState) {
@@ -246,7 +254,14 @@ fn is_cpu_apuio_access(cpu: &CpuState) -> bool {
         .unwrap_or(false)
 }
 
-fn assert_spc_pending_eq(cpu_line_num: usize, expected: &[Spc700State], actual: &[Spc700State]) {
+fn assert_spc_pending_eq(cpu_line_num: usize, expected: &[(usize, Spc700State)], actual: &[Spc700State]) {
+    for ((i, expected_spc), actual_spc) in expected.iter().zip(actual.iter()) {
+        assert_spc_trace_eq(
+            *i,
+            expected_spc.clone(),
+            actual_spc.clone(),
+        );
+    }
     assert_eq!(
         actual.len(),
         expected.len(),
@@ -254,14 +269,6 @@ fn assert_spc_pending_eq(cpu_line_num: usize, expected: &[Spc700State], actual: 
         actual.len(),
         expected.len()
     );
-
-    for (spc_idx, (expected_spc, actual_spc)) in expected.iter().zip(actual.iter()).enumerate() {
-        assert_spc_trace_eq(
-            cpu_line_num * 100_000 + spc_idx,
-            expected_spc.clone(),
-            actual_spc.clone(),
-        );
-    }
 }
 
 #[test]

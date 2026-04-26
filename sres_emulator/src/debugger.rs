@@ -171,10 +171,15 @@ pub enum Trigger {
 
 pub type DebuggerRef = Arc<Mutex<Debugger>>;
 
+/// The number of events the Debugger can store.
+/// This has to be quite large, since during a DMA we can generate a lot of events
+/// on a single CPU step.
+const LOG_BUFFER_SIZE: usize = 16384;
+
 pub struct Debugger {
     pub log_points: Vec<EventFilter>,
     pub break_points: Vec<EventFilter>,
-    pub log: RingBuffer<DebugEvent, 1024>,
+    pub log: RingBuffer<DebugEvent, LOG_BUFFER_SIZE>,
     pub break_reason: Option<BreakReason>,
     pub enabled: bool,
 }
