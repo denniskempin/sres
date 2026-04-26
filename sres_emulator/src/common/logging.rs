@@ -99,7 +99,7 @@ pub fn test_init(verbose: bool) {
     ONCE_INIT.call_once(|| {
         let filter_config = std::env::var("SRES_LOG").unwrap_or(
             if verbose {
-                "trace"
+                "warn,cpu_step=info,spc700_step=info"
             } else {
                 "warn,cpu_step=info"
             }
