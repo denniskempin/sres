@@ -5,6 +5,8 @@ pub mod controller;
 pub mod debugger;
 pub mod main_bus;
 
+pub use debugger::TraceStep;
+
 use std::ops::Deref;
 use std::sync::MutexGuard;
 
@@ -19,6 +21,7 @@ use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::cartridge::Cartridge;
 use crate::components::cpu::Cpu;
+use crate::components::cpu::CpuState;
 use crate::components::cpu::MainBus;
 use crate::components::ppu::Ppu;
 use crate::debugger::BreakReason;
@@ -50,6 +53,34 @@ pub type AsyncSystem = SystemImpl<AsyncBusDeviceU24<Ppu>, AsyncBusDeviceU24<Apu>
 
 /// Default implementation used in UI
 pub type System = BatchedSystem;
+
+/// Iterates CPU and SPC700 trace steps in chronological order from the debugger log.
+/// When the log has no steps, runs one CPU instruction (see [`SystemImpl::execute_one_instruction`]).
+///
+/// Created with [`SystemDebug::trace_step_iter`].
+pub struct TraceStepIter<'a, PpuT: ManagedBusDeviceU24<Ppu>, ApuT: ManagedBusDeviceU24<Apu>> {
+    system: &'a mut SystemImpl<PpuT, ApuT>,
+}
+
+impl<'a, PpuT, ApuT> Iterator for TraceStepIter<'a, PpuT, ApuT>
+where
+    PpuT: ManagedBusDeviceU24<Ppu>,
+    ApuT: ManagedBusDeviceU24<Apu>,
+{
+    type Item = TraceStep;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(step) = self.system.debugger().pop_oldest_trace_step() {
+                return Some(step);
+            }
+            if self.system.cpu.halted() {
+                return None;
+            }
+            self.system.execute_one_instruction();
+        }
+    }
+}
 
 pub struct SystemImpl<PpuT: ManagedBusDeviceU24<Ppu>, ApuT: ManagedBusDeviceU24<Apu>> {
     pub cpu: Cpu<MainBusImpl<PpuT, ApuT>>,
@@ -306,5 +337,32 @@ impl<'a, PpuT: ManagedBusDeviceU24<Ppu> + 'a, ApuT: ManagedBusDeviceU24<Apu> + '
 
     pub fn apu(&'a self) -> ApuDebug<'a> {
         self.apu.debug()
+    }
+
+    /// Yields [`TraceStep`] events logged for [`EventFilter::CpuStep`] and [`EventFilter::Spc700Step`],
+    /// oldest first. When the debugger log has no such events, advances emulation by one CPU instruction.
+    ///
+    /// Call this with `&mut` to the same [`SystemImpl`] you use for [`SystemImpl::debug`]; do not hold a
+    /// [`SystemDebug`] from that system across this call (borrow conflict).
+    pub fn trace_step_iter<'s>(
+        system: &'s mut SystemImpl<PpuT, ApuT>,
+    ) -> TraceStepIter<'s, PpuT, ApuT> {
+        system.debugger().enable();
+        system.debugger().clear_log_points();
+        system.debugger().add_log_point(EventFilter::CpuStep);
+        system.debugger().add_log_point(EventFilter::Spc700Step);
+        TraceStepIter { system }
+    }
+
+    pub fn cpu_step_iter<'s>(
+        system: &'s mut SystemImpl<PpuT, ApuT>,
+    ) -> impl Iterator<Item = CpuState> + 's {
+        system.debugger().enable();
+        system.debugger().clear_log_points();
+        system.debugger().add_log_point(EventFilter::CpuStep);
+        TraceStepIter { system }.map(|step| match step {
+            TraceStep::Cpu(cpu) => cpu,
+            TraceStep::Spc700(_) => panic!("Spc700 step in CPU step iterator"),
+        })
     }
 }

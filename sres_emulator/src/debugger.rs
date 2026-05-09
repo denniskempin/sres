@@ -26,6 +26,22 @@ use crate::components::spc700::Spc700Event;
 use crate::components::spc700::Spc700State;
 use crate::main_bus::MainBusEvent;
 
+/// One logged CPU or SPC700 instruction step from the debugger trace buffer.
+#[derive(Clone, Debug, PartialEq)]
+pub enum TraceStep {
+    Cpu(CpuState),
+    Spc700(Spc700State),
+}
+
+impl std::fmt::Display for TraceStep {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TraceStep::Cpu(state) => write!(f, "{state}"),
+            TraceStep::Spc700(state) => write!(f, "{state}"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, strum::Display)]
 pub enum DebugEvent {
     Cpu(CpuEvent),
@@ -245,6 +261,21 @@ impl Debugger {
         })
     }
 
+    /// Removes the **oldest** logged trace event. The ring buffer stores newest events at the
+    /// front (`push_front`), so this uses `pop_back`.
+    pub fn pop_oldest_trace_step(&mut self) -> Option<TraceStep> {
+        let event = self.log.stack.pop_back()?;
+        Some(match event {
+            DebugEvent::Cpu(CpuEvent::Step(state)) => TraceStep::Cpu(state),
+            DebugEvent::Spc700(Spc700Event::Step(state)) => TraceStep::Spc700(state),
+            _ => {
+                panic!(
+                    "pop_oldest_trace_step: unexpected DebugEvent (enable only CpuStep and Spc700Step log points)"
+                );
+            }
+        })
+    }
+
     pub fn take_break_reason(&mut self) -> Option<BreakReason> {
         self.break_reason.take()
     }
@@ -279,6 +310,10 @@ impl Debugger {
         if !self.has_log_point(&trigger) {
             self.log_points.push(trigger);
         }
+    }
+
+    pub fn clear_log_points(&mut self) {
+        self.log_points.clear();
     }
 
     pub fn remove_log_point(&mut self, trigger: &EventFilter) {
