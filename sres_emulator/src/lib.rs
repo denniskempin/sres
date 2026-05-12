@@ -5,14 +5,13 @@ pub mod controller;
 pub mod debugger;
 pub mod main_bus;
 
-pub use debugger::TraceStep;
-
 use std::ops::Deref;
 use std::sync::MutexGuard;
 
 use common::util::EdgeDetector;
 use components::ppu::Framebuffer;
 use components::ppu::PpuDebug;
+pub use debugger::TraceStep;
 
 use crate::apu::Apu;
 use crate::apu::ApuDebug;
