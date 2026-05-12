@@ -185,41 +185,54 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
     system.cpu.bus.bus_write(0x000000.into(), 0x93);
 
     let mut trace_steps = SystemDebug::trace_step_iter(&mut system);
-    let mut expected_spc_pending = VecDeque::new();
-    let mut actual_spc_pending = VecDeque::new();
+    let mut pending_cpu: VecDeque<CpuState> = VecDeque::new();
+    let mut pending_spc: VecDeque<Spc700State> = VecDeque::new();
 
-    // The order of SPC and CPU steps is not guaranteed to be the same as in the reference. So we opportunistically validate SPC traces
-    // as they are produced. Only when we see an APUIO access, we validate to make sure SPC and CPU are in sync with events
-    // from the reference log.
-    for (i, expected_line) in mixed_trace_log_from_xz_file(&trace_path)
+    // The order of SPC and CPU steps is not guaranteed to be the same as in the reference. Each
+    // expected step is matched immediately with the next actual step of the same type, buffering
+    // any steps of the other type encountered along the way. Only on an APUIO access do we assert
+    // that both streams are fully in sync (no buffered steps on either side).
+    for (line_num, expected_line) in mixed_trace_log_from_xz_file(&trace_path)
         .unwrap()
         .enumerate()
     {
         match expected_line.unwrap() {
             TraceStep::Spc700(expected_spc) => {
-                expected_spc_pending.push_back((i, expected_spc));
-            }
-            TraceStep::Cpu(expected_cpu) => {
-                let actual_cpu = loop {
-                    match trace_steps.next() {
-                        Some(TraceStep::Spc700(s)) => actual_spc_pending.push_back(s),
-                        Some(TraceStep::Cpu(c)) => break c,
-                        None => panic!("mixed trace ended before matching CPU step from reference"),
+                let actual_spc = if let Some(spc) = pending_spc.pop_front() {
+                    spc
+                } else {
+                    loop {
+                        match trace_steps.next() {
+                            Some(TraceStep::Spc700(spc)) => break spc,
+                            Some(TraceStep::Cpu(cpu)) => pending_cpu.push_back(cpu),
+                            None => panic!("trace ended before matching SPC step from reference"),
+                        }
                     }
                 };
-
-                while !actual_spc_pending.is_empty() && !expected_spc_pending.is_empty() {
-                    let (pending_i, expected_spc) = expected_spc_pending.pop_front().unwrap();
-                    let actual_spc = actual_spc_pending.pop_front().unwrap();
-                    assert_spc_trace_eq(pending_i, expected_spc, actual_spc);
-                }
-
-                assert_cpu_trace_eq(i, expected_cpu, actual_cpu.clone());
-
-                if is_cpu_apuio_access(&actual_cpu) {
-                    assert_spc_pending_eq(i, &expected_spc_pending, &actual_spc_pending);
-                    expected_spc_pending.clear();
-                    actual_spc_pending.clear();
+                assert_spc_trace_eq(line_num, expected_spc, actual_spc);
+            }
+            TraceStep::Cpu(expected_cpu) => {
+                let actual_cpu = if let Some(cpu) = pending_cpu.pop_front() {
+                    cpu
+                } else {
+                    loop {
+                        match trace_steps.next() {
+                            Some(TraceStep::Cpu(cpu)) => break cpu,
+                            Some(TraceStep::Spc700(spc)) => pending_spc.push_back(spc),
+                            None => panic!("trace ended before matching CPU step from reference"),
+                        }
+                    }
+                };
+                let is_apuio = is_cpu_apuio_access(&actual_cpu);
+                assert_cpu_trace_eq(line_num, expected_cpu, actual_cpu);
+                if is_apuio {
+                    assert!(
+                        pending_cpu.is_empty() && pending_spc.is_empty(),
+                        "SPC/CPU streams out of sync at APUIO access (line {line_num}): \
+                         {} pending CPU steps, {} pending SPC steps",
+                        pending_cpu.len(),
+                        pending_spc.len()
+                    );
                 }
             }
         }
@@ -246,23 +259,6 @@ fn is_cpu_apuio_access(cpu: &CpuState) -> bool {
         .effective_addr
         .map(|addr| (0x2140..=0x217F).contains(&addr.offset))
         .unwrap_or(false)
-}
-
-fn assert_spc_pending_eq(
-    cpu_line_num: usize,
-    expected: &VecDeque<(usize, Spc700State)>,
-    actual: &VecDeque<Spc700State>,
-) {
-    for ((i, expected_spc), actual_spc) in expected.iter().zip(actual.iter()) {
-        assert_spc_trace_eq(*i, expected_spc.clone(), actual_spc.clone());
-    }
-    assert_eq!(
-        actual.len(),
-        expected.len(),
-        "SPC checkpoint mismatch at CPU line {cpu_line_num}: actual {} steps, expected {} steps",
-        actual.len(),
-        expected.len()
-    );
 }
 
 #[test]
