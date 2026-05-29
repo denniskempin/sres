@@ -33,7 +33,7 @@ impl ApuBus {
     pub fn new(debug_event_collector: DebugEventCollectorRef<ApuBusEvent>) -> Self {
         Self {
             debug_event_collector: debug_event_collector.clone(),
-            spc_cycle: 4,
+            spc_cycle: 6,
             master_clock: 0,
             ram: [0; 0x10000],
             channel_in: [0; 4],
