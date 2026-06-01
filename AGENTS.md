@@ -32,6 +32,29 @@ All standard build/test/lint commands are documented in `CLAUDE.md`. Key ones:
 
 The `docs/` directory contains useful reference information. Read `docs/index.md` for how to access the information.
 
+### Codebase Summaries (AGENTS.md)
+
+Each significant directory in `sres_emulator` contains an `AGENTS.md` file written for AI agents. Use these to quickly understand a module's purpose, key types, patterns, and conventions.
+
+| Path | What it covers |
+|------|----------------|
+| `sres_emulator/src/AGENTS.md` | System orchestration (`lib.rs`), controller format, debugger |
+| `sres_emulator/src/common/AGENTS.md` | Shared types, traits, utilities, test doubles |
+| `sres_emulator/src/components/AGENTS.md` | Component independence rules, cartridge, clock |
+| `sres_emulator/src/components/cpu/AGENTS.md` | W65C816 CPU core |
+| `sres_emulator/src/components/ppu/AGENTS.md` | Picture Processing Unit (graphics rendering) |
+| `sres_emulator/src/components/s_dsp/AGENTS.md` | Sony S-DSP (audio synthesis) |
+| `sres_emulator/src/components/spc700/AGENTS.md` | Sony SPC700 audio CPU |
+| `sres_emulator/src/apu/AGENTS.md` | APU integration (SPC700 + S-DSP + timers + APUIO) |
+| `sres_emulator/src/main_bus/AGENTS.md` | Central SNES system bus, DMA, memory mapping |
+| `sres_emulator/tests/AGENTS.md` | Integration test suite overview |
+| `sres_emulator/tests/rom_tests/AGENTS.md` | CPU trace-comparison & ROM-outcome tests |
+| `sres_emulator/tests/ppu_tests/AGENTS.md` | Golden-image rendering tests |
+| `sres_emulator/tests/apu_tests/AGENTS.md` | Golden-WAV audio tests |
+| `sres_emulator/tests/asm_lib/AGENTS.md` | Test ROM assembly library |
+| `sres_emulator/benches/AGENTS.md` | Criterion benchmarks |
+| `sres_emulator/fuzz/AGENTS.md` | Fuzzing setup (`cargo-fuzz`) |
+
 ### Non-obvious caveats
 
 - **Nightly toolchain required**: The project uses `build-std` (rebuilds stdlib from source), which requires the nightly channel specified in `rust-toolchain.toml`. The `rust-src` component must be installed.
