@@ -1,3 +1,9 @@
+---
+summary: Reference for the SNES Cartridge CIC (lockout chip) instruction set, including its 4-bit register set, memory layout, and the full opcode tables for newer (6113/D411) and older (3195) CIC variants.
+keywords: SNES, CIC, lockout chip, 4-bit CPU, opcodes
+importance: 2
+---
+
 # SNES Cartridge CIC Instruction Set
 
 #### CIC Registers

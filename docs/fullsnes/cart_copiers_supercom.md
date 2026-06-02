@@ -1,3 +1,9 @@
+---
+summary: Documents the CCL Supercom Partner and Pro Fighter SNES cart copiers, including their I/O port layout for FDC, parallel port, and BIOS ROM mapping across various model revisions.
+keywords: Supercom, Pro Fighter, cart copier, FDC ports, CCL
+importance: 0
+---
+
 # SNES Cart Copiers - CCL (Supercom & Pro Fighter)
 
 Below is for Supercom Partner & Pro Fighter models from CCL (China Coach Limited). See the Front Fareast chapter for their earlier Super Magicom models (which were produced by Front & CCL), and also for Supercom Pro 2 (which was made by CCL alone, but still used the Front-like I/O ports).

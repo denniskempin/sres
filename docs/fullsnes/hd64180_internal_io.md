@@ -1,3 +1,9 @@
+---
+summary: Reference table of the HD64180 CPU's internal I/O register map, covering ASCI serial channels, CSI/O, timers, DMA channels, MMU, and control registers with their addresses, descriptions, and reset values.
+keywords: HD64180, internal I/O, register map, DMA, ASCI
+importance: 1
+---
+
 # HD64180 Internal I/O Map
 
 #### HD64180 Internal Registers

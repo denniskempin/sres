@@ -1,3 +1,9 @@
+---
+summary: Reference table of the GSU (Super FX) coprocessor's ALU opcodes, including arithmetic, logical, rotate/shift, byte, and multiply operations with cycle counts and flag effects.
+keywords: GSU, Super FX, ALU, opcodes
+importance: 1
+---
+
 # SNES Cart GSU-n CPU ALU Opcodes
 
 #### GSU ALU Opcodes

@@ -3,6 +3,9 @@ title: "BRR samples"
 source_url: "https://snes.nesdev.org/wiki/BRR_samples"
 pageid: 109
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the BRR (Bit-Rate Reduction) sample format used by the S-SMP DSP for sound playback. Covers the 9-byte block layout with shift/filter/loop/end flags, the four ADPCM decoding filters, and gaussian interpolation during playback."
+keywords: "BRR, S-DSP, ADPCM, sample format, gaussian interpolation"
+importance: 4
 ---
 
 Sound samples played by the [[S-SMP]] DSP are stored in the [BRR](https://en.wikipedia.org/wiki/Bit_Rate_Reduction) (bit-rate-reduction) data format.

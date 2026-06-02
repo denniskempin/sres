@@ -1,3 +1,9 @@
+---
+summary: Documents the pin assignments of the SA-1 coprocessor chip as used in SNES cartridges, mapping its 128 pins to SNES bus signals, ROM data/address lines, SRAM connections, and clock/control lines.
+keywords: SA-1, pinout, SNES, coprocessor, cartridge
+importance: 1
+---
+
 # SNES Pinouts SA1 Chip
 
 #### SA-1

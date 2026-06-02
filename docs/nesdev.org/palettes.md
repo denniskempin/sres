@@ -1,4 +1,10 @@
 ---
+summary: "Describes the SNES CGRAM palette of 256 15-bit RGB color entries, how to access them via the CGADD/CGDATA/CGDATAREAD PPU registers, and how palette groups are assigned to the backdrop, 2bpp/4bpp/8bpp tiles, backgrounds, and sprites."
+keywords: "CGRAM, palette, PPU registers, 15-bit RGB, CGADD/CGDATA"
+importance: 5
+---
+
+---
 title: "Palettes"
 source_url: "https://snes.nesdev.org/wiki/Palettes"
 pageid: 67

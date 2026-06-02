@@ -1,3 +1,9 @@
+---
+summary: Reference for the SPC700 audio CPU's I/O ports (addresses 00F0h-00FFh) within the SNES APU, covering the TEST and CONTROL registers, DSP register access, CPUIO communication with the 5A22 S-CPU, AUXIO ports, and the three timer divider/output registers.
+keywords: SPC700, APU, I/O ports, Timers, Waitstates
+importance: 4
+---
+
 # SNES APU SPC700 I/O Ports
 
 ```text

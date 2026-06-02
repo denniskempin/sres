@@ -1,3 +1,9 @@
+---
+summary: Credits and acknowledgments for the no$sns fullsnes documentation, including copyright, source attributions (Anomie, Boris, SNES Central, snes9x, byuu, Segher, etc.), and references for the SNES hardware specifications.
+keywords: credits, copyright, no$sns, fullsnes, acknowledgments
+importance: 0
+---
+
 # About/Credits
 
 #### About

@@ -1,3 +1,9 @@
+---
+summary: Reference for the Capcom CX4 coprocessor's 16-bit instruction set as used in select SNES cartridges (notably Mega Man X2 and X3). Documents opcodes, flag effects, addressing modes, and operand encodings including registers, immediates, and program counter addressing.
+keywords: CX4, Capcom, coprocessor, opcodes, Mega Man X2
+importance: 1
+---
+
 # SNES Cart Capcom CX4 - Opcodes
 
 #### CX4 Opcodes (all are 16bit wide)

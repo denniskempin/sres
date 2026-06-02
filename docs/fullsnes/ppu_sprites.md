@@ -1,3 +1,9 @@
+---
+summary: Reference for SNES PPU sprite (OBJ) hardware, covering the OBSEL register (object size selection and tile base address), the OAM layout (512+32 bytes holding attributes for 128 sprites), sprite attribute fields (X/Y coordinates, tile number, flip, priority, palette), and the small/large size selection bit.
+keywords: PPU, sprites, OAM, OBSEL
+importance: 5
+---
+
 # SNES PPU Sprites (OBJs)
 
 ```text

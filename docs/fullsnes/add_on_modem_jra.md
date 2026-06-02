@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES SFC Modem add-on used for the Japanese JRA PAT horse racing betting service, including its bundled NTT Data Pad controller, FLASH backup memory in its BIOS cartridge, supported baudrates, and references to related modems.
+keywords: SFC Modem, JRA PAT, FLASH Backup, NTT Data Pad, Baudrate
+importance: 1
+---
+
 # SNES Add-On SFC Modem (for JRA PAT)
 
 > **See:** [SNES Add-On SFC Modem - Data I/O](add_on_modem_data.md)

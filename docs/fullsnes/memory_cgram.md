@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES CGRAM (Color Generator Memory / palette memory) access registers, including the CGADD address register at 2121h and the CGDATA/RDCGRAM data read/write registers at 2122h/213Bh, along with the byte-level protocol for accessing palette entries and a reference to Direct Color mode.
+keywords: CGRAM, palette, CGADD, CGDATA, RDCGRAM
+importance: 5
+---
+
 # SNES Memory CGRAM Access (Palette Memory)
 
 ```text

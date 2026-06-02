@@ -1,3 +1,9 @@
+---
+summary: Pinout diagrams for the Nintendo Super System (NSS) arcade hardware, covering the cartridge slot connectors, RICOH RP5H01 decryption PROM, JAMMA edge connector, and auxiliary connectors for joypads and front-panel LEDs/buttons. Also includes notes on common NSS hardware repair issues and SNES-cartridge adaptor signal/CIC requirements.
+keywords: NSS, pinouts, JAMMA, RP5H01 PROM
+importance: 0
+---
+
 # SNES Pinouts NSS Connectors
 
 NSS - CN11/12/13 - Cartridge Slots (3 slots, 2x50pin each)

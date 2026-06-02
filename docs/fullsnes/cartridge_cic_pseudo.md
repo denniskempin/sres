@@ -1,3 +1,8 @@
+---
+summary: Pseudo-code documentation of the SNES Cartridge CIC (Checking Integrated Circuit) lockout chip, covering the main authentication loop, data stream mangling, initialization routines, random seed exchange, and timing parameters for both SNES and NES region variants.
+keywords: CIC, lockout chip, region locking, authentication, pseudo code
+importance: 1
+---
 # SNES Cartridge CIC Pseudo Code
 
 #### CicMain

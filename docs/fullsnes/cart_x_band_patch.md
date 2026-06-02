@@ -1,3 +1,9 @@
+---
+summary: Documents the memory-mapped registers used by the X-Band modem cartridge for memory patching and mapping, including the Kill/Control registers and the C000h-range patch vector configuration. Many fields are marked as unknown/investigative.
+keywords: X-Band, modem, memory patch, cartridge, registers
+importance: 1
+---
+
 # SNES Cart X-Band I/O - Memory Patch/Mapping
 
 ```text

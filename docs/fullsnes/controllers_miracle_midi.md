@@ -1,3 +1,9 @@
+---
+summary: Documents the MIDI message protocol used by the Miracle Piano Teaching Keyboard when connected to the SNES, including supported note, controller, and system-exclusive commands sent between the keyboard and console.
+keywords: Miracle Piano, MIDI, SNES controllers, SysEx
+importance: 1
+---
+
 # SNES Controllers Miracle Piano MIDI Commands
 
 The Miracle is always using MIDI messages (no matter if the messages are transferred through MIDI or RS232 or NES/SNES/Genesis controller cables). Below lists the supported MIDI messages (including "Undocumented" messages, which are used by the Miracle's SNES software, although they aren't mentioned in the Miracle's Owner's Manual).

@@ -1,3 +1,9 @@
+---
+summary: Index of SNES cartridge documentation covering general cartridge info, basic mapping schemes (LoROM and HiROM), cartridges with custom or pre-programmed coprocessors (SA-1, GSU, CX4, DSP, Seta ST018, OBC1, S-DD1, SPC7110), and special non-game expansions (Super Game Boy, Satellaview, Sufami Turbo, etc.).
+keywords: SNES cartridges, LoROM, HiROM, custom chips, mapping schemes
+importance: 2
+---
+
 # SNES Cartridges
 
 #### General Cartridge Info

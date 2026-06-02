@@ -1,3 +1,9 @@
+---
+summary: Documents the I/O ports of the Rockwell modem chip used in the SNES X-Band cartridge, mapped at FBC180h-FBC1BEh. Covers data/control/status registers, CONF modem configuration values, and X/Y RAM addresses for DSP parameters.
+keywords: X-Band, Rockwell modem, cartridge I/O, CONF
+importance: 0
+---
+
 # SNES Cart X-Band I/O - Rockwell Modem Ports
 
 Below are the I/O Ports of the Rockwell chip. In the SNES, Rockwell registers 00h-1Fh are mapped to EVEN memory addresses at FBC180h-FBC1BEh. The chip used in the SNES supports data/voice modem functions (but not fax modem functions).

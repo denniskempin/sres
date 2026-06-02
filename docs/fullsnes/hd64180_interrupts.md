@@ -1,3 +1,9 @@
+---
+summary: Reference for the interrupt system of the Hitachi HD64180 CPU, covering the interrupt priority table with vector addresses, the IL (Interrupt Vector Low) register, and the ITC (INT/TRAP Control) register including TRAP handling for undefined opcodes.
+keywords: HD64180, interrupts, TRAP, ITC register, IL register
+importance: 1
+---
+
 # HD64180 Interrupts
 
 #### Interrupts

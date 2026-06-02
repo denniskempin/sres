@@ -1,3 +1,9 @@
+---
+summary: Describes the GSU (Super FX) coprocessor's internal caches on the SNES cartridge, covering the ROM-read data cache, RAM-write data cache, and RAM-address cache, including their interactions with opcodes and the conditions that cause wait states.
+keywords: GSU, Super FX, read cache, write cache, cache
+importance: 2
+---
+
 # SNES Cart GSU-n Other Caches
 
 #### ROM-Read-Data Cache (1-byte read-ahead)

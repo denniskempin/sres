@@ -1,3 +1,9 @@
+---
+summary: Describes the X-Band Keyboard, a rare SNES peripheral add-on for the X-Band Modem that connected via a controller port. Covers the keyboard layout, the protocol for reading scancodes via IOBIT and the controller data lines, and the complete scancode tables for normal and special keys.
+keywords: X-Band keyboard, scancodes, SNES controller port, IOBIT, keyboard layout
+importance: 1
+---
+
 # SNES Controllers X-Band Keyboard
 
 The X-Band keyboard is a (rare) optional add-on for the X-Band Modem, intended to allow faster chatting/mailing as with the joypad controlled on-screen keyboard.

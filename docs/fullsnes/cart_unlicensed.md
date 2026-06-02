@@ -1,3 +1,9 @@
+---
+summary: Describes unlicensed SNES cartridge variants, including Kaiser's Gamars Puzzle and bootleg games with various copy-protection hardware (bitswap latch, constant pattern, and ALU/flipflop schemes).
+keywords: bootleg cartridges, copy protection, unlicensed, Kaiser
+importance: 1
+---
+
 # SNES Cart Unlicensed Variants
 
 #### Gamars Puzzle (Kaiser)

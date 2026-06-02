@@ -1,3 +1,9 @@
+---
+summary: Reference notes on ARM CPU architecture version numbering (ARM# vs ARMv#) and the instruction set differences between ARMv1 through ARMv6, including the meaning of variant suffixes such as M, T, and E.
+keywords: ARM, ARMv, THUMB, instruction set, variant suffixes
+importance: 2
+---
+
 # ARM Versions
 
 #### Version Numbers

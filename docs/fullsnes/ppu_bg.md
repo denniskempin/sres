@@ -1,3 +1,9 @@
+---
+summary: Documents SNES PPU background control registers (2105h-2114h), including BG modes 0-7, tile sizes, mosaic effects, screen base/size configuration, character data addressing, and scroll registers with the BG_old/M7_old write mechanism.
+keywords: BG modes, BGMODE, mosaic, BG scroll, tilemap
+importance: 5
+---
+
 # SNES PPU BG Control
 
 ```text

@@ -1,3 +1,9 @@
+---
+summary: Describes common hardware modifications for the SNES, including disabling the CIC lock chip and adding a 50Hz/60Hz regional switch on cost-down models, with pin-level details for the PPU and S-CPUN A chips.
+keywords: CIC, 50Hz/60Hz, PPU, region lock, hardware mod
+importance: 2
+---
+
 # SNES Common Mods
 
 #### CIC Disable

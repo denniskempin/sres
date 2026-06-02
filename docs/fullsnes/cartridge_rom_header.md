@@ -1,3 +1,9 @@
+---
+summary: Describes the structure and contents of the SNES cartridge ROM header, including memory mapping variants (LoROM, HiROM, ExHiROM), standard and extended header fields, CPU exception vectors, ROM/RAM sizes, checksum computation, ROM speed and map modes, chipset/co-processor identifiers, and country/region codes.
+keywords: SNES cartridge header, LoROM, HiROM, checksum, map mode
+importance: 4
+---
+
 # SNES Cartridge ROM Header
 
 The Cartridge header is mapped to 00FFxxh in SNES memory (near the exception vectors). In ROM-images it is found at offset 007Fxxh (LoROM), 00FFxxh (HiROM), or 40FFxxh (ExHiROM); add +200h to that offsets if "(imagesize AND 3FFh)=200h", ie. if there's an extra header from SWC/UFO/etc. copiers.

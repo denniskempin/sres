@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES controller I/O port registers used for manual (software-controlled) reading of joypad input, covering JOYWR (4016h write strobe), JOYA (4016h read), JOYB (4017h read), and the programmable I/O ports WRIO (4201h) and RDIO (4213h).
+keywords: JOYWR, JOYA/JOYB, manual joypad read, WRIO/RDIO, controller ports
+importance: 3
+---
+
 # SNES Controllers I/O Ports - Manual Reading
 
 #### 4016h/Write - JOYWR - Joypad Output (W)

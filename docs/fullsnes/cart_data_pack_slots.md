@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES Cart Data Pack slot found on Satellaview (BS-X) compatible cartridges, including which games support it, how the slot is detected via the cartridge header, and the FLASH memory mapping for LoROM, HiROM, SA-1, and MCC chip variants.
+keywords: Data Pack, Satellaview, BS-X, memory mapping, cartridge header
+importance: 1
+---
+
 # SNES Cart Data Pack Slots (satellaview-like mini-cartridge slot)
 
 #### Data Packs

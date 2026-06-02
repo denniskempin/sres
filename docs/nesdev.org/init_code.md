@@ -3,6 +3,9 @@ title: "Init code"
 source_url: "https://snes.nesdev.org/wiki/Init_code"
 pageid: 24
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Recommended SNES power-on initialization sequence for the 65C816 CPU, covering the reset handler setup (native mode, stack, direct page, data bank) and clearing WRAM/VRAM/CGRAM/OAM via DMA, plus a reference list of PPU register reset values."
+keywords: "init code, reset handler, PPU registers, DMA"
+importance: 1
 ---
 
 When the SNES is powered on or reset, the 65c816 will jump to the [[CPU vectors|RESET CPU vector]] (in bank 0) in 65C02 emulation mode.

@@ -1,3 +1,9 @@
+---
+summary: Documents the Venus Multi Game Hunter (MGH) SNES cart copier, including its 32K BIOS with SNES/65C816 and Genesis/Z80 entry points, I/O port mappings, and floppy disk controller access routed through an embedded 80C51 CPU.
+keywords: MGH, Venus, cart copier, 80C51, floppy disk controller
+importance: 1
+---
+
 # SNES Cart Copiers - Venus (Multi Game Hunter)
 
 MGH (Multi Game Hunter) from Venus.

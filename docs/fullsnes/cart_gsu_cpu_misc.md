@@ -1,3 +1,8 @@
+---
+summary: Miscellaneous technical notes on the GSU (Super FX) coprocessor used in SNES cartridges, covering uncached ROM/RAM read/write timings, jump/pipeline quirks, undocumented opcodes, power consumption concerns, and restart behavior after STOP.
+keywords: GSU, Super FX, opcodes, timing, jumps
+importance: 2
+---
 # SNES Cart GSU-n CPU Misc
 
 #### Uncached ROM/RAM-Read-Timings

@@ -3,6 +3,9 @@ title: "S-DSP registers"
 source_url: "https://snes.nesdev.org/wiki/S-DSP_registers"
 pageid: 180
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Reference for the SNES S-DSP registers, covering global controls (main/echo volume, key on/off, flags, FIR filter, echo buffer) and per-voice registers (volume, pitch, sample source, ADSR/GAIN envelopes). Also describes how to access these registers through the S-SMP DSPADDR/DSPDATA interface, including timing caveats and errata."
+keywords: "S-DSP registers, ADSR envelope, echo/FIR filter, BRR voices, DSPADDR/DSPDATA"
+importance: 5
 ---
 
 The S-DSP registers are accessed via the [[S-SMP#$F2-F3 DSP|DSPADDR and DSPDATA]] S-SMP registers.

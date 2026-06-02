@@ -3,6 +3,9 @@ title: "DMA registers"
 source_url: "https://snes.nesdev.org/wiki/DMA_registers"
 pageid: 19
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Reference for the SNES DMA and HDMA registers at $420B-$437F, covering the 8 DMA channels, the MDMAEN/HDMAEN enable registers, per-channel configuration (DMAPn, BBADn, A1Tn, DASn, A2An, NLTRn), transfer patterns and address adjust modes, and the on-disk format of HDMA tables (direct and indirect, with line count and repeat flag)."
+keywords: "DMA, HDMA, registers, channels, MDMAEN"
+importance: 5
 ---
 
 The SNES's **DMA** (Direct Memory Access) unit allows a game to copy graphics, palettes, [[OAM]] and more at a much higher speed than the CPU can accomplish alone. This allows a game to make better use of the limited amount of time it has in vblank to change graphical memory.

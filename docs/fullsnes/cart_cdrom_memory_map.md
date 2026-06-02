@@ -1,3 +1,9 @@
+---
+summary: Memory map and I/O port reference for the SNES CDROM prototype cartridge expansion, including the BIOS battery RAM unlock sequence, CDROM unit control registers, and the CXD1800Q decoder/FIFO register set used for disc-to-SRAM transfers.
+keywords: CDROM, CXD1800Q, Mechacon, S-WRAM
+importance: 1
+---
+
 # SNES Cart CDROM - Memory and I/O Map
 
 #### I/O Ports

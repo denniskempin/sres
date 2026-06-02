@@ -1,3 +1,9 @@
+---
+summary: Reference for the S-DSP control registers (KON, KOFF, FLG, ENDX, NON) used to manage voice keying, muting, noise generation, and echo behavior in the SNES audio processor. Includes details on KON/KOFF/FLG polling interactions and timing considerations.
+keywords: S-DSP, APU, audio, voice control, registers
+importance: 5
+---
+
 # SNES APU DSP Control Registers
 
 4Ch - KON - Key On Flags for Voice 0..7 (R/W) (W)

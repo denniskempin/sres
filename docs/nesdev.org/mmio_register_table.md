@@ -1,4 +1,9 @@
 ---
+summary: "Complete reference table for the SNES memory-mapped I/O register space. Lists all PPU registers at $2100-$213F, the 5A22/WRAM/APU system registers at $2140-$421F, and DMA registers at $4300-$437F, with addresses, bit layouts, access types, and brief notes for each. Includes a legend explaining the register access type abbreviations (R/W/8/16/24/8x2)."
+keywords: "MMIO registers, PPU, DMA, APU, WRAM"
+importance: 5
+---
+---
 title: "MMIO register table"
 source_url: "https://snes.nesdev.org/wiki/MMIO_register_table"
 pageid: 42

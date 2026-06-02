@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES audio/video output connector pinouts, including the RF TV modulator output and the Multi Out connector with assignments for RGB, S-Video, composite video, and stereo audio signals.
+keywords: pinout, Multi Out, RGB, S-Video, composite video
+importance: 1
+---
+
 # SNES Audio/Video Connector Pinouts
 
 #### RF Out (TV Modulator)

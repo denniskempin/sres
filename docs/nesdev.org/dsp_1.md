@@ -3,6 +3,9 @@ title: "DSP-1"
 source_url: "https://snes.nesdev.org/wiki/DSP-1"
 pageid: 197
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Documents the DSP-1 math coprocessor chip used in select SNES cartridges, covering its command/status registers, data type encodings, and opcodes for operations like 16-bit multiplication, floating-point inverse, trigonometry, vector distance, and 3D rotation."
+keywords: "DSP-1, coprocessor, 3D rotation, fixed-point math"
+importance: 2
 ---
 
 ```

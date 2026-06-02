@@ -1,3 +1,9 @@
+---
+summary: Describes the SPC7110 cartridge's memory map, I/O port definitions, ROM image format, data ROM decompression ports, direct data ROM access, unsigned multiply/divide unit, memory mapping controls, and external RTC-4513 ports.
+keywords: SPC7110, Memory Map, I/O Ports, Data ROM Decompression, HiROM
+importance: 2
+---
+
 # SNES Cart SPC7110 Memory and I/O Map
 
 #### Memory Map

@@ -3,6 +3,9 @@ title: "APU pinout"
 source_url: "https://snes.nesdev.org/wiki/APU_pinout"
 pageid: 7
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Pinout reference for the SNES Audio Processing Unit (APU) hardware, covering the S-SMP audio CPU (QFP-64), S-DSP audio DSP (QFP-80), SHVC-SOUND module connector, and the combined S-APU chip used in later revisions. Provides ASCII pin diagrams, signal descriptions for clocks and buses, and notes on chip variants. Sourced from the nesdev.org SNES wiki."
+keywords: "APU, S-SMP, S-DSP, pinout, SHVC-SOUND"
+importance: 3
 ---
 
 ## S-SMP

@@ -1,3 +1,9 @@
+---
+summary: Overview of the Zilog Z80 CPU register set, including main and shadow registers, index registers (IX/IY), refresh (R) and interrupt (I) registers, and undocumented 8-bit halves of IX/IY. The Z80 is not part of the SNES hardware.
+keywords: Z80, registers, IX/IY, shadow registers
+importance: 0
+---
+
 # Z80 Register Set
 
 #### Register Summary

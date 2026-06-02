@@ -1,3 +1,9 @@
+---
+summary: Documents the pinouts for the BSX (Satellaview) FLASH card slot connector and the BSX-EXT port, including the two conflicting 62-pin numbering schemes, the signal-to-SNES-cartridge-slot mappings, and the BSX-EXT port's partially reverse-engineered pin assignments.
+keywords: BSX, Satellaview, pinout, cartridge slot, FLASH card slot
+importance: 1
+---
+
 # SNES Pinouts BSX Connectors
 
 FLASH Card Slot (as found on a "BSC-1A5M-01" board) There are two conflicting numbering schemes for the 62pin connector.

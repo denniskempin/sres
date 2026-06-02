@@ -1,3 +1,9 @@
+---
+summary: SNES APU signal-flow block diagrams covering DSP voice processing (BRR decode, pitch, ADSR, noise), the mixer/reverb path with FIR echo filter, and external sound output/input through the analog mixer.
+keywords: APU, DSP, BRR, echo/reverb, audio mixing
+importance: 4
+---
+
 # SNES APU Block Diagram
 
 DSP Voice Block Diagram (n=voice, 0..7)

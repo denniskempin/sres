@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES DMA and HDMA start/enable registers (MDMAEN at 420Bh and HDMAEN at 420Ch), covering channel ordering (0 first through 7 last), HDMA priority over DMA, and the restriction that channels activated for H-DMA must not be used for GP-DMA.
+keywords: DMA, HDMA, MDMAEN, HDMAEN, transfer ordering
+importance: 5
+---
+
 # SNES DMA and HDMA Start/Enable Registers
 
 ```text

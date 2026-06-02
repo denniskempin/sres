@@ -1,3 +1,9 @@
+---
+summary: Pinout reference for miscellaneous SNES support chips, including the S-ENC RGB-to-composite video encoder, the PAL-only S-CLK clock generator, the NEC uPD6376 stereo audio DAC, the LM324 quad audio amplifier, and the (undocumented) S-MIX chip.
+keywords: pinouts, S-ENC, uPD6376, LM324, S-CLK
+importance: 2
+---
+
 # SNES Pinouts Misc Chips
 
 #### S-ENC Pin-Outs

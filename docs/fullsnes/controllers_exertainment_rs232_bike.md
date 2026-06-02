@@ -1,3 +1,9 @@
+---
+summary: Documents the RS232 communication protocol for the SNES Exertainment Bike during the biking phase, detailing the packet structures exchanged between the SNES and the bike (start, active, pause, exit, user parameters), and the meaning of each byte including speed, time, calories, distance, pulse, fit test score, hills, and checksums.
+keywords: SNES, Exertainment, Bike, RS232, packet
+importance: 1
+---
+
 # SNES Controllers Exertainment - RS232 Data Packets Biking Phase
 
 #### Communication Phase

@@ -1,4 +1,7 @@
 ---
+summary: "Pinout of the SNES cartridge connector showing all 62 pins with signal names, directions, and descriptions for the CPU/peripheral address buses, shared data bus, control lines (/ROMSEL, /WRAMSEL, /PRD, /PWR, /IRQ, /RESET), clocks (SYSTEM CLK, PHI2, CIC CLK), power/ground, stereo audio inputs, and the EXPAND expansion signal."
+keywords: "pinout, cartridge connector, A bus, B bus, audio"
+importance: 2
 title: "Cartridge connector"
 source_url: "https://snes.nesdev.org/wiki/Cartridge_connector"
 pageid: 2

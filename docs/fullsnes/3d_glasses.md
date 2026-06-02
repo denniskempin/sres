@@ -1,3 +1,9 @@
+---
+summary: Brief overview of 3D glasses used on the SNES, focusing on the dark/clear Pulfrich Effect (Nuoptix) glasses used by the only known SNES 3D game, Jim Power: The Lost Dimension in 3-D.
+keywords: Pulfrich effect, 3D glasses, Nuoptix, Jim Power, periphery
+importance: 1
+---
+
 # SNES 3D Glasses
 
 #### SNES 3D Games (there's only one known game)

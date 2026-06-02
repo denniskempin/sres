@@ -1,3 +1,9 @@
+---
+summary: Reference for the SNES cartridge GSU (Super FX) co-processor general I/O port map, covering the 16 CPU registers (R0-R15), status flag register (SFR), program/ROM/RAM bank registers, cache base, configuration registers (CFGR/CLSR), backup RAM, version code, and on-chip cache RAM.
+keywords: GSU, Super FX, I/O ports, cartridge co-processor, registers
+importance: 2
+---
+
 # SNES Cart GSU-n General I/O Ports
 
 3000h-301Fh - R0-R15 - CPU Registers (R/W) 16bit CPU registers (see GSU I/O map for additional details on each register).

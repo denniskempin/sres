@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES Multiplayer 5 (MP5) adaptor, which plugs into one controller port and supports up to five players. Covers the register-level reading protocol using $4016h/$4017h and $4201h, hardware detection methods, supported/unsupported games, and the official Nintendo schematic.
+keywords: MP5, Multitap, controller port, $4201h, Tribal Tap
+importance: 1
+---
+
 # SNES Controllers Multiplayer 5 (MP5) (Five Player Adaptor)
 
 The MP5 plugs into one Controller Port on the SNES (typically Port 2), and has 4 ports for controllers to be plugged into it (labeled 2 through 5). It also has an override switch which makes it pass through Pad 2 and ignore everything else.

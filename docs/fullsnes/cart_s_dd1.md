@@ -1,3 +1,8 @@
+---
+summary: Technical reference for the SNES S-DD1 (Data Decompressor) cartridge coprocessor, used by only two games (Star Ocean and Street Fighter Alpha 2). Covers its I/O port map (DMA enable/bank-switch registers), HiROM-style memory map, supported PCB versions (SHVC-1NON, SNSP-1NON, SHVC-LN3B), and pinouts.
+keywords: S-DD1, Data Decompressor, DMA, cartridge coprocessor
+importance: 1
+---
 # SNES Cart S-DD1 (Data Decompressor) (2 games)
 
 The S-DD1 is a 100pin Data Decompression chip, used by only two games:

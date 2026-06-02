@@ -1,3 +1,8 @@
+---
+summary: Lists known BIOS versions for SNES cart copier devices (Game Doctor, Super Wild Card, Super UFO, Multi Game Hunter, etc.), including I/O port addresses, BIOS sizes, and release dates.
+keywords: cart copier, BIOS, Super Wild Card, Game Doctor, Super UFO
+importance: 0
+---
 # SNES Cart Copiers - BIOSes
 
 #### Copier BIOSes

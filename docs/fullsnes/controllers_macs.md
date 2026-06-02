@@ -1,3 +1,9 @@
+---
+summary: Documentation of the M.A.C.S. (Multi-Purpose Arcade Combat Simulator) lightgun, a US Army training peripherial that combines a lightpen with an M16 rifle replica and connects to the SNES's 2nd controller port.
+keywords: lightgun, M.A.C.S., lightpen, peripherial
+importance: 1
+---
+
 # SNES Controllers M.A.C.S. (Lightgun)
 
 #### Multi-Purpose Arcade Combat Simulator (M.A.C.S.)

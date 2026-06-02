@@ -1,3 +1,9 @@
+---
+summary: Methods for detecting which controllers (Mouse, Super Scope, Multiplayer 5, etc.) a SNES ROM supports by scanning the ROM image for specific BIOS strings, opcode patterns, or known title strings. Also covers the NSRT header format for explicit controller metadata.
+keywords: controller detection, ROM scanning, BIOS strings, NSRT header
+importance: 2
+---
+
 # SNES Controllers Detecting Controller Support of ROM-Images
 
 Below are some methods to detect controller support by examining ROM-images.

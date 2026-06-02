@@ -1,3 +1,9 @@
+---
+summary: Documents the Gamars Super Disk FC-301 SNES cart copier, listing its known hardware variants (ALMA Super Disk F-16, FR-402 Super Disk) along with the required SRAM mirroring and FDC register mappings. Also clarifies that the commonly labeled "Gamars (Copier BIOS)" ROM image is actually a puzzle game.
+keywords: Gamars, cart copier, FDC, SRAM, ALMA
+importance: 1
+---
+
 # SNES Cart Copiers - Gamars Copier
 
 Known as:

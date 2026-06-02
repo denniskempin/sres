@@ -1,3 +1,8 @@
+---
+summary: Documentation for the Capcom CX4 chip, a Hitachi HG51B169 RISC CPU coprocessor used only in Mega Man X2 and X3. Covers memory map, registers, internal data ROM lookup tables (Div/Sqrt/Sin/Cos), cartridge header, and CPU timings.
+keywords: CX4, Capcom, HG51B169, Mega Man X2/X3, coprocessor
+importance: 1
+---
 # SNES Cart Capcom CX4 (programmable RISC CPU) (Mega Man X 2-3) (2 games)
 
 > **See:** [SNES Cart Capcom CX4 - I/O Ports](cart_cx4_io.md)

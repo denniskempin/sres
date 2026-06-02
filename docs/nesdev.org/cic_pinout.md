@@ -3,6 +3,9 @@ title: "CIC Pinout"
 source_url: "https://snes.nesdev.org/wiki/CIC_Pinout"
 pageid: 186
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Pinout reference for the SNES CIC (Comparing Integrated Chip) lockout chip, covering the Key chip in cartridges (DIP package) and the Lock chip in consoles (surface-mount package), including signal names like D1, D2, CLK, and RST."
+keywords: "CIC, lockout chip, pinout, region locking, SNES"
+importance: 2
 ---
 
 Pinout of the CIC Lockout Chip.

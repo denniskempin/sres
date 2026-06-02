@@ -1,3 +1,9 @@
+---
+summary: Documents the I/O port layout and configuration of the HD64180 CPU used in the SFC-Box peripheral, covering ASCI serial channels, CSI/O, timers, interrupts, CPU registers, and the OSD chip communication protocol.
+keywords: HD64180, SFC-Box, ASCI, CSI/O, OSD
+importance: 0
+---
+
 # SFC-Box I/O Ports (HD64180 Ports)
 
 #### System Clock

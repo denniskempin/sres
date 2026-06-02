@@ -1,3 +1,8 @@
+---
+summary: Documents the SNES APU S-DSP ADSR and Gain envelope registers (VxADSR1, VxADSR2, VxGAIN, VxENVX, VxOUTX), describing Attack/Decay/Sustain/Release phase transitions, Direct and Custom Gain modes, and the 5-bit rate timing table used to step envelope levels.
+keywords: ADSR, Gain, Envelope, S-DSP, Voice
+importance: 5
+---
 # SNES APU DSP ADSR/Gain Envelope
 
 x5h - VxADSR1 - ADSR settings for Voice 0..7, lower 8bit (R/W) x6h - VxADSR2 - ADSR settings for Voice 0..7, upper 8bit (R/W)

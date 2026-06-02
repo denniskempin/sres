@@ -1,3 +1,9 @@
+---
+summary: Reference documentation for ARM coprocessor instructions (MRC/MCR register transfers, LDC/STC data transfers, and CDP data operations), detailing their bit-level encoding, ARM version support, execution cycles, and noting that these opcodes are irrelevant for the GBA's dummy CP14 and only relevant for the NDS9's CP15 unit.
+keywords: ARM opcodes, coprocessor instructions, MRC/MCR, LDC/STC, CDP
+importance: 0
+---
+
 # ARM Opcodes: Coprocessor Instructions (MRC/MCR, LDC/STC, CDP)
 
 Coprocessor Register Transfers (MRC, MCR) (with ARM Register read/write)

@@ -1,3 +1,9 @@
+---
+summary: Details the SNES APU DSP pitch system, including the pitch scaler registers, pitch modulation (PMON), the pitch counter algorithm, maximum sound frequency, 4-point Gaussian interpolation with its gauss table, and waveform examples illustrating interpolation behavior.
+keywords: SNES, APU, DSP, BRR, pitch, PMON, gaussian interpolation
+importance: 5
+---
+
 # SNES APU DSP BRR Pitch
 
 x2h - VxPITCHL - Pitch scaler for Voice 0..7, lower 8bit (R/W) x3h - VxPITCHH - Pitch scaler for Voice 0..7, upper 6bit (R/W)

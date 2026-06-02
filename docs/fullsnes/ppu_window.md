@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES PPU window feature, which uses horizontal regions (defined by registers 2126h-212Bh) combined with mask logic (OR/AND/XOR/XNOR) to selectively disable BG/OBJ layers and alter Color-Math effects on the main and sub screens.
+keywords: PPU, window, W12SEL, W34SEL, WOBJSEL, mask logic
+importance: 4
+---
+
 # SNES PPU Window
 
 The window feature allows to disable BG/OBJ layers in selected regions, and also to alter Color-Math effects in selected regions.

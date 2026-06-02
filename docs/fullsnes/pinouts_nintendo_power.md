@@ -1,3 +1,9 @@
+---
+summary: Pinout reference for the MX15001TFC chip used in Nintendo Power SNES flashcarts, listing the 100-pin mapping between SNES bus signals, flash memory, SRAM, and control lines. Also notes the CIC_ERROR behavior and PAL compatibility caveats.
+keywords: SNES, Nintendo Power, flashcart, MX15001TFC, pinout
+importance: 1
+---
+
 # SNES Pinouts Nintendo Power Flashcarts
 
 #### MX15001TFC

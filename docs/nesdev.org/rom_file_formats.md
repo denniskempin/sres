@@ -3,6 +3,9 @@ title: "ROM file formats"
 source_url: "https://snes.nesdev.org/wiki/ROM_file_formats"
 pageid: 122
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the on-disk formats used for Super NES ROM files, including the .SFC and .SMC extensions and the optional 512-byte copier header. Covers how the cartridge ROM is laid out for LoROM, HiROM, and ExHiROM mappings, and how to detect whether a ROM file is headered."
+keywords: "LoROM, HiROM, ExHiROM, headered ROM, SFC"
+importance: 5
 ---
 
 Super NES ROM files are usually found in one of 2 variations of the same format.

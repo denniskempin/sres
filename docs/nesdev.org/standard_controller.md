@@ -1,4 +1,10 @@
 ---
+summary: Describes the SNES standard controller's 16-bit button report, including the JOY1H/JOY1L register layout, button mapping, and the 4-bit peripheral signature used to identify connected devices. Covers both automatic reads via $4218/$4219 and manual reads through JOYSER0/JOYSER1.
+keywords: standard controller, JOY1, JOYSER0, button report, peripheral signature
+importance: 3
+---
+
+---
 title: "Standard controller"
 source_url: "https://snes.nesdev.org/wiki/Standard_controller"
 pageid: 47

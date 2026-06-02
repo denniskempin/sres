@@ -1,3 +1,9 @@
+---
+summary: Documents predefined items in the Satellaview BS-X cartridge, including their memory pointers, item data format, and shop mechanics. Covers the 8Fh-byte item structure with name, description, activation message, and price fields.
+keywords: Satellaview, BS-X, cartridge items, item format, shops
+importance: 0
+---
+
 # SNES Cart Satellaview Items
 
 Predefined Items (and their 24bit memory pointers) Items sold in C-Skyscraper:

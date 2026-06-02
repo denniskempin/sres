@@ -1,4 +1,9 @@
 ---
+summary: "Reference documentation for the SNES controller connector pinout, covering the 7-pin pinout of both controller ports, signal descriptions, and standard controller wiring color codes."
+keywords: "controller connector, pinout, joypad, JOYSER, JOYOUT"
+importance: 4
+---
+---
 title: "Controller connector"
 source_url: "https://snes.nesdev.org/wiki/Controller_connector"
 pageid: 92

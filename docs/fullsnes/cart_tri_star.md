@@ -1,3 +1,9 @@
+---
+summary: Documents the Tri-Star (Super 8) cartridge adaptor that allows playing NES/Famicom games on the SNES, covering its BIOS memory and I/O map, joypad handling, NES/SNES mode selection, known BIOS versions, and hardware component list.
+keywords: Tri-Star, Super 8, NES adapter, NOAC, BIOS
+importance: 1
+---
+
 # SNES Cart Tri-Star (aka Super 8) (allows to play NES games on the SNES)
 
 The Tri-Star is an adaptor for playing NES games on the SNES (similar to the Super Gameboy which allows to play Gameboy games on SNES). The thing have three cartridge slots (two for western/japanese NES/Famicom cartridges, and one for SNES cartridges).

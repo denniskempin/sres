@@ -1,3 +1,8 @@
+---
+summary: Documents the SNES X-Band modem cartridge, a rare peripheral used for networked gaming via phone lines. Covers its memory map, I/O ports, supported games, hidden codes, and PCB component lists.
+keywords: X-Band modem, cartridge peripheral, networked gaming, memory map
+importance: 0
+---
 # SNES Cart X-Band Misc
 
 Info...

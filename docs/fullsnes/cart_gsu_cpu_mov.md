@@ -1,3 +1,8 @@
+---
+summary: Reference for the GSU (SuperFX) co-processor's MOV-family opcodes, including register/immediate moves, byte/word loads from ROM and RAM, bank switching, and bitmap pixel operations.
+keywords: GSU, SuperFX, MOV, register transfer
+importance: 1
+---
 # SNES Cart GSU-n CPU MOV Opcodes
 
 #### GSU MOV Opcodes (Register/Immediate)

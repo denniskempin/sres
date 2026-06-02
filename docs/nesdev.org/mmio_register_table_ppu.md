@@ -1,4 +1,9 @@
 ---
+summary: Reference table of the SNES PPU's memory-mapped I/O registers, covering addresses $2100-$213F with name, bit layout, access type, and notes for each register.
+keywords: PPU, MMIO registers, SNES, register table
+importance: 5
+---
+---
 title: "MMIO register table/PPU"
 source_url: "https://snes.nesdev.org/wiki/MMIO_register_table/PPU"
 pageid: 43

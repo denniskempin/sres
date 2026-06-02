@@ -1,3 +1,9 @@
+---
+summary: Pinouts and logic tables for SNES cartridge Memory Address Decoder (MAD) chips, including MAD-1, MAD-2, MAD-R, and related battery controller chips like MM1026 and MM1134. Documents HiROM/LoROM address decoding, chip select signals, SRAM write-protection, and power-supply switching between VCC and battery.
+keywords: MAD-1, MAD-R, SNES cartridge, HiROM, LoROM
+importance: 2
+---
+
 # SNES Pinouts MAD Chips
 
 #### MAD-1 (and MAD-1 A) Pinouts (Memory Address Decoder 1)

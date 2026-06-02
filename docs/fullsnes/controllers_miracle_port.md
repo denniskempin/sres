@@ -1,3 +1,9 @@
+---
+summary: Technical specification of the SNES controller port protocol used by the Miracle Piano Teaching System keyboard. Describes the read/write direction signaling via strobe pulse length, the bit-level data format, and example byte transfer routines.
+keywords: Miracle Piano, Controller Port, Strobe Protocol, SNES Peripherals
+importance: 1
+---
+
 # SNES Controllers Miracle Piano Controller Port
 
 #### Miracle Controller Port Transfer

@@ -1,4 +1,10 @@
 ---
+summary: "Describes the structure of the SNES cartridge ROM header, including the cartridge title, map mode, ROM/RAM size, chipset, country, developer ID, version, and checksum fields. Also covers the expanded header, checksum computation for non-power-of-2 ROMs, and verification heuristics used by emulators to detect a valid header."
+keywords: "ROM header, map mode, checksum, chipset, cartridge"
+importance: 4
+---
+
+---
 title: "ROM header"
 source_url: "https://snes.nesdev.org/wiki/ROM_header"
 pageid: 14

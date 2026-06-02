@@ -1,4 +1,9 @@
 ---
+summary: Describes the DSP family of coprocessors (DSP-1, DSP-2, DSP-3, DSP-4) used in a small number of SNES games to provide computational support, often for 3D features. The SNES CPU communicates with these chips through memory-mapped registers, writing commands and reading back results. Not to be confused with the S-DSP sound device built into the SNES.
+keywords: DSP-1, coprocessor, SNES enhancement chip, 3D graphics
+importance: 2
+---
+---
 title: "DSP Expansion"
 source_url: "https://snes.nesdev.org/wiki/DSP_Expansion"
 pageid: 160

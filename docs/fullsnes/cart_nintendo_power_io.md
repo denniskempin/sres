@@ -1,3 +1,9 @@
+---
+summary: Describes the Nintendo Power cartridge I/O port map (2400h-2407h) including the command register, status, size, base, and SRAM mapping values, as well as the MX15001 initialization sequence used to select and boot a game file.
+keywords: Nintendo Power, I/O Ports, Cartridge, Memory Map, MX15001
+importance: 1
+---
+
 # SNES Cart Nintendo Power - I/O Ports
 
 Nintendo Power I/O Map  Write registers:

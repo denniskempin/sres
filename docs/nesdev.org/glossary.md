@@ -1,4 +1,9 @@
 ---
+summary: "A glossary of common SNES terminology, organized into CPU, Graphics, and Sound categories. Defines core terms such as S-CPU, DMA, HDMA, VRAM, CGRAM, OAM, S-DSP, S-SMP, and SPC700 along with their roles in the system."
+keywords: "glossary, terminology, CPU, PPU, audio"
+importance: 4
+---
+---
 title: "Glossary"
 source_url: "https://snes.nesdev.org/wiki/Glossary"
 pageid: 85

@@ -1,3 +1,9 @@
+---
+summary: Overview of the unreleased SNES CDROM drive add-ons developed by Sony (which led to the PlayStation) and later Philips, plus released third-party Copier CDROM solutions. Acts as an index linking to detailed sub-documents on memory map, BIOS, mechacon, and FIFO.
+keywords: SNES CDROM, Sony prototype, Philips prototype, unreleased peripheral
+importance: 0
+---
+
 # SNES Cart CDROM Drive
 
 #### SNES Sony CDROM (unreleased)

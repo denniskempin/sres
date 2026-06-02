@@ -1,4 +1,9 @@
 ---
+summary: "A short collection of Mode 7 perspective effect examples for the SNES PPU, with cross-references to related Mode 7 documentation and links to external example implementations and guides."
+keywords: "Mode 7, PPU, perspective, background, transform"
+importance: 4
+---
+---
 title: "Mode 7 perspective effects"
 source_url: "https://snes.nesdev.org/wiki/Mode_7_perspective_effects"
 pageid: 96

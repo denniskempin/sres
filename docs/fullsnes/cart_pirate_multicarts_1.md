@@ -1,3 +1,9 @@
+---
+summary: Technical reference for SNES pirate X-in-1 multicart cartridges, covering cartridge headers, ROM dumps, bank-mapping via custom FFFFxxh/6FFFxxh I/O ports, and specific multicart titles and their chipsets.
+keywords: pirate cartridges, multicarts, bank mapping, FFFFxx port
+importance: 1
+---
+
 # SNES Cart Pirate X-in-1 Multicarts (1)
 
 There are several X-in-1 Multicarts, all containing the same type of text based GUI, and thus probably all made by the same company.

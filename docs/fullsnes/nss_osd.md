@@ -1,3 +1,9 @@
+---
+summary: Reference documentation for the Mitsubishi M50458-001SP On-Screen Display (OSD) controller used in the Nintendo Satellaview (NSS), covering its character RAM addressing, attribute/character codes, configuration registers, display modes, blinking/underline behavior, and the values used by the NSS BIOS.
+keywords: M50458, OSD, Satellaview, character RAM, display registers
+importance: 1
+---
+
 # NSS On-Screen Controller (OSD)
 
 #### On-Screen Display Controller M50458-001SP (Mitsubishi Microcomputers)

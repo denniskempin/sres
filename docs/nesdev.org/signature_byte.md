@@ -3,6 +3,9 @@ title: "Signature byte"
 source_url: "https://snes.nesdev.org/wiki/Signature_byte"
 pageid: 146
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the signature byte that follows BRK, COP, and WDM instructions on the 65C816, advancing the PC by two bytes even though the hardware ignores the second operand. Covers software interrupt handling, stack layout, vector locations, and how different assemblers treat the optional byte."
+keywords: "signature byte, BRK, COP, WDM, 65C816"
+importance: 3
 ---
 
 In 65x parlance, a **signature byte** is the byte that follows certain instructions, including:

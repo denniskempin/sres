@@ -1,3 +1,9 @@
+---
+summary: Explains the SNES cartridge ROM-image interleave format used by old copiers like Game Doctor and UFO, including how to detect interleaved files and how deinterleaving works. Also covers the ExHiROM file ordering used by a small number of special cartridges.
+keywords: HiROM, LoROM, ExHiROM, Game Doctor, ROM interleave
+importance: 1
+---
+
 # SNES Cartridge ROM-Image Interleave
 
 Some ROM images are "interleaved", meaning that their content is ordered differently as how it appears in SNES memory. The interleaved format dates back to old copiers, most modern tools use/prefer normal ROM-images without interleave, but old interleaved files may still show up here and there.

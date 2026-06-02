@@ -1,3 +1,9 @@
+---
+summary: Reference for the eight SNES DMA/HDMA channel registers at 43x0h..43xFh, covering DMAPx, BBADx, A1TxL/H, A1Bx, DASxL/H, DASBx, A2AxL/H, NTRLx, and the unused/mirror slots. Documents DMA transfer unit selection, normal DMA address/byte-counter behavior, direct and indirect HDMA addressing, and HDMA table entry formats.
+keywords: DMA, HDMA, registers, PPU, channels
+importance: 5
+---
+
 # SNES DMA and HDMA Channel 0..7 Registers
 
 For below ports, x = Channel number (0-7)

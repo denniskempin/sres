@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES S-DSP echo processing subsystem, including the EVOLx/EFB/EON/ESA/EDL registers and the 8-tap FIR filter coefficients that implement the echo ring buffer, feedback path, and per-voice echo enable flags.
+keywords: S-DSP, echo, FIR filter, ring buffer, ESA, EDL
+importance: 4
+---
+
 # SNES APU DSP Echo Registers
 
 2Ch - EVOLL - Left channel echo volume (R/W) 3Ch - EVOLR - Right channel echo volume (R/W)

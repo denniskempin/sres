@@ -1,4 +1,9 @@
 ---
+summary: Catalog of test ROMs useful for developing a SNES emulator, covering general accuracy tests, CPU multiplier behaviour, PPU rendering modes and CGWSEL behaviour, and input peripheral (controller, mouse) testing.
+keywords: SNES test ROMs, emulator testing, PPU rendering, CPU tests, input peripherals
+importance: 1
+---
+---
 title: "Emulator tests"
 source_url: "https://snes.nesdev.org/wiki/Emulator_tests"
 pageid: 94

@@ -1,3 +1,9 @@
+---
+summary: Notes on the SNES SPC7110 cartridge chip, including examples of data compression in Mode0/1/2, the built-in selftest program common to all SPC7110 games, and the SHVC-BDH3B-01 / SHVC-LDH3C-01 PCB variants.
+keywords: SPC7110, data compression, SNES cartridge, PCB, selftest
+importance: 1
+---
+
 # SNES Cart SPC7110 Notes
 
 #### Compression/Decompression Example

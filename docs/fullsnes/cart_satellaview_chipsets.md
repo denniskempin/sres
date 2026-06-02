@@ -1,3 +1,9 @@
+---
+summary: Hardware reference documenting the PCBs and chipsets used by the Satellaview (BSX) add-on for the SNES, including the BIOS cartridge (BSC-1A5B9P-01), the MAIN-BSA-01 receiver unit, the BSMC memory cards, and game cartridges with onboard flash slots.
+keywords: Satellaview, BSX, Nintendo Power, flashcart, cartridge
+importance: 1
+---
+
 # SNES Cart Satellaview Chipsets
 
 #### BSC-1A5B9P-01 (1995) (BIOS cartridge PCB)

@@ -1,3 +1,9 @@
+---
+summary: Catalog of the X-Band modem BIOS function tables for SNES, listing the function numbers invoked via `CALL E00040h` (X-Band BIOS functions) and `CALL E000CCh` (X-Band GAME alias functions), with columns for Sega Genesis, SNES/US, and SNES/JP variants. Documents the large dispatch table that the Sega-developed X-Band peripheral exposes to games for memory management, graphics, networking, database, user interface, controllers, and smart card operations.
+keywords: X-Band, modem, BIOS functions, Sega, SNES
+importance: 1
+---
+
 # SNES Cart X-Band BIOS Functions
 
 #### X-Band BIOS Functions (CALL E00040h)

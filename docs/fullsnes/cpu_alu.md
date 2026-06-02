@@ -1,3 +1,9 @@
+---
+summary: Documents the W65C816 CPU's arithmetic and logical instructions, including ALU opcodes (ORA, AND, EOR, ADC, SBC, CMP, CPX, CPY) with their addressing modes, the BIT test instruction, INC/DEC operations, and TSB/TRB test-and-set/reset instructions, with flag effect details.
+keywords: W65C816, ALU, opcodes, addressing modes, flags
+importance: 4
+---
+
 # CPU Arithmetic/Logical Operations
 
 #### ALU Opcodes

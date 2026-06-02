@@ -1,3 +1,8 @@
+---
+summary: Describes the SNES PPU interrupt system, covering the NMI enable and vblank flag registers, the H/V-count timer registers for triggering IRQs, and the status/acknowledgment registers (RDNMI, TIMEUP, HVBJOY). Also documents additional IRQ sources from the cartridge and expansion ports.
+keywords: NMI, IRQ, VBlank, H/V timer, PPU registers
+importance: 4
+---
 # SNES PPU Interrupts
 
 ```text

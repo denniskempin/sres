@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the Nintendo Power flash cartridge's extra commands, mapping registers, and FLASH memory operations beyond the standard LoROM/HiROM mapping. Documents the boot-time chip-info sequence, hidden mapping info format, and the Nintendo Power command set issued via SNES port $2400.
+keywords: Nintendo Power, flash cartridge, mapping registers, port 2400
+importance: 1
+---
+
 # SNES Cart Nintendo Power - New Stuff
 
 #### Operation during /RESET=LOW

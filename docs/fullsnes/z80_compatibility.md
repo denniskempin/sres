@@ -1,3 +1,9 @@
+---
+summary: Documents the Z80 CPU's backwards compatibility with older 8080/8085 processors, covering instruction format differences, parity/overflow flag semantics, CPU-specific opcodes, and variations across Z80, Z80A, and NEC-780 implementations.
+keywords: Z80, 8080, 8085, instruction set, NEC-780
+importance: 1
+---
+
 # Z80 Compatibility
 
 The Z80 CPU is (almost) fully backwards compatible to older 8080 and 8085 CPUs.

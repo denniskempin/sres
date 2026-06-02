@@ -1,3 +1,8 @@
+---
+summary: Describes the SNES standard joypad controller, including the 16-bit button/ID bit layout returned during serial reads, physical button appearance, and a list of third-party joypad and joystick variants.
+keywords: joypad, controller, button bits, input, NTT Data Pad
+importance: 4
+---
 # SNES Controllers Joypad
 
 #### Joypad Bits

@@ -1,3 +1,9 @@
+---
+summary: Index page for SNES cartridge copier documentation, listing reference pages for various copier brands (Super Magicom, Super Wild Card, Game Doctor, Super UFO, etc.), floppy disc controllers, NEC uPD765 commands, FAT12 format, and copier BIOSes.
+keywords: cart copier, Super Magicom, Game Doctor, floppy disc, BIOS
+importance: 1
+---
+
 # SNES Cart Copiers
 
 #### Copiers

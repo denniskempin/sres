@@ -1,3 +1,9 @@
+---
+summary: Documents SNES cartridge FLASH backup memory as used by the JRA PAT BIOS cartridges for the SFC Modem, including supported chips (AMD, Atmel, Sharp), command sequences for erase/write/ID operations, memory map, and PCB versions.
+keywords: FLASH memory, JRA PAT, SFC Modem, cartridge backup
+importance: 1
+---
+
 # SNES Cart FLASH Backup
 
 Most SNES games are using battery-backed SRAM for storing data, the only exception - which do use FLASH memory - are the JRA PAT BIOS cartridges for the SFC Modem:

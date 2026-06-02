@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES APU DSP volume registers, including the master volume registers (MVOLL/MVOLR) and per-voice volume registers (VxVOLL/VxVOLR), their signed encoding, edge cases around -128, and the output mixer formula that combines per-voice samples with the master volume and echo volume.
+keywords: SNES, APU, DSP, volume, output mixer
+importance: 4
+---
+
 # SNES APU DSP Volume Registers
 
 0Ch - MVOLL - Left channel master volume (R/W) 1Ch - MVOLR - Right channel master volume (R/W)

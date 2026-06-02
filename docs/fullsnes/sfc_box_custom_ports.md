@@ -1,3 +1,8 @@
+---
+summary: Describes the custom I/O ports of the SFC-Box (a coin-operated commercial SNES kiosk variant), including keyswitch/button inputs, SNES transfer signals, joypad reading, RTC (S-3520) access, and ROM/SRAM/DSP slot mapping registers.
+keywords: SFC-Box, custom I/O ports, joypad reading, RTC S-3520, ROM mapping
+importance: 1
+---
 # SFC-Box I/O Ports (Custom Ports)
 
 [80h].R - Keyswitch and Button Inputs

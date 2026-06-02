@@ -1,3 +1,8 @@
+---
+summary: Reference document describing SNES horizontal and vertical timing details, including master/dot cycle lengths, normal/long/short scanline cases, and how special scanlines synchronize the frame rate with PAL/NTSC color clocks to avoid composite video artifacts.
+keywords: SNES timing, H/V counter, scanline, NTSC, PAL color clock
+importance: 4
+---
 # SNES Timing H/V Counters
 
 #### Horizontal Timings

@@ -1,3 +1,8 @@
+---
+summary: Describes the Satellaview directory packet format, including folder, file, and item entry structures used by the BS-X broadcast system to organize downloadable content. Covers include files, streaming files, and home-available files.
+keywords: Satellaview, BS-X, directory packet, folder entry, file entry
+importance: 1
+---
 # SNES Cart Satellaview Directory Packet
 
 #### Directory (Software Channel 1.1.0.6)

@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES PPU H/V counter latching mechanism (OPHCT/OPVCT via port 2137h), the PPU1/PPU2 status registers STAT77 and STAT78, and how lightgun screen coordinates are derived from the latched counters.
+keywords: PPU, H/V counter, OPHCT/OPVCT, STAT78, lightgun
+importance: 4
+---
+
 # SNES PPU Timers and Status
 
 ```text

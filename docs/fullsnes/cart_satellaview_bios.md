@@ -1,3 +1,9 @@
+---
+summary: Reference for the Satellaview BIOS function table, covering hooks, SRAM vectors, FLASH memory operations, memory mapping, satellite directory handling, download routines, APU functions, and procedures for executable files returning control to BIOS.
+keywords: Satellaview, BIOS, FLASH, download, PSRAM
+importance: 1
+---
+
 # SNES Cart Satellaview BIOS Function Summary
 
 BIOS functions must be called with BIOS ROM enabled in Bank 80h-9Fh (in some cases it may be required also in Bank 00h-1Fh), and with DB=80h.

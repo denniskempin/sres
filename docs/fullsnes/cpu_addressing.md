@@ -1,3 +1,9 @@
+---
+summary: Reference for the 65xx CPU memory addressing modes (implied, immediate, zero page, absolute, and indirect variants) used by the W65C816 in the SNES, including zero page wraparound behavior, the on-chip I/O port at 0000h-0001h, and assembler ambiguity between zero page and absolute forms.
+keywords: CPU, addressing modes, zero page, absolute, indirect
+importance: 4
+---
+
 # CPU Memory Addressing
 
 #### Opcode Addressing Modes

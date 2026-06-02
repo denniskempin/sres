@@ -1,3 +1,9 @@
+---
+summary: Describes the memory-mapped I/O registers (4800h-480Ch) of the SPC7110 cartridge chip used for data decompression, including the decompressed data read port, ROM directory addressing, target offset, length counter, and decompression status.
+keywords: SPC7110, decompression, I/O ports, registers, cartridge
+importance: 2
+---
+
 # SNES Cart SPC7110 Decompression I/O Ports
 
 ```text

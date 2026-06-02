@@ -1,4 +1,9 @@
 ---
+summary: Documents the S-SMP (Sony SPC700) register table for the SNES APU, listing 2 common names, addresses, bit layouts, access types, and notes for each register used by the audio CPU.
+keywords: S-SMP, APU, registers, timers, S-DSP
+importance: 4
+---
+---
 title: "APU register table/SMP"
 source_url: "https://snes.nesdev.org/wiki/APU_register_table/SMP"
 pageid: 182

@@ -1,3 +1,9 @@
+---
+summary: Documents the X-Terminator and Game Wizard cheat cartridges (Pro Action Replay clones), covering their I/O ports, memory map, SRAM/BIOS mapping, BIOS versions, and Parame expansion ROM format used to extend the cheat-code database.
+keywords: X-Terminator, Game Wizard, cheat cartridge, Pro Action Replay clone, Parame expansion ROM
+importance: 0
+---
+
 # SNES Cart Cheat Devices - X-Terminator & Game Wizard
 
 #### Pro Action Replay (PAR1) clone

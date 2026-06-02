@@ -1,3 +1,9 @@
+---
+summary: Documents the SFC-Box, a special multi-game SNES kiosk variant that pairs a regular SNES with an HD64180 co-processor and MB90082 OSD chip. Covers its menu system, the unique PSS61-PSS64 multi-game cartridges, ROM/EPROM layout (GROM/ATROM/KROM), and crash behaviors that require continued emulation.
+keywords: SFC-Box, multi-game cartridge, HD64180, MB90082, ATROM
+importance: 1
+---
+
 # SFC-Box Overview
 
 #### Main Menu

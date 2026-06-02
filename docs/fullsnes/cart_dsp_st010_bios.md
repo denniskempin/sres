@@ -1,3 +1,9 @@
+---
+summary: Reference list of BIOS commands for SNES coprocessor chips including the DSP1, DSP2, DSP3, and DSP4 3D-math coprocessors as well as the ST010 and ST011 processors. Each entry documents the command opcode, its purpose, and notable bugs or mirror ranges.
+keywords: DSP1, ST010, ST011, coprocessor, BIOS commands
+importance: 1
+---
+
 # SNES Cart DSP-n/ST010/ST011 - BIOS Functions
 
 #### DSP1 Commands

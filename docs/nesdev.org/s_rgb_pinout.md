@@ -1,4 +1,9 @@
 ---
+summary: "Pinout of the S-RGB Encoder chip (BA6596F) used in the SNES for video output. Shows analog RGB input/output pins, composite sync signals, luma/chroma outputs, and the region select pin for NTSC/PAL."
+keywords: "S-RGB, pinout, BA6596F, video encoder"
+importance: 1
+---
+---
 title: "S-RGB Pinout"
 source_url: "https://snes.nesdev.org/wiki/S-RGB_Pinout"
 pageid: 188

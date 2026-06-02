@@ -1,4 +1,10 @@
 ---
+summary: "Reference table for the S-DSP global registers in the SNES APU, covering main and echo volume, key on/off, flags, echo feedback, noise and pitch modulation enables, sample directory and echo memory pointers, echo delay, and the 8-tap echo FIR filter coefficients."
+keywords: "S-DSP, APU, DSP registers, echo, audio"
+importance: 4
+---
+
+---
 title: "APU register table/DSP global"
 source_url: "https://snes.nesdev.org/wiki/APU_register_table/DSP_global"
 pageid: 178

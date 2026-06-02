@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES power supply specifications for PAL (9V AC) and NTSC (10V DC) consoles, including the 7805 voltage regulator, audio amplifier behavior at reduced voltage, and the power switch anti-eject mechanism.
+keywords: power supply, 7805 regulator, audio amplifier, anti-eject
+importance: 1
+---
+
 # SNES Power Supply
 
 #### AC 9V (PAL version)

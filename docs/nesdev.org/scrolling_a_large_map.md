@@ -3,6 +3,9 @@ title: "Scrolling a large map"
 source_url: "https://snes.nesdev.org/wiki/Scrolling_a_large_map"
 pageid: 34
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes techniques for implementing large-map scrolling on the SNES by simulating infinite tilemaps through direction detection, tile-boundary tracking, and incremental column writes using the VMAIN register."
+keywords: "scrolling, tilemap, VMAIN, VRAM, PPU"
+importance: 4
 ---
 
 A lot of games have their action take place in an area that's too big to fit on the screen at once. To support this, SNES tilemaps can be bigger than the screen, and a programmer can use [scrolling](https://snes.nesdev.org/w/index.php?title=Scrolling&action=edit&redlink=1 "Scrolling (page does not exist)") to choose which section of it should be displayed. However, the biggest available sizes are still too small for most games' needs.

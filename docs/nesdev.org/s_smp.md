@@ -1,4 +1,9 @@
 ---
+summary: Reference for the S-SMP, the Sony SPC-700 sub-CPU in the SNES APU. Covers its memory layout, the memory-mapped registers (TEST, CONTROL, DSPADDR/DSPDATA, CPUIO ports, and timers), the APUIO communication protocol with the main 65816 S-CPU, and the IPL Boot ROM handshake used to upload programs to audio RAM.
+keywords: S-SMP, SPC-700, APUIO, IPL Boot ROM, timers
+importance: 5
+---
+---
 title: "S-SMP"
 source_url: "https://snes.nesdev.org/wiki/S-SMP"
 pageid: 106

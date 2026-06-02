@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the SNES CD-ROM add-on BIOS functions invoked via jump opcodes at 00:E0xxh. Documents main functions (disc loading, mechacon commands, WRAM-to-VRAM DMA), SRAM file management routines, and decoder/misc functions, along with known bugs in the BIOS.
+keywords: CD-ROM BIOS, BIOS functions, SRAM, Mechacon, DMA
+importance: 1
+---
+
 # SNES Cart CDROM - BIOS Functions
 
 #### SNES CD BIOS Function Summary (jump opcodes at 00:E0xxh)

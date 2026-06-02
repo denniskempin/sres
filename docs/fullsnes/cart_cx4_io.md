@@ -1,3 +1,9 @@
+---
+summary: Documents the I/O port map of the Capcom CX4 coprocessor cartridge used in titles like Mega Man X2/X3, covering its 3KB RAM, DMA registers, ROM mapping, control/status ports, internal registers, and exception vector redirection.
+keywords: CX4, Capcom, DMA, coprocessor, exception vectors
+importance: 2
+---
+
 # SNES Cart Capcom CX4 - I/O Ports
 
 #### CX4 I/O Map

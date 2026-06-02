@@ -1,3 +1,9 @@
+---
+summary: Describes the Super Game Boy (SGB) cartridge, an adapter that allows monochrome Game Boy games to run on the SNES by forwarding video to VRAM and joypad data to the SGB CPU. Covers the SGB chipset (SGB CPU and ICD2-R/N interface chip), the SGB I/O map (ports 6000h-7800h), command packet handling, gameboy audio routing, and undocumented SGB command details.
+keywords: Super Game Boy, SGB, ICD2, Game Boy, cartridge
+importance: 1
+---
+
 # SNES Cart Super Gameboy
 
 The Super Gameboy (SGB) is some kind of an adaptor for monochrome handheld Gameboy games. The SGB cartridge contains a fully featured gameboy (with CPU, Video & Audio controllers), but without LCD screen and without joypad buttons.

@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES CD-ROM (Super Disc) prototype BIOS Cartridge, including its DRAM, battery-backed SRAM, BIOS ROM, user interface, self-check/ADPCM/decoder test menus, memory mapping, and SRAM write-protect lock ports.
+keywords: Super Disc, CD-ROM BIOS cartridge, BIOS ROM, ADPCM test, battery SRAM lock
+importance: 0
+---
+
 # SNES Cart CDROM - BIOS Cartridge
 
 Contains extra DRAM, some small battery-backed SRAM, and the BIOS ROM. The DRAM and SRAM are rather small, and there's no coprocessor. However, this is only prototype, and Nintendo could have easly expanded the BIOS cartridge (without needing to modify the actual CDROM hardware).

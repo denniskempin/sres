@@ -1,3 +1,9 @@
+---
+summary: Reference for the cheat code formats used by various SNES cartridge cheat devices, including Pro Action Replay (PAR1/PAR2/PAR3), Game Genie, Gold Finger, and Front Far East, covering syntax, address/data encoding, and special prefix codes.
+keywords: Pro Action Replay, Game Genie, Gold Finger, cheat codes
+importance: 1
+---
+
 # SNES Cart Cheat Devices - Code Formats
 
 PAR AAAAAADD - Normal Pro Action Replay Codes (Datel) The Pro Action Replay is a cheat device for the SNES produced by Datel. The original PAR only support 3 codes, but the PAR2 supports 255 and has a built-in trainer for code searcher. There is also a PAR3, but the added features are unknown.

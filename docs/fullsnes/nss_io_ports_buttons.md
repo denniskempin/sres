@@ -1,3 +1,9 @@
+---
+summary: Reference for the Nintendo Super System (NSS) I/O port register layout covering joypad button inputs, front-panel buttons, coin/service inputs, and coin counter outputs.
+keywords: NSS, I/O ports, joypad, coin counter
+importance: 2
+---
+
 # NSS I/O Ports - Button Inputs and Coin Control
 
 #### Port 00h.R - Joypad Buttons (IC46/74LS540)

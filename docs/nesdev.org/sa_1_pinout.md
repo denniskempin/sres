@@ -3,6 +3,9 @@ title: "SA-1 Pinout"
 source_url: "https://snes.nesdev.org/wiki/SA-1_Pinout"
 pageid: 196
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Pinout diagram of the Super Accelerator (SA-1) coprocessor chip used in some SNES cartridges, documenting its address, data, control, SRAM, and ROM signal assignments across all 128 pins."
+keywords: "SA-1, pinout, coprocessor, cartridge, SNES"
+importance: 1
 ---
 
 Pinout of the Super Accelerator (SA-1) Coprocessor

@@ -1,3 +1,9 @@
+---
+summary: Reference documentation for the SNES SuperScope lightgun peripheral, covering hardware layout, controller register bits (fire, cursor, turbo, pause, offscreen, noise), compatible games, and operational notes including normal/turbo modes and PPU screen-position latching behavior.
+keywords: SuperScope, lightgun, controller, PPU latch, peripherals
+importance: 1
+---
+
 # SNES Controllers SuperScope (Lightgun)
 
 #### SUPER SCOPE

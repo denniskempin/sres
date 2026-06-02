@@ -1,3 +1,9 @@
+---
+summary: Documents the memory maps and I/O port assignments for the Nintendo Super System (NSS), an arcade-based SNES variant. Covers the Z80 coprocessor memory layout, Z80 IN/OUT ports for joypad, RTC, EEPROM, and watchdog, plus SNES-side special registers for DIP switches and joypad handling.
+keywords: NSS, Z80, memory map, I/O ports, arcade
+importance: 1
+---
+
 # NSS Memory and I/O Maps
 
 #### Z80 Memory Map

@@ -1,3 +1,9 @@
+---
+summary: Comprehensive memory-mapped I/O map of the SNES, listing all hardware registers (PPU, APU, CPU, DMA, WRAM, joypad) with their addresses, names, descriptions, and reset values, plus an overview of expansion peripherals and cheat devices.
+keywords: PPU, APU, DMA, WRAM, joypad
+importance: 4
+---
+
 # SNES I/O Map
 
 #### First some bytes

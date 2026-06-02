@@ -1,3 +1,9 @@
+---
+summary: A reference table of Z80 jump commands and interrupt-related opcodes, listing instructions such as JP, JR, CALL, RET, RST, DI, EI, IM, HALT, RETI, and RETN together with their opcodes, cycle counts, and flag effects, plus details on how INT and NMI are handled.
+keywords: Z80, jump commands, interrupts, opcodes, cycles
+importance: 1
+---
+
 # Z80 Jumpcommands & Interrupts
 
 General Jump Commands  Instruction    Opcode  Cycles Flags  Notes  jp   nn        C3 nn nn    10 ------ jump to nn, ie. PC=nn  jp   HL        E9           4 ------ jump to HL, ie. PC=HL  jp   ii        pD E9        8 ------ jump to ii, ie. PC=ii  jp   f,nn      xx nn nn 10;10 ------ jump to nn if nz,z,nc,c,po,pe,p,m  jr   nn        18 dd       12 ------ relative jump to nn, ie. PC=PC+d  jr   f,nn      xx dd     12;7 ------ relative jump to nn if nz,z,nc,c  djnz nn        10 dd     13;8 ------ B=B-1 and relative jump to nn if B<>0  call nn        CD nn nn    17 ------ call nn ie. SP=SP-2, (SP)=PC, PC=nn  call f,nn      xx nn nn 17;10 ------ call nn if nz,z,nc,c,po,pe,p,m  ret            C9          10 ------ pop PC ie. PC=(SP), SP=SP+2  ret  f         xx        11;5 ------ pop PC if nz,z,nc,c,po,pe,p,m  rst  n         xx          11 ------ call n  ;n=00,08,10,18,20,28,30,38  nop            00           4 ------ no operation

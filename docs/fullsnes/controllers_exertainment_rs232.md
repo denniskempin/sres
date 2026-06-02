@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES Exertainment RS232 controller based on the Texas Instruments TL16C550AN UART, detailing its register map at 21C0h-21C7h including FIFO, interrupt, baudrate, character format, and handshaking controls.
+keywords: RS232, TL16C550AN, UART, Exertainment
+importance: 0
+---
+
 # SNES Controllers Exertainment - RS232 Controller
 
 Texas Instruments TL16C550AN - Asynchronous Communications Element (ACE) The ACE uses eight I/O addresses (mapped to 21C0h-21C7h in the SNES), the meaning of the first two addresses depends on the "DLAB" bit (which can be changed via 21C3h.Bit7).

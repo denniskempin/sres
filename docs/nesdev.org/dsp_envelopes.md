@@ -3,6 +3,9 @@ title: "DSP envelopes"
 source_url: "https://snes.nesdev.org/wiki/DSP_envelopes"
 pageid: 115
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes how the S-DSP shapes each voice's volume using either an ADSR envelope (attack, decay, sustain, release) or a GAIN control, including the rate/step formulas and timing tables. Also documents the shared 32-entry period table and per-column delay offsets that govern when envelope events fire on the S-SMP."
+keywords: "S-DSP, ADSR, GAIN, envelope, period table"
+importance: 4
 ---
 
 The envelope value of each [[S-DSP]] voice is driven by either an ADSR envelope, or a gain control. This gives an additional way to automatically shape the volume of the voice over time, aside from its **VOL** registers.

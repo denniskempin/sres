@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES two-button Mouse controller, including which controller port to use, the bit-level data format returned by the mouse, the support ID string games must include, and how to configure mouse sensitivity via $4016/$4017.
+keywords: SNES Mouse, two-button mouse, controller port, mouse sensitivity, mouse data bits
+importance: 2
+---
+
 # SNES Controllers Mouse (Two-button Mouse)
 
 #### Mouse Connection

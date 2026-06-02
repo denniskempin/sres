@@ -3,6 +3,9 @@ title: "DSP Pinout"
 source_url: "https://snes.nesdev.org/wiki/DSP_Pinout"
 pageid: 184
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Pinout diagram and signal descriptions for the DSP-x Coprocessors (NEC µPD77C25) found in some SNES cartridges, distinct from the S-DSP audio processor."
+keywords: "DSP-1, NEC µPD77C25, cartridge coprocessor, pinout"
+importance: 1
 ---
 
 This is how most DSP-x Coprocessors are hokked up in the Cartridge (Not to be confused with the S-DSP Audio Processor).

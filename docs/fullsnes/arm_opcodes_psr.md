@@ -1,3 +1,9 @@
+---
+summary: Reference documentation for the ARM MRS and MSR opcodes used to transfer data to and from the Program Status Register (PSR). Covers the instruction encoding format, field definitions for CPSR/SPSR, and restrictions on user-mode access.
+keywords: ARM, PSR, MRS, MSR, CPSR
+importance: 2
+---
+
 # ARM Opcodes: PSR Transfer (MRS, MSR)
 
 #### Opcode Format

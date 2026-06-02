@@ -1,3 +1,9 @@
+---
+summary: A component list for the SFC-Box Cartridge PCB (GS 0871-102), enumerating the ICs, ROM pads, and connector, and noting which parts (DSP1, Mario Chip 1/GSU, SRAM, oscillator) are optional or semi-optional across the PSS61-PSS64 cartridge variants.
+keywords: SFC-Box, cartridge PCB, DSP1, GSU, Mario Chip 1
+importance: 1
+---
+
 # SFC-Box Component List (Cartridges)
 
 #### SFC-Box Cartridge PCB (GS 0871-102)

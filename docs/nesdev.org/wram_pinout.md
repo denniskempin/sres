@@ -3,6 +3,9 @@ title: "WRAM pinout"
 source_url: "https://snes.nesdev.org/wiki/WRAM_pinout"
 pageid: 48
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Pinout and signal descriptions for the Nintendo S-WRAM chip, a 64-pin work RAM expansion that maps to both the CPU and peripheral buses via /WRAMSEL, ENABLE (CPU A22), and PA0-1/PA2-7 selects."
+keywords: "S-WRAM, pinout, /WRAMSEL, peripheral bus, expansion chip"
+importance: 1
 ---
 
 ## Pinout
