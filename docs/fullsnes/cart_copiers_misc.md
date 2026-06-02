@@ -1,3 +1,9 @@
+---
+summary: Miscellaneous hardware details about SNES cartridge copiers, covering parallel port (DB-25) connectivity for PC data transfer, DSP chip support, and battery/backup options for internal SRAM.
+keywords: SNES cart copiers, parallel port, DSP chips, SRAM battery backup
+importance: 1
+---
+
 # SNES Cart Copiers - Misc
 
 #### Parallel Ports (DB-25)

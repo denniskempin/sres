@@ -1,3 +1,9 @@
+---
+summary: Reference for the new/extended opcodes introduced by the Hitachi HD64180 (a Z80-compatible CPU), covering I/O port extensions (IN0/OUT0/OTxM), test (TST/TSTIO), multiply (MLT), sleep (SLP), differences from stock Z80 behavior, undefined-opcode trapping, and execution-time changes.
+keywords: HD64180, Z80, opcodes, IN0, OUT0, SLP
+importance: 1
+---
+
 # HD64180 New Opcodes (Z80 Extension)
 
 #### New HD64180 Opcodes

@@ -3,6 +3,9 @@ title: "Register sizes in ca65"
 source_url: "https://snes.nesdev.org/wiki/Register_sizes_in_ca65"
 pageid: 79
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "How the ca65 assembler handles W65C816 register-size directives (.a8, .a16, .i8, .i16) and their effect on immediate-operand encoding, with notes on .smart mode and macro introspection via .asize/.isize."
+keywords: "ca65, W65C816, register size, .a8 .a16, immediate operands"
+importance: 2
 ---
 
 When the 65c816's registers switch between being 8-bit and 16-bit, that affects how the processor expects instructions with immediate operands to be stored. For example, when the 65c816 encounters opcode `A9` (which is `LDA #value`) the current size of the accumulator determines if it will try to read one or two bytes after the opcode. This creates a problem for assemblers - they have to know whether to encode `LDA #1` as `A9 01` or `A9 01 00`. If they get it wrong, the processor will misinterpret the instruction, then probably become misaligned with the code and misinterpret following instructions as well.

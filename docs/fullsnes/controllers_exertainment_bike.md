@@ -1,3 +1,8 @@
+---
+summary: Overview of the Life Fitness Exertainment stationary bicycle, an SNES-compatible exercise machine that plugs into the console's Expansion Port and adds an RS232-based data pack interface alongside standard joypad controls on the handlebars.
+keywords: Exertainment, Expansion Port, RS232, Life Fitness, TL16C550AN
+importance: 1
+---
 # SNES Controllers Exertainment (bicycle exercising machine)
 
 The Exertainment is an exercising machine made by Life Fitness. It consists of a stationary bicycle, a monitor with TV tuner, a SNES game cartridge, and a SNES console with some extra hardware plugged into its Expansion Port.

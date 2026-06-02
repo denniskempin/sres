@@ -1,4 +1,9 @@
 ---
+summary: "Reference table for SNES DMA and HDMA MMIO registers ($43n0-$43nF) covering all eight channels, including DMAPn, BBADn, A1Tn/A1Bn source address, DASn byte count / HDMA indirect address, A2An HDMA current address, and NLTRn scanline counter."
+keywords: "DMA, HDMA, DMAPn, A-bus, B-bus"
+importance: 5
+---
+---
 title: "MMIO register table/DMA"
 source_url: "https://snes.nesdev.org/wiki/MMIO_register_table/DMA"
 pageid: 45

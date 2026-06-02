@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES VRAM access registers (VMAIN, VMADDL/H, VMDATAL/H, RDVRAML/H), covering address increment modes, address translation for bitmap graphics, and the prefetch behavior used when reading VRAM data.
+keywords: VRAM, VMAIN, VMADDR, address translation, prefetch
+importance: 5
+---
+
 # SNES Memory VRAM Access (Tile and BG Map)
 
 ```text

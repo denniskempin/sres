@@ -1,3 +1,8 @@
+---
+summary: Index page for SNES controller documentation, linking to pages on controller I/O ports, hardware IDs, standard controllers (joypad, mouse, MP5), light guns, specialty input devices, and add-ons that connect to the controller port.
+keywords: controllers, joypad, I/O ports, light guns, peripherals
+importance: 3
+---
 # SNES Controllers
 
 #### I/O Ports

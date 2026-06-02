@@ -1,3 +1,9 @@
+---
+summary: Describes the SFC-Box Coprocessor, an HD64180 (extended Z80) subsystem that serves as the heart of Nintendo's SFC-Box kiosk/demo unit. Details its responsibilities (controller data injection/sniffing, ROM mapping, menu communication, pay-per-play) and documents the WRIO/RDIO protocol used between the SNES and the coprocessor.
+keywords: HD64180, SFC-Box, coprocessor, Z80, KROM
+importance: 0
+---
+
 # SFC-Box Coprocessor (HD64180) (extended Z80)
 
 This is the "heart" of the SFC-Box. The two central parts are a HD64180 CPU (with extended Z80 instruction set), and a 64Kbyte EPROM labelled "KROM 1" (HD64180 BIOS). Plus, a frightening amount of about 50 small logic chips on the mainboard & daughterboard.

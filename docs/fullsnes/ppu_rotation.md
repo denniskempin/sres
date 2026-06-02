@@ -1,3 +1,9 @@
+---
+summary: Reference for the SNES PPU's Mode 7 rotation and scaling feature, covering the M7SEL/M7A/M7B/M7C/M7D/M7X/M7Y/M7HOFS/M7VOFS hardware registers, the affine matrix formula mapping screen coordinates to VRAM coordinates, screen-over wrap behavior, the shared write-twice mechanism, and Mode 7's interaction with the general-purpose multiply unit and EXTBG.
+keywords: PPU, Mode 7, rotation, scaling, affine transformation
+importance: 4
+---
+
 # SNES PPU Rotation/Scaling
 
 ```text

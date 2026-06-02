@@ -1,3 +1,9 @@
+---
+summary: Documents the MEMSEL register at 420Dh which controls waitstate timing for the Memory-2 area (banks 80h-FFh), including access cycle speeds, ROM speed requirements, and the header flag indicating high-speed memory usage.
+keywords: MEMSEL, Memory-2, waitstate control, 420Dh, cartridge header
+importance: 1
+---
+
 # SNES Memory Control
 
 ```text

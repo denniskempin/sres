@@ -1,3 +1,9 @@
+---
+summary: Documents the Type 2 FLASH access protocol used by the Satellaview I/O cartridge, covering unlock/erase sequences, sector erase, 1-128 byte writes, status mode polling, and command termination.
+keywords: Satellaview, FLASH, Type 2, erase, write
+importance: 1
+---
+
 # SNES Cart Satellaview I/O FLASH Access (Type 2)
 
 Type 2 protocol is completely different as for Type 1,3,4 (aside from the Chip Detection sequence, which is same for all types).

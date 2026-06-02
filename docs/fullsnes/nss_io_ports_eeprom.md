@@ -1,3 +1,9 @@
+---
+summary: Reference documentation for the NSS (Nintendo Super System) arcade board's EEPROM and PROM I/O ports, including register layouts, the Mitsubishi M6M80011 serial EEPROM protocol, and the Ricoh RP5H01 serial PROM used for cartridge decryption key storage. Covers BIOS PROM access points, NSS coinage/EEPROM data format, and known PROM dumps for supported games.
+keywords: NSS, EEPROM, PROM, M6M80011, RP5H01
+importance: 1
+---
+
 # NSS I/O Ports - EEPROM and PROM
 
 #### Memory A000h.R - EEPROM Input

@@ -3,6 +3,9 @@ title: "Mouse"
 source_url: "https://snes.nesdev.org/wiki/Mouse"
 pageid: 13
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the Super NES Mouse (SNS-016) peripheral's 32-bit controller report format, including its 4-byte structure with signature, sensitivity, button, and motion data. Covers reading methods, sensitivity cycling, sign-and-magnitude motion encoding, and Hyperkin clone compatibility quirks."
+keywords: "SNES Mouse, controller report, peripheral, sensitivity, Hyperkin"
+importance: 1
 ---
 
 The **Super NES Mouse** (SNS-016) is a peripheral for the Super NES that was originally bundled with *Mario Paint*.

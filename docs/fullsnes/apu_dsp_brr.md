@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the SNES APU DSP BRR (Bit Rate Reduction) sample format, covering the VxSRCN/DIR sample table mechanism, the 9-byte block structure with shift/filter/loop-end flags, 4-bit nibble decoding, the four filter formulas, and the overflow/clipping behavior applied before the Gauss filter.
+keywords: BRR, DSP, APU, sample format
+importance: 5
+---
+
 # SNES APU DSP BRR Samples
 
 #### x4h - VxSRCN - Source number for Voice 0..7 (R/W)

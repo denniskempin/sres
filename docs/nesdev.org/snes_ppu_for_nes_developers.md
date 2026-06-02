@@ -3,6 +3,9 @@ title: "SNES PPU for NES developers"
 source_url: "https://snes.nesdev.org/wiki/SNES_PPU_for_NES_developers"
 pageid: 12
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "A comparison guide explaining the SNES PPU for developers familiar with the NES PPU. Covers VRAM, CGRAM palettes, DMA/HDMA, background modes, tilemaps, and sprites/OAM, plus a register-by-register mapping from NES PPU registers to their SNES equivalents."
+keywords: "PPU, VRAM, CGRAM, OAM, background modes"
+importance: 5
 ---
 
 The SNES PPU and NES PPU use every similar concepts for displaying graphics. This article will summarize some important differences and similarities, and lay out some basics before you learn about things more in-depth.

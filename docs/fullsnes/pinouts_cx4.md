@@ -1,3 +1,9 @@
+---
+summary: Pinout reference for the Capcom CX4 chip used in Mega Man X2 and X3, listing the 80 pins and their assignments between the SNES cartridge bus and the CX4's internal ROM/SRAM bus.
+keywords: CX4, Capcom, pinout, co-processor, Mega Man X2
+importance: 1
+---
+
 # SNES Pinouts CX4 Chip
 
 #### Capcom CX4 (used in Mega Man X2/X3)

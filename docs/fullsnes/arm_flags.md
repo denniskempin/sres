@@ -1,3 +1,9 @@
+---
+summary: Reference describing the ARM condition field (cond) and condition codes, plus the CPSR and SPSR status registers used for conditional instruction execution.
+keywords: ARM, condition codes, CPSR, SPSR, status register
+importance: 1
+---
+
 # ARM Flags & Condition Field (cond)
 
 #### ARM Condition Field {cond}

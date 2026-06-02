@@ -1,3 +1,9 @@
+---
+summary: Documents the SA-1 cartridge memory control registers covering Super MMC bank mapping (CXB/DXB/EXB/FXB), BW-RAM mapping/configuration, and I-RAM write protection for both SNES and SA-1 CPUs.
+keywords: SA-1, BW-RAM, I-RAM, memory mapping, cartridge registers
+importance: 2
+---
+
 # SNES Cart SA-1 Memory Control
 
 2220h SNES CXB - Set Super MMC Bank C - Hirom C0h-CFh / LoRom 00h-1Fh (W) 2221h SNES DXB - Set Super MMC Bank D - Hirom D0h-DFh / LoRom 20h-3Fh (W) 2222h SNES EXB - Set Super MMC Bank E - Hirom E0h-EFh / LoRom 80h-9Fh (W) 2223h SNES FXB - Set Super MMC Bank F - Hirom F0h-FFh / LoRom A0h-BFh (W)

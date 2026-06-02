@@ -3,6 +3,9 @@ title: "SPC-700 instruction set"
 source_url: "https://snes.nesdev.org/wiki/SPC-700_instruction_set"
 pageid: 112
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Reference for the SPC-700 instruction set used by the SNES S-SMP audio CPU, covering its 6502-like architecture (registers, PSW flags, addressing modes), differences from the 6502/65C02, and a complete opcode table with mnemonics, opcodes, byte sizes, cycle counts, and flag effects."
+keywords: "SPC-700, S-SMP, SNES, audio CPU, opcodes"
+importance: 4
 ---
 
 The Sony SPC-700 CPU is part of the [[S-SMP]] sound processor of the SNES. It runs at 1.024 MHz, and behaves similarly to a 6502 with some extensions.

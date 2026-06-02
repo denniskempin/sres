@@ -1,3 +1,9 @@
+---
+summary: Describes the ALU and LD instruction formats of the NEC uPD77C25 coprocessor used in SNES cartridges with the ST010/ST011 DSP chips, including opcode encoding, register fields, the K*L multiplier, and SRC/DST operands.
+keywords: uPD77C25, ST010, ST011, DSP, coprocessor
+importance: 1
+---
+
 # SNES Cart DSP-n/ST010/ST011 - NEC uPD77C25 - ALU and LD Instructions
 
 #### ALU Instructions (Artithmetic/Logical Unit)

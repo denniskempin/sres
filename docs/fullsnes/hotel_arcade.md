@@ -1,3 +1,9 @@
+---
+summary: Overview of specialized SNES hardware variants designed for commercial hotel and arcade use, including the Nintendo Super System (NSS) arcade cabinet, Super Famicom Box (SFC-Box) hotel system, DS-109S, and Nintendo Gateway/Lodgenet systems.
+keywords: NSS, SFC-Box, Arcade, Hotel systems, Lodgenet
+importance: 1
+---
+
 # SNES Hotel Boxes and Arcade Machines
 
 #### Nintendo Super System (NSS) (USA) (1991)

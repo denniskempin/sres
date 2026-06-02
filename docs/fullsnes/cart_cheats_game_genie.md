@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES Game Genie cheat cartridge device, covering its three BIOS versions (GENSRC, K7, ed), I/O port mappings, control and code flag/data registers, and a brief mention of the unreleased Game Genie 2 prototype.
+keywords: Game Genie, cheat device, BIOS versions, I/O ports, cartridge
+importance: 1
+---
+
 # SNES Cart Cheat Devices - Game Genie
 
 #### Game Genie BIOS Versions

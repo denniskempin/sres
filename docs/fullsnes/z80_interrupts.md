@@ -1,3 +1,9 @@
+---
+summary: Reference document describing the Z80 processor's interrupt handling, including the IFF1/IFF2 flip-flop behavior, the three interrupt modes (IM 0, 1, 2), non-maskable interrupt (NMI) execution, and the RETN/RETI return instructions.
+keywords: Z80, interrupts, IFF, NMI, interrupt modes
+importance: 1
+---
+
 # Z80 Interrupts
 
 Interrupt Flip-Flop (IFF1,IFF2)

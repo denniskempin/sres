@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES CDROM disc format, including the bootsector in sector 0 loaded to and executed from 00:1080h, and the Primary Volume Descriptor in sector 16 with its required 28h-byte ID (Volume Descriptor Type, "CD001" identifier, and "SUPERDISC" System Identifier) used to recognize a bootable SNES CD.
+keywords: SNES-CD, CDROM, bootsector, volume descriptor, ISO 9660
+importance: 1
+---
+
 # SNES Cart CDROM - CDROM Bootsector and Volume Descriptor
 
 SNES CD can be in MODE1 or MODE2/FORM1 format. The disc requires an 28h-byte ID in sector 16, and a 800h-byte bootsector in sector 0, which may then loaded further data via BIOS functions, or via direct access to the cdrom I/O ports.

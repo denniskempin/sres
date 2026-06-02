@@ -1,3 +1,9 @@
+---
+summary: Index page listing all SNES pinout reference documents, covering external connectors (controllers, AV, power, expansion, cartridge slot) and internal chipset pinouts (CPU, PPU, APU, ROM, RAM, CIC, and coprocessors like SA1, CX4, GSU, SuperFX).
+keywords: pinouts, connectors, chipset, SNES hardware, cartridge slot
+importance: 2
+---
+
 # SNES Pinouts
 
 #### External Connector Pinouts

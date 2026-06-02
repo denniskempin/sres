@@ -1,4 +1,9 @@
 ---
+summary: "Lists SNES games that use variable width (proportional) fonts, including Final Fantasy 6, EarthBound, Yoshi's Island, and others, with a reference describing the technique."
+keywords: "variable width fonts, proportional fonts, VWF, SNES"
+importance: 1
+---
+---
 title: "Variable width fonts"
 source_url: "https://snes.nesdev.org/wiki/Variable_width_fonts"
 pageid: 147

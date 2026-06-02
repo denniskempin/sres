@@ -1,3 +1,9 @@
+---
+summary: Reference describing the ARM7TDMI data processing (ALU) opcodes, including the instruction encoding format, the list of opcodes (AND, EOR, SUB, RSB, ADD, ADC, SBC, RSC, TST, TEQ, CMP, CMN, ORR, MOV, BIC, MVN), the second operand shift specifications, and the resulting CPSR flag behavior.
+keywords: ARM, ARM7TDMI, ALU, opcodes, data processing
+importance: 0
+---
+
 # ARM Opcodes: Data Processing (ALU)
 
 #### Data Processing (ALU)

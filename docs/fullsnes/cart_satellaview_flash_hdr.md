@@ -1,3 +1,9 @@
+---
+summary: Documents the Satellaview FLASH cartridge file header structure, field offsets, checksum behavior, and related PSRAM/Transmit header formats.
+keywords: Satellaview, FLASH header, checksum, BS-X cartridge
+importance: 1
+---
+
 # SNES Cart Satellaview FLASH File Header
 
 #### Satellaview FLASH File Header

@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES SFC Modem add-on hardware, its purpose for Japanese horse racing betting via NTT lines, and the various modem BIOS ROM versions (PAT, Wide Baken Taiyou, SPAT4-Wide) with their baud rates, AT-command support, and FLASH chip compatibility.
+keywords: SFC Modem, NTT, JRA, AT-commands, horse racing
+importance: 1
+---
+
 # SNES Add-On SFC Modem - Misc
 
 "The Modem as far as I know only had one function and that was to allow you to do online betting via the official JRA (Japanese Horse Racing) online service.

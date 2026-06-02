@@ -1,3 +1,9 @@
+---
+summary: Reference for Z80-style rotate and shift instructions (rlca, rla, rrca, rra, rld, rrd, rlc, rl, rrc, rr, sla, sll, sra, srl) and single-bit operations (bit, set, res, ccf, scf), including undocumented opcodes, with opcodes, cycle counts, and flag effects.
+keywords: Z80, rotate, shift, bit operations, undocumented instructions
+importance: 1
+---
+
 # Z80 Rotate/Shift and Singlebit Operations
 
 Rotate and Shift Commands  Instruction    Opcode  Cycles Flags  Notes  rlca           07           4 --0-0c rotate akku left  rla            17           4 --0-0c rotate akku left through carry  rrca           0F           4 --0-0c rotate akku right  rra            1F           4 --0-0c rotate akku right through carry  rld            ED 6F       18 sz0p0- rotate left low digit of A through (HL)  rrd            ED 67       18 sz0p0- rotate right low digit of A through (HL)  <cmd> r        CB xx        8 sz0p0c see below  <cmd> (HL)     CB xx       15 sz0p0c see below  <cmd> (ii+d)   pD CB dd xx 23 sz0p0c see below  <cmd> r,(ii+d) pD CB dd xx 23 sz0p0c see below, UNDOCUMENTED modify and load Whereas <cmd> may be:

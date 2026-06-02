@@ -1,4 +1,9 @@
 ---
+summary: "Reference table of the 10 S-DSP voice registers (VxVOL, VxPITCH, VxSRCN, VxADSR1/2, VxGAIN, VxENVX, VxOUTX) that control per-voice sample playback, volume, pitch, source selection, and ADSR envelope behavior on the SNES APU."
+keywords: "S-DSP, voice registers, APU, ADSR envelope, sample playback"
+importance: 5
+---
+---
 title: "APU register table/DSP voice"
 source_url: "https://snes.nesdev.org/wiki/APU_register_table/DSP_voice"
 pageid: 177

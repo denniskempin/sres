@@ -1,3 +1,9 @@
+---
+summary: Overview of SNES controllers with tilt and motion sensors, including the BatterUP baseball bat, TeeV Golf wireless club, StuntMaster VR headset, Nordic Quest ski exerciser, and other obscure peripherals. Most emulate standard joypad button/direction signals rather than providing true analog input.
+keywords: SNES controllers, tilt sensors, motion sensors, BatterUP, TeeV Golf
+importance: 1
+---
+
 # SNES Controllers Tilt/Motion Sensors
 
 There are a few SNES controllers with Tilt/Motion Sensors, most or all of them are emulating normal SNES joypad button/direction signals, which is making them compatible with existing games, but also means that the SNES receives only digital data (pressed/released) rather than anlogue (slow/fast) data.

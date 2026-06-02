@@ -1,3 +1,9 @@
+---
+summary: Reference documentation for the ARM CPU architecture as used in SNES coprocessors, covering the register set, flags, 26-bit memory interface, exception handling, instruction set (branch, ALU, PSR, multiply, memory, coprocessor), and instruction cycle times.
+keywords: ARM, SA-1, coprocessor, register set, instruction set
+importance: 1
+---
+
 # ARM CPU Reference
 
 The ARM CPU is a 32bit RISC (Reduced Instruction Set Computer) processor, designed by ARM (Advanced RISC Machines).

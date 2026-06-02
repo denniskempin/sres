@@ -1,3 +1,9 @@
+---
+summary: Documents lesser-known SNES input mechanisms, including the console's Reset Button behavior and the Super Famicom Box arcade peripheral, including its HD64180-based controller handling and 16-bit shift register forwarding.
+keywords: Reset Button, Super Famicom Box, controllers, peripherals, HD64180
+importance: 1
+---
+
 # SNES Controllers Other Inputs
 
 #### Reset Button (on the console)

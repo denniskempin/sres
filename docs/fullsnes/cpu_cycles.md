@@ -1,3 +1,8 @@
+---
+summary: Reference table for W65C816 CPU clock cycles in the SNES, covering memory access speeds for different address regions, cycle counts for implied/immediate/memory operands, push/pop, and jumps/branches, with a legend for the cycle-counting notation.
+keywords: W65C816, CPU cycles, memory speed, addressing modes, timing
+importance: 5
+---
 # CPU Clock Cycles
 
 #### SNES Memory Speed

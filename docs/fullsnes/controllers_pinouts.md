@@ -1,3 +1,9 @@
+---
+summary: Reference for the SNES joypad controller port pinouts (Port 1 and Port 2), covering the 7-pin connector signals (VCC, clock, strobe, data, I/O/lightpen, GND), the internal 11-pin daughterboard connector on the mainboard, and PAL vs NTSC differences caused by the diode-based open-collector clock and strobe outputs.
+keywords: joypad, controller port, pinout, strobe, clock
+importance: 4
+---
+
 # SNES Controllers Pinouts
 
 #### Joypads (2)

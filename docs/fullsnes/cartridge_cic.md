@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES cartridge CIC (lockout) chip, a 4-bit security CPU that performs lock-and-key authentication with a matching CIC in the console, resetting the system when the exchange fails. References cover the pseudo code, instruction set, version differences, pinouts, and disable mods.
+keywords: CIC, lockout chip, authentication, security, region lock
+importance: 2
+---
+
 # SNES Cartridge CIC Lockout Chip
 
 SNES cartridges are required to contain a CIC chip (security chip aka lockout chip). The CIC is a small 4bit CPU with built-in ROM. An identical CIC is located in the SNES console. The same 4bit CPU (but with slightly different code in ROM) is also used in NES consoles/cartridges.

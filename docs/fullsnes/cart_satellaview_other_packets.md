@@ -1,3 +1,9 @@
+---
+summary: Documents various Satellaview broadcast packet formats including patch packets, welcome messages, time channel data, file packets, and game-specific special channels (Itoi Bass Tsuri, Derby Stallion 96) for the SNES Satellaview peripheral.
+keywords: Satellaview, packet formats, Time Channel, broadcast
+importance: 1
+---
+
 # SNES Cart Satellaview Other Packets
 
 SNES Patch Packet (by 105BBC) (Software Channel 1.1.0.7) Loaded to 7FC000h, data portions then copied to specified addresses. Size (max) 16Kbytes.

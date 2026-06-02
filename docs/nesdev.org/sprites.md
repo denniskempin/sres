@@ -1,4 +1,9 @@
 ---
+summary: "Describes SNES sprite (OBJ) rendering, including tile sizes, palette selection, priority, color math behavior, and per-scanline limits (32 sprites, 34 slivers). Details the 544-byte OAM memory layout for up to 128 sprites and known hardware quirks like the X=-256 bug."
+keywords: "OAM, OBJ, sprites, PPU, rendering"
+importance: 5
+---
+---
 title: "Sprites"
 source_url: "https://snes.nesdev.org/wiki/Sprites"
 pageid: 56

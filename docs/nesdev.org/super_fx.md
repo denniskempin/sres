@@ -1,4 +1,10 @@
 ---
+summary: "Introduction to the Super FX (GSU) enhancement chip designed by Argonaut Games, which natively plots pixels and lines using 14 general-purpose 16-bit registers, 98 instructions, and a 512-byte cache."
+keywords: Super FX, GSU, enhancement chip, coprocessor, Argonaut
+importance: 1
+---
+
+---
 title: "Super FX"
 source_url: "https://snes.nesdev.org/wiki/Super_FX"
 pageid: 149

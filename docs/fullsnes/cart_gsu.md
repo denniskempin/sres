@@ -1,3 +1,9 @@
+---
+summary: Reference index for the SNES GSU-n (Super FX / Mario Chip) cartridge expansion, a programmable RISC-like CPU coprocessor. Links to subpages covering the GSU memory map, I/O map, CPU opcodes, caches, and pinouts.
+keywords: GSU, Super FX, Mario Chip, RISC CPU, coprocessor
+importance: 1
+---
+
 # SNES Cart GSU-n (programmable RISC CPU) (aka Super FX/Mario Chip) (10 games)
 
 #### Graphic Support Unit (GSU) (10.74MHz RISC-like CPU)

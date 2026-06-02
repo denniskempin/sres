@@ -1,3 +1,9 @@
+---
+summary: Notes on the SNES X-Band modem cartridge's Rockwell modem chip, covering configuration changes, dialing procedures, offline mode, and pin-outs for the Fred and Rockwell chips.
+keywords: X-Band, Rockwell, modem, cartridge, pin-out
+importance: 1
+---
+
 # SNES Cart X-Band Rockwell Notes
 
 #### Rockwell Configuration Changes

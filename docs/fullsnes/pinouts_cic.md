@@ -1,3 +1,9 @@
+---
+summary: Pinout reference for the SNES CIC (Copy Interface Chip) lockout/region-protection chips, covering both SMD variants (F411/F413) used in the console and DIP variants (D411/D413) used in cartridges, with signal directions and usage for each pin.
+keywords: CIC, lockout, region protection, pinout
+importance: 2
+---
+
 # SNES Pinouts CIC Chips
 
 #### CIC Pinouts

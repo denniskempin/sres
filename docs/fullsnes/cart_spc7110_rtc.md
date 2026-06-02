@@ -1,3 +1,9 @@
+---
+summary: Technical reference for accessing the Epson/Seiko RTC-4513 real-time clock via the SPC7110 coprocessor I/O ports, covering the 4-bit serial protocol, read/write commands, the full BCD register table with bit definitions, and the supporting game.
+keywords: SPC7110, RTC-4513, Epson, real-time clock
+importance: 1
+---
+
 # SNES Cart SPC7110 with RTC-4513 Real Time Clock (1 game)
 
 RTC from Epson/Seiko. Used by one game from Hudson Soft:

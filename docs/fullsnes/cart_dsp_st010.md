@@ -1,3 +1,9 @@
+---
+summary: Overview of the SNES cartridge DSP-n/ST010/ST011 coprocessor chips, which are pre-programmed NEC uPD77C25 CPUs used by 23 games. Covers the DSP-1/1A/1B/2/3/4 variants, Seta ST010/ST011 extended chips, cartridge header mappings, and pointers to register, ALU, JP, BIOS, and game-list details.
+keywords: DSP-1, ST010, ST011, uPD77C25, coprocessor
+importance: 1
+---
+
 # SNES Cart DSP-n/ST010/ST011 (pre-programmed NEC uPD77C25 CPU) (23 games)
 
 #### Nintendo DSP-n Chips

@@ -1,3 +1,9 @@
+---
+summary: Describes the data I/O protocol for the SNES SFC Modem add-on peripheral, including the bit-serial transfer of RX data, TX data, and modem status via controller port 2 using JOY2, JOY4, and IOBIT lines.
+keywords: SFC Modem, controller port 2, JOY2/JOY4, IOBIT, serial I/O
+importance: 1
+---
+
 # SNES Add-On SFC Modem - Data I/O
 
 The modem is intended to be connected to controller port 2. RX Data, TX Data, and Modem Status are simultaneously transferred via three I/O lines. The overall transfer length (with ID bits) is 16-bit, however, after checking the ID bits, one can abbreviate the transfer to 9-bit length.

@@ -1,3 +1,9 @@
+---
+summary: Overview of the SNES DMA subsystem, covering the eight DMA channels and the two transfer modes (H-DMA and GP-DMA), their use cases, and pointers to the related register and memory documentation.
+keywords: DMA, H-DMA, GP-DMA, PPU, H-Blank
+importance: 5
+---
+
 # SNES DMA Transfers
 
 The SNES includes eight DMA channels, which can be used for H-DMA or GP-DMA.

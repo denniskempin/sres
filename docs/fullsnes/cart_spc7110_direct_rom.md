@@ -1,3 +1,8 @@
+---
+summary: Documents the SPC7110's direct data ROM read feature, covering the $4810-$481A register set, base/offset/step configuration, mode byte settings, and special actions for data decompression.
+keywords: SPC7110, Data ROM, Direct ROM Access, Decompression, Registers
+importance: 1
+---
 # SNES Cart SPC7110 Direct Data ROM Access
 
 4810h Data ROM Read from [Base] or [Base+Offs], and increase Base or Offs 481Ah Data ROM Read from [Base+Offset], and optionally set Base=Base+Offs Reportedly, Testing leads to believe that the direct ROM read section starts out as inactive.

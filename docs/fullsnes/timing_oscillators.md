@@ -1,3 +1,9 @@
+---
+summary: Reference table of SNES clock frequencies and oscillator specifications, covering NTSC and PAL system clocks (master, dot, color, CPU, frame rate), APU timers, CPU waitstates/refresh behavior, and external oscillator chips found in cartridges.
+keywords: NTSC, PAL, oscillators, APU, cartridge chips
+importance: 4
+---
+
 # SNES Timing Oscillators
 
 #### NTSC Timings

@@ -1,4 +1,7 @@
 ---
+summary: "Techniques for drawing window shapes on the SNES PPU, including combining the two hardware windows with logical operations (OR, AND, XOR, XNOR) and building single-window shapes via HDMA tables. Covers rectangles, trapeziums, acute trapeziums, and precalculated translated windows with pseudocode examples."
+keywords: "SNES PPU windows, HDMA, window mask logic, trapezium"
+importance: 3
 title: "Drawing window shapes"
 source_url: "https://snes.nesdev.org/wiki/Drawing_window_shapes"
 pageid: 91

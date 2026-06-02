@@ -1,3 +1,8 @@
+---
+summary: Index page for the CPU 65XX microprocessor documentation, linking to sub-pages covering registers, addressing modes, clock cycles, instruction set, assembler syntax, glitches, and family variants.
+keywords: 65XX, CPU, 65816, instruction set, registers
+importance: 5
+---
 # CPU 65XX Microprocessor
 
 #### Overview

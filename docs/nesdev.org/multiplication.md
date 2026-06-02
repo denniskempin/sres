@@ -1,4 +1,9 @@
 ---
+summary: "Documentation of the SNES multiplication hardware, covering the 5A22 and PPU multipliers, including their registers (WRMPYA, M7A, M7B), behavior, timing, and usage examples."
+keywords: "multiplication, 5A22, PPU, WRMPYA, M7A"
+importance: 2
+---
+---
 title: "Multiplication"
 source_url: "https://snes.nesdev.org/wiki/Multiplication"
 pageid: 35

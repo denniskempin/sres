@@ -1,3 +1,9 @@
+---
+summary: Documents the Sufami Turbo BIOS function vectors (jmp 80FF00h..80FF3Bh) including SRAM management, character set retrieval, and help functions, along with the BIOS's 4096-character 16x16 charset stored in banks 04h..07h.
+keywords: Sufami Turbo, BIOS, cartridge, SRAM, character set
+importance: 1
+---
+
 # SNES Cart Sufami Turbo BIOS Functions & Charset
 
 #### Sufami Turbo BIOS Function Summary

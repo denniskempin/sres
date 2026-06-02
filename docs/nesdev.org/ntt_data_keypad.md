@@ -1,4 +1,9 @@
 ---
+summary: "Describes the Super Famicom NTT Data Keypad (NDK10), a 15-button controller peripheral designed to be used with the NTT Data Communication Modem. Details the 32-bit extension to the standard controller protocol that maps the extra numeric keypad, page-navigation, and communication-end buttons."
+keywords: "NTT Data Keypad, NDK10, Super Famicom controller, controller protocol"
+importance: 1
+---
+---
 title: "NTT Data Keypad"
 source_url: "https://snes.nesdev.org/wiki/NTT_Data_Keypad"
 pageid: 111

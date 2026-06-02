@@ -1,3 +1,9 @@
+---
+summary: Describes the front panel layout of the Nintendo Super System (NSS) arcade demo unit, including its oversized mounted SNES joypads, game selection buttons with LEDs, page/restart/instruction controls, and auxiliary inputs like coin slots, test/service buttons, and DIP switches.
+keywords: NSS, controls, front panel, joypad, DIP switch
+importance: 1
+---
+
 # NSS Controls
 
 #### Front Panel

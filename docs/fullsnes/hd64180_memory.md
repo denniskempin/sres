@@ -1,3 +1,9 @@
+---
+summary: Documents the HD64180's memory mapping and control subsystem, covering its MMU (Common/Bank Base and Common/Bank Area registers), DRAM refresh control, I/O control register, 19-bit physical address bus, waitstate control, DMA bypassing the MMU, and unused/reserved internal registers.
+keywords: HD64180, MMU, memory mapping, refresh control
+importance: 1
+---
+
 # HD64180 Memory Mapping and Control
 
 #### Memory Managment Unit (MMU)

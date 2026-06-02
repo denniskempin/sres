@@ -1,3 +1,9 @@
+---
+summary: Reference table of ARM instruction cycle times covering ALU, load/store, branch, multiply, and coprocessor operations, along with definitions of N/S/I/C cycle types and memory waitstate behavior.
+keywords: ARM, instruction cycles, waitstates, memory timing, coprocessor
+importance: 0
+---
+
 # ARM Instruction Cycle Times
 
 #### Instruction Cycle Summary

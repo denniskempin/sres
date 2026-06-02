@@ -1,3 +1,9 @@
+---
+summary: Documents the Nintendo Super System (NSS) arcade platform, including its BIOS versions and CRC32 identifiers, the cartridge ROM-image format (PRG-ROM, INST-ROM, and PROM), and a catalog of released NSS games.
+keywords: Nintendo Super System, NSS, BIOS, arcade, cartridge
+importance: 1
+---
+
 # NSS Games, BIOSes and ROM-Images
 
 #### Nintendo Super System BIOS (Nintendo)

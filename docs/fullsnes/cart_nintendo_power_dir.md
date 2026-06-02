@@ -1,3 +1,9 @@
+---
+summary: Describes the directory area and entry format used by the Nintendo Power cartridge service, including FLASH/SRAM block mapping, title bitmap encoding, and unused metadata fields.
+keywords: Nintendo Power, Directory, FLASH, SRAM, Cartridge
+importance: 1
+---
+
 # SNES Cart Nintendo Power - Directory
 
 #### Directory Area

@@ -1,3 +1,9 @@
+---
+summary: Describes the 512-byte ROM/RAM code cache used by the GSU (SuperFX) coprocessor, including its line structure, CACHE/LJMP/STOP behavior, SNES-side write procedure, and CBR/GO interaction.
+keywords: GSU, SuperFX, code cache, CBR, CACHE opcode
+importance: 1
+---
+
 # SNES Cart GSU-n Code-Cache
 
 #### ROM/RAM-Code-Cache (512-byte cache)

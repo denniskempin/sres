@@ -1,3 +1,9 @@
+---
+summary: Technical notes on the Sufami Turbo, a rare SNES cartridge adaptor with a built-in BIOS ROM and two mini-cart slots that allowed linking two small games together, covering its memory map, ROM image formats, hardware components, and the small library of thirteen Japan-only titles released in 1996.
+keywords: Sufami Turbo, cartridge adaptor, memory map, BIOS ROM, mini-cart
+importance: 1
+---
+
 # SNES Cart Sufami Turbo General Notes
 
 #### Sufami Turbo Hardware

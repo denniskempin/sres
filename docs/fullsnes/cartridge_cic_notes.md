@@ -1,3 +1,9 @@
+---
+summary: Technical notes on the SNES cartridge CIC (lockout) chip, covering its internal program counter, ROM-image bit layout, clocking and timings, I/O ports, regional stream seeds, and signal behavior across variants (D411, 3195A, D413A, 6113).
+keywords: CIC, SNES cartridge, copy protection, stream seeds, ROM image
+importance: 1
+---
+
 # SNES Cartridge CIC Notes
 
 #### Program Counter (PC)

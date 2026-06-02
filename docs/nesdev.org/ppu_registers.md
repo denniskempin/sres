@@ -3,6 +3,9 @@ title: "PPU registers"
 source_url: "https://snes.nesdev.org/wiki/PPU_registers"
 pageid: 9
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Reference for the SNES PPU's memory-mapped I/O registers at $2100-$213F, covering display configuration (brightness, BG modes, scroll, mosaic, layer enable), VRAM/CGRAM/OAM access, Mode 7 transformation matrix/center, OBJ setup, windows, color math, hardware multiplication, H/V counters, and PPU status flags."
+keywords: "PPU registers, MMIO, VRAM, Mode 7, color math"
+importance: 5
 ---
 
 The SNES PPU is accessed through [[MMIO register table|memory-mapped registers]] at $2100-213F.

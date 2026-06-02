@@ -3,6 +3,9 @@ title: "Booting the SPC700"
 source_url: "https://snes.nesdev.org/wiki/Booting_the_SPC700"
 pageid: 40
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Explains how the 65c816 main CPU boots the SPC700 audio CPU via the APUIO communication ports, including waiting for readiness, setting the starting address, uploading a program byte-by-byte, starting execution, and writing DSP registers directly through the boot ROM."
+keywords: "SPC700, APUIO, 65c816, boot ROM, DSP registers"
+importance: 5
 ---
 
 When the SNES powers on or resets, the [[SPC700]] starts running a small program which does some initialization and then waits to communicate with the 65c816. At this point the 65c816 can instruct the SPC700 to load a new program into its RAM and start running it. This page explains how to do this.

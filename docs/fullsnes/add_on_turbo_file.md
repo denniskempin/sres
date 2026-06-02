@@ -1,3 +1,9 @@
+---
+summary: Overview of the ASCII Turbo File add-ons for SNES, external battery-backed RAM cartridges for storing game save data. Describes hardware versions (Turbo File Twin, Turbo File Adapter), capacities, and switch modes (STF and TFII).
+keywords: Turbo File, ASCII, external SRAM, save backup, peripheral
+importance: 1
+---
+
 # SNES Add-On Turbo File (external backup memory for storing game positions)
 
 The Turbo File add-ons are an external battery-backed RAM-Disks made by ASCII.

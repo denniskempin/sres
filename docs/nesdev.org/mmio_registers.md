@@ -1,4 +1,7 @@
 ---
+summary: Reference for SNES memory-mapped I/O registers covering the 5A22 CPU, APU communication, and S-WRAM access, plus interrupts, timers, math (multiply/divide), joypad I/O, and ROM speed control. Excludes PPU ($2100-$213F) and DMA ($4300-$437F) registers which are documented separately.
+keywords: SNES, MMIO, registers, 5A22, APU, WRAM, joypad
+importance: 4
 title: "MMIO registers"
 source_url: "https://snes.nesdev.org/wiki/MMIO_registers"
 pageid: 39

@@ -1,3 +1,9 @@
+---
+summary: Overview of the SNES X-Band cartridge, a 2400 baud modem by Catapult Entertainment released in 1994, including links to its I/O map, BIOS, memory patch, smart card reader, LED/debug, FIFO, Rockwell modem, and keyboard companion documentation.
+keywords: X-Band, modem, Catapult Entertainment, 2400 baud, cartridge
+importance: 1
+---
+
 # SNES Cart X-Band (2400 baud Modem)
 
 The X-Band is a 2400 baud modem from Catapult Entertainment Inc., licensed by Nintendo, originally released 1994 in USA, and 199x? in Japan. Aside from the SNES version, there have been also Genesis and Saturn versions.

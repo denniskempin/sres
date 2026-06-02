@@ -1,3 +1,8 @@
+---
+summary: Low-level cycle-by-cycle timing of the SNES APU, detailing the 32-cycle DSP sample period with RAM/register access slots (T0-T31), internal signals (LRCK, MX1-3, /WE, /OE, /CE), and SPC700 timer synchronization.
+keywords: APU timing, DSP cycles, SPC700, audio sample, RAM access
+importance: 3
+---
 # SNES APU Low Level Timings
 
 #### Register and RAM Access Timing Chart

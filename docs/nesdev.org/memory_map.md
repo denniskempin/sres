@@ -3,6 +3,9 @@ title: "Memory map"
 source_url: "https://snes.nesdev.org/wiki/Memory_map"
 pageid: 18
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the SNES overall memory layout (RAM, I/O, ROM regions) and details the three cartridge mapping modes — LoROM (32 KiB banks), HiROM (64 KiB banks), and ExHiROM (extended beyond 4 MiB) — including their address pin connections and ROM header locations."
+keywords: "LoROM, HiROM, ExHiROM, ROM header, memory map"
+importance: 5
 ---
 
 ## Overall

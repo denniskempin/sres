@@ -1,3 +1,9 @@
+---
+summary: A list of games that support the SNES Mouse controller peripheral, noting that most can also be used with a standard joypad (with Mario Paint being a notable exception). Includes regional variants and a few additional titles/notes appended at the end.
+keywords: SNES Mouse, controllers, input devices, mouse-supported games, peripherals
+importance: 1
+---
+
 # SNES Controllers Mouse Games
 
 The SNES Mouse is supported by many games, whereas most of them (except Mario Paint) can be also used with normal joypads.

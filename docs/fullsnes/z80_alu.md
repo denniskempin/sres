@@ -1,3 +1,8 @@
+---
+summary: Reference table of the Z80 processor's arithmetic and logical instructions, including 8-bit operations (ADD, SUB, AND, XOR, etc.), 16-bit operations, increment/decrement, and search commands with their opcodes, cycle counts, and flag effects.
+keywords: Z80, ALU, arithmetic, logical instructions
+importance: 1
+---
 # Z80 Arithmetic/Logical Commands
 
 8bit Arithmetic/Logical Commands  Instruction    Opcode  Cycles Flags  Notes  daa            27           4 szxp-x decimal adjust akku  cpl            2F           4 --1-1- A = A xor FF  neg            ED 44        8 szho1c A = 00-A  <arit>  r      xx           4 szhonc see below  <arit>  i      pD xx        8 szhonc see below, UNDOCUMENTED  <arit>  n      xx nn        7 szhonc see below  <arit>  (HL)   xx           7 szhonc see below  <arit>  (ii+d) pD xx dd    19 szhonc see below  <cnt>   r      xx           4 szhon- see below  <cnt>   i      pD xx        8 szhon- see below, UNDOCUMENTED  <cnt>   (HL)   xx          11 szhon- see below  <cnt>   (ii+d) pD xx dd    23 szhon- see below  <logi>  r      xx           4 szhp00 see below  <logi>  i      pD xx        8 szhp00 see below, UNDOCUMENTED  <logi>  n      xx nn        7 szhp00 see below  <logi>  (HL)   xx           7 szhp00 see below  <logi>  (ii+d) pD xx dd    19 szhp00 see below Arithmetic <arit> commands:

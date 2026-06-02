@@ -1,3 +1,8 @@
+---
+summary: Reference for the BS-X Satellaview cartridge's interpreter token bytecode, listing all opcodes (00h-FFh), parameter encodings for variables and pointers, predefined call/gosub functions, and compressed data handling. Covers thread control, math operations, PPU/OBJ manipulation, and APU messaging tokens.
+keywords: Satellaview, BS-X, interpreter tokens, bytecode, cartridge
+importance: 1
+---
 # SNES Cart Satellaview Interpreter Token Summary
 
 #### Interpreter Tokens

@@ -3,6 +3,9 @@ title: "Version differences"
 source_url: "https://snes.nesdev.org/wiki/Version_differences"
 pageid: 183
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Catalog of SNES hardware chip revisions and the behavioral differences between them, covering S-CPU (5A22, RF5A122/1-CHIP), S-PPU1, S-PPU2, audio chips (SHVC-SOUND, S-DSP, S-APU), and DAC variants. Documents per-revision version numbers (RDNMI, STAT77, STAT78), bug fixes, and remaining known bugs needed for accurate emulation of specific motherboard revisions."
+keywords: "S-CPU, S-PPU2, 1-CHIP, S-APU, DMA"
+importance: 4
 ---
 
 Nintendo stopped incrementing version numbers after 2/1/3.

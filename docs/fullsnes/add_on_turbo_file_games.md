@@ -1,3 +1,8 @@
+---
+summary: Lists SNES and NES games compatible with the ASCII Turbo File and Turbo File Twin external save-data storage peripherals, including STF-mode and TFII-mode support.
+keywords: Turbo File, Turbo File Twin, game compatibility, save data, ASCII
+importance: 0
+---
 # SNES Add-On Turbo File - Games
 
 #### SNES Games that support Turbo File Twin in STF-Mode

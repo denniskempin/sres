@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES 24-bit address space, partitioning it into the System Area (WRAM, I/O ports, expansion), LoROM, HiROM, and mirror regions, and covers cartridge ROM capacity, battery-backed SRAM mapping, the A-Bus/B-Bus split, and bank switching schemes used by special-chip cartridges.
+keywords: memory map, LoROM, HiROM, WRAM, bank switching
+importance: 5
+---
+
 # SNES Memory Map
 
 The SNES uses a 24bit address bus (000000h-FFFFFFh). These 24bit addresses are often divided into 8bit bank numbers (00h-FFh) plus 16bit offset (0000h-FFFFh).

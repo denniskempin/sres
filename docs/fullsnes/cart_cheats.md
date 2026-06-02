@@ -1,3 +1,8 @@
+---
+summary: Reference for SNES cheat cartridge devices, summarizing code formats and patch capacity for Pro Action Replay, Game Genie, Game Mage, X-Terminator, Game Wizard, Gold Finger, Game Saver, and related copiers. Each entry links to dedicated sub-documents with hardware I/O and code-format details.
+keywords: Game Genie, Pro Action Replay, X-Terminator, Gold Finger, cheat codes
+importance: 1
+---
 # SNES Cart Cheat Devices
 
 #### Code Format Summary

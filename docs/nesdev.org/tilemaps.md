@@ -3,6 +3,9 @@ title: "Tilemaps"
 source_url: "https://snes.nesdev.org/wiki/Tilemaps"
 pageid: 52
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the SNES PPU tilemap (nametable) format used by background layers, covering 32x32 tile regions in VRAM, the 16-bit tilemap entry fields (tile index, palette, priority, flips), Mode 7's special 128x128 format with separate tile data, and offset-per-tile maps used by BG3 in Modes 2, 4, and 6."
+keywords: "tilemap, nametable, VRAM, Mode 7, BGMODE"
+importance: 4
 ---
 
 With the exception of [mode 7](#Mode_7) and [[Offset-per-tile]], a **tilemap** is a 2-kilobyte (1-kiloword) block of data in VRAM that defines a 32x32 tile region that can be used by a [[Backgrounds|background]]. A tilemap may also be known as a **nametable**.

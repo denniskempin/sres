@@ -1,3 +1,9 @@
+---
+summary: Documents the CXD1800Q decoder/FIFO chip used in the SNES CDROM unit, covering the index/data port interface, configuration registers, interrupt and status flags, and DMA/sector buffer transfer registers.
+keywords: SNES CDROM, CXD1800Q, CDROM decoder, DMA, sector buffer
+importance: 1
+---
+
 # SNES Cart CDROM - Decoder/FIFO
 
 CXD1800Q chip (equivalent to CXD1196AR datasheet).

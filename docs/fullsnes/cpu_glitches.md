@@ -1,3 +1,9 @@
+---
+summary: Describes 65C816 CPU glitch behaviors relevant to the SNES, including the absence of dummy-write cycles in read-modify-write opcodes (unlike the original 6502) and dummy read cycles that occur at page-boundary crossings during indexed addressing.
+keywords: 65C816, CPU glitches, read-modify-write, page-wraps, dummy cycles
+importance: 4
+---
+
 # CPU Glitches
 
 #### Dummy Write Cycles in Read-Modify-Opcodes

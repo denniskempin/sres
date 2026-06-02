@@ -1,3 +1,9 @@
+---
+summary: Hardware reference for the Super Disk Interceptor, a SNES cart copier made by KL818/Sane Ting. Documents the I/O and memory map (including FDC registers and BIOS mapping), plus component lists for the 1992 and 1993 board revisions.
+keywords: Super Disk Interceptor, Sane Ting, cart copier, floppy disk controller, FDC
+importance: 1
+---
+
 # SNES Cart Copiers - Sane Ting (Super Disk Interceptor)
 
 The Super Disk Interceptor is a SNES copier from KL818 B.C./Sane Ting Co. Ltd., the company also made a copier for Mega Drive, called Mega Disk Interceptor.

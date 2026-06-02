@@ -1,3 +1,9 @@
+---
+summary: Documents hardware that is unsupported or prohibited when used with the SNES Multiplayer 5 (MP5) controller adapter, including missing-signal incompatibilities and power-consumption limits per slot.
+keywords: SNES, Multiplayer 5, MP5, controller compatibility
+importance: 1
+---
+
 # SNES Controllers Multiplayer 5 - Unsupported Hardware
 
 The Multiplayer 5 is incompatible with almost everything except normal joypads/joysticks. The only other things that do work are Twin Taps, and maybe also the NTT Data Pad (unless it exceeds 17mA, and unless games do refuse it as device with "unknown" controller ID).

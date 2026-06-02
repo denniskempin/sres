@@ -1,3 +1,9 @@
+---
+summary: Technical documentation of the Lasabirdie golf club controller for the SNES, covering its hardware layout, button configuration, and the serial data transfer protocol used to communicate with the console.
+keywords: Lasabirdie, Ricoh, Golf Club, Controller Protocol, Get in the Hole
+importance: 0
+---
+
 # SNES Controllers Lasabirdie (golf club)
 
 The Lasabirdie is a golf club made in 1995 by Ricoh. Supported by only one game (which came shipped with the device):

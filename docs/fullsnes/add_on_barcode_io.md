@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES controller protocol used by the Barcode Battler add-on (with BBII Interface), including the bit layout for ID/status/digit fields and the raw 1200 baud 8N1 ASCII output format. Intended as reference for emulating or interfacing with this periphery.
+keywords: Barcode Battler, BBII Interface, SNES controller, barcode I/O
+importance: 1
+---
+
 # SNES Add-On Barcode Transmission I/O
 
 The Barcode Battler outputs barcodes as 20-byte ASCII string, at 1200 Baud, 8N1. The NES software receives that bitstream via Port 4017h.Bit2. The SNES software requires a BBII Interface, which converts the 8bit ASCII digits into 4bit nibbles, and inserts SNES controller ID and status codes, the interface should be usually connected to Controller Port 2 (although the existing SNES games seem to accept it also in Port 1).

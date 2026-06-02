@@ -1,3 +1,9 @@
+---
+summary: Describes the Satellaview (BS-X) satellite channel system, including the format of the Channel Map packet (hardware channel 0124h) loaded to 7E9BECh, the structure of hardware and software channel numbers, reserved channels used by specific games, and the endianness conventions used in satellite packets.
+keywords: Satellaview, channel map, hardware channel, software channel, BS-X
+importance: 1
+---
+
 # SNES Cart Satellaview Channels and Channel Map
 
 #### Channels

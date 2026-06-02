@@ -1,3 +1,8 @@
+---
+summary: Documents the OBC1 (OBJ Controller), an 80-pin Nintendo cartridge coprocessor used exclusively by Metal Combat:  Falcon's Revenge to assist OAM manipulation. Covers its I/O port map, SRAM layout, and PCB details.
+keywords: OBC1, OBJ Controller, Metal Combat, cartridge coprocessor
+importance: 1
+---
 # SNES Cart OBC1 (OBJ Controller) (1 game)
 
 The OBC1 is a 80pin OBJ Controller chip from Nintendo, used by only one game:

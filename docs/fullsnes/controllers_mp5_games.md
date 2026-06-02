@@ -1,4 +1,10 @@
+---
+summary: List of SNES games that support the Multiplayer 5 (Multitap) controller configuration, including the languages each title was released in and the maximum number of players supported.
+keywords: Multitap, Multiplayer 5, games, 5 players, periphery
+importance: 1
+---
 # SNES Controllers Multiplayer 5 - Supported Games
+
 
 Multiplayer 5 Games  Game                                                       Languages   Players  Bakukyuu Renpatsu!! Super B-Daman ("battle mode")                (J)         4  Bakutou Dochers: Bumps-jima wa Oosawagi ("battle mode")          (J)         4  Barkley Shut Up and Jam! / Barkey no Power Dunk                  (E,J)       4  Battle Cross (supports only 5 joypads; player 6 always inactive) (J)         5  Battle Jockey                                                    (J)         4  Bill Walsh College Football                                      (E)         4  Chibi Maruko-chan: Mezase! Minami no Island!!                    (J)         4  College Slam                                                     (E)         4  Crystal Beans From Dungeon Explorer                              (J)         3  Dino Dini's Soccer!                                              (E,F,G)    ??
 

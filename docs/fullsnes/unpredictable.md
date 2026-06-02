@@ -1,3 +1,9 @@
+---
+summary: A technical reference documenting SNES hardware "unpredictable" behaviors relevant to accurate emulation. Covers open bus behavior on unused addresses, partial ports, PPU registers, and DMA transfers, as well as SPC700 division overflow edge cases.
+keywords: open bus, DMA, PPU, SPC700 division, unused addresses
+importance: 4
+---
+
 # SNES Unpredictable Things
 
 #### Open Bus

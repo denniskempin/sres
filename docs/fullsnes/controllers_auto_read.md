@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES automatic joypad reading mechanism, including the I/O port registers $4218-$421F, the bit ordering for button states (B, Y, Select, Start, D-Pad, A, X, L, R), and the timing behavior of the auto-read process during V-Blank.
+keywords: SNES controllers, automatic reading, JOY registers, button state, V-Blank timing
+importance: 4
+---
+
 # SNES Controllers I/O Ports - Automatic Reading
 
 ```text

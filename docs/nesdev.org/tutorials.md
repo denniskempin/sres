@@ -3,6 +3,9 @@ title: "Tutorials"
 source_url: "https://snes.nesdev.org/wiki/Tutorials"
 pageid: 95
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: A curated list of external tutorials for general SNES development, covering assembly programming, graphics, and game engine design.
+keywords: SNES development, assembly programming, graphics, game engine, tutorials
+importance: 3
 ---
 
 Tutorials for general SNES development.

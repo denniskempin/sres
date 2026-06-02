@@ -1,4 +1,10 @@
 ---
+summary: "This document provides practical examples and patterns for using Horizontal Direct Memory Access (HDMA) on the SNES to modify PPU registers per scanline, covering transfer patterns, timing considerations, table structures, and dynamic table updates."
+keywords: "HDMA, DMA, PPU, scanline effects, CGRAM"
+importance: 4
+---
+
+---
 title: "HDMA examples"
 source_url: "https://snes.nesdev.org/wiki/HDMA_examples"
 pageid: 105

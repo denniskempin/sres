@@ -1,3 +1,9 @@
+---
+summary: Describes the bitmap I/O ports of the SNES cartridge GSU-n (Super FX) coprocessor, including the Screen Base (SCBR), Screen Mode (SCMR), and Plot Option (POR/CMODE) registers used for rendering in 4/16/256-color and OBJ modes.
+keywords: GSU, Super FX, SCBR, SCMR, POR
+importance: 1
+---
+
 # SNES Cart GSU-n Bitmap I/O Ports
 
 ```text

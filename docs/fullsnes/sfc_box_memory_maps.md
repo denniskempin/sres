@@ -1,3 +1,9 @@
+---
+summary: Documents the SFC-Box memory and I/O maps, including the physical 19-bit and virtual 16-bit memory layouts (KROM, GROM, WRAM) and HD64180 I/O port assignments for keyswitch, joypad, RTC, and SNES mapping registers.
+keywords: SFC-Box, memory map, I/O ports, HD64180
+importance: 0
+---
+
 # SFC-Box Memory & I/O Maps
 
 most of KROM is high-level-language based crap, this is ACTUALLY WORSE than 6502-code compiled to run on a Z80 CPU.

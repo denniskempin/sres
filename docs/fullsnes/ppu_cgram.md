@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES PPU's CGRAM (Color Palette Memory) format, including the 15-bit BGR palette entry bit layout, palette index assignments for backdrops and BG/OBJ palettes across all BG modes, the direct-color mode for 256-color BGs, and special-case screen border and forced blank coloring.
+keywords: CGRAM, palette, direct color, PPU, backdrop
+importance: 4
+---
+
 # SNES PPU Color Palette Memory (CGRAM) and Direct Colors
 
 #### CGRAM Palette Entries

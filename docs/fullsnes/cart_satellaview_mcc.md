@@ -1,3 +1,9 @@
+---
+summary: Reference for the Satellaview MCC memory controller, documenting its 16-bit I/O register (with bits scattered across memory banks) and the BIOS cartridge memory map covering FLASH, PSRAM, BIOS ROM, and SRAM.
+keywords: Satellaview, MCC, memory controller, FLASH, PSRAM
+importance: 1
+---
+
 # SNES Cart Satellaview I/O Ports of MCC Memory Controller
 
 #### MCC I/O Ports

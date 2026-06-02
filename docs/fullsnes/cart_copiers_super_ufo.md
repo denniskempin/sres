@@ -1,3 +1,9 @@
+---
+summary: Hardware reference for the Super UFO SNES cart copier family (UFO3, UFO6, UFO7/UFO8), covering memory maps, I/O register layouts, FDC floppy-disk-controller addresses, SRAM/DRAM regions, and component lists for the cartridge boards.
+keywords: Super UFO, cart copier, FDC, memory map, UFO8
+importance: 1
+---
+
 # SNES Cart Copiers - Super UFO
 
 #### UFO Super Drive Pro / Super UFO

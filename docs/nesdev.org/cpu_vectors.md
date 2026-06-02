@@ -3,6 +3,9 @@ title: "CPU vectors"
 source_url: "https://snes.nesdev.org/wiki/CPU_vectors"
 pageid: 49
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Documents the 65C816 CPU interrupt vector table on the SNES, listing the vector addresses in bank $00 and the interrupt sources for each in both native and 6502 emulation modes."
+keywords: "CPU vectors, 65C816, interrupts, native mode, emulation mode"
+importance: 5
 ---
 
 When an interrupt occurs, the address of the interrupt handler is read from the vector table in bank $00. The vector used is determined by the type of interrupt and the current CPU mode. Vectors are all 16-bit and the target bank is forced to $00.

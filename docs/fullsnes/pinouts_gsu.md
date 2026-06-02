@@ -1,3 +1,9 @@
+---
+summary: Reference document showing the pinout assignments for the GSU (Super FX) coprocessor chip variants used in SNES cartridges, including MC1, GSU1, GSU1A, GSU2, and GSU2-SP1 packages.
+keywords: GSU, Super FX, pinout, chip package, coprocessor
+importance: 1
+---
+
 # SNES Pinouts GSU Chips
 
 #### GSU Chip Packages

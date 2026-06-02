@@ -3,6 +3,9 @@ title: "Save file formats"
 source_url: "https://snes.nesdev.org/wiki/Save_file_formats"
 pageid: 131
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: Describes the two main save file formats used in SNES emulation: Save RAM (.SRM) files that contain a linear dump of battery-backed cartridge SRAM, and savestates which store the entire emulator state at a given moment.
+keywords: Save RAM, SRM, savestates, SRAM
+importance: 2
 ---
 
 Save files for SNES generally come in two forms: Save RAM, and Savestates.

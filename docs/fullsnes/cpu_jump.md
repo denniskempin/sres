@@ -1,3 +1,9 @@
+---
+summary: Reference table of SNES CPU (65C816) jump, branch, interrupt, and control opcodes, including normal jumps, conditional branches, exception vectors, flag-manipulation instructions, and special opcodes such as STP, WAI, and XBA.
+keywords: 65C816, jump, branch, interrupt, opcode
+importance: 5
+---
+
 # CPU Jump and Control Instructions
 
 #### Normal Jumps

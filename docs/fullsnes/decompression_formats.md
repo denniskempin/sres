@@ -1,3 +1,8 @@
+---
+summary: Documents Nintendo's SNES-specific data compression formats used by the BSX (Satellaview) and SFC-Box (Super Famicom Box) add-ons, describing their code/length encoding schemes and decompression codes. Also briefly covers SNES hardware-based decompression capabilities, including BRR audio, SPC7110/S-DD1 video, and SA-1 bit processing.
+keywords: compression, decompression, BSX, SFC-Box, SPC7110
+importance: 1
+---
 # SNES Decompression Formats
 
 Nintendo-specific Compression Overall Format (BSX and SFC-Box) Compressed data consists of "code/length" pairs encoded in 1 or 2 bytes:

@@ -1,3 +1,8 @@
+---
+summary: Reference documentation for the HD64180 serial I/O ports, covering the ASCI (Asynchronous Serial Communication Interface) and CSI/O (Clocked Serial I/O) modules. It details the control and status registers, data registers, baudrate generation, and the multi-processor networking feature.
+keywords: HD64180, ASCI, CSI/O, serial I/O
+importance: 1
+---
 # HD64180 Serial I/O Ports (ASCI and CSI/O)
 
 #### Asynchronous Serial Communication Interfaces (ASCI) and Clocked Serial I/O (CSI/I)

@@ -1,3 +1,9 @@
+---
+summary: Technical reference describing the SNES GSU (Super FX) co-processor's two-stage 8-pixel write cache, including flush conditions, primary/secondary cache behavior, and how the RPIX and PLOT opcodes interact with the caches.
+keywords: GSU, Super FX, pixel cache, RPIX, PLOT
+importance: 2
+---
+
 # SNES Cart GSU-n Pixel-Cache
 
 #### RAM-Pixel-Write-Cache (two 8-pixel rows)

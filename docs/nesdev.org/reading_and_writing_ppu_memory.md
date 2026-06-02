@@ -3,6 +3,9 @@ title: "Reading and writing PPU memory"
 source_url: "https://snes.nesdev.org/wiki/Reading_and_writing_PPU_memory"
 pageid: 145
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes how the S-CPU accesses the SNES PPU's three memory regions (CGRAM, OAM, and VRAM) via PPU registers, including timing constraints (vblank/hblank/force-blank), address auto-increment behavior, and DMA transfer patterns for each region."
+keywords: "VRAM, CGRAM, OAM, PPU memory, DMA"
+importance: 5
 ---
 
 ## CGRAM

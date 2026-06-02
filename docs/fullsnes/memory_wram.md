@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES 128K Work RAM (WRAM) memory, including its 7E:0000-7F:FFFF address space, the 0000-1FFF mirrors in banks 00-3F/80-BF, and the auto-incrementing access port at $2180-$2183. Also covers WRAM-to-WRAM DMA limitations, 2.6MHz access timing, and tricks for faster "3.5MHz" reads.
+keywords: WRAM, Work RAM, Port 2180h, DMA, 2.6MHz
+importance: 5
+---
+
 # SNES Memory Work RAM Access
 
 The SNES includes 128Kbytes of Work RAM, which can be accessed in several ways:

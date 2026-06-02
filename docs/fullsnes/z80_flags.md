@@ -1,3 +1,9 @@
+---
+summary: Describes the Z80 CPU's flag register (located in the lower 8 bits of AF), covering the Carry, Zero, Sign, Parity/Overflow, BCD (Half-Carry, Add/Sub), and undocumented flags and their behavior across various instructions.
+keywords: Z80, flags, AF register, parity/overflow, BCD
+importance: 1
+---
+
 # Z80 Flags
 
 #### Flag Summary

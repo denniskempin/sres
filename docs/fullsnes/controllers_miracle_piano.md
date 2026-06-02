@@ -1,3 +1,8 @@
+---
+summary: Documents the Miracle Piano Teaching System, a SNES piano keyboard peripheral featuring 49 keys, a sustain foot pedal, and mode/volume push buttons, with cross-references to its controller port, MIDI commands, instruments, and pinout details.
+keywords: SNES, Miracle Piano, MIDI, piano keyboard, peripheral
+importance: 1
+---
 # SNES Controllers Miracle Piano
 
 #### Miracle Piano Teaching System (The Software Toolworks)

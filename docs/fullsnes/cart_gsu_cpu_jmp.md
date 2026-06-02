@@ -1,3 +1,9 @@
+---
+summary: Documents the jump, branch, and prefix opcodes (STOP, BRA, JMP, LOOP, LINK, ALT1/2/3, TO/WITH/FROM) of the SuperFX (GSU) coprocessor CPU used in SNES cartridges, including flags, cycle counts, and special behavior.
+keywords: GSU, SuperFX, coprocessor, opcodes, prefix
+importance: 2
+---
+
 # SNES Cart GSU-n CPU JMP and Prefix Opcodes
 
 #### GSU Special Opcodes

@@ -1,3 +1,9 @@
+---
+summary: Reference for the SNES cartridge PCB naming convention (SHVC-XXXX-NN), decoding each character position to indicate ROM count, memory mapping (LoRom/HiRom), coprocessor type, SRAM size, and battery/RTC presence. Also lists special cartridges that don't follow the naming scheme, common ROM chip part numbers, and packaging styles.
+keywords: SNES cartridge PCB, SHVC naming convention, LoRom, HiRom, coprocessors
+importance: 3
+---
+
 # SNES Cartridge PCBs
 
 #### Cartridge PCB Naming (eg. SHVC-XXXX-NN)

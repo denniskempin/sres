@@ -3,6 +3,9 @@ title: "Subroutine call tradeoffs"
 source_url: "https://snes.nesdev.org/wiki/Subroutine_call_tradeoffs"
 pageid: 203
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Trade-offs and best practices for W65C816 subroutine calls, covering register size flag conventions, argument passing via registers/temporary variables/globals/stack, and tail call optimisations."
+keywords: "W65C816, calling convention, register size, tail call optimization, stack arguments"
+importance: 5
 ---
 
 There is no common standard calling convention for 65c816 assembly. There are no best-fit value for the register size flags, `D` direct page register or `DB` data bank register and calling a subroutine with the incorrect flag/`D`/`DB`/`PB` value will crash the program.

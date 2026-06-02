@@ -1,3 +1,9 @@
+---
+summary: Reference document detailing the SNES cartridge slot pinout, listing all 62 pins with their signal assignments (address/data bus, control strobes, audio, CIC lockout) and physical connector specifications.
+keywords: pinout, cartridge, connector, CIC, address bus
+importance: 4
+---
+
 # SNES Cartridge Slot Pinouts
 
 #### Cartridge Slot 62 pins (31x2 pins)

@@ -1,3 +1,8 @@
+---
+summary: Describes the SNES Turbo File add-on memory layout and its filesystem formats, including the newer 1987+ format with "AB" ID, title, data, and checksum, and the older 1986 format used by Castle Excellent with hardcoded offset and reversed bit-order IDs.
+keywords: Turbo File, SNES add-on, file format, save memory, Castle Excellent
+importance: 1
+---
 # SNES Add-On Turbo File - TFII Mode Filesystem
 
 #### Turbo File Memory

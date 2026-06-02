@@ -1,3 +1,8 @@
+---
+summary: Documents the Seta ST018 cartridge coprocessor, a pre-programmed ARM CPU used by a single Japanese SNES game (Hayazashi Nidan Morita Shogi 2). Covers the ARM-side memory and I/O maps, SNES-side registers, status flags, command set, and hardware component list.
+keywords: Seta ST018, ARM coprocessor, enhancement chip, Shogi
+importance: 1
+---
 # SNES Cart Seta ST018 (pre-programmed ARM CPU) (1 game)
 
 Seta ST018 - 160pin SETA D6984 ST018 chip (PCB SHVC-1DE3B-01) The chip is used by a single game only:

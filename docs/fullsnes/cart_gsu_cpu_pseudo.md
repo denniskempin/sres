@@ -1,3 +1,9 @@
+---
+summary: Reference listing of GSU (Super FX) CPU pseudo/macro opcodes used in SNES cartridge coprocessors, including official aliases (LEA, MOVE variants) and nocash-style extensions (jmp, push/pop, cmp, call, ret, alu, and).
+keywords: GSU, Super FX, pseudo opcodes, SNES cartridge, coprocessor
+importance: 2
+---
+
 # SNES Cart GSU-n CPU Pseudo Opcodes
 
 #### Official GSU Pseudo/Macro Opcodes

@@ -1,3 +1,9 @@
+---
+summary: Reference documentation for the SFC-Box OSD (On-Screen Display) chip, detailing its command set, VRAM layout, character generator ROM, and color table. Covers variants of the Fujitsu OSD chip (MB90075, MB90082, MB90089, MB90092) with per-command bit assignments and behavioral differences.
+keywords: OSD chip, SFC-Box, MB90075, MB90089, on-screen display
+importance: 1
+---
+
 # SFC-Box OSD Chip (On-Screen Display Controller)
 
 #### OSD Command Summary

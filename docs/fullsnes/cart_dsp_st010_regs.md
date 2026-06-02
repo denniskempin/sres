@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the NEC uPD77C25 coprocessor used in SNES cartridges (DSP1-DSP4 and ST010/ST011), covering LoROM/HiROM memory mapping, register set, FlagA/FlagB and Status Register (SR) flags, opcode encoding, internal memory layout, and ROM image formats.
+keywords: uPD77C25, DSP1, ST010, opcode encoding, status register
+importance: 1
+---
+
 # SNES Cart DSP-n/ST010/ST011 - NEC uPD77C25 - Registers & Flags & Overview
 
 #### DSP Mapping

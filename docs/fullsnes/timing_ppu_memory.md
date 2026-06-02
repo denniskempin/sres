@@ -1,3 +1,9 @@
+---
+summary: Detailed notes on SNES PPU timing, focusing on how the 1364 master cycles per scanline are used for VRAM, CGRAM, and OAM accesses, and when it may be possible to modify these memories outside of V-Blank or Forced Blank.
+keywords: PPU, VRAM, CGRAM, OAM, scanline timing
+importance: 5
+---
+
 # SNES Timing PPU Memory Accesses
 
 Below is some info/guesses on what is happening during the 1364 master cycles of a scanline. Plus some info/guesses on if/when/why it is (or isn't) possible the change VRAM/CGRAM/OAM outside of V-Blank or Forced-Blank.

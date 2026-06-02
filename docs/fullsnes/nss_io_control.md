@@ -1,3 +1,9 @@
+---
+summary: Describes the Nintendo Super System (NSS) arcade hardware I/O control registers, including NMI control, RAM protection, slot selection, LED control, and the SNES watchdog mechanism used for joypad read monitoring.
+keywords: NSS, I/O ports, control registers, watchdog, arcade
+importance: 0
+---
+
 # NSS I/O Ports - Control Registers
 
 #### Port WHERE.W

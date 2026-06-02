@@ -1,3 +1,9 @@
+---
+summary: Component list for the Sony SFX-100 "Play Station" / SNES Cart CD-ROM prototype, enumerating mainboard ICs (CXD2500, CXD1800, etc.), daughterboards, CD drive parts, external connectors, and the BIOS cartridge layout.
+keywords: SFX-100, SNES Cart CDROM, CXD2500, CXD1800, component list
+importance: 1
+---
+
 # SNES Cart CDROM - Component List
 
 "based on the on photos that have been posted, the main board has the same parts as a Super Famicom, but with 7 additional chips:

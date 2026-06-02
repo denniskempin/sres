@@ -1,3 +1,9 @@
+---
+summary: Pinout reference for the SNES Expansion Port (EXT), the 28-pin connector on the bottom of the console used by peripherals such as the Satellaview and Exertainment. Documents the signal assignments and highlights the special pins (SMPCK, DOTCK, MONO-AUDIO) that are not present on the cartridge slot.
+keywords: Expansion Port, EXT, Satellaview, Pinout, SMPCK
+importance: 1
+---
+
 # SNES Expansion Port (EXT) Pinouts
 
 EXT (at bottom of console) (used by Satellaview and Exertainment) Most pins are exactly the same as on the cartridge slot, the only special pins, which aren't found on Cart slot, are EXT pins 21, 22, and 25: SMPCK is 8.192MHz (24.576MHz/3) from APU, DOTCK is the PPU dot clock (around 5.3MHz, with some stuttering during hblank period), MONO is a mono audio output.

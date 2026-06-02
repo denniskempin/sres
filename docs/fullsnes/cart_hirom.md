@@ -1,3 +1,8 @@
+---
+summary: Describes the HiROM memory mapping for SNES cartridges with 64K banks, covering plain HiROM boards and HiROM variants with SRAM. Lists board types (SHVC-*), their ROM areas, ROM mirror regions, and SRAM regions, including the ExHiROM variant.
+keywords: HiROM, SNES, cartridge mapping, SRAM, ExHiROM
+importance: 4
+---
 # SNES Cart HiROM Mapping (ROM divided into 64K banks) (around 500 games)
 
 #### Plain HiROM

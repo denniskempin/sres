@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES-side and GSU-side memory maps for the GSU (SuperFX) co-processor cartridges (MC1, GSU1, and GSU2 variants), including LoROM/HiROM ROM mapping, game pak RAM regions, I/O port locations, interrupt vector handling while the GSU is active, cartridge header format, and the GSU's internal address/data busses.
+keywords: GSU, SuperFX, memory map, LoROM, cartridge
+importance: 2
+---
+
 # SNES Cart GSU-n Memory Map
 
 #### MC1 Memory Map (at SNES Side)

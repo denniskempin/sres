@@ -1,3 +1,9 @@
+---
+summary: Reference for 65XX assembler directives and their 80XX-style equivalents, covering syntax features like origins, labels, byte/word definitions, and native/nocash modes. Also documents special directives for producing NES, C64, and VIC20 ROM images, including details on the VIC20 relocation stub.
+keywords: 65XX assembler, directives, syntax, 80XX-style, VIC20 stub
+importance: 1
+---
+
 # CPU Assembler Directives/Syntax
 
 Below are some common 65XX assembler directives, and the corresponding expressions in 80XX-style language.

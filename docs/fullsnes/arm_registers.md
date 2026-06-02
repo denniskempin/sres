@@ -1,3 +1,9 @@
+---
+summary: Reference for the ARM7TDMI register set used in the SuperFX coprocessor, covering the 37 32-bit registers (31 general-purpose R0-R12 plus R13/R14/R15 and the CPSR/SPSR status registers) across all processor modes (System/User, FIQ, Supervisor, Abort, IRQ, Undefined), including which registers are banked and the special roles of SP, LR, and PC.
+keywords: ARM7TDMI, registers, banked registers, CPSR SPSR, processor modes
+importance: 1
+---
+
 # ARM Register Set
 
 #### Overview

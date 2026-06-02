@@ -1,3 +1,9 @@
+---
+summary: Index of Z80 CPU specifications for the SNES, including register set, flags, instruction format, load/ALU/shift operations, jumps, interrupts, I/O, compatibility, pin-outs, and local usage details.
+keywords: Z80, CPU, registers, flags, opcodes, interrupts
+importance: 1
+---
+
 # Z80 CPU Specifications
 
 > **See:** [Z80 Register Set](z80_registers.md)

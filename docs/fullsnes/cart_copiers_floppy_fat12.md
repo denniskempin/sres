@@ -1,3 +1,9 @@
+---
+summary: Describes the FAT12 floppy disk format used by SNES cart copiers to store ROM images, including the boot record layout, FAT structure, root directory entry format, and data cluster organization.
+keywords: FAT12, cart copier, floppy disk, boot record, root directory
+importance: 1
+---
+
 # SNES Cart Copiers - Floppy Disc FAT12 Format
 
 The SNES Copier floppy format is compatible to that used under DOS on PCs.

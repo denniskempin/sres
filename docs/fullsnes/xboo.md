@@ -1,3 +1,9 @@
+---
+summary: Describes the Xboo WRAM Boot circuit, a hardware design using logic gates to upload SNES ROMs via the parallel port. Covers both the basic WRAM-Boot circuit (max 128K) and the Extended Circuit for larger ROMs, including functional descriptions, parts lists, and TEST mode behavior.
+keywords: WRAM Boot, XBOO, parallel port upload, no$sns utility
+importance: 1
+---
+
 # SNES Xboo Upload (WRAM Boot)
 
 WRAM-Boot Circuit (for WRAM-boot-compatible ROMs, max 128K bytes)

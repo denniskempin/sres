@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES-side I/O registers used to communicate with the SA-1 coprocessor, including control, interrupt enable/clear, reset/NMI/IRQ vector setup, status flag read, and chip version code.
+keywords: SA-1, interrupts, SNES coprocessor, I/O registers, vectors
+importance: 2
+---
+
 # SNES Cart SA-1 Interrupt/Control on SNES Side
 
 #### 2200h SNES CCNT - SA-1 CPU Control (W)

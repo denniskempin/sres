@@ -1,3 +1,9 @@
+---
+summary: Reference for the SPC7110 cartridge's hardware multiply/divide math unit, covering the register map at 4820h-482Fh, operation triggers, result/remainder layout, status bit, reset behavior, and known unknowns such as signed mode and execution time.
+keywords: SPC7110, multiply, divide, math unit, cartridge
+importance: 1
+---
+
 # SNES Cart SPC7110 Multiply/Divide Unit
 
 #### Unsigned Multiply/Divide Unit

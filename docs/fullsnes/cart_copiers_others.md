@@ -1,3 +1,9 @@
+---
+summary: Component lists and chip inventories for several third-party SNES cartridge copier devices, including the Special Partner (GP-003 REV. B), Supercom/24m DSP/CD-ROM/FX-32/High Density/Real Time Save, Double Pro Fighter (CCL), and Super Smart Disc boards.
+keywords: SNES cart copiers, Special Partner, Supercom, Double Pro Fighter, Super Smart Disc
+importance: 0
+---
+
 # SNES Cart Copiers - Others
 
 Component List - Board "GP-003 REV. B" (used in Special Partner)

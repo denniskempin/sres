@@ -1,4 +1,10 @@
 ---
+summary: Pinout reference for the S-ENC video encoder chip used in SNES 1CHIP revisions, listing all 24 pins with their signal names and functions for composite video output.
+keywords: S-ENC, video encoder, pinout, composite video, SNES
+importance: 1
+---
+
+---
 title: "S-ENC Pinout"
 source_url: "https://snes.nesdev.org/wiki/S-ENC_Pinout"
 pageid: 189

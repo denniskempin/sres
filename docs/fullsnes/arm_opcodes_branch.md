@@ -1,3 +1,9 @@
+---
+summary: Reference for ARM branch and branch-with-link (B, BL) opcodes, software interrupt (SWI), and undefined instruction behavior, including bit layout, execution timing, return mechanism, and PC alignment rules.
+keywords: ARM, branch, BL, SWI, software interrupt
+importance: 1
+---
+
 # ARM Opcodes: Branch and Branch with Link (B, BL, SWI)
 
 Branch and Branch with Link (B, BL) Branch (B) is supposed to jump to a subroutine. Branch with Link is meant to be used to call to a subroutine, return address is then saved in R14/LR (and can be restored via MOV PC,LR aka MOV R15,R14) (for nested subroutines, use PUSH LR and POP PC).

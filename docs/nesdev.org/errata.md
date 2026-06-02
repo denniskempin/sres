@@ -3,6 +3,9 @@ title: "Errata"
 source_url: "https://snes.nesdev.org/wiki/Errata"
 pageid: 37
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Reference catalog of SNES hardware quirks and bugs programmers must account for, covering the PPU (INIDISP, sprites, color math), the APU (S-SMP communication, S-DSP envelopes/echo/FIR/BRR), the SPC700 instruction set, the 5A22 CPU (multiplication, DMA, HDMA), Mode 7, controller input timing, and file-format pitfalls."
+keywords: "PPU, S-DSP, SPC700, 5A22, DMA"
+importance: 5
 ---
 
 This page describes quirks in the SNES hardware that programmers need to be aware of. They could be mistakes in the hardware's implementation, or just unintuitive behavior.

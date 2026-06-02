@@ -1,3 +1,9 @@
+---
+summary: Describes the LED and debug I/O ports of the SNES X-Band modem cartridge, including the LEDData/LEDEnable registers at C168h/C16Ah, a DB25-based debug hardware mod, and the serial protocol used by the BIOS to read a 64-bit number (and its checksum) via FBC168h/FBC16Ah.
+keywords: X-Band, LED, cartridge I/O, debug, C168h, C16Ah
+importance: 1
+---
+
 # SNES Cart X-Band I/O - LED and Debug
 
 ```text

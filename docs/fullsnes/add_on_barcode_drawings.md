@@ -1,3 +1,9 @@
+---
+summary: ASCII art drawings of the Epoch Barcode Battler add-on for the SNES/Super Famicom, including the handheld console (front, back, LCD screen layout), the BBII interface cable, and the picture/description sides of the paper barcode cards.
+keywords: Barcode Battler, Epoch, SNES add-on, ASCII art, periphery
+importance: 1
+---
+
 # SNES Add-On Barcode Battler Drawings
 
 #### Barcode Battler - Handheld Console (Front)
