@@ -1,4 +1,10 @@
 ---
+summary: "This document describes the algorithm for uploading SPC music rips to real SNES hardware, covering the restoration of DSP registers, 64K RAM, and CPU registers on the SPC-700 sound module."
+keywords: "SPC, SPC-700, DSP registers, SPC upload, SNES audio"
+importance: 4
+---
+
+---
 title: "Blargg SPC upload"
 source_url: "https://snes.nesdev.org/wiki/Blargg_SPC_upload"
 pageid: 110

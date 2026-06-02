@@ -3,6 +3,9 @@ title: "VBlank interrupts"
 source_url: "https://snes.nesdev.org/wiki/VBlank_interrupts"
 pageid: 82
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Explains how to use VBlank NMI interrupts on the SNES to safely access the PPU outside its active display period, covering NMITIMEN configuration, ISR design considerations (register saving, DB/DP reset, lag-frame handling), and main-loop coordination. Includes a sample 65C816 NMI implementation with frame counter and PPU data transfer pattern."
+keywords: "VBlank, NMI, NMITIMEN, PPU, ISR"
+importance: 4
 ---
 
 As the majority of the PPU only be accessed during the Vertical Blanking Period while the display is active, careful consideration is required to ensure all PPU writes occur at the correct time.

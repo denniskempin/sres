@@ -3,6 +3,9 @@ title: "PPU pinout"
 source_url: "https://snes.nesdev.org/wiki/PPU_pinout"
 pageid: 5
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Reference pinout diagrams for the SNES S-PPU1 (5C77) and S-PPU2 (5C78) picture processing chips, listing all 100 pins of each chip and describing the key signals (clocks, video buses, blanking, transparency, digital video enable, external latch, and reset)."
+keywords: "PPU, S-PPU1, S-PPU2, 5C77, 5C78, pinout, video"
+importance: 4
 ---
 
 ## S-PPU1

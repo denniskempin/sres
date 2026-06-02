@@ -1,3 +1,9 @@
+---
+summary: Reference notes on the undocumented behavior of the Z80 CPU used in SNES peripherals (such as the Super Game Boy), focusing on the "garbage" flag bits (3 and 5) of the F register and the internal MEMPTR register. Documents how various instruction families compute these hidden values and which instructions leave the documented flags in surprising states.
+keywords: Z80, undocumented flags, MEMPTR, garbage flags
+importance: 1
+---
+
 # Z80 Garbage in Flag Register
 
 #### Nocash Z80-flags description

@@ -1,3 +1,9 @@
+---
+summary: Documents the Sunsoft Pachinko Controller peripheral for the SNES, including its connection port, serial bit format (ID bits, analog dial position, button), physical appearance, and the four Japanese pachinko games that support it.
+keywords: Pachinko Controller, Sunsoft, SNES controllers, 4017h serial, analog dial
+importance: 1
+---
+
 # SNES Controllers Pachinko
 
 #### Pachinko Controller (Sunsoft)

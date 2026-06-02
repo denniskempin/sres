@@ -1,3 +1,9 @@
+---
+summary: Pseudocode reference for the SPC7110 cartridge chip's three data decompression modes (0, 1, 2), including the initialization, the shared probability/context-adaptive decompression core, pixel ordering helper, mode 1/2 bitplane handling, and the Evolution probability, EvolutionNextLps, EvolutionNextMps, and Mode2ContextTable lookup tables.
+keywords: SPC7110, decompression, context-adaptive, probability
+importance: 1
+---
+
 # SNES Cart SPC7110 Decompression Algorithm
 
 decompress_mode0(src,dst,len)

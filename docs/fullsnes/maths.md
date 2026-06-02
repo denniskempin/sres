@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES hardware multiply and divide functions, including the CPU-clocked 8-bit unsigned multiplication (WRMPYA/WRMPYB) and 16-bit unsigned division (WRDIVL/H/B) accessed via 42xxh ports, as well as the PPU's signed 8x8/8x16 multiplication used for Mode 7 rotation/scaling via M7A/M7B and MPYL/M/H. Includes timing notes on required wait cycles, behavior of division by zero, and restrictions on using the PPU math registers during active Mode 7 drawing.
+keywords: multiplication, division, PPU math, Mode 7, hardware registers
+importance: 3
+---
+
 # SNES Maths Multiply/Divide
 
 ```text

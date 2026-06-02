@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the JP (Jump/Call) instruction set of the NEC uPD77C25 coprocessor found in SNES cartridges such as DSP-n, ST010, and ST011. Covers the JP opcode bit layout, the full list of BRCH conditional/unconditional jump and call opcodes, reset and interrupt behavior, and differences in older variants.
+keywords: NEC uPD77C25, DSP-n, ST010, JP instructions, SNES coprocessor
+importance: 1
+---
+
 # SNES Cart DSP-n/ST010/ST011 - NEC uPD77C25 - JP Instructions
 
 #### JP Instructions (Jump/Call)

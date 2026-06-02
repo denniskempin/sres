@@ -3,6 +3,9 @@ title: "Tricky-to-emulate games"
 source_url: "https://snes.nesdev.org/wiki/Tricky-to-emulate_games"
 pageid: 8
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Catalog of SNES emulation bugs compiled from Mesen-S development, listing specific games affected by each issue across CPU, PPU, DMA/HDMA, APU, and SuperFX edge cases. Intended as a quick reference for finding and debugging emulation issues, and for selecting regression test cases."
+keywords: "emulation bugs, PPU, DMA, HDMA, Super FX"
+importance: 3
 ---
 
 This is a list of various emulation bugs encountered during the development of Mesen-S.

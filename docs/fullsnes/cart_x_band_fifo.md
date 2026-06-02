@@ -1,3 +1,8 @@
+---
+summary: Documents the SNES X-Band modem cartridge's external FIFO hardware, covering the modem/serial control registers (C118h-C160h) for TX/RX buffers, status bits, and the serial V counter used for timing modem communication.
+keywords: X-Band, modem, FIFO, serial
+importance: 1
+---
 # SNES Cart X-Band I/O - Whatever Stuff (External FIFO for Modem?)
 
 Below is some additional modem stuff (additionally to the normal Rockwell Modem registers at C180h-C1BEh). The original source code refers to that extra stuff as "modem (and serial) bits". Purpose is unknown...

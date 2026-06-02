@@ -1,4 +1,9 @@
 ---
+summary: "Reference notes on the Capcom Cx4 enhancement chip, a coprocessor used in Mega Man X2 and Mega Man X3. The page is currently a stub that links to external resources (superfamicom.org wiki and emulator source code) for Cx4 documentation."
+keywords: "Cx4, Capcom, coprocessor, Mega Man X2"
+importance: 1
+---
+---
 title: "CX4"
 source_url: "https://snes.nesdev.org/wiki/CX4"
 pageid: 152

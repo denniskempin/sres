@@ -1,3 +1,9 @@
+---
+summary: Reference for the SNES APU memory and I/O map, covering the SPC700 audio CPU memory layout, the main-CPU-to-APU communication ports (APUI00–APUI03), the SPC700 I/O ports, the 128 DSP registers used for audio synthesis, and APU RAM power-up behavior.
+keywords: APU, SPC700, DSP, memory map
+importance: 5
+---
+
 # SNES APU Memory and I/O Map
 
 #### SPC700 Memory Map

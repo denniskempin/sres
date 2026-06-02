@@ -1,3 +1,9 @@
+---
+summary: Pinout reference for the SNES Real-Time Clock (RTC) chips used in cartridge peripherals, covering the Sharp S-RTC, Epson/Seiko RTC-4513, and Seiko/Epson S-3520CF, with pin assignments and notes on the 32.768kHz crystal.
+keywords: RTC, real-time clock, pinout, Sharp S-RTC, S-3520CF
+importance: 1
+---
+
 # SNES Pinouts RTC Chips
 
 #### Sharp S-RTC Pin-Outs (used by Dai Kaiju Monogatari 2)

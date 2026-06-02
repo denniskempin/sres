@@ -1,3 +1,9 @@
+---
+summary: Reference for the SA-1 cartridge chip's DMA transfer registers (DCNT, SDA, DDA, DTC, BRF) and operations, covering Normal DMA between ROM, BW-RAM, and I-RAM as well as the Character Conversion DMA mode used to convert bitmaps into tiles.
+keywords: SA-1, DMA, Character Conversion, BW-RAM, I-RAM
+importance: 2
+---
+
 # SNES Cart SA-1 DMA Transfers
 
 #### 2230h SA-1 DCNT - DMA Control (W)

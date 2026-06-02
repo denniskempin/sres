@@ -1,3 +1,8 @@
+---
+summary: Describes the SNES CD-ROM cartridge's Mechacon (mechanism controller) chip, which handles drive mechanics (motor start/stop, seeking, tracking, gain, balance) for both CD audio playback and data disc reading. Documents the Mechacon CPU register interface, command set (play, pause, seek, fast-forward, etc.), and Q-data/status request response formats.
+keywords: Mechacon, CDROM, drive mechanics, SubQ channel, seek
+importance: 1
+---
 # SNES Cart CDROM - Mechacon
 
 The Mechacon handles all the drive mechanics (motor start/stop, seeking, tracking, gain, balance). Essentinally it's covering only the "Audio" part (streaming bits and watching the SubQ-channel's position info) without being aware of "Digital" data in CDROM Headers & Data Blocks.

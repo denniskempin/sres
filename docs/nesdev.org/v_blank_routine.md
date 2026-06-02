@@ -1,4 +1,10 @@
 ---
+summary: "Describes VBlank routines in SNES games, covering shadow variables for safe PPU register writes, buffers for transferring OAM/CGRAM/tilemap data via DMA, update queues, HDMA setup, and joypad reading. Includes 65816 assembly examples for transferring shadow values to PPU registers during the vertical blanking period."
+keywords: "VBlank, PPU, DMA, HDMA, shadow variables"
+importance: 2
+---
+
+---
 title: "VBlank routine"
 source_url: "https://snes.nesdev.org/wiki/VBlank_routine"
 pageid: 83

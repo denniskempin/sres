@@ -1,3 +1,8 @@
+---
+summary: Pinout reference for the SNES Picture Processing Unit chips, including the S-PPU1 (5C77) and S-PPU2 (5C78) that handle graphics rendering, plus the integrated CPUN-A. Each chip's 100 pins are listed with signal names, bus assignments, and notes on VRAM/SRAM, video output, CPU interface, and reset signals.
+keywords: PPU, S-PPU1, S-PPU2, pinouts, VRAM
+importance: 5
+---
 # SNES Pinouts PPU Chips
 
 S-PPU1, 5C77

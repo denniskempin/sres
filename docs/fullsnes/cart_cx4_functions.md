@@ -1,3 +1,9 @@
+---
+summary: Lists the CX4 coprocessor functions located at SNES address 02:8000-02:9FFF as used by Mega Man X2/X3 ROMs, including math, graphics, and test routines. Notes the minor ROM bank differences between the two games.
+keywords: CX4, Capcom, Mega Man X2/X3, coprocessor functions
+importance: 1
+---
+
 # SNES Cart Capcom CX4 - Functions
 
 CX4 Functions (as contained in Mega Man X2/X3 ROMs) The CX4 functions are located at SNES address 02:8000-02:9FFF (aka CX4 addresses at PAGE:PC=0000:00..000F:FF with BASE=028000):

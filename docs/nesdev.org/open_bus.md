@@ -3,6 +3,9 @@ title: "Open bus"
 source_url: "https://snes.nesdev.org/wiki/Open_bus"
 pageid: 162
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Explains the open bus behavior on the SNES data bus, where undriven lines retain the last value before decaying. Covers CPU open bus (including the 5A22's separate internal read and write buses) and PPU open bus, listing the specific register read addresses where open bus values can appear."
+keywords: "open bus, CPU, PPU, 5A22, data bus"
+importance: 3
 ---
 
 When no device responds on a data bus, the result is known as open bus. This can happen at memory regions where no ROM or other device is mapped, or when reading from a register for which only some bits are driven, leaving the other bits floating.

@@ -3,6 +3,9 @@ title: "MMIO register table/MMIO"
 source_url: "https://snes.nesdev.org/wiki/MMIO_register_table/MMIO"
 pageid: 44
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Table of SNES memory-mapped I/O (MMIO) registers in the $2140-$421F address range, listing each register's address, bit layout, access type, and function. Covers APU communication, S-WRAM access, joypad I/O, multiplication/division, timers, NMI control, DMA enables, and FastROM selection."
+keywords: "MMIO, SNES, registers, DMA, joypad"
+importance: 5
 ---
 
 See: [[MMIO register table]]

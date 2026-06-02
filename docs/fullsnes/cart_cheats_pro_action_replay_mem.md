@@ -1,3 +1,9 @@
+---
+summary: Describes the Pro Action Replay (PAR1-PAR3) SNES cheat device, including its 32K SRAM memory mapping at even bank addresses, 3-position switch behavior for enabling game/BIOS/codes, BIOS version history and CRCs, and a list of known cartridge components.
+keywords: Pro Action Replay, SRAM, cheat codes, BIOS, Datel
+importance: 1
+---
+
 # SNES Cart Cheat Devices - Pro Action Replay Memory
 
 #### PAR1-PAR3 SRAM

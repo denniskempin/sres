@@ -1,3 +1,9 @@
+---
+summary: Reference describing the SNES LoROM cartridge memory mapping, listing common board types (SHVC-xxx) along with their ROM and SRAM address areas, and noting special variants such as boards with MAD-R, large-ROM banks, and 3MByte Special LoROM schemes.
+keywords: SNES, LoROM, cartridge mapping, SRAM, bank layout
+importance: 5
+---
+
 # SNES Cart LoROM Mapping (ROM divided into 32K banks) (around 1500 games)
 
 #### Plain LoROM

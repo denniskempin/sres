@@ -1,3 +1,9 @@
+---
+summary: A reference list of SNES games that use the DSP-n (DSP-1, DSP-1A, DSP-1B, DSP-2, DSP-3, DSP-4) and ST010/ST011 coprocessor chips in their cartridges, identifying which chip variant each title requires.
+keywords: DSP-1, ST010, ST011, coprocessor, cartridge chip
+importance: 1
+---
+
 # SNES Cart DSP-n/ST010/ST011 - List of Games using that chips
 
 #### Games using DSPn/ST01n chips

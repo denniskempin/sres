@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the NEC uPD765 floppy disc controller (FDC) command set and status registers as used by SNES cartridge copiers. Covers command/execution/result phases, parameter and result byte formats, the four status registers, and operational notes for reading, writing, formatting, and seeking floppy disks.
+keywords: SNES, cart copier, uPD765, FDC, floppy disk
+importance: 1
+---
+
 # SNES Cart Copiers - Floppy Disc NEC uPD765 Commands
 
 #### Accessing the FDC 765

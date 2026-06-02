@@ -1,4 +1,7 @@
 ---
+summary: "Documents the 65C816 MVN and MVP block copy instructions, covering their operation, usage examples, overlap behavior, and assembler syntax."
+keywords: "MVN, MVP, block copy, 65C816, memory transfer"
+importance: 5
 title: "MVN and MVP block copy"
 source_url: "https://snes.nesdev.org/wiki/MVN_and_MVP_block_copy"
 pageid: 30

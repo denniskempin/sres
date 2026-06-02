@@ -3,6 +3,9 @@ title: "OAM layout"
 source_url: "https://snes.nesdev.org/wiki/OAM_layout"
 pageid: 60
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the 544-byte Object Attribute Memory (OAM) used by the SNES PPU, split into a 512-byte low table holding per-sprite x/y/tile/attributes and a 32-byte high table packing extra bits and size-select fields for groups of four sprites."
+keywords: "OAM, sprites, low table, high table, sprite attributes"
+importance: 5
 ---
 
 [[OAM]] is a total of 544 bytes in size, consisting of a 512 byte low table and a 32 byte high table.

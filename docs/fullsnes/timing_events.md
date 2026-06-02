@@ -1,3 +1,9 @@
+---
+summary: Detailed reference of SNES PPU horizontal and vertical timing events, including per-scanline behavior, vblank flags, HDMA transfer points, H-IRQ/V-IRQ/HV-IRQ trigger positions, OAM/joypad/refresh timing, and the statistical distribution of H-counter values latched by software reading port 2137h.
+keywords: PPU timing, H/V events, HDMA, IRQ, scanline
+importance: 4
+---
+
 # SNES Timing H/V Events
 
 #### Summary of Vertical Timings

@@ -1,4 +1,7 @@
 ---
+summary: "Guide to the WDC 65C816 16-bit CPU for programmers already familiar with the 6502, covering new registers, instructions (REP, SEP, XBA), flags, addressing modes, and architectural differences used in the SNES."
+keywords: "65c816, 6502, W65C816, CPU, SNES"
+importance: 5
 title: "65c816 for 6502 developers"
 source_url: "https://snes.nesdev.org/wiki/65c816_for_6502_developers"
 pageid: 11

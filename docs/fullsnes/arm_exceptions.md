@@ -1,3 +1,9 @@
+---
+summary: Reference documentation on the ARM CPU's exception handling mechanism, covering the exception vector table, CPU mode changes, register banking (R8-R12_fiq), CPSR/SPSR state save/restore, and return instructions for each exception type (Reset, FIQ, IRQ, SWI, Undefined Instruction, Prefetch/Data Abort).
+keywords: ARM exceptions, exception vectors, CPSR/SPSR, FIQ/IRQ
+importance: 1
+---
+
 # ARM Exceptions
 
 #### Exception Vectors

@@ -1,3 +1,9 @@
+---
+summary: Documents the Barcode Battler add-on by Epoch, a barcode-scanning peripheral that links to the SNES via an EXT port and BBII interface box. Covers hardware versions, compatible games, connection details, and internal components.
+keywords: Barcode Battler, add-on peripheral, EXT port, BBII interface, Epoch
+importance: 0
+---
+
 # SNES Add-On Barcode Battler (barcode reader)
 
 The Barcode Battler from Epoch allows to scan barcodes (either from special paper cards, or from daily-life products like food packagings), games can then use the barcode digits as Health Points, or other game attributes.

@@ -1,3 +1,9 @@
+---
+summary: Documents the RS232 data packet format, command codes, character format, baudrate, and handshaking used by the SNES Exertainment Bike/Speedboard controllers when communicating with the console.
+keywords: Exertainment, RS232, packet format, baudrate
+importance: 1
+---
+
 # SNES Controllers Exertainment - RS232 Data Packets & Configuration
 
 From Bike to SNES (16 bytes: ATT code, command, 13-byte-data, checksum)

@@ -1,3 +1,9 @@
+---
+summary: Reference I/O map for the Satellaview cartridge used in the Satellaview peripheral, covering the DCD-BSA receiver chip registers, flash card commands, and BIOS cartridge MCC-BSC chip bank mapping ports.
+keywords: Satellaview, DCD-BSA, MCC-BSC, flash card
+importance: 1
+---
+
 # SNES Cart Satellaview I/O Map
 
 #### Receiver I/O Map (DCD-BSA chip)

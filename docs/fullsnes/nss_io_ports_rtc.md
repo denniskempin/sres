@@ -1,3 +1,8 @@
+---
+summary: Documents the NSS (Nintendo Super System) I/O ports used to access the Real-Time Clock and On-Screen Display chips, covering the bit layout of ports 03h.R (RTC input) and 02h/82h/72h/EAh.W (RTC/OSD output), and references the S-3520 RTC and M50458-001SP OSD chips.
+keywords: NSS, RTC, OSD, S-3520, M50458-001SP
+importance: 1
+---
 # NSS I/O Ports - RTC and OSD
 
 #### Real-Time Clock (RTC) and On-Screen Display (OSD) Registers

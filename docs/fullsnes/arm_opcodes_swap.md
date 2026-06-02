@@ -1,3 +1,8 @@
+---
+summary: Describes the ARM SWP/SWPB (Single Data Swap) opcode format, behavior, and execution timing. Covers byte vs word swaps, register restrictions, and mis-aligned rotated reads.
+keywords: ARM, SWP, opcode, data swap
+importance: 0
+---
 # ARM Opcodes: Memory: Single Data Swap (SWP)
 
 #### Opcode Format

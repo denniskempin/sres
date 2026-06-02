@@ -1,3 +1,9 @@
+---
+summary: Technical specification of the STF (Super Turbo File) mode transmission protocol for the SNES Add-On Turbo File peripheral, detailing command sequences, data transfer procedures, status/ID reception, and low-level bit I/O operations over the controller port.
+keywords: Turbo File, STF protocol, transmission protocol, Add-On, peripheric
+importance: 1
+---
+
 # SNES Add-On Turbo File - STF Mode Transmission Protocol
 
 #### FileTwinSendCommand (28bits)

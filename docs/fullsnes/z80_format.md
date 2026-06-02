@@ -1,3 +1,8 @@
+---
+summary: Describes the notation conventions used for documenting Z80 CPU instructions, including parameter placeholders, opcode byte encoding, clock cycle timing, and affected flag indicators.
+keywords: Z80, instruction format, opcode, flags
+importance: 0
+---
 # Z80 Instruction Format
 
 #### Commands and Parameters

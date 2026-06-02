@@ -3,6 +3,10 @@ title: "Offset-per-tile"
 source_url: "https://snes.nesdev.org/wiki/Offset-per-tile"
 pageid: 20
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+
+summary: "Describes the offset-per-tile feature in SNES background modes 2, 4, and 6, where BG3's tilemap is repurposed as a per-column scroll offset map overriding BG1 and BG2 scroll positions. Covers the data format, per-layer override bits, and the leftmost column exclusion."
+keywords: "offset-per-tile, PPU, scroll, background modes, BG3"
+importance: 3
 ---
 
 Offset-per-tile is a feature of background modes 2, 4, and 6. It allows overriding a layer's horizontal and vertical scroll position on a tile-by-tile basis. This is used by *Yoshi's Island* for the dizzy effect and *Tetris Attack* to have two different playfields with different vertical positions.

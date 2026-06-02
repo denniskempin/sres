@@ -1,3 +1,9 @@
+---
+summary: Hardware reference for the SA-1 coprocessor's arithmetic unit, covering the MCNT, MA, MB, MR, and OF registers used for signed multiplication, signed division, and multiply-sum operations.
+keywords: SA-1, arithmetic, multiply, divide, registers
+importance: 1
+---
+
 # SNES Cart SA-1 Arithmetic Maths
 
 #### 2250h SA-1 MCNT - Arithmetic Control (W)

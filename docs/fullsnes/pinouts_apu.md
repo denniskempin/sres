@@ -1,3 +1,9 @@
+---
+summary: Documents the pinout specifications for the SNES audio processing chips, including the S-DSP sound processor, S-SMP (SPC700) audio CPU, and the combined S-APU chip used in cost-down SNES consoles. Each pin's signal type, source/sink component, and clock derivation is detailed.
+keywords: S-DSP, S-SMP, SPC700, S-APU, pinouts
+importance: 4
+---
+
 # SNES Pinouts APU Chips
 
 #### S-DSP Pinouts (Sound Chip)

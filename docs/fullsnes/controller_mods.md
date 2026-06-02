@@ -1,3 +1,9 @@
+---
+summary: Covers SNES controller hardware modifications, including the 4021 shift register internals, PAL vs NTSC controller compatibility, and the SNESPAD circuit for connecting SNES joypads to a PC parallel port.
+keywords: controller mods, shift register, SNESPAD, parallel port, PAL/NTSC
+importance: 1
+---
+
 # SNES Controller Mods
 
 #### Shift Registers

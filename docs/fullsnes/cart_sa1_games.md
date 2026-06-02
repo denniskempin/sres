@@ -1,3 +1,9 @@
+---
+summary: A list of the ~35 SNES games that use the SA-1 (Super Accelerator) cartridge chip, a 10.74MHz 65C816-based coprocessor. Entries include titles, regions, publishers/developers, and notes distinguishing games that leverage the SA-1 I/O from those that mainly use it for CPU-intensive calculations (shogi and Go titles).
+keywords: SA-1, Super Accelerator, 65C816, SNES cartridge, enhancement chip
+importance: 1
+---
+
 # SNES Cart SA-1 Games
 
 SA1     - 128pin - Super Accelerator (book2) (10.74MHz 65C816 CPU) Used by 35 games:

@@ -1,3 +1,9 @@
+---
+summary: A brief overview of the 65xx family of processors, listing the various 6502 variants and their software compatibility, and extending through to the 65C816 used in the SNES.
+keywords: 6502, 65C816, CPU family, 6502 variants
+importance: 2
+---
+
 # CPU The 65XX Family
 
 Different versions of the 6502:

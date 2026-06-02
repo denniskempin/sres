@@ -1,4 +1,10 @@
 ---
+summary: "Documents the SNES PPU window system, which uses two configurable windows to mask backgrounds, sprites, and color math on a per-scanline basis. Covers the relevant PPU registers, window enable and invert flags, boolean mask logic between windows, and HDMA-based shape drawing."
+keywords: "PPU, Windows, Backgrounds, Color math, HDMA"
+importance: 4
+---
+
+---
 title: "Windows"
 source_url: "https://snes.nesdev.org/wiki/Windows"
 pageid: 132

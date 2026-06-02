@@ -1,3 +1,9 @@
+---
+summary: Documents the Bung Game Doctor SF7 (and SF6) SNES cartridge copier, covering its memory map, BIOS-mode I/O ports, parallel-port register layout, and a component list for the CT401 board.
+keywords: Game Doctor, Bung, cart copier, parallel port, floppy disk
+importance: 1
+---
+
 # SNES Cart Copiers - Bung (Game Doctor)
 
 #### Game Doctor SF7

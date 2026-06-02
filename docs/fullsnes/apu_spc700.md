@@ -1,3 +1,9 @@
+---
+summary: Describes the SPC700 8-bit CPU used in the SNES APU (S-SMP chip), including its register set (A, X, Y, SP, PSW, YA, PC), flag bits in the PSW, supported addressing modes, and the format used for command descriptions.
+keywords: SPC700, APU, S-SMP, PSW, addressing modes
+importance: 4
+---
+
 # SNES APU SPC700 CPU Overview
 
 The sound unit is controlled by a S-SMP chip: an 8bit CPU that uses Sony's SPC700 instruction set. The SPC700's opcodes and it's three main registers (A,X,Y) are clearly inspired by 6502 instruction set, although the opcodes are numbered differently, and it has some new/changed instructions.

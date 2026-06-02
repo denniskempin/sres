@@ -1,3 +1,9 @@
+---
+summary: Documents the I/O map of the GSU (Super FX) coprocessor found in certain SNES cartridges, covering GPRs R0-R15, control/status registers, cache RAM, and bank-mirror layouts for the original GSU and the GSU2 revision.
+keywords: GSU, Super FX, I/O map, coprocessor, cartridge
+importance: 1
+---
+
 # SNES Cart GSU-n I/O Map
 
 GSU I/O Map (in banks 00h-3Fh and 80h-BFh) During GSU operation, only SFR, SCMR, and VCR may be accessed.

@@ -1,3 +1,9 @@
+---
+summary: Describes the Satellaview cartridge I/O receiver data stream registers ($2188-$2193), covering hardware channel selection, queue sizes, status/data queue reads, and status summary flags for the two simultaneous receive streams.
+keywords: Satellaview, receiver registers, data streams, queue
+importance: 0
+---
+
 # SNES Cart Satellaview I/O Receiver Data Streams
 
 The receiver can be programmed to watch (and receive) two different Hardware Channels simultaneously. In practice, Stream 1 is used only by the BIOS, and Stream 2 is used only by a few BS FLASH games (Dragon Quest 1, Satella2 1, BS Fire Emblem Akaneia Senki 1, and maybe some others) (which do use it for receiving Time Channel Packets).

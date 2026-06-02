@@ -1,3 +1,9 @@
+---
+summary: Reference documentation for HD64180 (Z8x180) extension registers, including Operation Mode Control, ASCI extensions, time constants, clock multiplier, CPU control, and DMA I/O address registers. Describes port addresses, reset values, bit fields, and variant availability (Z180, Z8S180, Z8L180, HD64180).
+keywords: HD64180, Z8x180, ASCI, DMA, I/O ports
+importance: 0
+---
+
 # HD64180 Extensions
 
 Port 3Eh on Z8x180 only (not HD64180).

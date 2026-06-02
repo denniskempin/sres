@@ -3,6 +3,9 @@ title: "Timing"
 source_url: "https://snes.nesdev.org/wiki/Timing"
 pageid: 50
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes SNES hardware timing, including the master clock rates for NTSC and PAL, 65816 CPU cycle lengths per memory region, video scanline and vertical blank timing with DMA bandwidth, and the independent S-SMP/S-DSP/SPC-700 audio clocks."
+keywords: "master clock, CPU cycles, scanline, vblank, DRAM refresh"
+importance: 5
 ---
 
 Timing of the SNES hardware.

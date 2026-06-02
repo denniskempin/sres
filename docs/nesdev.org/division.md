@@ -1,4 +1,10 @@
 ---
+summary: "Describes the SNES hardware division unit (used because the 65c816 has no native DIV), covering the WRDIVL/WRDIVH/WRDIVB input registers, the RDDIVL/RDDIVH quotient and RDMPYL/RDMPYH remainder result registers, the 16-cycle latency and division-by-zero behavior, and the constraint that division shares result registers with multiplication so only one operation can be in flight at a time."
+keywords: "WRDIVB, RDDIV, RDMPY, hardware division, 65c816"
+importance: 2
+---
+
+---
 title: "Division"
 source_url: "https://snes.nesdev.org/wiki/Division"
 pageid: 36

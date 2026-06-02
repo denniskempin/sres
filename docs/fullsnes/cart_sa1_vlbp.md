@@ -1,3 +1,8 @@
+---
+summary: Describes the SA-1 cartridge's Variable-Length Bit Processing feature, covering the VBD control register (data length and auto-increment mode), the VDA ROM start address and kick, and the VDP data read port used to fetch variable-length bit data from ROM.
+keywords: SA-1, variable-length bit processing, VBD, VDA, VDP
+importance: 1
+---
 # SNES Cart SA-1 Variable-Length Bit Processing
 
 #### 2258h SA-1 VBD - Variable-Length Bit Processing (W)

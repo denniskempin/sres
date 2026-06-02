@@ -1,3 +1,8 @@
+---
+summary: Reference for the Macronix MX29F16xx FLASH command set used in the SNES Nintendo Power cartridge, covering init via port 240xh, the HIROM_ALL mapping split across two chips, and FLASH commands such as Read/Reset, ID read, status, program, chip/sector erase, protect, sleep, abort, and hidden-sector operations.
+keywords: Nintendo Power, MX29F16xx, Macronix, FLASH commands, MX15001
+importance: 1
+---
 # SNES Cart Nintendo Power - FLASH Commands
 
 Before sending write/erase commands, one must initialize the MX15001 chip via port 240xh (particulary: release the /WP pin), selecting the HIROM_ALL mapping mode may be also recommended (for getting the whole 4Mbyte FLASH memory mapped as continous memory block at address C00000h-FFFFFFh).

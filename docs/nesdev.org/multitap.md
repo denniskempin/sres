@@ -1,4 +1,9 @@
 ---
+summary: "Describes the SNES 5-player multitap accessory, which plugs into controller port 2 to add four extra controller ports. Covers the WRIO ($4201) high bit used to switch between reading multitap ports 2/3 and 4/5, the report layout on JOYSER1 ($4017) including the 17th connected-bit, the reading sequence using automatic controller read, and the official multitap detection procedure."
+keywords: "Multitap, WRIO, JOYSER1, 5-player controller"
+importance: 1
+---
+---
 title: "Multitap"
 source_url: "https://snes.nesdev.org/wiki/Multitap"
 pageid: 62

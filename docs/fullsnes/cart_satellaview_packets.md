@@ -1,3 +1,9 @@
+---
+summary: Describes the binary packet and frame format used by the Satellaview satellite-modem peripheral, including fragment headers, the Channel Map packet, 22-byte frames, fragmented packet transmission rules, and the supported text string escapes.
+keywords: Satellaview, packet format, fragments, frames, Channel Map
+importance: 1
+---
+
 # SNES Cart Satellaview Packet Headers and Frames
 
 #### Packet Fragment Format (10-byte header)

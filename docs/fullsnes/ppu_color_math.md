@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES PPU color math system, including main/sub screen enable logic, control registers (CGWSEL 2130h, CGADSUB 2131h, COLDATA 2132h), per-layer add/subtract with optional Div2 half result, Force Main Screen Black, and the special handling of color math in hires and pseudo 3-layer modes.
+keywords: PPU, Color Math, Main Screen, Sub Screen, CGWSEL
+importance: 4
+---
+
 # SNES PPU Color-Math
 
 #### Main Screen / Sub Screen Enable

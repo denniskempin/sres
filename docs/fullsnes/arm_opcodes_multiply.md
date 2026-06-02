@@ -1,3 +1,8 @@
+---
+summary: Documents the encoding, restrictions, and execution timing of ARM multiply and multiply-accumulate opcodes (MUL, MLA, UMULL, UMLAL, SMULL, SMLAL), including flag effects and ARM version support.
+keywords: ARM, multiply, MUL, MLA, opcodes
+importance: 1
+---
 # ARM Opcodes: Multiply and Multiply-Accumulate (MUL, MLA)
 
 #### Opcode Format

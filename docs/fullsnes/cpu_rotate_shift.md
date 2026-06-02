@@ -1,3 +1,9 @@
+---
+summary: Reference table of the W65C816 CPU rotate and shift instructions (ASL, LSR, ROL, ROR), including opcodes, addressing modes, cycle counts, and flag effects.
+keywords: W65C816, CPU, shift, rotate, ASL, LSR, ROL, ROR
+importance: 4
+---
+
 # CPU Rotate and Shift Instructions
 
 #### Shift Left Logical/Arithmetic

@@ -1,3 +1,9 @@
+---
+summary: Hardware reference for the Miracle Piano keyboard controller, covering the 25-pin SUBD connector pinout (which carries NES/SNES/Genesis controller signals, RS232, and MIDI) and the contents of its SNES and NES cartridges. Also includes a complete component list of the Miracle Piano mainboard and sound engine, identifying ICs such as the 8051 CPU, AS0012/AS0013 ASICs, sound ROM, and supporting amplifiers, regulators, and connectors.
+keywords: Miracle Piano, pinout, controller port, component list
+importance: 1
+---
+
 # SNES Controllers Miracle Pinouts and Component List
 
 #### 25pin SUBD connector (J6)

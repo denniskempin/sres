@@ -1,3 +1,9 @@
+---
+summary: Describes the FLASH memory command protocol used by the Satellaview I/O cartridge types 1, 3, and 4, including erase, write, and status mode commands similar to Sharp LH28F032SU/LH28F320SK flash chips.
+keywords: Satellaview, flash memory, cartridge, erase, write
+importance: 1
+---
+
 # SNES Cart Satellaview I/O FLASH Access (Type 1,3,4)
 
 The Type 1,3,4 protocol is somewhat compatible to Sharp LH28F032SU/LH28F320SK chips (which has also a same/similar 52pin package). Concerning the commands used by the BIOS, Type 1,3,4 seems to be exactly the same - except that Type 3 doesn't support the Erase-Entire chip command.

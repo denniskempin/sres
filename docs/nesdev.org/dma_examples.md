@@ -3,10 +3,10 @@ title: "DMA examples"
 source_url: "https://snes.nesdev.org/wiki/DMA_examples"
 pageid: 59
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Practical 65816 assembly examples for using SNES DMA to copy OAM, update tilemap rows and columns, and clear or fill WRAM and VRAM."
+keywords: "SNES, DMA, VRAM, 65816, assembly"
+importance: 5
 ---
-
-This page provides examples on how to use [[DMA registers]] to do fast copies on the SNES.
-
 These examples use the following defines to make the code clearer:
 
 ```

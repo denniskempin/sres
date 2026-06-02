@@ -1,3 +1,9 @@
+---
+summary: Documents the format of the Satellaview Town Status packet (Software Channel 1.1.0.5), including its 256-byte layout, the meaning of each field (flags, people present, APU/BSX power-down controls, file IDs), and the Fountain Replacement and Season flags used to alter the town's decorative elements.
+keywords: Satellaview, Town Status packet, BSX, Fountain Replacement, Season Flags
+importance: 1
+---
+
 # SNES Cart Satellaview Town Status Packet
 
 #### Town Status (Software Channel 1.1.0.5)

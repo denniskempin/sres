@@ -1,3 +1,8 @@
+---
+summary: Overview of the SA-1 (Super Accelerator) enhancement chip, a 10.74MHz 65C816 coprocessor used in 35 SNES cartridges. Covers the memory map for both SNES and SA-1 sides, I-RAM/BW-RAM layout, PCB variants, and chipset components.
+keywords: SA-1, coprocessor, 65C816, enhancement chip, BW-RAM
+importance: 2
+---
 # SNES Cart SA-1 (programmable 65C816 CPU) (aka Super Accelerator) (35 games)
 
 > **See:** [SNES Cart SA-1 Games](cart_sa1_games.md)

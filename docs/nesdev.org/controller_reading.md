@@ -3,6 +3,9 @@ title: "Controller reading"
 source_url: "https://snes.nesdev.org/wiki/Controller_reading"
 pageid: 41
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Explains how the SNES reads game controllers, covering both automatic vblank reading (via NMITIMEN/HVBJOY) and manual NES-style reading (via $4016/$4017), and how to extend the auto-read to support multi-word peripherals like the Mouse."
+keywords: "controller reading, auto-read, manual reading, NMITIMEN, HVBJOY"
+importance: 3
 ---
 
 The SNES has a feature that can automatically read the game controllers, so the 65c816 does not need to spend any time doing that. The controllers can also be read manually, the same way the NES does it. The automatic reading feature will only read 16 bits from the controller, so peripherals like the [[Mouse]] need to be read either completely manually or with a combination of automatic and manual reading.

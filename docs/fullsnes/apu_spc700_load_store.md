@@ -1,3 +1,9 @@
+---
+summary: Reference table of SPC700 load and store opcodes for the SNES APU, covering register manipulation, memory load, memory store, and push/pop operations with opcodes, cycle counts, addressing modes, and flag effects.
+keywords: SPC700, APU, load/store, opcodes, addressing modes
+importance: 4
+---
+
 # SNES APU SPC700 CPU Load/Store Commands
 
 #### Register Manipulation

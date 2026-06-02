@@ -3,6 +3,9 @@ title: "Color math"
 source_url: "https://snes.nesdev.org/wiki/Color_math"
 pageid: 97
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the SNES PPU's color math feature, which blends main screen pixels with a sub screen or fixed color using additive or subtractive operations (optionally halved) to produce effects like transparency, fades, and darkening. Covers the relevant registers (TM, TS, CGWSEL, CGADSUB, COLDATA), per-layer masking rules, and practical game examples."
+keywords: "color math, PPU blending, transparency, CGADSUB, sub screen"
+importance: 4
 ---
 
 **Color math** allows the SNES to do some limited blending between layers or colours. This can be useful for effects like transparent shadows, ghosts that fade away, or a translucent colored text box.

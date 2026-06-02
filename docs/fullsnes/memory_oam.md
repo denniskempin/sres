@@ -1,3 +1,9 @@
+---
+summary: Describes SNES Object Attribute Memory (OAM) access for sprite attributes, including the OAM address and priority rotation registers (2102h/2103h), the OAM data read/write ports (2104h/2138h), and the semantics of even/odd byte access with automatic address increment.
+keywords: OAM, sprites, OBJ, SNES PPU, sprite attributes
+importance: 5
+---
+
 # SNES Memory OAM Access (Sprite Attributes)
 
 ```text

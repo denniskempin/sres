@@ -1,3 +1,9 @@
+---
+summary: Documents Z80 CPU opcodes that are mirrored, duplicated, non-functional, or have ignored DD/FD prefixes, including NEG/RETN/RETI aliases, IM mode mirrors, LD HL duplications, and no-op behavior.
+keywords: Z80, mirrored opcodes, non-functional opcodes, DD/FD prefixes, IM modes
+importance: 0
+---
+
 # Z80 Meaningless and Duplicated Opcodes
 
 #### Mirrored Instructions

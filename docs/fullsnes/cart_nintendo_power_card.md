@@ -1,3 +1,9 @@
+---
+summary: Overview of the Nintendo Power flashcard, an official Japan-only SNES FLASH cartridge with 4MByte FLASH (eight 512KByte blocks) and 32KByte battery-backed SRAM. Covers PCB chipsets, menu cartridge header, and menu content layout.
+keywords: Nintendo Power, flashcard, FLASH cartridge, SRAM, MX15001
+importance: 1
+---
+
 # SNES Cart Nintendo Power (flashcard)
 
 Nintendo Power cartridges are official FLASH cartridges from Nintendo (released only in Japan). Unlike the older Satellaview FLASH cartridges, they do connect directly to the SNES cartridge slot. The capacity is 4MByte FLASH and 32KByte battery-backed SRAM.

@@ -1,4 +1,9 @@
 ---
+summary: "Describes the SNES PPU's tile data formats stored in VRAM as 8x8 pixel units, covering the planar 2bpp, 4bpp, and 8bpp bit-depths, Mode 7's chunky 1-byte-per-pixel format, and direct color modes. Explains the bit-plane layout per pixel row, the 16-column tile arrangement in VRAM, and how 8bpp and Mode 7 can bypass CGRAM for direct RGB color specification."
+keywords: "2bpp, 4bpp, 8bpp, Mode 7, direct color"
+importance: 5
+---
+---
 title: "Tiles"
 source_url: "https://snes.nesdev.org/wiki/Tiles"
 pageid: 51

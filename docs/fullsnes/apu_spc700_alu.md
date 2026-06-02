@@ -1,3 +1,9 @@
+---
+summary: Reference for the SPC700 audio CPU's ALU instruction set in the SNES APU, listing opcodes, addressing modes, cycle counts, and flag effects for 8-bit, 16-bit, 1-bit, and special ALU operations.
+keywords: SPC700, APU, ALU, opcode, SNES
+importance: 4
+---
+
 # SNES APU SPC700 CPU ALU Commands
 
 #### 8bit ALU Operations

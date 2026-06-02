@@ -1,3 +1,8 @@
+---
+summary: Lists the NPCs (people, frogs, gimmicks, ship) and avatar sprites used by the Satellaview BS-X town, including their IDs, locations, behaviors, and folder associations.
+keywords: Satellaview, BS-X, NPCs, avatars, town people
+importance: 0
+---
 # SNES Cart Satellaview People
 
 #### People

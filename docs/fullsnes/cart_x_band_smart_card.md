@@ -1,3 +1,9 @@
+---
+summary: Describes the built-in Smart Card reader present in the X-Band modem cartridge for the SNES, covering its likely purpose (prepaid cards), the I/O ports used to access it (FBC100h, FBC108h), the control and status register bit definitions, and the standard smart card pinout.
+keywords: X-Band, Smart Card, I/O ports, BIOS
+importance: 1
+---
+
 # SNES Cart X-Band I/O - Smart Card Reader
 
 The X-Band contains a built-in Smart Card reader (credit card shaped chip cards with 8 gold contacts). The X-Band BIOS contains messages that refer to "XBand Cards" and "XBand Rental Cards". There aren't any photos (or other info) of these cards in the internet, maybe X-Band requested customers to return the cards, or the cards got lost for another reason.

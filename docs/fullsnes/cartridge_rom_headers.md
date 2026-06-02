@@ -1,3 +1,9 @@
+---
+summary: Documents the various 512-byte file headers and naming conventions used by SNES ROM-image copiers and backup units (SMC, SWC, FIG, BIN, 078, MGD, Superufo, SFC, NSRT). These headers are generally non-essential and can be detected/skipped based on file size modulo 1024.
+keywords: ROM headers, file formats, SMC/SWC, copier headers, NSRT
+importance: 2
+---
+
 # SNES Cartridge ROM-Image Headers and File Extensions
 
 Below file headers are dated back to back-up units, which allowed to load ROM-images from 1.44MB floppy disks into RAM, larger images have been split into "multi files".

@@ -1,3 +1,9 @@
+---
+summary: Documents the APUIO communication ports (2140h-2143h) used by the Main CPU and SPC700 to exchange data, including the standard uploader protocol and the SPC700 boot ROM (IPL) disassembly.
+keywords: APUIO, SPC700 boot ROM, 2140h-2143h, IPL uploader
+importance: 5
+---
+
 # SNES APU Main CPU Communication Port
 
 ```text

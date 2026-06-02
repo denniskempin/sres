@@ -1,3 +1,9 @@
+---
+summary: A concise reference of the ARM instruction set covering logical and arithmetic ALU operations, multiply, memory load/store, jumps/calls, coprocessor functions, and binary opcode formats, including cycle counts and CPSR flag effects.
+keywords: ARM, instruction set, opcode format, coprocessor, CPSR flags
+importance: 2
+---
+
 # ARM Instruction Summary
 
 Modification of CPSR flags is optional for all {S} instructions.

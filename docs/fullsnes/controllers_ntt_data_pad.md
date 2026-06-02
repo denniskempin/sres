@@ -1,3 +1,9 @@
+---
+summary: Reference for the NTT Data Pad, a 27-button SNES controller with a built-in numeric keypad designed for use with the SFC Modem (JRA PAT). Documents the button layout, controller ID bits, and the full 32-bit data format with bit positions for all buttons including numeric, action, and d-pad inputs.
+keywords: NTT Data Pad, controller, numeric keypad, SFC Modem
+importance: 1
+---
+
 # SNES Controllers NTT Data Pad (joypad with numeric keypad)
 
 Special joypad with numeric keypad, for use with SFC Modem:

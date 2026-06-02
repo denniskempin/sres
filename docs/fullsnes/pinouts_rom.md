@@ -1,3 +1,8 @@
+---
+summary: ASCII pinout diagrams for SNES cartridge ROM chips, covering the standard 40-pin SNES ROM, 36-pin EPROM-style package, and 44-pin package used by SPC7110, S-DD1, SA-1 boards and Nintendo Power FLASH carts. Also notes the address-line routing quirk for LoROM cartridges.
+keywords: SNES, ROM, pinout, cartridge, LoROM
+importance: 2
+---
 # SNES Pinouts ROM Chips
 
 ```text

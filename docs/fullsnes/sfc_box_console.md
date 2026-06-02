@@ -1,3 +1,9 @@
+---
+summary: Component list for the SFC-Box (Super Famicom Box) mainboard "MAIN 0871-100A" and its daughterboards (modulator, power supply, PU/GD/CC/FR boards, keyswitch), enumerating ICs (S-CPU, S-PPU1/2, S-SMP, S-DSP, S-ENC, HD64180 Z80, OSD, RTC), connectors, oscillators, options/jumpers, and pin counts.
+keywords: SFC-Box, Super Famicom Box, component list, mainboard, daughterboard
+importance: 1
+---
+
 # SFC-Box Component List (Console)
 
 #### SFC-Box Mainboard "MAIN 0871-100A"  Section 1 (CPU/PPU) (Front-Left)

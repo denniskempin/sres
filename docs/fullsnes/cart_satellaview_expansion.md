@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the Satellaview Expansion Data format appended to directory packets, describing chunk-based structures for custom buildings, persons, BG animations, and cell-to-tile translation used by the town/status packet system.
+keywords: Satellaview, Expansion Data, Directory Packets, Custom Building, Custom Persons
+importance: 1
+---
+
 # SNES Cart Satellaview Expansion Data (at end of Directory Packets)
 
 #### Directory (Software Channel 1.1.0.6)

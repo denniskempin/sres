@@ -1,3 +1,9 @@
+---
+summary: Describes the Nintendo-specific chip detection sequence used by the Satellaview BIOS to identify FLASH cartridges (Types 1-4), including the command protocol, expected detection values (ID, flags, type, size), and edge cases such as write-protected or missing cartridges.
+keywords: Satellaview, FLASH cartridge, chip detection, BIOS
+importance: 1
+---
+
 # SNES Cart Satellaview I/O FLASH Detection (Type 1,2,3,4)
 
 The Satellaview FLASH cartridges contain slightly customized "standard" FLASH chips; with a custom Nintendo-specific Chip Detection sequence:

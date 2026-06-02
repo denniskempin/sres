@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the Korean C20H pirate multicart, a 1Mbyte cartridge containing 20 NES games ported to SNES. Documents the I/O port layout, bank-switching scheme via port 8000h, LoROM mapping, and component list.
+keywords: pirate multicart, C20H, bank switching, LoROM
+importance: 0
+---
+
 # SNES Cart Pirate X-in-1 Multicarts (2)
 
 There's at least one korean multicart (called "C20H" or "super20hab" or so), with 20 small games stored on a relative small 1Mbyte ROM. The games are NES games ported to work on SNES, some with typical pirate mods (like removing copyright strings, or renaming the game to bizarre names).

@@ -1,3 +1,9 @@
+---
+summary: Reference table of CIC (lockout) chip versions used in NES and SNES cartridges and consoles, covering regional NTSC/PAL variants, SMD/DIP package options, known third-party CIC clones, and chip production date codes.
+keywords: CIC, lockout chip, region lockout, NES, SNES
+importance: 1
+---
+
 # SNES Cartridge CIC Versions
 
 #### NES CIC Versions

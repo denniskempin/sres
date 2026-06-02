@@ -1,3 +1,8 @@
+---
+summary: Describes the SNES Twin Tap controller (Partyroom21/Yonezawa PR21), a specialized 2-button 8-player quiz-game accessory, covering its physical design, transfer protocol, and the single game that supports it.
+keywords: Twin Tap, SNES controller, Partyroom21, 8-player, multiplayer
+importance: 1
+---
 # SNES Controllers Twin Tap
 
 The Twin Tap from Partyroom21 (aka Yonezawa PR21) is a special controller for 8-player quiz games. The Twin Tap itself consists of 7pin SNES controller connector with two cables, and a push-button on each cable-end (one button per player). For the 8-player mode, four Twin Taps need to be connected to a multiplayer adaptor (such like Partyroom21's own "Multi Adaptor Auto").

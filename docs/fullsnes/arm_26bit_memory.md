@@ -1,3 +1,9 @@
+---
+summary: Reference document describing the ARM 26bit memory interface used by ARMv1/ARMv2 processors. Covers the R15 Program Counter register format in 26bit mode, reading/writing behavior of R15, and exception handling including the 26bit Address Exception.
+keywords: ARM 26bit, R15, Program Counter, PSR, Exceptions
+importance: 0
+---
+
 # ARM 26bit Memory Interface
 
 The 26bit Memory Interface was used by ARMv1 and ARMv2. The 32bit interface is used by ARMv3 and newer, however, 26bit backward compatibility was included in all ARMv3 (except ARMv3G), and optionally in some non-T variants of ARMv4.

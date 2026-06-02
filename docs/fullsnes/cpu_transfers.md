@@ -1,3 +1,9 @@
+---
+summary: Reference for W65C816 CPU instructions that move data between registers, memory, and the stack, including register-to-register transfers, load/store operations with all addressing modes, push/pull stack operations, and block memory transfer commands (MVP, MVN).
+keywords: W65C816, CPU opcodes, load/store, stack, block transfer
+importance: 5
+---
+
 # CPU Memory and Register Transfers
 
 #### Register to Register Transfer

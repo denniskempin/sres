@@ -1,4 +1,9 @@
 ---
+summary: "Brief overview of Nintendo's official two-book SNES Development Manual, where Book 1 covers main SNES hardware with references, example code, and the game submission process, and Book 2 covers cartridge expansion hardware and peripheral accessories."
+keywords: "SNES Development Manual, Nintendo, hardware reference, cartridge expansion, peripherals"
+importance: 2
+---
+---
 title: "SNES Development Manual"
 source_url: "https://snes.nesdev.org/wiki/SNES_Development_Manual"
 pageid: 28

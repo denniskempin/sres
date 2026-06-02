@@ -3,6 +3,9 @@ title: "S-CPUN Pinout"
 source_url: "https://snes.nesdev.org/wiki/S-CPUN_Pinout"
 pageid: 187
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Pinout reference for the S-CPUN (Ricoh 5A122), the integrated CPU plus dual PPU chip used in 1CHIP SNES consoles, listing signal assignments for video outputs, address and data buses, joypad I/O, clocks, DRAM, and other pins."
+keywords: "S-CPUN, Ricoh 5A122, 1CHIP, pinout, PPU"
+importance: 2
 ---
 
 Pinout of S-CPUN (Ricoh 5A122) used in 1CHIP Consoles. This Chip combines the CPU and both PPUs into a single IC.

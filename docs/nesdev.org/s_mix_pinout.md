@@ -1,4 +1,9 @@
 ---
+summary: Pinout and mixer schematic for the S-MIX audio chip used in later SNES revisions to combine audio output from the APU, cartridge, and expansion port.
+keywords: S-MIX, audio mixer, pinout, APU, later revisions
+importance: 2
+---
+---
 title: "S-MIX Pinout"
 source_url: "https://snes.nesdev.org/wiki/S-MIX_Pinout"
 pageid: 190

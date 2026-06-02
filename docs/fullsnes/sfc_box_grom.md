@@ -1,3 +1,9 @@
+---
+summary: Describes the memory map and structure of the 32Kbyte GROM EPROM found in SFC-Box cartridges, including the root header, ROM directory, ROM file info blocks, HD64180 bank-switching code, bitmap title tiles, palettes, and Shift-JIS instruction pages used by SNES kiosk/demo units.
+keywords: SFC-Box, GROM, HD64180, kiosk cartridge
+importance: 1
+---
+
 # SFC-Box GROM Format
 
 All SFC-Box Cartridges are containing a 32Kbyte "GROM" EPROM, the chip contains info about the ROMs in the cartridge (title, instructions, etc).

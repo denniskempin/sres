@@ -1,3 +1,9 @@
+---
+summary: Describes the registers and processor status flags of the W65C816 CPU used in the SNES, covering the accumulator, index, bank, program counter, and stack pointer registers, the P flag bits, the M/X index/accumulator width flags, the E emulation flag, and common register-name aliases.
+keywords: W65C816, CPU registers, processor status flags, emulation mode, 6502
+importance: 5
+---
+
 # CPU Registers and Flags
 
 The 65XX CPUs are equipped with not more than three general purpose registers (A, X, Y). However, the limited number of registers is parts of covered by comfortable memory operations, especially page 0 of memory (address 0000h-00FFh) may be used for relative fast and complicated operations, in so far one might say that the CPU has about 256 8bit 'registers' (or 128 16bit 'registers') in memory. For details see Memory Addressing chapter.

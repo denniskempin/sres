@@ -1,3 +1,9 @@
+---
+summary: Describes the SNES PPU resolution capabilities, including physical and software-selectable vertical resolutions for NTSC and PAL consoles, and the various high-resolution modes (true and pseudo horizontal/vertical, OBJ) achievable via BG modes and SETINI flags.
+keywords: PPU, resolution, high-resolution, interlace, BG modes
+importance: 5
+---
+
 # SNES PPU Resolution
 
 #### Physical Resolution

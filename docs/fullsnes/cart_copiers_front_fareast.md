@@ -1,3 +1,9 @@
+---
+summary: Technical reference for SNES cartridge copier hardware from Front Fareast and related manufacturers (Super Magicom, Super Wild Card, Supercom Pro, etc.). Covers I/O port mappings, system modes, parallel port communication protocol, BIOS details, and detailed component lists for various models.
+keywords: Super Magicom, Super Wild Card, cartridge copier, parallel port, I/O ports
+importance: 1
+---
+
 # SNES Cart Copiers - Front Fareast (Super Magicom & Super Wild Card)
 
 #### Front/CCL/Clones

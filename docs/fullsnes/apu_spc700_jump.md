@@ -1,3 +1,9 @@
+---
+summary: Reference table of the SPC700 audio CPU's jump and control instructions, covering conditional branches (BPL, BMI, BBS, BBC, CBNE, DBNZ), normal jumps/calls (BRA, JMP, CALL, TCALL, PCALL, RET, RETI, BRK), and wait/control opcodes (NOP, SLEEP, STOP, CLRP, SETP, EI, DI) with encodings and cycle counts.
+keywords: SPC700, APU, jump instructions, control commands, opcodes
+importance: 4
+---
+
 # SNES APU SPC700 CPU Jump/Control Commands
 
 #### Conditional Jumps

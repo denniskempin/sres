@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the SNES Turbo File add-on's STF (Storage) mode filesystem, including FileTwin capacity codes, FAT layout, memory addressing, and file header format.
+keywords: Turbo File, STF, FileTwin, FAT, filesystem
+importance: 1
+---
+
 # SNES Add-On Turbo File - STF Mode Filesystem
 
 #### FileTwinCapacityCodes (last 4bit of FileTwinRecvStatusAndID)

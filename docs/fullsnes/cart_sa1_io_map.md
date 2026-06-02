@@ -1,3 +1,9 @@
+---
+summary: Reference table of the SA-1 coprocessor cartridge I/O register map, covering write-only registers, read-only registers, and reset values for ports 2200h-230Eh.
+keywords: SA-1, coprocessor, I/O map, registers
+importance: 1
+---
+
 # SNES Cart SA-1 I/O Map
 
 #### SA-1 I/O Map (Write Only Registers)

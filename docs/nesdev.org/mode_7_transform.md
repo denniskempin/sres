@@ -1,4 +1,9 @@
 ---
+summary: "Describes the SNES PPU's Mode 7 affine transformation, explaining how the 1024x1024 background tilemap is mapped to the screen using the M7A/M7B/M7C/M7D transformation matrix, M7X/M7Y pivot point, and M7HOFS/M7VOFS scroll offsets to enable rotation, scaling, shearing, and perspective effects (often via HDMA)."
+keywords: "Mode 7, affine transformation, PPU, HDMA, texture mapping"
+importance: 5
+---
+---
 title: "Mode 7 transform"
 source_url: "https://snes.nesdev.org/wiki/Mode_7_transform"
 pageid: 80

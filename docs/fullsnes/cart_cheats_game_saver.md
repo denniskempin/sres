@@ -1,3 +1,8 @@
+---
+summary: Documents the Nakitek Game Saver (and Game Saver Plus) SNES cheat/save-state cartridge, including its controls, memory and I/O map, BIOS versions, hardware components, and the 5-digit Revival Codes used to improve game compatibility by preserving select WRAM bytes or handling PPU write-twice ports.
+keywords: Game Saver, save state, cheat device, Revival Codes, Nakitek
+importance: 1
+---
 # SNES Cart Cheat Devices - Game Saver
 
 The Game Saver from Nakitek allows to load/save snapshots of (most of) the SNES memory and I/O ports.

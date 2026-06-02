@@ -1,3 +1,9 @@
+---
+summary: Reference for the NSS interpreter token opcodes used by the SNES BIOS, listing their byte values, parameters, and behaviors for OSD string output, port manipulation, control flow, and subroutines.
+keywords: NSS interpreter, BIOS tokens, OSD, INST ROM
+importance: 1
+---
+
 # NSS Interpreter Tokens
 
 #### Tokens

@@ -1,3 +1,9 @@
+---
+summary: Pinout diagrams for the SNES 128K WRAM (Work RAM) chip and SRAM chips, including the 28-pin SRAM used on the mainboard for Video RAM and Sound RAM, as well as cartridge SRAM configurations.
+keywords: WRAM, SRAM, VRAM, ARAM, Pinouts
+importance: 2
+---
+
 # SNES Pinouts RAM Chips
 
 #### 128K WRAM Pinouts

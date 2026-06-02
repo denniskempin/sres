@@ -1,4 +1,9 @@
 ---
+summary: A community-curated reference list of SNES development tools, covering assemblers, compilers, debuggers, audio/graphics editors, web utilities, and emulators.
+keywords: assemblers, debuggers, emulators, SNES development tools, compilers
+importance: 1
+---
+---
 title: "Tools"
 source_url: "https://snes.nesdev.org/wiki/Tools"
 pageid: 29

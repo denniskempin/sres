@@ -1,3 +1,9 @@
+---
+summary: Reference listing of the components used in the NSS (Nintendo Super System) arcade board, covering the main chipset, NSS/Z80-specific chips, cartridge PCBs (NSS-01-ROM-A/B/C), amplifiers, oscillators, connectors, jumpers, and the APU daughterboard.
+keywords: NSS, Nintendo Super System, arcade board, JAMMA, cartridge PCB
+importance: 1
+---
+
 # NSS Component Lists
 
 #### Cartridge PCB "NSS-01-ROM-A" (1991 Nintendo)

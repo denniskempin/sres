@@ -1,3 +1,9 @@
+---
+summary: Describes the layout and encoding of the SNES PPU's Video RAM, including BG Map entries, 8x8 tile data formats (4/16/256 colors and Mode 7), and the addressing scheme for 16x16 and larger tiles composed of multiple 8x8 tiles.
+keywords: VRAM, BG Map, Tiles, PPU, Mode 7
+importance: 4
+---
+
 # SNES PPU Video Memory (VRAM)
 
 #### BG Map (32x32 entries)

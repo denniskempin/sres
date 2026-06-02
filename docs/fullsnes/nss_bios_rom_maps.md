@@ -1,3 +1,9 @@
+---
+summary: Reference for the NSS (Nintendo Super System) arcade BIOS and INST ROM memory maps, covering reset vectors, PROM security checks, the encrypted 32-byte configuration area, and the title/instruction data layout. Also documents Skill Mode variants, GameID assignments, and tools for assembling INST ROM files.
+keywords: NSS, BIOS ROM, INST ROM, memory map, PROM checks
+importance: 2
+---
+
 # NSS BIOS and INST ROM Maps
 
 #### NSS BIOS ROM (32K mapped to 0000h-7FFFh)

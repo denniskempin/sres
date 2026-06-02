@@ -1,4 +1,8 @@
 ---
+summary: "Pinout reference for the MAD-1 (Memory Address Decoder 1) chip used in SNES cartridges, describing its 16 pins, the signals used for ROM mapping, cart save RAM access, DSP-n coprocessor access, and battery switchover, plus the two operating modes ($20 and $21) selected by the Map pin."
+keywords: "MAD-1, Memory Address Decoder, SNES cartridge, DSP-n, pinout"
+importance: 1
+---
 title: "MAD-1 Pinout"
 source_url: "https://snes.nesdev.org/wiki/MAD-1_Pinout"
 pageid: 185

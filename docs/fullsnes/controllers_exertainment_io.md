@@ -1,3 +1,8 @@
+---
+summary: Documents the I/O port map (21C0h-21DFh) for the SNES Exertainment expansion unit, covering the TL16C550AN RS232 controller, an SPI-style serial port for an OSD video controller, and access to the battery-backed 8KB SRAM.
+keywords: Exertainment, expansion port, TL16C550AN, RS232, SRAM
+importance: 0
+---
 # SNES Controllers Exertainment - I/O Ports
 
 #### Exertainment I/O Port Summary (Expansion Port Unit)

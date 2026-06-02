@@ -1,3 +1,9 @@
+---
+summary: Documents the ARM LDM/STM block data transfer instructions, including opcode encoding, addressing modes (IB/IA/DB/DA and stack aliases FD/ED/FA/EA), S-bit behavior, transfer order, and edge cases with invalid register lists.
+keywords: ARM, LDM, STM, block transfer, addressing modes
+importance: 0
+---
+
 # ARM Opcodes: Memory: Block Data Transfer (LDM, STM)
 
 #### Opcode Format

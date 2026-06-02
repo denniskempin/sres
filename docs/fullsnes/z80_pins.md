@@ -1,3 +1,9 @@
+---
+summary: Pin-out diagram of the Z80 CPU listing all 40 pins, including the 16-bit address bus (A0-A15), 8-bit data bus (D0-D7), control signals (/RD, /WR, /MREQ, /IORQ, /M1, /RFSH, /HALT, /WAIT, /INT, /NMI, /BUSRQ, /BUSAK, /RST), clock, and power/ground pins.
+keywords: Z80, pin-out, CPU, address bus, control signals
+importance: 1
+---
+
 # Z80 Pin-Outs
 
 ```text

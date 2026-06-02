@@ -1,4 +1,8 @@
 ---
+summary: Reference table of the S-SMP and S-DSP register maps for the SNES APU, listing each register's name, address, bit layout, access type, and functional notes.
+keywords: S-SMP, S-DSP, APU registers, audio
+importance: 5
+---
 title: "APU register table"
 source_url: "https://snes.nesdev.org/wiki/APU_register_table"
 pageid: 179

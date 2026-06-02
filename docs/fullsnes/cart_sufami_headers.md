@@ -1,3 +1,9 @@
+---
+summary: Describes the header formats for Sufami Turbo cartridges, an add-on adapter for SNES that accepts mini-cartridges. Covers the BIOS ROM header, game ROM header at offset 00000h, and the SRAM file header used for save data.
+keywords: Sufami Turbo, cartridge header, BIOS, SRAM
+importance: 1
+---
+
 # SNES Cart Sufami Turbo ROM/RAM Headers
 
 #### Sufami Turbo BIOS ROM Header

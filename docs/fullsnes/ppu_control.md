@@ -1,3 +1,9 @@
+---
+summary: Documents the SNES PPU control registers, including INIDISP (display control 1 with forced blanking and master brightness), TM/TS (main/sub screen layer designation), and SETINI (display control 2 with pseudo-512 mode, interlace, and OBJ high-resolution settings).
+keywords: PPU, INIDISP, SETINI, screen designation, forced blanking
+importance: 5
+---
+
 # SNES PPU Control
 
 ```text

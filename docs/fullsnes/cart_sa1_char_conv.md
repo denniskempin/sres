@@ -1,3 +1,9 @@
+---
+summary: Describes the SA-1 coprocessor's Character Conversion feature, which uses DMA to translate BW-RAM bitmap data or CPU-supplied pixel data into tile format in I-RAM for transfer to SNES VRAM/WRAM. Covers the two conversion types (automatic packed pixels and semi-automatic unpacked tiles), their control registers, buffer alignment requirements, and example games that use each type.
+keywords: SA-1, Character Conversion, BW-RAM, I-RAM, DMA
+importance: 3
+---
+
 # SNES Cart SA-1 Character Conversion
 
 #### Character Conversion Types

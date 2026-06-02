@@ -1,3 +1,9 @@
+---
+summary: Index page linking to detailed documentation about the Satellaview (BS-X) cartridge, including its I/O ports, satellite transmission format, memory layout, and related hardware info.
+keywords: Satellaview, BS-X, cartridge, I/O ports, transmission format
+importance: 1
+---
+
 # SNES Cart Satellaview (satellite receiver & mini flashcard)
 
 #### Satellaview I/O Ports

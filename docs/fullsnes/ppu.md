@@ -1,3 +1,9 @@
+---
+summary: Overview of the SNES Picture Processing Unit (PPU), serving as an entry point to its sub-topics including control registers, background modes, sprites, video memory (OAM/VRAM/CGRAM), window/color-math, and interrupts.
+keywords: PPU, video memory, sprites, backgrounds, priority
+importance: 5
+---
+
 # SNES Picture Processing Unit (PPU)
 
 > **See:** [SNES PPU Control](ppu_control.md)

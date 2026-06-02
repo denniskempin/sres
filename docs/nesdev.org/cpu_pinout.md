@@ -3,6 +3,9 @@ title: "CPU pinout"
 source_url: "https://snes.nesdev.org/wiki/CPU_pinout"
 pageid: 3
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Pinout diagram and signal descriptions for the Nintendo 5A22 S-CPU, the W65C816-based processor at the heart of the SNES, packaged in a QFP-100. Documents all 100 pins including the address and data buses, joypad I/O, control signals, and special signals like VPA and VDA."
+keywords: "S-CPU, 5A22, pinout, W65C816, QFP-100"
+importance: 5
 ---
 
 ## Pinout

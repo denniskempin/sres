@@ -1,3 +1,9 @@
+---
+summary: I/O register map for the SNES X-Band cartridge peripheral, derived from the Sega Genesis X-Band source code. Lists default base addresses and registers for translation patches, range/mask settings, safe RAM/ROM bounds, smart card control/status, modem buffers, and other X-Band hardware functions.
+keywords: X-Band, I/O Map, cartridge, modem, smart card
+importance: 1
+---
+
 # SNES Cart X-Band I/O Map
 
 Below I/O Map is based on source code of the Sega Genesis X-Band version (files i\harddef.a and i\feq.a). The I/O Map of the SNES version might differ in some places.

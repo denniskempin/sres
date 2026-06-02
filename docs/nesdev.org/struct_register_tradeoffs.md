@@ -3,6 +3,9 @@ title: "Struct register tradeoffs"
 source_url: "https://snes.nesdev.org/wiki/Struct_register_tradeoffs"
 pageid: 200
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Compares using the 65C816's X, Y, or direct page register as a struct pointer in SNES game engines, examining how each choice affects addressing mode support, performance, and code complexity."
+keywords: "65c816, X and Y registers, this pointer, addressing modes, direct page"
+importance: 3
 ---
 
 Action games usually need to keep track of the position, direction, status, and other details for multiple game objects. It follows that the game's code needs to keep track of which object in particular it's processing (commonly referred to as "[this](https://en.wikipedia.org/wiki/This_(computer_programming))"), and the reference to `this` needs to be stored in a register in order to allow accessing the object's data. Because the 65c816's registers have some major differences in what they're capable of, which register is chosen ends up being a big factor in shaping how the gameplay related parts of the engine use the 65c816.

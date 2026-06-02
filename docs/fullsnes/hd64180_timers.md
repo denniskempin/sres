@@ -1,3 +1,9 @@
+---
+summary: Describes the HD64180 processor's Programmable Reload Timers (PRT 0/1) and Free Running Counter (FRC), including the TCR control register, counter/reload registers, and IRQ behavior. This is unrelated to standard SNES hardware.
+keywords: HD64180, PRT, FRC, TCR, timers
+importance: 0
+---
+
 # HD64180 Timers (PRT and FRC)
 
 #### Programmable Reload Timers (PRT) and Free Running Counter (FRC)

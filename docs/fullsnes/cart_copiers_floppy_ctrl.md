@@ -1,3 +1,9 @@
+---
+summary: Reference for the floppy disc controller (FDC) chips used by SNES cartridge copiers, covering the GM82C765B and MCS3201FN/MCCS3201FN variants, their address decoding, motor control bits, transfer rate/density settings, and the MCS3201FN disk change flag.
+keywords: SNES cart copiers, floppy disc controller, GM82C765B, MCS3201FN, NEC uPD765
+importance: 1
+---
+
 # SNES Cart Copiers - Floppy Disc Controllers
 
 #### FDC Chips

@@ -1,3 +1,9 @@
+---
+summary: Lists commercial SNES games that use the Super FX (GSU) and Mario Chip 1 coprocessors, including chip revisions (GSU1, GSU2, GSU2-SP1, Mario Chip 1) and corresponding PCB board versions such as SHVC-1C0N, SHVC-1CB0N7S, and SHVC-1CB5B.
+keywords: Super FX, GSU, Mario Chip 1, Star Fox, Yoshi's Island
+importance: 1
+---
+
 # SNES Cart GSU-n List of Games, Chips, and PCB versions
 
 GSU1/Mario Chip1 is used by six games:

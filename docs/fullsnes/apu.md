@@ -1,3 +1,9 @@
+---
+summary: Index page for the SNES Audio Processing Unit (APU), linking to detailed reference material covering the SPC700 audio CPU, the S-DSP sound processor, the APU memory and I/O map, block diagram, I/O ports, and low-level timings.
+keywords: APU, SPC700, S-DSP, audio
+importance: 5
+---
+
 # SNES Audio Processing Unit (APU)
 
 #### Overview

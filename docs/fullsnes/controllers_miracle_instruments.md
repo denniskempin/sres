@@ -1,3 +1,9 @@
+---
+summary: Reference list of the 128 instrument patches available on the Miracle Piano keyboard controller for the SNES, covering standard programs, single-voice/dual-voice distinctions, MIDI control, and the key-mapped effects and percussion sound tables for patches 072-076.
+keywords: Miracle Piano, instrument patches, MIDI, SNES controller
+importance: 1
+---
+
 # SNES Controllers Miracle Piano Instruments
 
 #### Available Patches (aka Instruments)

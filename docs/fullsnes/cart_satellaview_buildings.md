@@ -1,3 +1,8 @@
+---
+summary: Lists the buildings (00h-1Fh) in the Satellaview BS-X town map, including their numbering, names, and special properties. Covers the Home Building's main menu options and notes which building IDs are unused or unsafe.
+keywords: Satellaview, BS-X, buildings, town map, FLASH card
+importance: 1
+---
 # SNES Cart Satellaview Buildings
 
 #### Home Building (Starting Point)

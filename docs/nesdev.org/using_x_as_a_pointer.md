@@ -3,6 +3,9 @@ title: "Using X as a pointer"
 source_url: "https://snes.nesdev.org/wiki/Using_X_as_a_pointer"
 pageid: 23
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Explains how to use the 65c816's 16-bit X index register as a pointer to access data with faster and smaller addressing modes such as directpage,x and absolute,x."
+keywords: "65c816, X register, addressing modes, direct page, pointer"
+importance: 2
 ---
 
 Because the 65c816's index registers can be 16-bit, they can hold a 16-bit address. For programs that already use 16-bit index registers for other reasons (such as accessing level data), this can sometimes create an optimization opportunity, allowing for the use of faster addressing modes and smaller code.

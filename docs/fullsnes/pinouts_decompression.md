@@ -1,3 +1,9 @@
+---
+summary: Reference for the pin-out signals of SNES cartridge data-decompression coprocessors, notably the SPC7110F0A and S-DD1 chips.
+keywords: SNES, pinouts, SPC7110, S-DD1, decompression
+importance: 2
+---
+
 # SNES Pinouts Decompression Chips
 
 #### SPC7110F0A Pin-Outs

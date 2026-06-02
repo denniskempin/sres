@@ -1,3 +1,9 @@
+---
+summary: Technical reference for the Konami Justifier lightgun peripheral, including controller bit format, latch behavior, supported games, and compatibility notes with the Sega version.
+keywords: Konami Justifier, lightgun, Lethal Enforcers, IOBit, H/V position latch
+importance: 1
+---
+
 # SNES Controllers Konami Justifier (Lightgun)
 
 ```text

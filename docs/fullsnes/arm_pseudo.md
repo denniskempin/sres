@@ -1,3 +1,9 @@
+---
+summary: Reference guide for ARM pseudo instructions and the A22i assembler's directives, including alias directives, numeric formats, operator precedence, and nocash-friendly syntax shortcuts.
+keywords: ARM pseudo instructions, A22i assembler, directives, no$gba
+importance: 1
+---
+
 # ARM Pseudo Instructions and Directives
 
 #### ARM Pseudo Instructions

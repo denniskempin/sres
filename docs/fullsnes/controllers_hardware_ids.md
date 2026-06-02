@@ -1,3 +1,9 @@
+---
+summary: Reference list of SNES controller hardware ID codes returned on data lines 13-24, mapping bit patterns to controller types (joypad, mouse, modem, Super Scope, Justifier, etc.) and listing devices with unknown IDs.
+keywords: SNES, controller, hardware ID, controller detection, peripherals
+importance: 3
+---
+
 # SNES Controllers Hardware ID Codes
 
 Controller ID Bits (13th-16th bit, or extended: 13th-24th bit)

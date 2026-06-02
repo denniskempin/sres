@@ -1,3 +1,9 @@
+---
+summary: Reference for SNES Z80 load instructions, covering 8-bit and 16-bit load operations and block transfer commands with opcodes, cycle counts, and flag effects.
+keywords: z80, load instructions, opcodes, block transfer
+importance: 1
+---
+
 # Z80 Load Commands
 
 8bit Load Commands  Instruction    Opcode  Cycles Flags  Notes  ld   r,r       xx           4 ------ r=r  ld   i,i       pD xx        8 ------ i=i  ld   r,n       xx nn        7 ------ r=n  ld   i,n       pD xx nn    11 ------ i=n  ld   r,(HL)    xx           7 ------ r=(HL)  ld   r,(ii+d)  pD xx dd    19 ------ r=(ii+d)  ld   (HL),r    7x           7 ------ (HL)=r  ld   (ii+d),r  pD 7x dd    19 ------ ld   (HL),n    36 nn       10 ------ ld   (ii+d),n  pD 36 dd nn 19 ------ ld   A,(BC)    0A           7 ------ ld   A,(DE)    1A           7 ------ ld   A,(nn)    3A nn nn    13 ------ ld   (BC),A    02           7 ------ ld   (DE),A    12           7 ------ ld   (nn),A    32 nn nn    13 ------ ld   A,I       ED 57        9 sz0i0- A=I  ;Interrupt Register  ld   A,R       ED 5F        9 sz0i0- A=R  ;Refresh Register  ld   I,A       ED 47        9 ------ ld   R,A       ED 4F        9 ------

@@ -3,6 +3,9 @@ title: "Audio drivers"
 source_url: "https://snes.nesdev.org/wiki/Audio_drivers"
 pageid: 173
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Overview of SNES audio drivers, which are programs running on the S-SMP that interpret music sequences and play sound effects in response to commands from the main CPU. Compares several homebrew-friendly drivers (SNESGSS, SNESMOD, Terrific Audio Driver, qSPC, XMSNES, SNES-ProTrackerPlayer, Super Kannagi Sound) by features, channel allocation, and music input format."
+keywords: "audio driver, S-SMP, music, sound effects, MML"
+importance: 2
 ---
 
 An '*audio driver* is a program that handles playing music and sound effects for a game running on a game console. In a SNES game, music is normally encoded into a sequence of notes that an audio driver then interprets, keeping track of timers in order to start and stop notes at the right times. The SNES has a dedicated processor for running audio drivers (the [[S-SMP]]) and the main program running on the 65c816 has to communicate with the audio driver on the S-SMP in order to ask it to play sound effects, switch which song is currently being played, and other tasks.

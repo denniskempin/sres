@@ -3,6 +3,9 @@ title: "UPD6376 Pinout"
 source_url: "https://snes.nesdev.org/wiki/UPD6376_Pinout"
 pageid: 199
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Pinout reference for the NEC UPD6376 audio DAC, which converts the S-DSP digital serial audio output into an analog stereo signal on the SNES. Describes the function of each of the 16 pins, including power, ground, data, and clock lines, and notes the FSSEL multiplexing mode used by the SNES."
+keywords: "UPD6376, audio DAC, pinout, S-DSP"
+importance: 1
 ---
 
 Pinout of the µPD6376 Audio DAC. It takes the Digital Serial Audio data from the S-DSP (not the DSP-x coprocessor) and converts it into an Analog signal.

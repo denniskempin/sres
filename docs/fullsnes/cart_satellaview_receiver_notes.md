@@ -1,3 +1,9 @@
+---
+summary: Notes on the Satellaview cartridge I/O receiver data stream handling, covering queue reset/read procedures, packet start/end flags, overrun handling, and estimated transfer rates.
+keywords: Satellaview, receiver queues, packet framing, overrun, transfer rate
+importance: 1
+---
+
 # SNES Cart Satellaview I/O Receiver Data Streams (Notes)
 
 #### Resetting the Queues

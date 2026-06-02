@@ -1,3 +1,9 @@
+---
+summary: Overview of the SNES memory architecture, describing Work RAM (WRAM), Video Memory (OAM/VRAM/CGRAM), Sound RAM, and the use of DMA transfers between memory regions.
+keywords: SNES memory, WRAM, VRAM, OAM, DMA
+importance: 5
+---
+
 # SNES Memory
 
 > **See:** [SNES Memory Map](memory_map.md)

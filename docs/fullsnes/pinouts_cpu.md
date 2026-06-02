@@ -1,3 +1,9 @@
+---
+summary: Pinout reference for the SNES CPU chip (5A22), listing all 100 pins with their direction, signal name, and function including the address and data buses, joypad I/O, clock and reset signals, H/V-blank inputs, and chip-select outputs.
+keywords: SNES, CPU, 5A22, pinout, W65C816
+importance: 5
+---
+
 # SNES Pinouts CPU Chip
 
 #### CPU 5A22

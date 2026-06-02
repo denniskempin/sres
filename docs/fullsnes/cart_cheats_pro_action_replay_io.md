@@ -1,3 +1,9 @@
+---
+summary: Documents the I/O port layouts for Pro Action Replay versions 1, 2, and 3 (PAR1, PAR2, PAR3) SNES cheat cartridges, including their code/data registers, control registers, NMI-hooking behavior, and differences in LoROM/HiROM support and ROM patching.
+keywords: Pro Action Replay, cheat device, I/O ports, code registers, NMI hook
+importance: 1
+---
+
 # SNES Cart Cheat Devices - Pro Action Replay I/O Ports
 
 #### PAR1 I/O Ports (W)

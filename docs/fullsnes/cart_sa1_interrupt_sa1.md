@@ -1,3 +1,9 @@
+---
+summary: Documents the SA-1 coprocessor interrupt and control registers on the SA-1 side (2209h SCNT, 220Ah CIE, 220Bh CIC, 220Ch-220Fh NMI/IRQ vector ports, and 2301h CFR), covering how NMI/IRQ sources, acknowledge bits, and message passing are wired between the SA-1 CPU and the SNES CPU.
+keywords: SA-1, interrupt, NMI, IRQ, coprocessor
+importance: 2
+---
+
 # SNES Cart SA-1 Interrupt/Control on SA-1 Side
 
 #### 2209h SA-1 SCNT - SNES CPU Control (W)

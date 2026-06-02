@@ -1,3 +1,9 @@
+---
+summary: Describes the RS232 packet structure and protocol used during the login phase between the SNES and the Exertainment Bike (Life Fitness) controller. Covers the multi-step handshake (packets 08h–0Dh), the logout packet (0Fh), the PPU status request/response, attention/acknowledge codes, and checksum calculation.
+keywords: Exertainment Bike, RS232, Login Phase, Packets, Checksum
+importance: 1
+---
+
 # SNES Controllers Exertainment - RS232 Data Packets Login Phase
 
 #### Login Phase

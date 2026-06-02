@@ -1,3 +1,9 @@
+---
+summary: Documents the Satellaview I/O Receiver Control registers in the SNES cartridge address range 2194h-2199h, including POWER/ACCESS LED control, status flags, power-down mode, and two 3-bit serial I/O ports used for configuration/calibration of Satellaview hardware.
+keywords: Satellaview, Receiver Control, Serial I/O, LED Control, I/O Registers
+importance: 1
+---
+
 # SNES Cart Satellaview I/O Receiver Control
 
 #### 2194h POWER (bit0) and ACCESS (bit2-3) LED Control? (R/W)

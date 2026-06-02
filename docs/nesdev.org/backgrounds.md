@@ -3,6 +3,9 @@ title: "Backgrounds"
 source_url: "https://snes.nesdev.org/wiki/Backgrounds"
 pageid: 73
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Reference for the SNES PPU's eight background modes (0-7), describing their layer configurations, tile bit-depths, priority ordering, and per-layer properties such as tilemap, tileset, scroll, mosaic, windowing, and high-resolution / interlacing options. Also covers Mode 7's unique transformation (rotation/scaling) and EXTBG."
+keywords: "background modes, tilemaps, PPU, Mode 7, priority, high resolution"
+importance: 5
 ---
 
 The SNES backgrounds consist of one or more layers of [[Tilemaps]].

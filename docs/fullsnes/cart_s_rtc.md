@@ -1,3 +1,9 @@
+---
+summary: Documents the Sharp S-RTC (Realtime Clock) chip used by the "SHVC-LJ3R-01" cartridge PCB, which appears in only one game, the Japanese "Dai Kaiju Monogatari 2". Describes the I/O ports at 002800h/002801h, the write/read communication protocol for setting and reading BCD-encoded timestamps, and the meaning of each timestamp digit.
+keywords: S-RTC, Sharp, Realtime Clock, BCD, Dai Kaiju Monogatari 2
+importance: 1
+---
+
 # SNES Cart S-RTC (Realtime Clock) (1 game)
 
 PCB "SHVC-LJ3R-01" with 24pin "Sharp S-RTC" chip. Used only by one japanese game:

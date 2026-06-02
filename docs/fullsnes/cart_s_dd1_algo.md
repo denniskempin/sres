@@ -1,3 +1,9 @@
+---
+summary: Pseudocode reference for the S-DD1 data decompression algorithm used in SNES cartridge expansion chips. Describes the initialization, byte output, probability-based bit decoding, Golomb/rice codeword reading, and the supporting Evolution and Run lookup tables.
+keywords: S-DD1, decompression algorithm, SNES cartridge, probability coding, Golomb coding
+importance: 1
+---
+
 # SNES Cart S-DD1 Decompression Algorithm
 
 #### decompress_init(src)

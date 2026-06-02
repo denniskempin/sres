@@ -1,3 +1,9 @@
+---
+summary: Describes the SA-1 cartridge coprocessor's H/V timer, covering the TMC control register, the timer restart register, the HCNT/VCNT counter set/read registers, and behavioral notes for HV and linear timer modes.
+keywords: SA-1, timer, H-counter, V-counter, HV timer
+importance: 1
+---
+
 # SNES Cart SA-1 Timer
 
 #### 2210h SA-1 TMC - H/V Timer Control (W)

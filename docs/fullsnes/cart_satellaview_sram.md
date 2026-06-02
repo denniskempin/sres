@@ -1,3 +1,9 @@
+---
+summary: Describes the 32Kbyte battery-backed SRAM in the Satellaview BIOS (BS-X) cartridge, including its memory map, layout of user/BIOS data fields, game-specific save positions used by various BS games, BIOS hook vectors, and access speed characteristics.
+keywords: Satellaview, SRAM, BS-X, battery-backed
+importance: 1
+---
+
 # SNES Cart Satellaview SRAM (Battery-backed)
 
 The Satellaview BIOS cartridge contains 32Kbyte battery-backed SRAM, mapped to eight 4Kbyte chunks at 5000h..5FFFh in Bank 10h..17h.

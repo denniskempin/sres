@@ -1,3 +1,9 @@
+---
+summary: Documents the Koei Voice-Kun, a rare SNES IR transmitter/receiver peripheral used to control Audio CD players for games bundled with audio CDs. Covers controller ID detection, IR signal I/O via registers 4017h and 4201h, and the small list of supported games.
+keywords: Voice-Kun, IR peripheral, Koei, 4017h, 4201h
+importance: 0
+---
+
 # SNES Add-On Voice-Kun (IR-transmitter/receiver for use with CD Players)
 
 The Voice-Kun (sometimes called Voicer-Kun) from Koei is an Infrared transmitter/receiver. The transmitter part is used for controlling Audio CD Players (ie. to select and play tracks from Audio CDs that are included with supported games). The receiver part is used to "learn" IR-signals from different Remote Control manufacturers.

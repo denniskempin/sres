@@ -1,3 +1,9 @@
+---
+summary: Notes on SNES DMA and HDMA behavior, covering midframe HDMA activation scenarios with register setup examples, and external DMA from the cartridge slot including notes on data decompression chips.
+keywords: DMA, HDMA, midframe, cartridge
+importance: 5
+---
+
 # SNES DMA and HDMA Notes
 
 #### Starting HDMA midframe

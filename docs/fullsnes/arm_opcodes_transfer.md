@@ -1,3 +1,9 @@
+---
+summary: Reference for the ARM single data transfer instructions (LDR and STR) used in the GBA's ARM7TDMI CPU, covering opcode bit fields, pre/post-indexed addressing, register/immediate offsets, and handling of misaligned memory accesses.
+keywords: ARM7TDMI, LDR, STR, Pre/Post-indexed addressing, Misaligned access
+importance: 1
+---
+
 # ARM Opcodes: Memory: Single Data Transfer (LDR, STR)
 
 #### Opcode Format

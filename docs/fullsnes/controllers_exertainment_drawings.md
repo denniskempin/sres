@@ -1,3 +1,9 @@
+---
+summary: ASCII drawings of the SNES Exertainment exercise bike, depicting the bike/monitor/rack assembly and the handlebar-mounted controllers with duplicate D-pad and XYAB face buttons.
+keywords: Exertainment, exercise bike, handlebar controller, ASCII drawings, periphery
+importance: 1
+---
+
 # SNES Controllers Exertainment - Drawings
 
 ```text

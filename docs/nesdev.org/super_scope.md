@@ -3,6 +3,9 @@ title: "Super Scope"
 source_url: "https://snes.nesdev.org/wiki/Super_Scope"
 pageid: 191
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "Describes the Super Scope, a light gun peripheral that plugs into the SNES second controller port and uses PPU OPHCT/OPVCT registers to latch screen coordinates when the CRT scanning beam hits its sensor. Covers the 16-bit data format, infrared command codes for Fire/Cursor/Pause/Turbo buttons, and timing/calibration details."
+keywords: "Super Scope, light gun, second controller port, PPU OPHCT/OPVCT, infrared"
+importance: 1
 ---
 
 The Super Scope is a Standard Peripheral that needs to be plugged into the Second Controller Port. This is because when the second [[Controller connector|controller port]]'s [[MMIO registers#RDIO|I/O line]] is asserted by the Super Scope, the [[PPU registers#OPVCT|PPU updates registers OPHCT and and OPVCT]] with the current screen coordinate that is being rendered.

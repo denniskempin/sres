@@ -1,3 +1,9 @@
+---
+summary: Theory of how SNES cartridge cheat devices (Game Genie, Pro Action Replay, etc.) patch ROM, WRAM, and SRAM, including cheat finders, slow motion, and game save features.
+keywords: cheat devices, ROM patches, WRAM patches, SRAM patches, Game Genie
+importance: 1
+---
+
 # SNES Cart Cheat Devices - Theory
 
 #### ROM Patches

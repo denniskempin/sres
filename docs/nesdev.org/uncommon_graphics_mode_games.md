@@ -3,6 +3,9 @@ title: "Uncommon graphics mode games"
 source_url: "https://snes.nesdev.org/wiki/Uncommon_graphics_mode_games"
 pageid: 25
 retrieved_at: "2026-04-05T23:38:15.892282+00:00"
+summary: "A reference catalog of SNES games that use less common PPU graphics modes and features, including BG Mode 0, Mode 3 8bpp, Mode 4 8bpp, Mode 7 EXTBG, direct color, high-resolution and interlaced output, horizontal and vertical offset-per-tile effects, and 239-line overscan."
+keywords: "SNES PPU, direct color, hi-res, offset-per-tile, overscan"
+importance: 2
 ---
 
 A list of games that use less common graphics modes.

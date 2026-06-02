@@ -1,3 +1,9 @@
+---
+summary: Index/overview of the Fullsnes (no$sns) SNES hardware reference documentation, organized into per-topic markdown files. Links to detailed pages covering the main CPU, memory map, DMA, PPU, APU, controllers, cartridges, coprocessors, and adjacent systems (NSS, SFC-Box, Z80/HD64180, ARM, RTC).
+keywords: SNES, hardware reference, PPU, APU, DMA
+importance: 5
+---
+
 # Fullsnes — SNES hardware reference (split markdown)
 
 This folder contains **no$sns** / **Fullsnes** reference text (Martin Korth, nocash), split from the monolithic spec into one markdown file per section for easier reading and linking. The material covers the SNES and closely related topics (cartridge coprocessors, peripherals, arcade/kiosk variants, and CPU references used by those add-ons).

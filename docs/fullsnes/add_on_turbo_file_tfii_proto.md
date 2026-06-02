@@ -1,3 +1,9 @@
+---
+summary: Low-level technical specification of the SNES Add-On Turbo File (TFII) transmission protocol, describing pseudo-code routines for invoking, resetting, status detection, and transferring 8191-byte data blocks via the controller port.
+keywords: SNES, Turbo File, TFII, transfer protocol, controller port
+importance: 1
+---
+
 # SNES Add-On Turbo File - TFII Mode Transmission Protocol
 
 oldest_recv_8191_bytes:
