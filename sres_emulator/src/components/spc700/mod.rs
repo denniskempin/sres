@@ -26,6 +26,7 @@ pub trait Spc700Bus: Bus<AddressU16> {
     fn spc_cycle(&self) -> u64;
     fn master_clock(&self) -> u64;
     fn update_master_clock(&mut self, cycles: u64);
+    fn promote_channel_out_writes(&mut self) {}
 }
 
 pub struct Spc700<BusT: Spc700Bus> {
@@ -69,14 +70,18 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
 
     pub fn catch_up_to_master_clock(&mut self, master_cycles: u64) {
         self.bus.update_master_clock(master_cycles);
-        // SPC700 runs at 2.048 MHz (32000 * 64), master clock at ~21.477 MHz
-        const SPC_CLOCK_FREQUENCY: u64 = 32000 * 64;
-        const MASTER_CLOCK_FREQUENCY: u64 = 21_477_272;
+        // Match Mesen2's SPC clock calibration: the effective SPC sample rate is
+        // 32040 Hz (32000 + the +40 SpcClockSpeedAdjustment default), so the SPC runs
+        // at 32040 * 64 = 2,049,600 Hz, against a 21,477,270 Hz NTSC master clock.
+        // See Mesen2 Spc::UpdateClockRatio / SnesConsole.cpp.
+        const SPC_CLOCK_FREQUENCY: u64 = 32040 * 64;
+        const MASTER_CLOCK_FREQUENCY: u64 = 21_477_270;
         let clock_ratio = SPC_CLOCK_FREQUENCY as f64 / MASTER_CLOCK_FREQUENCY as f64;
         let target_spc_cycle = (master_cycles as f64 * clock_ratio).floor() as u64 - 1;
         while self.bus.spc_cycle() < target_spc_cycle {
             self.step();
         }
+        self.bus.promote_channel_out_writes();
     }
 
     pub fn step(&mut self) {

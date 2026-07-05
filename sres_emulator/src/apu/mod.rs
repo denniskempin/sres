@@ -85,6 +85,7 @@ impl Apu {
     }
 
     fn read_apuio(&mut self, addr: AddressU24) -> u8 {
+        self.spc700.bus.promote_channel_out_writes();
         let channel_id = (addr.offset - 0x2140) as usize % 4;
         let value = self.spc700.bus.channel_out[channel_id];
         debug!("APUIO[{:04X}] reads {:02X}", addr.offset, value);

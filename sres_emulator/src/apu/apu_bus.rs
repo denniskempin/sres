@@ -8,10 +8,22 @@ use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
 
+// Match Mesen2's SPC clock calibration (see Spc700::catch_up_to_master_clock).
+const SPC_CLOCK_FREQUENCY: u64 = 32040 * 64;
+const MASTER_CLOCK_FREQUENCY: u64 = 21_477_270;
+const MASTER_TO_SPC_RATIO: f64 = SPC_CLOCK_FREQUENCY as f64 / MASTER_CLOCK_FREQUENCY as f64;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum ApuBusEvent {
     Read(AddressU16, u8),
     Write(AddressU16, u8),
+}
+
+/// Buffered SPC→CPU port write, promoted once the master clock reaches the write cycle.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ChannelOutPending {
+    write_spc_cycle: u64,
+    value: u8,
 }
 
 pub struct ApuBus {
@@ -21,6 +33,7 @@ pub struct ApuBus {
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
     pub channel_out: [u8; 4],
+    channel_out_pending: [Option<ChannelOutPending>; 4],
     pub timers: ApuTimers,
     pub dsp_register_select: u8,
     pub dsp_register_readonly: bool,
@@ -38,6 +51,7 @@ impl ApuBus {
             ram: [0; 0x10000],
             channel_in: [0; 4],
             channel_out: [0; 4],
+            channel_out_pending: [None; 4],
             timers: ApuTimers::new(),
             dsp_register_readonly: false,
             dsp_register_select: 0,
@@ -57,10 +71,46 @@ impl ApuBus {
             self.channel_in[1] = 0;
             self.channel_out[0] = 0;
             self.channel_out[2] = 0;
+            self.channel_out_pending[0] = None;
+            self.channel_out_pending[2] = None;
         }
         if self.control.clear_apuio34() {
             self.channel_in[2] = 0;
             self.channel_in[3] = 0;
+        }
+    }
+
+    fn write_channel_out(&mut self, channel: usize, value: u8) {
+        let write_spc_cycle = self.spc_cycle;
+        if self.master_clock == 0 {
+            // SPC-only unit tests step without a master clock.
+            self.channel_out[channel] = value;
+            self.channel_out_pending[channel] = None;
+            return;
+        }
+        self.channel_out_pending[channel] = Some(ChannelOutPending {
+            write_spc_cycle,
+            value,
+        });
+    }
+
+    /// Promote buffered SPC port writes to CPU-visible `channel_out` once the
+    /// master clock has reached the write's SPC cycle.
+    pub fn promote_channel_out_writes(&mut self) {
+        if self.master_clock == 0 {
+            return;
+        }
+        let exposed_spc_cycle =
+            (self.master_clock as f64 * MASTER_TO_SPC_RATIO).floor() as u64;
+
+        for channel in 0..4 {
+            let Some(pending) = self.channel_out_pending[channel] else {
+                continue;
+            };
+            if pending.write_spc_cycle <= exposed_spc_cycle {
+                self.channel_out[channel] = pending.value;
+                self.channel_out_pending[channel] = None;
+            }
         }
     }
 }
@@ -119,27 +169,34 @@ impl Bus<AddressU16> for ApuBus {
             .on_event(ApuBusEvent::Write(addr, value));
         trace!("{:08} [SPC] write {addr:}", self.master_clock);
 
+        let channel_out_write = matches!(addr.0, 0x00F4..=0x00F7);
+        if channel_out_write {
+            let channel = addr.0 as usize - 0x00F4;
+            self.write_channel_out(channel, value);
+        }
+
         self.spc_cycle += 2;
 
-        match addr.0 {
-            0x00F1 => self.write_control(value),
-            0x00F2 => {
-                self.dsp_register_readonly = value.bit(7);
-                self.dsp_register_select = value.bits(0..=6);
-            }
-            0x00F3 => {
-                if self.dsp_register_readonly {
-                    return;
+        if !channel_out_write {
+            match addr.0 {
+                0x00F1 => self.write_control(value),
+                0x00F2 => {
+                    self.dsp_register_readonly = value.bit(7);
+                    self.dsp_register_select = value.bits(0..=6);
                 }
-                self.dsp.write_register(self.dsp_register_select, value);
+                0x00F3 => {
+                    if self.dsp_register_readonly {
+                        return;
+                    }
+                    self.dsp.write_register(self.dsp_register_select, value);
+                }
+                0x00FA..=0x00FC => {
+                    let timer_id = addr.0 as usize - 0x00FA;
+                    self.timers.write_target(timer_id, value);
+                }
+                0x00FD..=0x00FF => {} // Timer outputs are read-only
+                _ => self.ram[addr.0 as usize] = value,
             }
-            0x00F4..=0x00F7 => self.channel_out[addr.0 as usize - 0x00F4] = value,
-            0x00FA..=0x00FC => {
-                let timer_id = addr.0 as usize - 0x00FA;
-                self.timers.write_target(timer_id, value);
-            }
-            0x00FD..=0x00FF => {} // Timer outputs are read-only
-            _ => self.ram[addr.0 as usize] = value,
         }
 
         // Update timers with 1 SPC cycle
@@ -161,6 +218,10 @@ impl Spc700Bus for ApuBus {
     }
     fn update_master_clock(&mut self, new_master_clock: u64) {
         self.master_clock = new_master_clock;
+    }
+
+    fn promote_channel_out_writes(&mut self) {
+        ApuBus::promote_channel_out_writes(self);
     }
 }
 
