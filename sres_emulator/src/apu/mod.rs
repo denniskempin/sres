@@ -75,7 +75,7 @@ impl Apu {
     /// Register 2140..2144: APUION - APU IO Channels
     fn write_apuio(&mut self, addr: AddressU24, value: u8) {
         let channel_id = (addr.offset - 0x2140) as usize % 4;
-        self.spc700.bus.write_channel_in(channel_id, value);
+        self.spc700.bus.channel_in[channel_id] = value;
         debug!("APUIO[{:04X}] = {:02X}", addr.offset, value);
     }
 
