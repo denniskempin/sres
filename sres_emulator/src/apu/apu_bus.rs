@@ -20,6 +20,11 @@ pub struct ApuBus {
     pub master_clock: u64,
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
+    /// Writes from the SNES S-CPU to the APUIO ports are not visible to the SPC700
+    /// instantly. They are buffered here and flushed into `channel_in` at the start of
+    /// the SPC700's next bus cycle, modelling the port synchronization latency so an
+    /// in-flight SPC read still observes the previous value.
+    pub channel_in_pending: [Option<u8>; 4],
     pub channel_out: [u8; 4],
     pub timers: ApuTimers,
     pub dsp_register_select: u8,
@@ -37,12 +42,29 @@ impl ApuBus {
             master_clock: 0,
             ram: [0; 0x10000],
             channel_in: [0; 4],
+            channel_in_pending: [None; 4],
             channel_out: [0; 4],
             timers: ApuTimers::new(),
             dsp_register_readonly: false,
             dsp_register_select: 0,
             dsp: Default::default(),
             control: ApuControlRegister::default(),
+        }
+    }
+
+    /// Buffer a write from the SNES S-CPU to an APUIO input port. The value becomes
+    /// visible to the SPC700 only at the start of its next bus cycle.
+    pub fn write_channel_in(&mut self, channel_id: usize, value: u8) {
+        self.channel_in_pending[channel_id] = Some(value);
+    }
+
+    /// Flush any pending S-CPU port writes into the SPC700-visible `channel_in` array.
+    /// Called at the start of every SPC700 bus cycle.
+    fn flush_channel_in(&mut self) {
+        for channel_id in 0..4 {
+            if let Some(value) = self.channel_in_pending[channel_id].take() {
+                self.channel_in[channel_id] = value;
+            }
         }
     }
 
@@ -86,6 +108,7 @@ impl Bus<AddressU16> for ApuBus {
     }
 
     fn cycle_io(&mut self) {
+        self.flush_channel_in();
         trace!("{:08} [SPC] io", self.master_clock);
         self.spc_cycle += 2;
         // Update timers with 1 SPC cycle
@@ -93,6 +116,7 @@ impl Bus<AddressU16> for ApuBus {
     }
 
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
+        self.flush_channel_in();
         trace!("{:08} [SPC] read {addr}", self.master_clock);
         self.spc_cycle += 2;
 
@@ -115,6 +139,7 @@ impl Bus<AddressU16> for ApuBus {
     }
 
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
+        self.flush_channel_in();
         self.debug_event_collector
             .on_event(ApuBusEvent::Write(addr, value));
         trace!("{:08} [SPC] write {addr:}", self.master_clock);
