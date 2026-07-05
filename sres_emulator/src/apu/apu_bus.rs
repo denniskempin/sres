@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use intbits::Bits;
 use log::trace;
 
@@ -21,6 +23,14 @@ pub struct ApuBus {
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
     pub channel_out: [u8; 4],
+    /// SPC700 writes to the CPUIO out ports (`channel_out`) must not become visible to the S-CPU
+    /// before the master clock actually reaches the SPC cycle on which the write happens. Because
+    /// the lazy catch-up executes whole SPC instructions atomically, a write that hardware performs
+    /// partway through an instruction would otherwise be observable at the instruction's *first*
+    /// cycle (up to ~1 instruction too early). Each entry is `(channel, write_spc_cycle, value)`;
+    /// entries are promoted into `channel_out` by `promote_channel_out` once the exposed SPC cycle
+    /// (derived from the master clock) catches up. See SRE-24.
+    channel_out_pending: VecDeque<(usize, u64, u8)>,
     pub timers: ApuTimers,
     pub dsp_register_select: u8,
     pub dsp_register_readonly: bool,
@@ -38,6 +48,7 @@ impl ApuBus {
             ram: [0; 0x10000],
             channel_in: [0; 4],
             channel_out: [0; 4],
+            channel_out_pending: VecDeque::new(),
             timers: ApuTimers::new(),
             dsp_register_readonly: false,
             dsp_register_select: 0,
@@ -55,12 +66,32 @@ impl ApuBus {
         if self.control.clear_apuio12() {
             self.channel_in[0] = 0;
             self.channel_in[1] = 0;
-            self.channel_out[0] = 0;
-            self.channel_out[2] = 0;
+            self.clear_channel_out(0);
+            self.clear_channel_out(2);
         }
         if self.control.clear_apuio34() {
             self.channel_in[2] = 0;
             self.channel_in[3] = 0;
+        }
+    }
+
+    /// Clear a `channel_out` port and drop any not-yet-visible pending writes for it, so a stale
+    /// deferred write cannot resurrect the port after a control-register clear.
+    fn clear_channel_out(&mut self, channel: usize) {
+        self.channel_out[channel] = 0;
+        self.channel_out_pending.retain(|&(ch, _, _)| ch != channel);
+    }
+
+    /// Promote deferred `channel_out` writes whose SPC write cycle is at or before the given
+    /// exposed SPC cycle (derived from the current master clock). See `channel_out_pending`.
+    pub fn promote_channel_out(&mut self, exposed_spc_cycle: u64) {
+        while let Some(&(channel, write_cycle, value)) = self.channel_out_pending.front() {
+            if write_cycle <= exposed_spc_cycle {
+                self.channel_out[channel] = value;
+                self.channel_out_pending.pop_front();
+            } else {
+                break;
+            }
         }
     }
 }
@@ -119,6 +150,9 @@ impl Bus<AddressU16> for ApuBus {
             .on_event(ApuBusEvent::Write(addr, value));
         trace!("{:08} [SPC] write {addr:}", self.master_clock);
 
+        // SPC cycle at the start of this write bus-cycle; the CPUIO out ports latch (and become
+        // observable to the S-CPU) from the beginning of the write cycle, not after it completes.
+        let write_cycle = self.spc_cycle;
         self.spc_cycle += 2;
 
         match addr.0 {
@@ -133,7 +167,13 @@ impl Bus<AddressU16> for ApuBus {
                 }
                 self.dsp.write_register(self.dsp_register_select, value);
             }
-            0x00F4..=0x00F7 => self.channel_out[addr.0 as usize - 0x00F4] = value,
+            0x00F4..=0x00F7 => {
+                // Defer visibility to the S-CPU until the master clock reaches this write's SPC
+                // cycle (see `channel_out_pending` and `promote_channel_out`).
+                let channel = addr.0 as usize - 0x00F4;
+                self.channel_out_pending
+                    .push_back((channel, write_cycle, value));
+            }
             0x00FA..=0x00FC => {
                 let timer_id = addr.0 as usize - 0x00FA;
                 self.timers.write_target(timer_id, value);
@@ -149,6 +189,7 @@ impl Bus<AddressU16> for ApuBus {
     fn reset(&mut self) {
         self.control = ApuControlRegister::default();
         self.timers.reset();
+        self.channel_out_pending.clear();
     }
 }
 
@@ -161,6 +202,9 @@ impl Spc700Bus for ApuBus {
     }
     fn update_master_clock(&mut self, new_master_clock: u64) {
         self.master_clock = new_master_clock;
+    }
+    fn promote_channel_out_writes(&mut self, exposed_spc_cycle: u64) {
+        self.promote_channel_out(exposed_spc_cycle);
     }
 }
 

@@ -26,6 +26,10 @@ pub trait Spc700Bus: Bus<AddressU16> {
     fn spc_cycle(&self) -> u64;
     fn master_clock(&self) -> u64;
     fn update_master_clock(&mut self, cycles: u64);
+    /// Make deferred CPUIO output-port writes visible up to the given exposed SPC cycle. Used to
+    /// model the fact that a port write only becomes observable to the S-CPU once the master clock
+    /// reaches the SPC cycle on which the (atomically executed) instruction performed the write.
+    fn promote_channel_out_writes(&mut self, _exposed_spc_cycle: u64) {}
 }
 
 pub struct Spc700<BusT: Spc700Bus> {
@@ -76,10 +80,16 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         const SPC_CLOCK_FREQUENCY: u64 = 32040 * 64;
         const MASTER_CLOCK_FREQUENCY: u64 = 21_477_270;
         let clock_ratio = SPC_CLOCK_FREQUENCY as f64 / MASTER_CLOCK_FREQUENCY as f64;
-        let target_spc_cycle = (master_cycles as f64 * clock_ratio).floor() as u64 - 1;
+        let exposed_spc_cycle = (master_cycles as f64 * clock_ratio).floor() as u64;
+        let target_spc_cycle = exposed_spc_cycle - 1;
         while self.bus.spc_cycle() < target_spc_cycle {
             self.step();
         }
+        // Reveal any deferred CPUIO output-port writes whose SPC write cycle is now at or before
+        // the SPC cycle exposed to the S-CPU by the current master clock. Because instructions
+        // execute atomically, a write performed during an instruction is buffered until the master
+        // clock actually reaches that cycle. See SRE-24.
+        self.bus.promote_channel_out_writes(exposed_spc_cycle);
     }
 
     pub fn step(&mut self) {

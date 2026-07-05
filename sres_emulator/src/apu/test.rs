@@ -31,6 +31,11 @@ fn boot_rom_transfer_test() {
     let mut spc700 = Spc700::new(ApuBus::new(mock_collector()), mock_collector());
     assert_states(&mut spc700, INIT_TRACE);
 
+    // CPUIO out-port writes are deferred until the master clock reaches their SPC cycle (see
+    // SRE-24). This test steps the SPC directly without advancing a master clock, so promote the
+    // buffered writes up to the current SPC cycle before inspecting the ports.
+    spc700.bus.promote_channel_out(spc700.bus.spc_cycle);
+
     // Init done signal is 0xaabb on port 0-1
     assert_eq!(spc700.bus.channel_out[0], 0xaa);
     assert_eq!(spc700.bus.channel_out[1], 0xbb);

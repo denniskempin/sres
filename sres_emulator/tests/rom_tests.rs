@@ -196,8 +196,8 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
         .unwrap()
         .enumerate()
     {
-        // WORK IN PROGRESS. The first 18740 instructions are working so far, stop test before we run into issues.
-        if line_num >= 18740 {
+        // WORK IN PROGRESS. The first 19047 instructions are working so far, stop test before we run into issues.
+        if line_num >= 19047 {
             break;
         }
 
