@@ -196,8 +196,9 @@ fn run_rom_test_with_spc700_trace(test_name: &str) {
         .unwrap()
         .enumerate()
     {
-        // WORK IN PROGRESS. The first 18740 instructions are working so far, stop test before we run into issues.
-        if line_num >= 18740 {
+        // Option A (channel_out write-visibility latch) fixes the 18740 divergence.
+        // Residual ±1 SPC-cycle mismatches appear later (~19047); see SRE-24.
+        if line_num >= 19047 {
             break;
         }
 

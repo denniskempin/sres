@@ -26,6 +26,7 @@ pub trait Spc700Bus: Bus<AddressU16> {
     fn spc_cycle(&self) -> u64;
     fn master_clock(&self) -> u64;
     fn update_master_clock(&mut self, cycles: u64);
+    fn promote_channel_out_writes(&mut self) {}
 }
 
 pub struct Spc700<BusT: Spc700Bus> {
@@ -80,6 +81,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         while self.bus.spc_cycle() < target_spc_cycle {
             self.step();
         }
+        self.bus.promote_channel_out_writes();
     }
 
     pub fn step(&mut self) {
