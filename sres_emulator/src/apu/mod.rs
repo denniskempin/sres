@@ -91,10 +91,18 @@ impl Apu {
         value
     }
 
+    /// Advance the SPC700 to the master clock, then reveal deferred CPUIO out-port writes.
+    fn catch_up_and_promote_channel_out(&mut self, master_clock: u64) {
+        let exposed_spc_cycle = self.spc700.catch_up_to_master_clock(master_clock);
+        self.spc700
+            .bus
+            .promote_channel_out(exposed_spc_cycle);
+    }
+
     fn update_clock(&mut self, new_clock: ClockInfo) {
         while new_clock.master_clock - self.last_sample_cycle >= CYCLES_PER_SAMPLE {
             self.last_sample_cycle += CYCLES_PER_SAMPLE;
-            self.spc700.catch_up_to_master_clock(new_clock.master_clock);
+            self.catch_up_and_promote_channel_out(new_clock.master_clock);
 
             let sample = self.generate_sample();
 
@@ -105,7 +113,7 @@ impl Apu {
             }
             self.sample_buffer.push_sample(sample);
         }
-        self.spc700.catch_up_to_master_clock(new_clock.master_clock);
+        self.catch_up_and_promote_channel_out(new_clock.master_clock);
     }
 
     fn reset(&mut self) {
