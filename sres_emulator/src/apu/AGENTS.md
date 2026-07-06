@@ -25,12 +25,11 @@ pub struct Apu {
     pub spc700: Spc700<ApuBus>,
     sample_buffer: AudioBuffer,
     last_sample_cycle: u64,
-    current_master_clock: u64,
 }
 ```
 
 - **`spc700`**: The SPC700 CPU instance, parameterised over `ApuBus`.
-- **Clocking**: The `Apu` tracks `current_master_clock` but does **not** advance the SPC700 on every single clock tick. Instead, it uses a **lazy catch-up** strategy to efficiently synchronize the two domains.
+- **Clocking**: The `Apu` uses a **lazy catch-up** strategy — the SPC700 is not advanced on every master clock tick. `update_clock` calls `catch_up_and_promote_channel_out`, which advances the SPC700 and then promotes deferred CPUIO out-port writes.
 - **Audio Buffering**: Samples are generated and pushed into an `AudioBuffer` (capacity 1024, max 32000). The frontend pulls audio via `swap_audio_buffer`.
 
 ### `ApuBus` (`apu_bus.rs`)
@@ -41,6 +40,7 @@ pub struct ApuBus {
     pub ram: [u8; 0x10000],
     pub channel_in: [u8; 4],
     pub channel_out: [u8; 4],
+    channel_out_pending: VecDeque<(usize, u64, u8)>, // (channel, write_spc_cycle, value)
     pub timers: ApuTimers,
     pub dsp: SDsp,
     pub control: ApuControlRegister,
@@ -50,9 +50,10 @@ pub struct ApuBus {
 
 - **`ram`**: 64KB of SPC700 RAM.
 - **`channel_in` / `channel_out`**: The four APUIO ports (`$F4-$F7` on the SPC700 side, mapped to `$2140-$2143` on the SNES main CPU side). These are the primary communication channels between the 5A22 main CPU and the SPC700.
+- **`channel_out_pending`**: SPC700 writes to `$F4-$F7` are buffered here with the SPC cycle at which the write bus-cycle begins. Because lazy catch-up executes whole SPC instructions atomically, immediate updates to `channel_out` would be visible to the S-CPU up to ~one instruction too early. `promote_channel_out` moves entries into `channel_out` once the master clock's exposed SPC cycle catches up (called from `Apu::catch_up_and_promote_channel_out` after every `catch_up_to_master_clock`). See SRE-24.
 - **`dsp`**: The `SDsp` instance, accessed via registers `$F2` (register select) and `$F3` (data read/write).
 - **`timers`**: The three APU timers, mapped at `$FA-$FC` (targets) and `$FD-$FF` (outputs).
-- **`control` (`$F1`)**: The control register that enables/disables timers and optionally clears APUIO ports.
+- **`control` (`$F1`)**: The control register that enables/disables timers and optionally clears APUIO ports. Clearing ports 0/2 also drops pending `channel_out` writes for those channels.
 - **IPL ROM**: A 64-byte boot ROM is embedded in `apu_bus.rs` and mapped at `$FFC0-$FFFF` when enabled via `control.ipl_rom_enabled()`.
 
 ### `ApuTimers` / `ApuTimer` (`timers.rs`)
@@ -71,7 +72,14 @@ A simple typed wrapper `Vec<i16>` used to pass generated audio samples to the fr
 
 ## Clocking Strategy
 
-The SNES master clock runs at ~21.47 MHz, while the SPC700 runs at ~2.048 MHz (which is exactly `32000 * 64`).
+Two clock ratios are used intentionally:
+
+| Purpose | Master clock | SPC rate | Location |
+|---------|--------------|----------|----------|
+| Audio sample boundaries | 21,477,272 Hz | 32,000 × 64 (2.048 MHz) | `apu/mod.rs` (`CYCLES_PER_SAMPLE`) |
+| Lazy SPC catch-up / CPUIO sync | 21,477,270 Hz | 32,040 × 64 (2.0496 MHz) | `spc700/mod.rs` (`catch_up_to_master_clock`) |
+
+The catch-up ratio matches Mesen2's `SpcClockSpeedAdjustment` (+40 Hz). Sample generation still uses the nominal 32 kHz rate.
 
 Key timing constants from `mod.rs`:
 ```rust
@@ -82,20 +90,23 @@ pub const SPC_CLOCK_FREQUENCY: u64 = APU_SAMPLE_RATE as u64 * 64; // 2,048,000
 ```
 
 ### Lazy Catch-up Synchronization
-The `Apu` does **not** advance the SPC700 on every master clock cycle. Instead, it catches up the SPC700 in three specific scenarios:
-1. **APUIO Write**: Before writing a new value to `channel_in` (from the SNES side), the SPC700 is advanced to the current master clock. This ensures the SPC700 sees the old value for all prior cycles.
-2. **APUIO Read**: Before reading from `channel_out`, the SPC700 is advanced so the read reflects the most recent state.
-3. **Sample Generation**: Every `CYCLES_PER_SAMPLE`, the SPC700 is advanced to that sample boundary before `generate_sample()` is called.
+The `Apu` does **not** advance the SPC700 on every master clock cycle. Instead, `update_clock` (called from `MainBusImpl::advance_master_clock` and after each CPU memory access) runs `catch_up_and_promote_channel_out`:
 
-This approach is critical for correctness: if the SPC700 were advanced on every bus cycle, it could process an APUIO write before the `write_apuio` method has a chance to deposit the new value.
+1. **`Spc700::catch_up_to_master_clock`**: Steps the SPC700 until the Mesen2-calibrated master→SPC boundary; returns the exposed SPC cycle.
+2. **`ApuBus::promote_channel_out`**: Reveals deferred `$F4-$F7` writes whose write cycle is at or before that exposed cycle.
+
+Catch-up also runs at audio sample boundaries before `generate_sample()`.
+
+Under `BatchedSystem`, an APUIO **read** flushes the write batch first, replaying buffered writes with `update_clock` calls — so promotion happens before `read_apuio` returns `channel_out`.
 
 ## Bus Interaction Patterns
 
 ### SNES Main CPU -> APU (`BusDeviceU24`)
 The `Apu` implements `BusDeviceU24`, exposing the four APUIO registers at `0x2140..=0x2143`.
-- **`read()`**: Calls `read_apuio`, which first calls `catch_up_to_master_clock`.
-- **`write()`**: Calls `write_apuio`, which first calls `catch_up_to_master_clock`, then writes to `channel_in` via `ApuBus::write_channel_in`.
-- **`update_clock()`**: Updates `current_master_clock` and triggers sample generation if enough cycles have passed.
+- **`read()`**: Returns `channel_out` (already promoted by the preceding `update_clock` on the bus access path).
+- **`write()`**: Writes directly to `channel_in`.
+- **`peek()`**: Reads `channel_out` without promotion — may lag visible CPU reads when pending writes exist.
+- **`update_clock()`**: Catch-up, promotion, and sample generation.
 
 ### SPC700 -> Peripherals (`Bus<AddressU16>`)
 `ApuBus` implements the `Bus<AddressU16>` trait for the SPC700's 16-bit address space.
@@ -104,19 +115,16 @@ The `Apu` implements `BusDeviceU24`, exposing the four APUIO registers at `0x214
   - `$F1`: Control register (timers enable, APUIO clear, IPL ROM enable).
   - `$F2`: DSP register select.
   - `$F3`: DSP register read/write.
-  - `$F4-$F7`: APUIO `channel_out` (write) and `channel_in` (read).
+  - `$F4-$F7`: APUIO `channel_out` (write, deferred) and `channel_in` (read).
   - `$FA-$FC`: Timer targets (write-only).
   - `$FD-$FF`: Timer outputs (read-only, clears on read).
   - `$FFC0-$FFFF`: IPL Boot ROM (if enabled).
-
-### Synchronization Delay (`write_channel_in`)
-There is a mechanism to model hardware timing jitter when the SNES writes to APUIO. `ApuBus::write_channel_in` checks if the write occurs within the first cycle of the current SPC instruction. If it does, the value is applied immediately; otherwise, it is placed into a pending buffer (`channel_in_pending`) that gets flushed at the start of the next SPC bus cycle.
 
 ## Audio Output Flow
 
 1. The emulator's main loop calls `update_clock` on the `Apu` as the master clock advances.
 2. When `master_clock - last_sample_cycle >= CYCLES_PER_SAMPLE`, the `Apu`:
-   a. Advances the SPC700 to the sample boundary.
+   a. Calls `catch_up_and_promote_channel_out`.
    b. Calls `generate_sample()`, which delegates to `self.spc700.bus.dsp.generate_sample(memory)`.
    c. Pushes the resulting `i16` sample into the `AudioBuffer`.
 3. The frontend (e.g., `sres_egui`) periodically calls `swap_audio_buffer` to take ownership of the accumulated samples.
@@ -134,8 +142,8 @@ impl<'a> ApuDebug<'a> {
 ## Important Patterns & Conventions
 
 - **No separate S-DSP file in `apu/`**: The S-DSP is a standalone component in `src/components/s_dsp`. The `ApuBus` merely exposes it to the SPC700 via the `$F2`/`$F3` register interface.
-- **SPC700 generic over Bus**: The `Spc700<BusT>` struct is defined in `src/components/spc700/mod.rs`. `ApuBus` is one implementation of the `Spc700Bus` trait.
-- **Trace-based testing**: `test.rs` uses a recorded trace from the Mesen emulator (`INIT_TRACE`) to assert cycle-accurate behavior of the SPC700 boot ROM.
+- **SPC700 generic over Bus**: The `Spc700<BusT>` struct is defined in `src/components/spc700/mod.rs`. `ApuBus` is one implementation of the `Spc700Bus` trait. CPUIO out-port deferral lives in `ApuBus` + `Apu::catch_up_and_promote_channel_out`, not in the SPC700 component.
+- **Trace-based testing**: `test.rs` uses a recorded trace from the Mesen emulator (`INIT_TRACE`) to assert cycle-accurate behavior of the SPC700 boot ROM. Tests that step the SPC without a master clock must call `promote_channel_out` manually before inspecting `channel_out`.
 - **Error handling on overflow**: If the `AudioBuffer` exceeds `MAX_AUDIO_BUFFER_SIZE` (32,000 samples), it is cleared and an error is logged, preventing unbounded memory growth.
 
 ## References

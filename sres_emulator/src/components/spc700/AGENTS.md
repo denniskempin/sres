@@ -2,7 +2,7 @@
 
 ## What It Is
 
-Sony SPC700 audio co-processor emulator. 8-bit, 2.048 MHz. Lives inside `Apu` (`src/apu/mod.rs`). Advanced lazily—only on APUIO access or audio sample boundaries.
+Sony SPC700 audio co-processor emulator. 8-bit, ~2.0496 MHz (Mesen2-calibrated catch-up ratio). Lives inside `Apu` (`src/apu/mod.rs`). Advanced lazily via `Apu::update_clock` — not every CPU cycle.
 
 ## Files
 
@@ -101,12 +101,16 @@ Instructions manually insert correct `cycle_io()` / `cycle_read_u8` counts to ma
 
 ## Clocking
 
+Catch-up uses Mesen2's calibrated ratio (see `Spc::UpdateClockRatio`):
+
 ```rust
-const SPC_CLOCK_FREQUENCY: u64 = 32000 * 64;      // 2.048 MHz
-const MASTER_CLOCK_FREQUENCY: u64 = 21_477_272;   // ~21.48 MHz
+const SPC_CLOCK_FREQUENCY: u64 = 32040 * 64;      // 2,049,600 Hz
+const MASTER_CLOCK_FREQUENCY: u64 = 21_477_270;   // NTSC master clock
 ```
 
-`catch_up_to_master_clock(master_cycles)` converts master → SPC cycles, then steps until caught up. Called only on APUIO access or sample boundaries.
+`catch_up_to_master_clock(master_cycles)` converts master → SPC cycles, steps until caught up, and **returns** the exposed SPC cycle. The APU integration layer (`Apu::catch_up_and_promote_channel_out`) uses that return value to promote deferred CPUIO out-port writes in `ApuBus` — the SPC700 component itself does not handle port visibility.
+
+Audio sample boundaries in `apu/mod.rs` still use the nominal 32 kHz / 21,477,272 Hz ratio for `CYCLES_PER_SAMPLE`.
 
 ## Debug & Tracing
 
@@ -140,17 +144,21 @@ const MASTER_CLOCK_FREQUENCY: u64 = 21_477_272;   // ~21.48 MHz
 ## Integration Diagram
 
 ```
-Main CPU ──► APUIO read/write ──► Apu::read_apuio / write_apuio
+Main CPU ──► APUIO read/write ──► Apu (via MainBusImpl + update_clock)
                                       │
                                       ▼
-                           catch_up_to_master_clock()
+                           catch_up_and_promote_channel_out()
                                       │
-                                      ▼
-                                 Spc700::step()
-                                      │
-                                      ▼
-                                 ApuBus (RAM, DSP, Timers)
-                                      │
-                                      ▼
-                               generate_sample()
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+         Spc700::catch_up_to_master_clock()    ApuBus::promote_channel_out()
+                    │                                   │
+                    ▼                                   │
+               Spc700::step()                           │
+                    │                                   │
+                    ▼                                   │
+               ApuBus (RAM, DSP, Timers) ◄──────────────┘
+                    │
+                    ▼
+              generate_sample()
 ```

@@ -25,7 +25,7 @@ pub fn test_play_brr_sample() {
 
     assert_eq!(
         system.debug().apu().dsp().voice(0),
-        "vol:127/127 pitch:4096 adsr:(10,7,7,0) src:$00 env:0 out:0".to_string()
+        "vol:127/127 pitch:4096 adsr:(10,7,7,0) src:$00 env:2 out:0".to_string()
     );
     // Clear audio buffer
     let mut samples = AudioBuffer::new();
@@ -60,7 +60,7 @@ pub fn test_play_noise() {
 
     assert_eq!(
         system.debug().apu().dsp().voice(0),
-        "vol:127/127 pitch:0 adsr:(14,0,7,22) src:$00 env:2 out:-1".to_string()
+        "vol:127/127 pitch:0 adsr:(14,0,7,22) src:$00 env:0 out:0".to_string()
     );
 }
 

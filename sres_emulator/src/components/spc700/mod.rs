@@ -67,16 +67,24 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.status.zero = true;
     }
 
-    pub fn catch_up_to_master_clock(&mut self, master_cycles: u64) {
+    /// Advance the SPC700 to the master clock boundary and return the SPC cycle exposed to the
+    /// S-CPU at that boundary. The APU integration layer uses this to promote deferred CPUIO
+    /// out-port writes (see `ApuBus::promote_channel_out`).
+    pub fn catch_up_to_master_clock(&mut self, master_cycles: u64) -> u64 {
         self.bus.update_master_clock(master_cycles);
-        // SPC700 runs at 2.048 MHz (32000 * 64), master clock at ~21.477 MHz
-        const SPC_CLOCK_FREQUENCY: u64 = 32000 * 64;
-        const MASTER_CLOCK_FREQUENCY: u64 = 21_477_272;
+        // Match Mesen2's SPC clock calibration: the effective SPC sample rate is
+        // 32040 Hz (32000 + the +40 SpcClockSpeedAdjustment default), so the SPC runs
+        // at 32040 * 64 = 2,049,600 Hz, against a 21,477,270 Hz NTSC master clock.
+        // See Mesen2 Spc::UpdateClockRatio / SnesConsole.cpp.
+        const SPC_CLOCK_FREQUENCY: u64 = 32040 * 64;
+        const MASTER_CLOCK_FREQUENCY: u64 = 21_477_270;
         let clock_ratio = SPC_CLOCK_FREQUENCY as f64 / MASTER_CLOCK_FREQUENCY as f64;
-        let target_spc_cycle = (master_cycles as f64 * clock_ratio).floor() as u64 - 1;
+        let exposed_spc_cycle = (master_cycles as f64 * clock_ratio).floor() as u64;
+        let target_spc_cycle = exposed_spc_cycle.saturating_sub(1);
         while self.bus.spc_cycle() < target_spc_cycle {
             self.step();
         }
+        exposed_spc_cycle
     }
 
     pub fn step(&mut self) {
