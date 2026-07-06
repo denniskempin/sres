@@ -84,7 +84,7 @@ impl ApuBus {
 
     /// Promote deferred `channel_out` writes whose SPC write cycle is at or before the given
     /// exposed SPC cycle (derived from the current master clock). See `channel_out_pending`.
-    pub fn promote_channel_out(&mut self, exposed_spc_cycle: u64) {
+    pub(crate) fn promote_channel_out(&mut self, exposed_spc_cycle: u64) {
         while let Some(&(channel, write_cycle, value)) = self.channel_out_pending.front() {
             if write_cycle <= exposed_spc_cycle {
                 self.channel_out[channel] = value;
@@ -202,9 +202,6 @@ impl Spc700Bus for ApuBus {
     }
     fn update_master_clock(&mut self, new_master_clock: u64) {
         self.master_clock = new_master_clock;
-    }
-    fn promote_channel_out_writes(&mut self, exposed_spc_cycle: u64) {
-        self.promote_channel_out(exposed_spc_cycle);
     }
 }
 
