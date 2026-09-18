@@ -137,11 +137,13 @@ impl EmulatorApp {
 
     #[cfg(target_arch = "wasm32")]
     fn load_pending_dropped_rom(&mut self) {
-        if let Some(bytes) = self.pending_dropped_rom.lock().unwrap().take() {
-            match Cartridge::with_sfc_data(&bytes, None) {
-                Ok(cartridge) => self.load_cartridge(cartridge),
-                Err(err) => log::error!("Failed to load dropped ROM: {err}"),
-            }
+        // Take bytes first so the MutexGuard drops before `&mut self` in `load_cartridge`.
+        let Some(bytes) = self.pending_dropped_rom.lock().unwrap().take() else {
+            return;
+        };
+        match Cartridge::with_sfc_data(&bytes, None) {
+            Ok(cartridge) => self.load_cartridge(cartridge),
+            Err(err) => log::error!("Failed to load dropped ROM: {err}"),
         }
     }
 
