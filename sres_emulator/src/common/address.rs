@@ -1,4 +1,5 @@
-//! Types for both U16 and U24 addresses used by the different CPUs
+//! `AddressU24` (CPU), `AddressU16` (SPC700), and `AddressU15` (PPU VRAM).
+//! `Address` add/sub take explicit `Wrap`. `AddressU15` uses wrapping `+`/`-` and `& 0x7FFF`.
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::hash::Hash;

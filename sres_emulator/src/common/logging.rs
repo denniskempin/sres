@@ -1,4 +1,5 @@
-//! Utilities for configuring logging
+//! `SresLogger` plus `init()`/`test_init()`. Filter from `SRES_LOG`.
+//! When `trace_as_context_only`, traces buffer and dump on the next non-`Trace` record.
 use std::collections::VecDeque;
 use std::sync::Mutex;
 use std::sync::Once;
