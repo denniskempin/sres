@@ -39,7 +39,7 @@ Register semantics: `docs/index.md`.
 
 ## Integration
 
-- `MainBusImpl` maps `$2140–$217F` to `Apu`. `update_clock` from `advance_master_clock` and after each CPU memory access.
+- `MainBusImpl` maps `$2140–$217F` to `Apu`. `advance_master_clock` calls `update_clock`. `cycle_read_u8` calls it again after the last 6 cycles; `cycle_write_u8` does not call it after the write.
 - `Apu::update_clock` runs `catch_up_and_promote_channel_out`, then `generate_sample` at each `CYCLES_PER_SAMPLE` boundary.
 - CPUIO out-port deferral lives in `ApuBus` + `Apu`, not in `components/spc700`.
 - `SDsp` lives in `components/s_dsp`; `ApuBus` owns the instance. `generate_sample` passes `&ram`.
