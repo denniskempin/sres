@@ -5,10 +5,10 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use anyhow::anyhow;
 use cpal::traits::DeviceTrait;
 use cpal::traits::HostTrait;
 use cpal::traits::StreamTrait;
-use cpal::BuildStreamError;
 use cpal::SampleFormat;
 use cpal::SizedSample;
 use cpal::Stream;
@@ -61,15 +61,13 @@ impl AudioOutput {
         self.stream = Some(stream);
     }
 
-    fn setup_audio_stream(&self) -> Result<Stream, BuildStreamError> {
+    fn setup_audio_stream(&self) -> anyhow::Result<Stream> {
         let host = cpal::default_host();
         let device = host
             .default_output_device()
-            .ok_or(BuildStreamError::DeviceNotAvailable)?;
+            .ok_or_else(|| anyhow!("no default audio output device"))?;
 
-        let supported_config = device
-            .default_output_config()
-            .map_err(|_| BuildStreamError::StreamConfigNotSupported)?;
+        let supported_config = device.default_output_config()?;
 
         let config = StreamConfig {
             channels: 2,        // Stereo output
@@ -78,10 +76,10 @@ impl AudioOutput {
         };
 
         match supported_config.sample_format() {
-            SampleFormat::F32 => self.build_stream::<f32>(&device, &config),
-            SampleFormat::I16 => self.build_stream::<i16>(&device, &config),
-            SampleFormat::U16 => self.build_stream::<u16>(&device, &config),
-            _ => Err(BuildStreamError::StreamConfigNotSupported),
+            SampleFormat::F32 => self.build_stream::<f32>(&device, config),
+            SampleFormat::I16 => self.build_stream::<i16>(&device, config),
+            SampleFormat::U16 => self.build_stream::<u16>(&device, config),
+            other => Err(anyhow!("unsupported audio sample format: {other:?}")),
         }
     }
 
@@ -93,15 +91,15 @@ impl AudioOutput {
     fn build_stream<T: SampleConverter>(
         &self,
         device: &cpal::Device,
-        config: &StreamConfig,
-    ) -> Result<Stream, BuildStreamError> {
+        config: StreamConfig,
+    ) -> anyhow::Result<Stream> {
         let buffer_queue = self.buffer_queue.clone();
-        device.build_output_stream(
+        Ok(device.build_output_stream(
             config,
             move |data: &mut [T::Output], _: &cpal::OutputCallbackInfo| {
                 if let Ok(mut queue) = buffer_queue.lock() {
                     // Process two samples at a time for stereo
-                    for chunk in data.chunks_exact_mut(2) {
+                    for chunk in data.as_chunks_mut::<2>().0 {
                         let sample = queue
                             .next_sample()
                             .map(T::convert)
@@ -113,7 +111,7 @@ impl AudioOutput {
             },
             |err| error!("Error in audio stream: {err}"),
             None,
-        )
+        )?)
     }
 
     pub fn update(&mut self, emulator: &mut System) {

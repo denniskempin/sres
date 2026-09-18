@@ -45,7 +45,7 @@ impl ClockInfo {
 
     pub fn hdot(&self) -> u64 {
         let mut counter = self.h_counter;
-        if self.f % 2 == 0 || self.v != 240 {
+        if self.f.is_multiple_of(2) || self.v != 240 {
             // Dot 323 and 327 take 6 cycles on non-short scanlines.
             if self.h_counter > 1292 {
                 counter -= 2;
@@ -85,14 +85,14 @@ impl ClockInfo {
 
         let pairs = (f - 1) / 2;
         let mut f_cycles = frame0_length + pairs * frame_pair_length;
-        if f % 2 == 0 {
+        if f.is_multiple_of(2) {
             f_cycles += odd_frame_length;
         }
 
         // Calculate cycles within frame f
         // If v >= 225: in vblank portion
         // If v < 225: in active portion (after 37 vblank scanlines)
-        let has_short_scanline = f % 2 == 0; // even frames have short scanline
+        let has_short_scanline = f.is_multiple_of(2); // even frames have short scanline
 
         let v_cycles = if v >= 225 {
             // In vblank portion (v=225-261 maps to offset 0-36)

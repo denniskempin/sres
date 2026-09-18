@@ -3,9 +3,7 @@
 #![cfg(test)]
 
 use super::apu_bus::ApuBus;
-use crate::common::address::AddressU16;
 use crate::common::debug_events::test::mock_collector;
-use crate::common::logging;
 use crate::components::spc700::Spc700;
 use crate::components::spc700::Spc700Bus;
 use crate::components::spc700::Spc700State;

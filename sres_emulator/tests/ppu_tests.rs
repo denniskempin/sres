@@ -61,7 +61,7 @@ pub fn test_krom_interlace_rpg() {
 pub fn test_colourmath() {
     logging::test_init(true);
 
-    let rom_path = test_dir().join(format!("colourmath.sfc"));
+    let rom_path = test_dir().join("colourmath.sfc");
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.execute_frames(30);
 

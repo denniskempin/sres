@@ -95,9 +95,7 @@ impl Apu {
     /// Advance the SPC700 to the master clock, then reveal deferred CPUIO out-port writes.
     fn catch_up_and_promote_channel_out(&mut self, master_clock: u64) {
         let exposed_spc_cycle = self.spc700.catch_up_to_master_clock(master_clock);
-        self.spc700
-            .bus
-            .promote_channel_out(exposed_spc_cycle);
+        self.spc700.bus.promote_channel_out(exposed_spc_cycle);
     }
 
     fn update_clock(&mut self, new_clock: ClockInfo) {
