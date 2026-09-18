@@ -1,27 +1,22 @@
-# APU Audio Tests
+# `sres_emulator/tests/apu_tests`
 
-Golden-WAV audio integration tests for APU (SPC700 + DSP). The Rust test driver is `apu_tests.rs` (one directory up).
+Assets for `../apu_tests.rs`. No `.rs` here.
+
+## Files
+
+| Prefix | Owns |
+|--------|------|
+| `play_brr_sample` | `.sfc`/`.spc`/`.brr` and golden `.wav` |
+| `play_noise` | `.sfc`/`.spc`; no `.wav` |
+| `ffvii_prelude` | `.sfc` and golden `.wav`; no `.asm` |
+
+## Behaviors & Gotchas
+
+1. `play_noise` is not a WAV test. The driver compares APU RAM to `play_noise.spc` at `$0200`, then asserts DSP `voice(0)` after Kick at `$02DD`. The SPC program continues into hi-hat and snare; the test does not.
+2. `play_brr_sample` idle loop is at `$02E9` (`jmp Loop` in `play_brr_sample.spc.asm`). The driver waits there, then captures 7936 samples. Moving `Loop` requires a matching PC filter in `../apu_tests.rs`.
+3. `play_brr_sample*.asm` includes `../asm_lib/`. `play_noise*.asm` includes `lib/` (no `apu_tests/lib`; that path needs parent `tests/lib` as include root).
+4. `ffvii_prelude` has no source in this tree. The driver runs 5 × 60 frames, then diffs the golden `.wav`.
 
 ## Tests
 
-| Data Files | What It Tests |
-|---|---|
-| `play_brr_sample.{sfc,spc,brr,wav}` | BRR sample decode, pitch, ADSR, mixing |
-| `play_noise.{sfc,spc}` | DSP noise generator patterns |
-| `ffvii_prelude.{sfc,wav}` | 5-second full-game music playback |
-
-Tests run ROMs, capture audio, and compare against `.wav` golden files.
-
-## Golden Files
-
-- Mono, 32 kHz, 16-bit signed PCM.
-- Missing goldens are **auto-created** on first run. Review before committing.
-- Mismatch writes `<prefix>.actual.wav` for inspection.
-- `ffvii_prelude.sfc` is a commercial ROM fragment. Do not redistribute.
-
-## Assembly
-
-- `.sfc.asm`: SNES 65816 CPU bootstrap (loads SPC program, infinite loops)
-- `.spc.asm`: SPC700 program (configures DSP, triggers playback, infinite loops)
-- `.brr`: Raw BRR sample data
-- Uses `bass` assembler with shared includes from `tests/asm_lib/` or `tests/apu_tests/lib/`
+- `cargo nextest run -p sres_emulator --test apu_tests`
