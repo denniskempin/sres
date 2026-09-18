@@ -104,7 +104,7 @@ Golden files are auto-created on first run; verify them before committing. Misma
 ## Reference
 
 - `docs/index.md` — indexed hardware reference docs (fullsnes.txt extracts and nesdev.org articles). Covers PPU, APU, DMA, memory maps, CPU opcodes, timing, and controllers. Use keyword search within the index to find the relevant file.
-- `review_guide.md` — review checklist and conventions a code owner enforces.
+- `.cursor/skills/code-review/SKILL.md` — independent code-owner review via a readonly subagent. Checks: `.cursor/skills/code-review/references/review-guide.md`.
 - `.cursor/skills/write-agents-docs/SKILL.md` — follow it when editing any `AGENTS.md` or `//!` file header.
 
 ## Subdirectory AGENTS.md Files
