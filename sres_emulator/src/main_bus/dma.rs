@@ -1,4 +1,5 @@
-//! Implementation of DMA functionality in the main bus.
+//! `DmaController`: 8-channel general DMA triggered by `$420B` (MDMAEN).
+//! HDMA (`$420C`, channel `$43x7`) is unimplemented.
 use std::fmt::Display;
 
 use intbits::Bits;
