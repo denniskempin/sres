@@ -97,7 +97,7 @@ Golden files are auto-created on first run and committed to Git LFS. Mismatches 
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **HDMA**: not implemented; `$420C` write logs a warning.
 - **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
-- **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware.
+- **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware. Exception: PPU `decode_bgmode` panics on BG modes 4/6/7 (see `sres_emulator/src/components/ppu`).
 - **Fuzz targets** explicitly test that arbitrary input never panics.
 
 ## Reference
@@ -109,6 +109,7 @@ Golden files are auto-created on first run and committed to Git LFS. Mismatches 
 | Path | Coverage |
 |---|---|
 | `sres_egui/src/AGENTS.md` | Native/WASM frontend |
+| `sres_egui/src/debug/AGENTS.md` | Debugger UI panels |
 | `sres_emulator/src/AGENTS.md` | System orchestration, controller, debugger |
 | `sres_emulator/src/common/AGENTS.md` | Shared types, traits, utilities |
 | `sres_emulator/src/components/AGENTS.md` | Component rules, cartridge, clock |
@@ -125,14 +126,15 @@ Golden files are auto-created on first run and committed to Git LFS. Mismatches 
 | `sres_emulator/tests/asm_lib/AGENTS.md` | Test ROM assembly library |
 | `sres_emulator/benches/AGENTS.md` | Criterion benchmarks |
 | `sres_emulator/fuzz/AGENTS.md` | Fuzzing setup |
+| `sres_emulator/fuzz/fuzz_targets/AGENTS.md` | libfuzzer bins |
 
 ## Environment Gotchas
 
 - **Nightly Rust**: Required. `rust-toolchain.toml` specifies channel; `rust-src` component needed.
 - **Headless X11**: `DISPLAY=:1` required in headless environments.
 - **libxkbcommon-x11-0**: Runtime dependency for native egui. Install via `apt` if missing.
-- **Git LFS**: Test ROMs (`.sfc`), traces (`.xz`), images (`.png`) stored in LFS. If LFS 404s, tests fall back to assembled ROMs (`xa65`).
-- **xa65 assembler**: `sudo apt-get install -y xa65`
+- **Git LFS**: Test ROMs (`.sfc`), traces (`.xz`), images (`.png`) stored in LFS. Missing files fail the test; Cargo does not reassemble.
+- **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only.
 - **cargo-nextest**: Preferred runner. `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
 
 ## Important Agent Rules
