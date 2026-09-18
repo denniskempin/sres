@@ -37,4 +37,4 @@ Assets for CPU trace-comparison and DMA ROM-outcome tests driven by `../rom_test
 
 - `cargo nextest run -p sres_emulator --test rom_tests` (parent Tests).
 - One test: `cargo nextest run -p sres_emulator --test rom_tests test_play_noise`
-- Ignored: `cargo nextest run -p sres_emulator --test rom_tests test_krom_msc --run-ignored`
+- Ignored: `cargo nextest run -p sres_emulator --test rom_tests test_krom_msc --run-ignored only`

@@ -38,7 +38,7 @@ Bitfields: `docs/index.md`.
 
 ## Gaps
 
-Unimplemented PPU features follow root (ignore write / read 0) unless noted. This module uses `log::warn` / `log::error`, not a `DebugEvent`.
+Unimplemented PPU features follow root (ignore write / read 0) unless noted. Unhandled I/O: `log::warn` / `log::error`, not a `DebugEvent` (root exception).
 
 - Windows `$2126–$212B`, MOSAIC `$2106`: unmatched, warn + ignore.
 - `INIDISP` bits 0–3 (brightness): ignored; only bit 7 (`disabled`) is used.

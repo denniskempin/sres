@@ -7,8 +7,8 @@ Cargo integration tests for `sres_emulator`. Taxonomy and System-variant mapping
 | File | Owns |
 |------|------|
 | `rom_tests.rs` | Trace-comparison (`SyncSystem`, `run_rom_test`) and ROM-outcome (`System`, `run_test_rom` until `stp`) |
-| `ppu_tests.rs` | Golden-image framebuffer, PPU `.snapshot`, and debug-render tests (`System`) |
-| `apu_tests.rs` | Golden-WAV tests (`System`, `compare_wav_against_golden`) |
+| `ppu_tests.rs` | ROM framebuffer and debug-render (`System`); snapshot tests (`Ppu` only, no ROM) |
+| `apu_tests.rs` | Golden-WAV (`System`, `compare_wav_against_golden`); `play_noise` RAM/DSP asserts |
 
 ## Subdirectories
 
@@ -30,10 +30,10 @@ Cargo integration tests for `sres_emulator`. Taxonomy and System-variant mapping
 ## Integration
 
 - Invoked as crate integration-test binaries `rom_tests`, `ppu_tests`, `apu_tests`.
-- Drivers load `Cartridge::with_sfc_file` into `System` or `SyncSystem`.
+- Drivers load `Cartridge::with_sfc_file` into `System` or `SyncSystem`. Snapshot tests construct `Ppu` directly.
 - Trace compares `CpuState` strings from xz Mesen logs via `SystemDebug::cpu_step_iter`.
 - ROM-outcome asserts `cpu.bus.peek_range` after `halted()`.
-- APU tests use `debug_until` / `execute_for_audio_samples` / `execute_frames` then `swap_audio_buffer`.
+- WAV tests use `debug_until` / `execute_for_audio_samples` / `execute_frames` then `swap_audio_buffer`. `play_noise` does not.
 
 ## Tests
 

@@ -23,7 +23,7 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 
 ## Behaviors & Gotchas
 
-1. `load_cartridge` enables the debugger (`app.rs:80`); `DebugUi` starts on `DebugCommand::Pause` (`debug.rs:50`). Debugger-off playback uses `execute_for_audio_samples`, not the root `execute_frames(1)` sketch (`app.rs:205-208`). Debug `Run` uses `execute_for_duration(stable_dt)` (`debug.rs:73`).
+1. `load_cartridge` enables the debugger (`app.rs:80`); `DebugUi` starts on `DebugCommand::Pause` (`debug.rs:50`). Debugger-off playback uses `execute_for_audio_samples` (`app.rs:205-208`). Debug `Run` uses `execute_for_duration(stable_dt)` (`debug.rs:73`).
 2. `main_display` updates the egui texture only when `swap_video_frame` returns true (`app.rs:165-168`). `emulator_ui` always `request_repaint` (`app.rs:240`).
 3. Native `main` may pass a CLI `Cartridge`; WASM always starts with `None` and shows `home_screen` (`main.rs:53-61`, `main.rs:90`).
 4. `Instant` is `std::time::Instant` natively and `Date.now()` milliseconds on WASM (`util.rs:80-114`).
@@ -44,7 +44,6 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 - WASM local-storage ROM persist is commented out (`app.rs:97-98`).
 - `InternalLink::Spc700ProgramCounter` is a no-op (`debug.rs:141`).
 - puffin profiler window is commented out (`debug.rs:127-129`).
-- `update_joypads` always passes `0` for joy2 (`app.rs:122`).
 
 ## Tests
 
