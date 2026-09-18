@@ -3,7 +3,7 @@ name = "sres_emulator"
 version = "0.1.0"
 authors = ["Dennis Kempin <dennis.kempin@gmail.com>"]
 edition = "2021"
-rust-version = "1.72"
+rust-version = "1.95"
 
 [lib]
 bench = false
@@ -20,20 +20,20 @@ env_logger = "0.11"
 log = "0.4"
 colored = "3"
 puffin = "0.20"
-itertools = "0.14"
+itertools = "0.15"
 strum = { version = "0.28", features = ["derive"] }
-bilge = "0.3"
+bilge = "0.4"
 bitcode = "0.6.9"
 hound = "3.5"
 lazy_static = "1.5"
 
 [dev-dependencies]
-tempfile = "3.25"
+tempfile = "3.27"
 pretty_assertions = "1.4"
 criterion = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-xz2 = "0.1"
+liblzma = "0.4"
 image = { version = "0.25", features = ["png"] }
 rasciigraph = "0.3"
 

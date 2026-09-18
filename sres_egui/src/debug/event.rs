@@ -1,59 +1,68 @@
 //! `event_filter_widget` parses `EventFilter` from text or toggles quick-add ranges.
 //! Callers pass either `break_points` or `log_points`; the widget does not distinguish them.
 
-use std::ops::DerefMut;
-
 use egui::TextStyle;
 use egui::Ui;
-use egui_hooks::UseHookExt;
 use sres_emulator::debugger::EventFilter;
 
-pub fn event_filter_widget(ui: &mut Ui, event_filters: &mut Vec<EventFilter>) {
+/// Persistent text-entry state for [`event_filter_widget`].
+#[derive(Default)]
+pub struct EventFilterInputState {
+    breakpoint_text: String,
+    error_message: Option<String>,
+    show_help: bool,
+}
+
+pub fn event_filter_widget(
+    ui: &mut Ui,
+    event_filters: &mut Vec<EventFilter>,
+    state: &mut EventFilterInputState,
+) {
     ui.vertical(|ui| {
-        event_filter_input_widget(ui, event_filters);
+        event_filter_input_widget(ui, event_filters, state);
         event_filter_list_widget(ui, event_filters);
     });
 }
 
-fn event_filter_input_widget(ui: &mut Ui, event_filters: &mut Vec<EventFilter>) {
-    let mut breakpoint_text = ui.use_state(String::default, ()).into_var();
-    let error_message = ui.use_state(Option::<String>::default, ());
-    let mut show_help = ui.use_state(|| false, ()).into_var();
-
+fn event_filter_input_widget(
+    ui: &mut Ui,
+    event_filters: &mut Vec<EventFilter>,
+    state: &mut EventFilterInputState,
+) {
     ui.horizontal(|ui| {
         let response = ui.add(
-            egui::TextEdit::singleline(breakpoint_text.deref_mut())
+            egui::TextEdit::singleline(&mut state.breakpoint_text)
                 .hint_text("e.g. pc 8000, r 2100:2140, irq nmi, LDA"),
         );
 
         let enter_pressed = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
 
         if enter_pressed || ui.button("Add").clicked() {
-            let input = breakpoint_text.trim();
+            let input = state.breakpoint_text.trim().to_string();
             if !input.is_empty() {
                 match input.parse::<EventFilter>() {
                     Ok(filter) => {
                         event_filters.push(filter);
-                        breakpoint_text.clear();
-                        error_message.set_next(None);
+                        state.breakpoint_text.clear();
+                        state.error_message = None;
                     }
                     Err(e) => {
-                        error_message.set_next(Some(format!("Error: {e}")));
+                        state.error_message = Some(format!("Error: {e}"));
                     }
                 }
             }
         }
 
         if ui.button("?").clicked() {
-            *show_help = true;
+            state.show_help = true;
         }
     });
     ui.collapsing("Events", |ui| {
         event_filter_quick_add(ui, event_filters);
     });
-    event_filter_help_window(ui, show_help.deref_mut());
+    event_filter_help_window(ui, &mut state.show_help);
 
-    if let Some(ref error_msg) = *error_message {
+    if let Some(ref error_msg) = state.error_message {
         ui.colored_label(egui::Color32::RED, error_msg);
     }
 }

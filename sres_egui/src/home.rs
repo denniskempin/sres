@@ -3,7 +3,6 @@
 
 use std::path::PathBuf;
 
-use egui::Context;
 use egui::FontId;
 use egui::ImageSource;
 use egui::OpenUrl;
@@ -15,18 +14,18 @@ use sres_emulator::components::cartridge::Cartridge;
 use crate::embedded_roms::RomFileInfo;
 use crate::embedded_roms::EMBEDDED_ROMS;
 
-pub fn home_screen<F>(ctx: &Context, on_load_cartridge: F)
+pub fn home_screen<F>(ui: &mut Ui, on_load_cartridge: F)
 where
     F: FnMut(Cartridge),
 {
     let mut callback = on_load_cartridge;
-    egui::CentralPanel::default().show(ctx, |ui| {
+    egui::CentralPanel::default().show(ui, |ui| {
         for category in EMBEDDED_ROMS {
             ui.vertical(|ui| {
                 ui.label(RichText::new(category.name).font(FontId::proportional(32.0)));
                 ui.horizontal(|ui| {
                     for rom_info in category.roms {
-                        cartridge_card(ctx, ui, rom_info, &mut callback);
+                        cartridge_card(ui, rom_info, &mut callback);
                     }
                 });
             });
@@ -34,7 +33,7 @@ where
     });
 }
 
-fn cartridge_card<F>(ctx: &Context, ui: &mut Ui, rom_info: &RomFileInfo, on_load_cartridge: &mut F)
+fn cartridge_card<F>(ui: &mut Ui, rom_info: &RomFileInfo, on_load_cartridge: &mut F)
 where
     F: FnMut(Cartridge),
 {
@@ -65,7 +64,7 @@ where
                 ui.horizontal(|ui| {
                     ui.label("By:");
                     if ui.link(author).clicked() {
-                        ctx.open_url(OpenUrl {
+                        ui.ctx().open_url(OpenUrl {
                             url: url.to_string(),
                             new_tab: true,
                         });

@@ -42,6 +42,7 @@ pub struct DebugUi {
     selected_memory_location: InternalLink,
     pub show_profiler: bool,
     break_reason: Option<BreakReason>,
+    event_filter_input: event::EventFilterInputState,
 }
 
 impl DebugUi {
@@ -57,6 +58,7 @@ impl DebugUi {
             past_emulation_times: RingBuffer::default(),
             selected_memory_location: InternalLink::None,
             break_reason: None,
+            event_filter_input: event::EventFilterInputState::default(),
         }
     }
 
@@ -163,7 +165,11 @@ impl DebugUi {
         }
 
         ui.separator();
-        event::event_filter_widget(ui, &mut emulator.debugger().break_points);
+        event::event_filter_widget(
+            ui,
+            &mut emulator.debugger().break_points,
+            &mut self.event_filter_input,
+        );
         ui.separator();
         cpu::cpu_state_widget(ui, emulator);
         ui.separator();

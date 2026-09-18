@@ -49,7 +49,8 @@ impl BrrDecoder {
         if self.current_block.is_empty() {
             if self.end {
                 // Check if we should loop (only if last block had loop flag set)
-                if let Some(header) = self.last_block_header {
+                {
+                    let header = self.last_block_header?;
                     if let (true, Some(loop_addr)) = (header.loop_flag(), self.loop_addr) {
                         // Reset decoder state for looping
                         self.buffer = [0, 0];
@@ -60,8 +61,6 @@ impl BrrDecoder {
                     } else {
                         return None;
                     }
-                } else {
-                    return None;
                 }
             }
             let new_index = self.memory_index + 9;
