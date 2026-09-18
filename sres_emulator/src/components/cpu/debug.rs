@@ -319,7 +319,7 @@ mod tests {
     #[test]
     pub fn test_from_mesen_trace() {
         assert_eq!(
-            CpuState::parse_mesen_trace(&EXAMPLE_MESEN_TRACE).unwrap(),
+            CpuState::parse_mesen_trace(EXAMPLE_MESEN_TRACE).unwrap(),
             example_trace()
         );
     }

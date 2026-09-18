@@ -10,11 +10,11 @@ use std::io::BufRead;
 use std::path::PathBuf;
 
 use itertools::Itertools;
+use liblzma::read::XzDecoder;
 use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use xz2::read::XzDecoder;
 
 use super::Spc700;
 use super::Spc700Bus;

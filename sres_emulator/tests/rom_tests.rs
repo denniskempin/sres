@@ -343,7 +343,7 @@ fn run_test_rom(test_name: &str) -> CpuT {
 }
 
 pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<CpuState>>> {
-    use xz2::read::XzDecoder;
+    use liblzma::read::XzDecoder;
     let file = File::open(path)?;
     let decoder = XzDecoder::new(file);
     let trace_reader = io::BufReader::new(decoder);
@@ -353,7 +353,7 @@ pub fn trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result
 }
 
 fn mixed_trace_log_from_xz_file(path: &Path) -> Result<impl Iterator<Item = Result<TraceStep>>> {
-    use xz2::read::XzDecoder;
+    use liblzma::read::XzDecoder;
     let file = File::open(path)?;
     let decoder = XzDecoder::new(file);
     let trace_reader = io::BufReader::new(decoder);

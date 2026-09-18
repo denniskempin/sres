@@ -1,5 +1,6 @@
-//! `EmulatorApp` (`eframe::App`): home screen until a cartridge is loaded, then `emulator_ui`.
+//! `EmulatorApp` (`eframe::App::ui`): home screen until a cartridge is loaded, then `emulator_ui`.
 //! `load_cartridge` builds `System::with_cartridge` and enables the debugger.
+//! File drops load `.sfc` from `ui()` (native path/bytes, WASM `bytes_async`).
 //! Debugger-off run uses `execute_for_audio_samples`; present via `swap_video_frame` / `AudioOutput::update`.
 
 use std::collections::HashMap;
@@ -10,8 +11,7 @@ use eframe::CreationContext;
 use eframe::Frame;
 use egui::Color32;
 use egui::ColorImage;
-use egui::Context;
-use egui::DroppedFile;
+use egui::DroppedFileHandle;
 use egui::FontId;
 use egui::Image;
 use egui::InputState;
@@ -45,6 +45,8 @@ pub struct EmulatorApp {
     input_recording_active: bool,
     input_recording_last: u16,
     input_recording: HashMap<u64, u16>,
+    #[cfg(target_arch = "wasm32")]
+    pending_dropped_rom: std::sync::Arc<std::sync::Mutex<Option<Vec<u8>>>>,
 }
 
 impl EmulatorApp {
@@ -67,6 +69,8 @@ impl EmulatorApp {
             input_recording: HashMap::new(),
             input_recording_last: 0,
             input_recording_active: false,
+            #[cfg(target_arch = "wasm32")]
+            pending_dropped_rom: std::sync::Arc::new(std::sync::Mutex::new(None)),
         };
 
         if let Some(rom) = cartridge {
@@ -83,20 +87,61 @@ impl EmulatorApp {
         self.audio_output.start();
     }
 
-    fn load_dropped_file(&mut self, drop: &DroppedFile) {
-        if let Some(path) = &drop.path {
-            match path.extension().and_then(OsStr::to_str) {
-                Some("sfc") => {
-                    self.load_cartridge(Cartridge::with_sfc_file(path).unwrap());
+    fn consume_dropped_rom(&mut self, ui: &Ui) {
+        let dropped = ui.input(|input| input.raw.dropped_files.first().cloned());
+        if let Some(drop) = dropped {
+            self.load_dropped_file(&drop);
+        }
+        #[cfg(target_arch = "wasm32")]
+        self.load_pending_dropped_rom();
+    }
+
+    fn load_dropped_file(&mut self, drop: &DroppedFileHandle) {
+        let path = drop.path();
+        if path.extension().and_then(OsStr::to_str) != Some("sfc") {
+            log::warn!("Ignoring dropped file {path:?}: not an .sfc ROM");
+            return;
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let result = if path.is_file() {
+                Cartridge::with_sfc_file(path)
+            } else {
+                match drop.bytes() {
+                    Ok(bytes) => Cartridge::with_sfc_data(&bytes, None),
+                    Err(err) => {
+                        log::error!("Failed to read dropped file {path:?}: {err}");
+                        return;
+                    }
                 }
-                _ => {
-                    panic!("Unknown file type");
-                }
+            };
+            match result {
+                Ok(cartridge) => self.load_cartridge(cartridge),
+                Err(err) => log::error!("Failed to load dropped ROM {path:?}: {err}"),
             }
-        } else if let Some(bytes) = &drop.bytes {
-            //#[cfg(target_arch = "wasm32")]
-            //crate::wasm::save_rom_in_local_storage(bytes);
-            self.load_cartridge(Cartridge::with_sfc_data(bytes, None).unwrap());
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let pending = self.pending_dropped_rom.clone();
+            let drop = drop.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                match drop.bytes_async().await {
+                    Ok(bytes) => *pending.lock().unwrap() = Some(bytes),
+                    Err(err) => log::error!("Failed to read dropped file: {err}"),
+                }
+            });
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn load_pending_dropped_rom(&mut self) {
+        if let Some(bytes) = self.pending_dropped_rom.lock().unwrap().take() {
+            match Cartridge::with_sfc_data(&bytes, None) {
+                Ok(cartridge) => self.load_cartridge(cartridge),
+                Err(err) => log::error!("Failed to load dropped ROM: {err}"),
+            }
         }
     }
 
@@ -178,29 +223,22 @@ impl EmulatorApp {
         .paint_at(ui, whole_rect);
     }
 
-    fn emulator_ui(&mut self, ctx: &Context) {
+    fn emulator_ui(&mut self, ui: &mut Ui) {
         puffin::profile_function!();
         puffin::GlobalProfiler::lock().new_frame();
         let start = Instant::now();
 
-        // Load new program if a file is dropped on the app
-        ctx.input(|input| {
-            if !input.raw.dropped_files.is_empty() {
-                self.load_dropped_file(&input.raw.dropped_files[0]);
-            }
-        });
-
-        egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
+        egui::Panel::top("menu_bar").show(ui, |ui| {
             self.menu_bar(ui);
         });
         if self.loaded_cartridge.is_none() {
             return;
         }
-        ctx.input(|input| {
+        ui.input(|input| {
             self.update_keys(input);
         });
 
-        let stable_dt = ctx.input(|input| input.stable_dt as f64);
+        let stable_dt = ui.input(|input| input.stable_dt as f64);
 
         if !self.emulator.debugger().enabled() {
             puffin::set_scopes_on(false);
@@ -210,14 +248,14 @@ impl EmulatorApp {
             puffin::set_scopes_on(self.debug_ui.show_profiler);
             self.debug_ui.run_emulator(&mut self.emulator, stable_dt);
 
-            egui::SidePanel::right("right_debug_panel")
+            egui::Panel::right("right_debug_panel")
                 .resizable(false)
-                .show(ctx, |ui| {
+                .show(ui, |ui| {
                     ui.style_mut().override_font_id = Some(FontId::monospace(12.0));
                     self.debug_ui.right_debug_panel(ui, &self.emulator);
                 });
 
-            egui::TopBottomPanel::bottom("bottom_debug_panel").show(ctx, |ui| {
+            egui::Panel::bottom("bottom_debug_panel").show(ui, |ui| {
                 self.debug_ui.bottom_debug_panel(ui, &self.emulator);
             });
         }
@@ -226,29 +264,30 @@ impl EmulatorApp {
         self.audio_output.update(&mut self.emulator);
 
         // Render emulator display
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             self.main_display(ui);
         });
 
         if self.emulator.debugger().enabled() {
-            self.debug_ui.modals(ctx, &mut self.emulator);
+            self.debug_ui.modals(ui.ctx(), &mut self.emulator);
         }
 
         self.past_frame_times.push(start.elapsed());
 
         // Always repaint to keep rendering at 60Hz.
-        ctx.request_repaint()
+        ui.ctx().request_repaint()
     }
 }
 
 impl eframe::App for EmulatorApp {
-    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+    fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
+        self.consume_dropped_rom(ui);
         if self.loaded_cartridge.is_none() {
-            home::home_screen(ctx, |cartridge| {
+            home::home_screen(ui, |cartridge| {
                 self.load_cartridge(cartridge);
             });
         } else {
-            self.emulator_ui(ctx);
+            self.emulator_ui(ui);
         }
     }
 }

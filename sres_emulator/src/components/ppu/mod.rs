@@ -562,8 +562,8 @@ impl Ppu {
                 TileSize::Size8x8
             }
         }
-        for i in 0..4 {
-            self.state.backgrounds[i].tile_size = to_tile_size(value.bit(4 + i));
+        for (i, background) in self.state.backgrounds.iter_mut().enumerate() {
+            background.tile_size = to_tile_size(value.bit(4 + i));
         }
     }
 
@@ -659,8 +659,8 @@ impl Ppu {
     ///    | +---- Enable BG4 on main screen
     ///    +------ Enable OBJ on main screen
     fn write_tm(&mut self, value: u8) {
-        for i in 0..4 {
-            self.state.backgrounds[i].main_enabled = value.bit(i);
+        for (i, background) in self.state.backgrounds.iter_mut().enumerate() {
+            background.main_enabled = value.bit(i);
         }
         self.state.oam.main_enabled = value.bit(4);
     }
@@ -676,8 +676,8 @@ impl Ppu {
     ///    | +---- Enable BG4 on subscreen
     ///    +------ Enable OBJ on subscreen
     fn write_ts(&mut self, value: u8) {
-        for i in 0..4 {
-            self.state.backgrounds[i].subscreen_enabled = value.bit(i);
+        for (i, background) in self.state.backgrounds.iter_mut().enumerate() {
+            background.subscreen_enabled = value.bit(i);
         }
         self.state.oam.sub_enabled = value.bit(4);
     }
@@ -696,8 +696,8 @@ impl Ppu {
     /// |+-------- Half color math
     /// +--------- Operator type (0 = add, 1 = subtract)
     fn write_cdadsub(&mut self, value: u8) {
-        for i in 0..4 {
-            self.state.backgrounds[i].color_math_enabled = value.bit(i);
+        for (i, background) in self.state.backgrounds.iter_mut().enumerate() {
+            background.color_math_enabled = value.bit(i);
         }
         self.state.oam.color_math_enabled = value.bit(4);
         self.state.color_math_backdrop_enabled = value.bit(5);

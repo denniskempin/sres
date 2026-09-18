@@ -143,7 +143,7 @@ mod test {
     fn example_spc700_trace() -> Spc700State {
         Spc700State {
             instruction: InstructionMeta {
-                address: AddressU16(0xffC5),
+                address: AddressU16(0xFFC5),
                 operation: "MOV".to_string(),
                 operand_str: Some("(X),A".to_string()),
                 effective_addr: Some(AddressU16::from(0x00EF)),
@@ -166,7 +166,7 @@ mod test {
             ..example_spc700_trace()
         };
         assert_eq!(
-            Spc700State::parse_mesen_trace(&EXAMPLE_MESEN_TRACE).unwrap(),
+            Spc700State::parse_mesen_trace(EXAMPLE_MESEN_TRACE).unwrap(),
             example_trace
         );
     }

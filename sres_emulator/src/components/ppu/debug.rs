@@ -117,7 +117,7 @@ impl PpuDebug<'_> {
         let words_per_tile = Self::words_per_tile(bit_depth);
         let remaining_words = VRAM_SIZE.saturating_sub(tileset_addr.0 as u32);
         let total_tiles = remaining_words / words_per_tile;
-        (total_tiles + 15) / 16
+        total_tiles.div_ceil(16)
     }
 
     fn debug_render_vram_impl<TileDecoderT: TileDecoder>(
