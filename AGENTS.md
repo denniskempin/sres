@@ -69,7 +69,7 @@ SRES is a SNES emulator in Rust.
 ## Entry Point Call Chain
 
 ```
-sres_egui::App::update()
+sres_egui::App::ui()
   → system.update_joypads(joy1, joy2)
   → system.execute_for_audio_samples(n)   // normal play; debugger stepping uses execute_frames(1)
   → system.swap_video_frame()             // true on vblank rise
