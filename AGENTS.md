@@ -24,9 +24,9 @@ SRES is a SNES emulator in Rust.
 
 ### Layer Structure (top to bottom)
 
-**`sres_egui`** — Native egui or WASM frontend. Uses only the public `System` API (see Entry Point Call Chain).
+**`sres_egui`** — Native egui or WASM frontend. Playback uses the public `System` API (see Entry Point Call Chain). Cartridge load and debugger panels also import `components/`, `apu/`, `main_bus/`, `debugger`, and `common/`.
 
-**`sres_emulator` (`lib.rs`)** — System orchestration. `SystemImpl<PpuT, ApuT>` has three variants: `BatchedSystem` (default, batched PPU/APU), `SyncSystem` (cycle-accurate), `AsyncSystem` (threaded APU). Owns the CPU, `MainBusImpl`, `Apu`, debugger, and framebuffer.
+**`sres_emulator` (`lib.rs`)** — System orchestration. `SystemImpl<PpuT, ApuT>` has three variants: `BatchedSystem` (default, batched PPU/APU), `SyncSystem` (cycle-accurate), `AsyncSystem` (threaded PPU and APU). Owns the CPU, `MainBusImpl`, `Apu`, debugger, and framebuffer.
 
 **`main_bus/`** — 65816 memory map, LoRom/HiRom address decoding, 8-channel DMA, hardware multiply/divide, and NMI/IRQ delegation to `Clock`. Connects CPU to all devices.
 
@@ -47,12 +47,12 @@ SRES is a SNES emulator in Rust.
 
 ### Key Design Patterns
 
-- **Lazy APU catch-up**: SPC700 only advances at APUIO access or audio sample boundaries — not every CPU cycle.
+- **Lazy APU catch-up**: SPC700 is not stepped every master cycle. `Apu::update_clock` catch-up-steps to the current master clock (`SyncSystem`: every CPU bus cycle; `BatchedSystem`: on device read, vblank/`sync()`, cache overflow).
 - **Generic CPU bus**: `Cpu<BusT: MainBus>` and `Spc700<BusT: Spc700Bus>` — bus injected at compile time.
 - **8/16-bit dispatch**: CPU instructions generic over `T: UInt`; dispatch by M/X status flags at runtime.
 - **PPU scanline renderer**: Draws one scanline at a time; new frame available only on vblank rise.
 - **Zero-cost debug**: `DebugEventCollector` guarded by `DEBUG_EVENTS_ENABLED` atomic; `#[cold]` dispatch.
-- **Save states**: All serializable state in `PpuState`/`ApuBus` etc., encoded with `bitcode`.
+- **Save states**: `PpuState` encoded with `bitcode`. APU and CPU are not snapshotted.
 
 ## System Variants
 
@@ -60,21 +60,22 @@ SRES is a SNES emulator in Rust.
 
 | Type | PPU/APU update | When to use |
 |---|---|---|
-| `BatchedSystem` | Buffered, flushed at vblank/sync points | Default; UI, general tests |
+| `BatchedSystem` | Buffered; flushed on device read, vblank/`sync()`, cache overflow | Default; UI, general tests |
 | `SyncSystem` | Cycle-accurate, every CPU step | Trace-comparison tests (`rom_tests`), cycle-timing bugs |
-| `AsyncSystem` | APU on background thread | Performance exploration / benchmarks only |
+| `AsyncSystem` | PPU and APU on background threads | Performance exploration / benchmarks only |
 
 `SyncSystem` is required when comparing against BSNES traces because batched updates introduce observable timing differences at register boundaries.
 
 ## Entry Point Call Chain
 
 ```
-sres_egui::App::ui()
-  → system.update_joypads(joy1, joy2)
-  → system.execute_for_audio_samples(n)   // normal play; debugger stepping uses execute_frames(1)
-  → system.swap_video_frame()             // true on vblank rise
-audio callback (sres_egui/src/audio.rs)
-  → system.swap_audio_buffer()            // exchange AudioBuffer
+EmulatorApp::ui()                        // eframe::App
+  → system.update_joypads(joy1, 0)       // joy2 is always 0
+  → system.execute_for_audio_samples(n)  // normal play; debugger uses execute_for_duration
+  → AudioOutput::update()                // UI thread: system.swap_audio_buffer()
+  → system.swap_video_frame()            // true on vblank rise
+cpal callback (sres_egui/src/audio.rs)
+  → drain AudioBufferQueue               // does not touch System
 ```
 
 `execute_*` → `execute_until` → `step()` → `cpu.step()` → `MainBusImpl::bus_read/write` → PPU/APU/DMA/Clock.
@@ -85,25 +86,25 @@ audio callback (sres_egui/src/audio.rs)
 |---|---|---|---|
 | Trace-comparison | `tests/rom_tests/` | `SyncSystem` | CPU instruction correctness vs BSNES |
 | ROM-outcome | `tests/rom_tests/` | `System` | DMA, memory behavior; inspect memory at `stp` |
-| Golden-image | `tests/ppu_tests/` | `System` | PPU rendering correctness; diff against `.png` |
-| Golden-WAV | `tests/apu_tests/` | `System` | SPC700/S-DSP audio correctness; diff against `.wav` |
+| Golden-image | `tests/ppu_tests/` | `System` (ROM) / `Ppu` (snapshots) | PPU rendering correctness; diff against `.png` |
+| Golden-WAV | `tests/apu_tests/` | `System` | SPC700/S-DSP vs `.wav` (`play_noise` is RAM/DSP, not WAV) |
 
 Golden files are auto-created on first run; verify them before committing. Mismatches write `.actual.png` / `.actual.wav`.
 
 ## Error Handling & Unimplemented Hardware
 
-- **Unimplemented registers**: reads return `0`, writes are silently ignored. Both emit a `DebugEvent` error (visible in debugger; no panic).
+- **Unimplemented registers**: reads return `0`, writes are silently ignored. Both emit a `DebugEvent` error (visible in debugger; no panic). Exception: PPU unhandled I/O uses `log::warn`, not a `DebugEvent` (see `sres_emulator/src/components/ppu`).
 - **Unmapped memory**: same — return `0` + emit error.
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **HDMA**: not implemented; `$420C` write logs a warning.
 - **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
 - **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware. Exception: PPU `decode_bgmode` panics on BG modes 4/6/7 (see `sres_emulator/src/components/ppu`).
-- **Fuzz targets** explicitly test that arbitrary input never panics.
+- **Fuzz targets** in `sres_emulator/fuzz/` are intended to test that arbitrary input never panics. The bins are stale and do not compile.
 
 ## Reference
 
 - `docs/index.md` — indexed hardware reference docs (fullsnes.txt extracts and nesdev.org articles). Covers PPU, APU, DMA, memory maps, CPU opcodes, timing, and controllers. Use keyword search within the index to find the relevant file.
-- `review_guide.md` — review checklist and conventions a code owner enforces.
+- `.cursor/skills/code-review/SKILL.md` — independent code-owner review via a readonly subagent. Checks: `.cursor/skills/code-review/references/review-guide.md`.
 - `.cursor/skills/write-agents-docs/SKILL.md` — follow it when editing any `AGENTS.md` or `//!` file header.
 
 ## Subdirectory AGENTS.md Files

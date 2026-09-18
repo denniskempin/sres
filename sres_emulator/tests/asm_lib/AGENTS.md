@@ -17,7 +17,7 @@ Shared include files for test ROMs. This `AGENTS.md` is the same through `tests/
 ## Behaviors & Gotchas
 
 1. `seek(offset)` (`base.asm:3`) maps a LoROM bus address to file origin: `origin ((offset & $7F0000) >> 1) | (offset & $7FFF)`.
-2. `SNES_INIT(SLOWROM)` / `SNES_INIT(FASTROM)` (`snes.inc:338`) enters native mode, sets SP `$1FFF`, writes `ROMSPEED` to `$420D` (`MEMSEL`), force-blanks (`INIDISP=$8F`), then DMA-clears OAM, WRAM, VRAM, and CGRAM.
+2. `SNES_INIT(SLOWROM)` / `SNES_INIT(FASTROM)` (`snes.inc:338`) enters native mode, sets SP `$1FFF`, writes `ROMSPEED` to `$420D` (`MEMSEL`), force-blanks (`INIDISP=$8F`), CPU-loop-clears OAM (`REG_OAMDATA`), then DMA-clears WRAM, VRAM, and CGRAM.
 3. `base.asm` always includes `snes_header.asm`, not `snes_header_ret.asm`. Only `rom_tests/krom_ret.asm` includes the latter and defines `RTIBreak`.
 4. `snes_spc700.inc` is bass (`macro Name() { }`). CPU sources include it for `SPCWaitBoot` / `TransferBlockSPC` / `SPCExecute` (`lda.w REG_APUIO0`). SMP sources (`arch snes.smp`) include it for `SPC_INIT` / `WDSP` (`str REG_DSPADDR=…`).
 5. `snes_gfx.inc` and CPU-side SPC macros require `snes.inc` `REG_*` already in scope. `base.asm` includes the header then `snes.inc`; callers that skip `base.asm` must include `snes.inc` first.
