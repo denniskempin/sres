@@ -118,6 +118,25 @@ Examples from this repo:
 5. Run the self-check.
 6. If the change touched a file's role, update its `//!` block in the same commit.
 
+## Fan-out with subagents
+
+Use subagents when step 0 yields more than 3 directories or more than 10 files. Below that, do the work inline. Directories are the unit of work: one subagent per directory, headers for that directory's `.rs` files included in the same unit.
+
+Order matters. Children dedupe against the final text of their parents, so process top-down in waves: all directories at depth N in one parallel batch, then depth N+1. Never run a parent and its child in the same batch. Sibling directories (`components/cpu`, `components/ppu`, `components/spc700`) go in one batch.
+
+Subagents do not see this conversation. Each prompt must be self-contained and include:
+- "Read `.cursor/skills/write-agents-docs/SKILL.md` first and follow it exactly."
+- The one target directory, its ancestor `AGENTS.md` paths in order, and the current chain size in bytes.
+- Whether the target `AGENTS.md` exists (edit) or not (create from the template).
+- The `.rs` files in that directory that lack a `//!` header.
+- "Edit files only. Do not commit, do not touch files outside `<dir>`, do not write scratch files inside the repo."
+- The required report: files changed, before and after line counts, the answered self-check, and any fact you could not verify at a file:line (say so; do not guess).
+
+Coordinator duties after each wave:
+1. Read every report. Reject and re-run any unit whose self-check has a "no" or whose report lacks line counts.
+2. Cross-file pass the subagent cannot do alone: `wc -c` every chain that changed; `rg` each new fact in the wave against sibling and parent `AGENTS.md` files for duplicates; check every `## Gaps` entry against the root error-handling section.
+3. Commit one directory per commit before starting the next wave.
+
 ## Self-check
 
 Answer each before finishing. Any "no" means go back.
