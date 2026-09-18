@@ -1,3 +1,4 @@
+//! `SDsp` register read/write sanity.
 #![cfg(test)]
 
 use super::*;
