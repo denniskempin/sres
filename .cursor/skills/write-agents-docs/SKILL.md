@@ -5,7 +5,7 @@ description: "Write or refresh AGENTS.md files and //! file headers in the SRES 
 
 # Writing AGENTS.md and `//!` headers
 
-Scope: `AGENTS.md` files and the leading `//!` block of `.rs` files. Not in scope: `///` item docs, code changes, `review_guide.md`. Policy lives in the root `AGENTS.md` and `review_guide.md` section 9; do not restate it.
+Scope: `AGENTS.md` files and the leading `//!` block of `.rs` files. Not in scope: `///` item docs, code changes, `.cursor/skills/code-review/`. Policy lives in the root `AGENTS.md`; the code-review skill enforces it. Do not restate it.
 
 ## How these files are consumed
 
@@ -22,7 +22,7 @@ Highest value per token: facts that cannot be inferred from the code in one step
 | `//!` header | 1 to 4 lines: what the file owns and the one thing to know before editing it. | Declarative |
 
 Rules:
-- One home per fact. Everywhere else is a pointer. Anti-pattern: the `$2100`/`$4200` register routing table currently appears in root `AGENTS.md`, `sres_emulator/src/main_bus/AGENTS.md`, and `review_guide.md`.
+- One home per fact. Everywhere else is a pointer. Anti-pattern: the `$2100`/`$4200` register routing table currently appears in root `AGENTS.md`, `sres_emulator/src/main_bus/AGENTS.md`, and the code-review skill's review guide.
 - Inferable-content test: if `ls` or one `rg` reproduces it, it does not go in `AGENTS.md`. Anti-pattern: the 30-row register-to-handler table in `sres_emulator/src/components/ppu/AGENTS.md`. Register semantics live in `docs/index.md`.
 - A rule that clippy, a test, or `sres_emulator/src/components/mod.rs` already enforces gets one line pointing at the enforcement.
 - A leaf never contradicts the root silently. When it must differ, name the exception and the reason: "Trace tests here use `SyncSystem`, not the default `System`, because batched updates shift register-boundary timing."
@@ -96,7 +96,7 @@ Examples from this repo:
 - Backticks for all identifiers. `$XXXX` for SNES addresses. Hardware register names (`INIDISP`, `MDMAEN`), not prose descriptions.
 - Tables for 3+ items of the same shape; bullets otherwise. Nested bullets at most one level.
 - No "simple", "just", "easy", or marketing adjectives. Present tense, active voice.
-- Keep existing section headers when editing; `review_guide.md` links to them.
+- Keep existing section headers when editing; the code-review skill's review guide links to them.
 - Edit, never regenerate. Open the existing file and change lines. Do not write a fresh file from the template over one that exists.
 - Net-negative bias: for every line added to an existing `AGENTS.md`, look for a line to delete (duplicate of parent, inferable, stale). Report before and after line counts.
 
