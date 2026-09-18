@@ -1,4 +1,5 @@
-//! TODO Add documentation
+//! `DebugEventCollectorRef` for components to emit debugger events.
+//! `on_event`/`on_error` no-op unless `DEBUG_EVENTS_ENABLED` (zero-cost path: root).
 use std::ops::Deref;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;

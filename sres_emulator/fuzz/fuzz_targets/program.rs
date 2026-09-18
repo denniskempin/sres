@@ -1,4 +1,5 @@
-//! Simple fuzzer that executes random programs on the emulator.
+//! libfuzzer bin `program`: load input as a 65816 program and step `Cpu`.
+//! Caps the loop at 1000 `cpu.step()` calls; does not run until halt.
 #![no_main]
 
 use crate::components::cpu::Cpu;

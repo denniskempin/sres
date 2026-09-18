@@ -1,3 +1,5 @@
+//! `ClockInfo`: convert `master_clock` to `v`/`h_counter`/`f`.
+//! `from_mesen_vhf` maps Mesen traces (frame increments at vblank). `vblank()` is `v >= 225`.
 use bitcode::Decode;
 use bitcode::Encode;
 

@@ -1,3 +1,6 @@
+//! `AudioOutput` plays APU samples through a cpal stream at 32 kHz.
+//! The stream callback drains `AudioBufferQueue` on the audio thread; `update` pushes via `swap_audio_buffer`.
+
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::Mutex;

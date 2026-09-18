@@ -1,4 +1,6 @@
-//! SNES BRR sample decoding
+//! `BrrDecoder`: SNES BRR sample decode.
+//! 9-byte blocks (header + 16 nibbles) and 4 IIR filters.
+//! `next_sample` decodes a block into `VecDeque<i16>` only when the queue is empty.
 #![allow(dead_code)]
 
 use std::collections::VecDeque;

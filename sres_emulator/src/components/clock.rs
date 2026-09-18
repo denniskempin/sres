@@ -1,4 +1,5 @@
-//! Tracking of PPU events and timing.
+//! `Clock`: master clock, NMI, and H/V timer IRQs.
+//! `advance_master_clock` ticks timing in chunks of ≤64 so edges are not skipped.
 
 use bitcode::Decode;
 use bitcode::Encode;

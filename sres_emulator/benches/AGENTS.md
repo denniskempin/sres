@@ -1,23 +1,31 @@
-# Benchmarks
+# `sres_emulator/benches`
 
-Criterion benchmarks for `sres_emulator`.
+Criterion benches for per-frame `System` cost and `Clock::advance_master_clock`.
 
 ## Files
 
-- `rom_benches.rs` — Frame timing on real ROMs (`krom_adc.sfc`, `krom_blend_hicolor_3840.sfc`). Tests `SyncSystem`, `BatchedSystem`, `AsyncSystem`, and headless modes.
-- `timer_benches.rs` — Micro-benchmark for `Clock::advance_master_clock()`.
+| File | Owns |
+|------|------|
+| `rom_benches.rs` | Per-frame `execute_frames(1)` on two test ROMs across `SyncSystem`, `BatchedSystem`, `AsyncSystem`, and `System::force_headless` |
+| `timer_benches.rs` | `Clock::advance_master_clock` micro-bench; one iteration is one NTSC frame of 8-cycle steps |
 
-## Run
+## Behaviors & Gotchas
 
-```bash
-cargo bench --bench rom_benches
-cargo bench --bench timer_benches
-```
+1. ROM paths resolve from `CARGO_MANIFEST_DIR` (crate root). `Cartridge::with_sfc_file` unwrap panics if the `.sfc` is missing.
+2. `krom_adc` (CPU opcode ROM) benches `SyncSystem`, `BatchedSystem`, `AsyncSystem`, and headless. `krom_blend_hicolor_3840` (PPU blend/hicolor ROM) benches only `System` and headless.
+3. Cartridge load sits outside `b.iter`; each sample times only `execute_frames(1)`.
+4. `timer_benches` runs `44671` steps of `8` cycles (`357368` = `262 * 1364`), one NTSC frame without the odd-frame short scanline. Headless: `force_headless()` in `sres_emulator/src`.
 
-Requires test ROMs from `sres_emulator/tests/`.
+## Integration
 
-## Adding Benchmarks
+- Criterion invokes the `[[bench]]` targets `rom_benches` and `timer_benches` in `sres_emulator/Cargo.toml`.
+- `rom_benches.rs` loads ROMs with `Cartridge::with_sfc_file`, constructs a system via `with_cartridge`, then calls `execute_frames(1)`.
+- Headless benches call `System::force_headless` → `Ppu::force_headless`.
+- `timer_benches.rs` constructs `Clock::default()` and calls `advance_master_clock` only; no `MainBusImpl`, PPU, or APU.
 
-1. New file in this directory.
-2. Register it in `Cargo.toml` with `[[bench]] name = "..." harness = false`.
-3. Standard Criterion boilerplate: `criterion_group!`, `criterion_main!`.
+## Tests
+
+- `cargo bench --bench rom_benches`
+- `cargo bench --bench timer_benches`
+- Assets: `sres_emulator/tests/rom_tests/krom_adc.sfc`, `sres_emulator/tests/ppu_tests/krom_blend_hicolor_3840.sfc`
+- Not run by `./check-all.sh` or `cargo nextest`.

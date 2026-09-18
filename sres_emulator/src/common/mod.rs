@@ -1,4 +1,4 @@
-//! Traits and types used by all components of the emulator.
+//! Shared types used by every emulator layer. This file only declares submodules.
 
 pub mod address;
 pub mod bus;

@@ -1,4 +1,4 @@
-//! Implementation of the CGRAM containing color palette data.
+//! 256-entry `Rgb15` CGRAM (`CgRam`). `CGDATA` writes latch the low byte then commit; reads toggle the same latch.
 use bitcode::Decode;
 use bitcode::Encode;
 

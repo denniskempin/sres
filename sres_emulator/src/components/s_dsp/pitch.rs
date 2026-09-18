@@ -1,3 +1,5 @@
+//! `PitchGenerator`: Gaussian interpolation of BRR samples.
+//! 12-sample buffer; `PitchCounter` wraps at `0xC000`.
 #![allow(dead_code)]
 
 use std::fmt::Display;

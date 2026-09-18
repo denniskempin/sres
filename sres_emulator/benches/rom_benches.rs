@@ -1,4 +1,5 @@
-//! Benchmarks that measure the time it takes to execute each frame of executing a ROM.
+//! Criterion per-frame `execute_frames(1)` benches.
+//! ROMs: `tests/rom_tests/krom_adc.sfc` (`SyncSystem` / `BatchedSystem` / `AsyncSystem` / headless) and `tests/ppu_tests/krom_blend_hicolor_3840.sfc` (`System` / headless).
 use std::path::PathBuf;
 
 use criterion::criterion_group;

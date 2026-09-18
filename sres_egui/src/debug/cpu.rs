@@ -1,3 +1,7 @@
+//! CPU panel: registers via `CpuDebug::state`, disassembly, and `debug_controls_widget`.
+//! `disassembly_widget` appends `cpu_trace().skip(100)` (newest-first log) then `peek_next_operations(20)`; peeks do not execute.
+//! Controls return `DebugCommand`; parent `DebugUi` drives `System`.
+
 use egui::Button;
 use egui::Color32;
 use egui::RichText;

@@ -1,3 +1,4 @@
+//! Read-only `PpuDebug` visualizers: VRAM tiles, backgrounds, sprites, palettes (`VramRenderSelection`).
 use super::Background;
 use super::BackgroundId;
 use super::BitDepth;

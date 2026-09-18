@@ -1,5 +1,5 @@
-//! Utility extensions for unsigned integers and generic traits to allow abstraction over
-//! multiple types of unsigned integers.
+//! `UInt` over `u8`/`u16`, `VariableLengthUInt`, and `U8Ext`/`U16Ext`/`U32Ext`.
+//! `UInt::add_bcd`/`sub_bcd` implement 65816 decimal mode.
 use std::fmt::UpperHex;
 use std::ops::BitXor;
 use std::ops::Shl;

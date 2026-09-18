@@ -1,3 +1,6 @@
+//! Headless `egui_kittest` helpers.
+//! `widget_snapshot` compares a widget to a PNG under `tests/snapshots/` (`UPDATE_SNAPSHOTS=1` to write).
+
 use std::path::PathBuf;
 
 use egui_kittest::Harness;

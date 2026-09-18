@@ -1,3 +1,5 @@
+//! `ApuBus`: SPC700 bus (RAM, IPL ROM, timers, `SDsp`, `$F4–$F7` CPUIO).
+//! CPUIO writes stay in `channel_out_pending` until `promote_channel_out`.
 use std::collections::VecDeque;
 
 use intbits::Bits;

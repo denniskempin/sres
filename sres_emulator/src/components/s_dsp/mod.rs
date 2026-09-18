@@ -1,3 +1,5 @@
+//! `SDsp`: register file, `Voice` array, `NoiseGenerator`, and mix.
+//! Entry: `generate_sample`. KON `$4C` starts a voice; DIR `$5D`; FLG `$6C`.
 #![allow(clippy::single_match)]
 
 mod brr;
