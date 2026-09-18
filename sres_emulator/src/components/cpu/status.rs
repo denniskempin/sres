@@ -1,4 +1,4 @@
-//! Type for status register and boilerplate for conversion and display
+//! `StatusFlags` for P (`From<u8>` / `Display`; uppercase letter when the flag is set).
 use intbits::Bits;
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]

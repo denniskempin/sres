@@ -1,7 +1,5 @@
-//! This module handles loading of operands used by instructions.
-//!
-//! Each instruction in the [opcode table](build_opcode_table) has an associated
-//! address mode, which is decoded here to handle how the operand is loaded and stored.
+//! Operand decode for `AddressMode` / `AccessMode`. `decode()` clocks the bus; `peek()` does not.
+//! Extra `cycle_io`: direct page if `d` low byte != 0; abs X/Y on page-cross or Write/Modify; stack-relative always.
 use super::Cpu;
 use super::MainBus;
 use super::STACK_BASE;
