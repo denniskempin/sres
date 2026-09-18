@@ -1,75 +1,52 @@
 # `sres_emulator/src/components`
 
-Independent SNES hardware components. No cross-component dependencies allowed.
-
-## Rules (enforced in `mod.rs`)
-
-1. Components cannot depend on each other.
-2. Components can only import from `common/`.
-3. Exported types are minimal; inner modules are private.
-4. Use `self`/`super` for inner modules only.
-
-Integration happens at `main_bus/` and `lib.rs`.
+Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib.rs` integrate (root).
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `mod.rs` | Module declarations and independence rules. |
-| `cartridge.rs` | ROM parsing, SNES header extraction, LoRom/HiRom detection. |
-| `clock.rs` | Master clock, scanline/horizontal timing, NMI, H/V timer IRQs. |
+| File | Owns |
+|------|------|
+| `mod.rs` | Module declarations; isolation rules (comments in this file). |
+| `cartridge.rs` | `Cartridge`, `SnesHeader`, `MappingMode`. `.sfc` / SRAM load; LoRom vs HiRom header heuristic. |
+| `clock.rs` | `Clock`. Master clock, NMI, H/V timers. Entry: `advance_master_clock`. |
+
+## Behaviors & Gotchas
+
+1. Header pick tries LoRom at `0x7FC0` and HiRom at `0xFFC0`. Keep a candidate only if the name is non-empty and `mapping_mode` matches that slot; both-ok or both-fail is an error (`find_header_in_rom`).
+2. Header `rom_size` < 5 becomes 32 KiB (`parse_header`); test ROMs under-report size.
+3. Short scanline: V=240 on odd frames (`f % 2 == 1`) is 1360 master cycles, otherwise 1364 (`tick_master_clock`).
+4. DRAM refresh: when `h_counter` crosses `dram_refresh_position`, add 40 to `h_counter` and `master_clock`. Position starts at 538, then `538 - ((master_clock - h_counter) & 7)` each line.
+5. Dots 323 and 327 take 6 cycles on non-short scanlines (`hdot` after `h_counter` 1292 and 1310).
+6. `$4210` read does not clear `nmi_flag` when `v == 225 && h_counter <= 2` (`read_rdnmi`).
+7. `advance_master_clock` ticks in chunks of ≤64 so NMI/timer edges are not skipped.
+8. H/V IRQ fires on the rise of the match (`EdgeDetector`), not while the match stays true.
+9. `Clock` owns `master_clock` and emits `ClockInfo`; other components consume `ClockInfo` (`common`).
+
+## Hardware Map
+
+- `Clock` MMIO: `$4200`, `$4207`–`$420A`, `$4210`–`$4212` (routed by `main_bus`). Semantics: `docs/index.md`.
+
+## Integration
+
+- `MainBusImpl` owns `Clock`, calls `advance_master_clock`, and `consume_nmi_interrupt` / `consume_timer_interrupt`.
+- `MainBusImpl` copies ROM/SRAM and `MappingMode` from `Cartridge` for LoRom/HiRom decode.
+- `SystemImpl::with_cartridge` and tests construct the system from `Cartridge`.
+
+## Gaps
+
+- `SnesHeader.fast_rom` (mapping bit 5) is parsed and never used. FastROM speed: root.
+- NMITIMEN bit 0 and HVBJOY bit 0 (joypad auto-read) are ignored; `$4212` bit 0 stays 0. Serial/auto-read packing: parent.
+
+## Tests
+
+- Unit tests in `cartridge.rs` and `clock.rs` (inline BSNES `(v, h)` log; no extra assets).
+- `cargo nextest run -p sres_emulator --lib -E 'test(components::clock::) or test(components::cartridge::)'`
 
 ## Subdirectories
 
 | Directory | Hardware |
 |-----------|----------|
-| `cpu/` | W65C816 (main CPU) |
-| `ppu/` | Ricoh 5C77 (graphics) |
-| `s_dsp/` | Sony S-DSP (audio synthesis) |
-| `spc700/` | Sony SPC700 (audio CPU) |
-
-## `cartridge.rs`
-
-- **`Cartridge`** — Holds `SnesHeader`, ROM bytes, SRAM bytes.
-- **`SnesHeader`** — Parsed from `0x7FC0` (LoRom) or `0xFFC0` (HiRom). Contains name, mapping mode, ROM/SRAM size, fast-ROM flag.
-- **`MappingMode`** — `LoRom` or `HiRom`.
-- **`RawSnesHeader`** — Packed struct for binary parsing.
-
-Factory methods:
-- `Cartridge::with_sfc_file(path)` — Loads `.sfc` + optional `.srm`.
-- `Cartridge::with_sfc_data(data, srm_data)` — From raw bytes.
-- `Cartridge::with_program(program)` — Minimal cartridge for test ROMs (no header).
-
-Header parser uses heuristics (non-empty name, matching mapping mode) to choose between LoRom/HiRom headers.
-
-## `clock.rs`
-
-Tracks master clock and generates interrupts. Driven by `main_bus`.
-
-- **`Clock`** — Tracks `master_clock`, `v` (scanline), `h_counter`, `f` (frame).
-- **`HVTimerMode`** — `Off`, `TriggerH`, `TriggerV`, `TriggerHV`.
-
-Key behaviors:
-- Short scanline: line 240 on odd frames is 1360 cycles (vs 1364).
-- DRAM refresh: ~40-cycle pause at ~536 cycles into each scanline.
-- NMI: Triggered on vblank rise (V >= 225) if `$4200` enabled.
-- H/V timers: Triggered when dot/scanline matches `$4207-$420A`.
-- NMI read quirk: Reading `$4210` in first 2 cycles of V=225 does not clear flag.
-
-Registers:
-
-| Address | Register |
-|---------|----------|
-| `$4200` | NMITIMEN |
-| `$4207/$4208` | HTIMEL/HTIMEH |
-| `$4209/$420A` | VTIMEL/VTIMEH |
-| `$4210` | RDNMI (read clears) |
-| `$4211` | TIMEUP (read clears) |
-| `$4212` | HVBJOY |
-
-`advance_master_clock` chunks advances into ≤64-cycle ticks to avoid missing events. Timing is sensitive; see tests for exact reference behavior.
-
-## Notes
-
-- All components derive `bitcode::Encode/Decode` for save-state serialization where applicable.
-- When modifying a component, only import from `common/`. Do not add cross-component dependencies.
+| `cpu/` | W65C816 |
+| `ppu/` | Ricoh 5C77 |
+| `s_dsp/` | Sony S-DSP |
+| `spc700/` | Sony SPC700 |
