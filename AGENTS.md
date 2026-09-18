@@ -24,21 +24,21 @@ SRES is a SNES emulator in Rust.
 
 ### Layer Structure (top to bottom)
 
-**`sres_egui`** — Native egui or WASM frontend. Calls `execute_frames()`, `swap_video_frame()`, `swap_audio_buffer()`, `update_joypads()` on the emulator.
+**`sres_egui`** — Native egui or WASM frontend. Uses only the public `System` API (see Entry Point Call Chain).
 
 **`sres_emulator` (`lib.rs`)** — System orchestration. `SystemImpl<PpuT, ApuT>` has three variants: `BatchedSystem` (default, batched PPU/APU), `SyncSystem` (cycle-accurate), `AsyncSystem` (threaded APU). Owns the CPU, `MainBusImpl`, `Apu`, debugger, and framebuffer.
 
 **`main_bus/`** — 65816 memory map, LoRom/HiRom address decoding, 8-channel DMA, hardware multiply/divide, and NMI/IRQ delegation to `Clock`. Connects CPU to all devices.
 
-**`apu/`** — APU integration layer. Orchestrates `Spc700` + `S-DSP` with lazy catch-up clocking. `ApuBus` provides APU RAM, IPL ROM, timers, and APUIO ports. Outputs 32 kHz `AudioBuffer`.
+**`apu/`** — APU integration layer. Orchestrates `Spc700` + `S-DSP`. `ApuBus` provides APU RAM, IPL ROM, timers, and APUIO ports. Outputs 32 kHz `AudioBuffer`.
 
-**`components/`** — Independent hardware components with no cross-component dependencies. All integration happens above in `main_bus/` and `lib.rs`.
+**`components/`** — Independent hardware components. They import only from `common/`; never from each other. All integration happens above in `main_bus/`, `apu/`, and `lib.rs`.
 
 | Component | Hardware | Notes |
 |---|---|---|
 | `cpu/` | W65C816 | 256-op table, generic `BusT`, 8/16-bit `UInt` dispatch |
 | `ppu/` | Ricoh 5C77 | Scanline renderer, VRAM/CGRAM/OAM |
-| `spc700/` | Sony SPC700 | Audio CPU, lazy catch-up |
+| `spc700/` | Sony SPC700 | Audio CPU |
 | `s_dsp/` | Sony S-DSP | 8-voice BRR sample playback, 32 kHz output |
 | `cartridge` | ROM/SRAM | LoRom/HiRom header parsing |
 | `clock` | Timer/IRQ | NMI, H/V timer IRQs, scanline timing |
@@ -48,7 +48,6 @@ SRES is a SNES emulator in Rust.
 ### Key Design Patterns
 
 - **Lazy APU catch-up**: SPC700 only advances at APUIO access or audio sample boundaries — not every CPU cycle.
-- **Component isolation**: `components/` have zero cross-component deps; integration lives in `main_bus/` and `lib.rs`.
 - **Generic CPU bus**: `Cpu<BusT: MainBus>` and `Spc700<BusT: Spc700Bus>` — bus injected at compile time.
 - **8/16-bit dispatch**: CPU instructions generic over `T: UInt`; dispatch by M/X status flags at runtime.
 - **PPU scanline renderer**: Draws one scanline at a time; new frame available only on vblank rise.
@@ -71,13 +70,14 @@ SRES is a SNES emulator in Rust.
 
 ```
 sres_egui::App::update()
-  → system.execute_frames(1)       // advance emulation
-  → system.swap_video_frame()      // true on vblank rise
-  → system.swap_audio_buffer()     // exchange AudioBuffer
   → system.update_joypads(joy1, joy2)
+  → system.execute_for_audio_samples(n)   // normal play; debugger stepping uses execute_frames(1)
+  → system.swap_video_frame()             // true on vblank rise
+audio callback (sres_egui/src/audio.rs)
+  → system.swap_audio_buffer()            // exchange AudioBuffer
 ```
 
-`execute_frames` → `execute_until` → `step()` → `cpu.step()` → `MainBusImpl::bus_read/write` → PPU/APU/DMA/Clock.
+`execute_*` → `execute_until` → `step()` → `cpu.step()` → `MainBusImpl::bus_read/write` → PPU/APU/DMA/Clock.
 
 ## Testing Strategy
 
@@ -88,7 +88,7 @@ sres_egui::App::update()
 | Golden-image | `tests/ppu_tests/` | `System` | PPU rendering correctness; diff against `.png` |
 | Golden-WAV | `tests/apu_tests/` | `System` | SPC700/S-DSP audio correctness; diff against `.wav` |
 
-Golden files are auto-created on first run and committed to Git LFS. Mismatches write `.actual.png` / `.actual.wav`.
+Golden files are auto-created on first run; verify them before committing. Mismatches write `.actual.png` / `.actual.wav`.
 
 ## Error Handling & Unimplemented Hardware
 
@@ -101,38 +101,22 @@ Golden files are auto-created on first run and committed to Git LFS. Mismatches 
 
 ## Reference
 
-`docs/index.md` — indexed hardware reference docs (fullsnes.txt extracts and nesdev.org articles). Covers PPU, APU, DMA, memory maps, CPU opcodes, timing, and controllers. Use keyword search within the index to find the relevant file.
+- `docs/index.md` — indexed hardware reference docs (fullsnes.txt extracts and nesdev.org articles). Covers PPU, APU, DMA, memory maps, CPU opcodes, timing, and controllers. Use keyword search within the index to find the relevant file.
+- `review_guide.md` — review checklist and conventions a code owner enforces.
+- `.cursor/skills/write-agents-docs/SKILL.md` — follow it when editing any `AGENTS.md` or `//!` file header.
 
 ## Subdirectory AGENTS.md Files
 
-| Path | Coverage |
-|---|---|
-| `sres_emulator/src/AGENTS.md` | System orchestration, controller, debugger |
-| `sres_emulator/src/common/AGENTS.md` | Shared types, traits, utilities |
-| `sres_emulator/src/components/AGENTS.md` | Component rules, cartridge, clock |
-| `sres_emulator/src/components/cpu/AGENTS.md` | W65C816 CPU |
-| `sres_emulator/src/components/ppu/AGENTS.md` | Picture Processing Unit |
-| `sres_emulator/src/components/s_dsp/AGENTS.md` | Sony S-DSP (audio) |
-| `sres_emulator/src/components/spc700/AGENTS.md` | Sony SPC700 audio CPU |
-| `sres_emulator/src/apu/AGENTS.md` | APU integration |
-| `sres_emulator/src/main_bus/AGENTS.md` | System bus, DMA, memory mapping |
-| `sres_emulator/tests/AGENTS.md` | Integration tests |
-| `sres_emulator/tests/rom_tests/AGENTS.md` | CPU trace & ROM tests |
-| `sres_emulator/tests/ppu_tests/AGENTS.md` | Golden-image rendering tests |
-| `sres_emulator/tests/apu_tests/AGENTS.md` | Golden-WAV audio tests |
-| `sres_emulator/tests/asm_lib/AGENTS.md` | Test ROM assembly library |
-| `sres_emulator/benches/AGENTS.md` | Criterion benchmarks |
-| `sres_emulator/fuzz/AGENTS.md` | Fuzzing setup |
+Each module and test directory under `sres_emulator/` has its own `AGENTS.md` (`find . -name AGENTS.md`). Read the nearest one before editing. Directory files hold local facts and never restate this file.
 
 ## Environment Gotchas
 
 - **Nightly Rust**: Required. `rust-toolchain.toml` specifies channel; `rust-src` component needed.
-- **Headless X11**: `DISPLAY=:1` required in headless environments.
 - **libxkbcommon-x11-0**: Runtime dependency for native egui. Install via `apt` if missing.
-- **Git LFS**: Test ROMs (`.sfc`), traces (`.xz`), images (`.png`) stored in LFS. If LFS 404s, tests fall back to assembled ROMs (`xa65`).
-- **xa65 assembler**: `sudo apt-get install -y xa65`
+- **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). No fetch step is needed.
+- **xa65 assembler**: Needed only to re-assemble hand-written test ROMs. `sudo apt-get install -y xa65`
 - **cargo-nextest**: Preferred runner. `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
 
 ## Important Agent Rules
-- **Concise**: Speak concisely, drop conversational fillers, pleasantries, rambling explanations. Use simple and direct language. 
+- **Concise**: Speak concisely, drop conversational fillers, pleasantries, rambling explanations. Use simple and direct language.
 - **Push back**: Do not blindly agree with inefficient, illogical or requests that lead to bad outcomes. Push back by stating the technical blocker in direct language.
