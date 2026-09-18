@@ -39,6 +39,6 @@ W65C816 (65816) CPU core.
 
 ## Tests
 
-- TomHarte 65816 JSON (`test/{0x–fx}.json.xz`, Git LFS). `run_tomharte_test` compares `CpuState`, memory, and cycle count.
+- TomHarte 65816 JSON (`test/{0x–fx}.json.xz`). `run_tomharte_test` compares `CpuState`, memory, and cycle count.
 - `SKIP_OPCODES`: `0x44` MVP, `0x54` MVN — test model differs; both instructions are implemented.
 - `cargo nextest run -p sres_emulator --lib -E 'test(components::cpu::)'`

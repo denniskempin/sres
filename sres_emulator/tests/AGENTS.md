@@ -23,7 +23,7 @@ Cargo integration tests for `sres_emulator`. Taxonomy and System-variant mapping
 ## Behaviors & Gotchas
 
 1. Sources are bass (`arch snes.cpu` / `arch snes.smp`). Cargo does not assemble; tests load committed `.sfc`.
-2. Missing ROM or trace files fail (`Cartridge::with_sfc_file` / `File::open`); these drivers do not skip or reassemble on LFS 404.
+2. Missing ROM or trace files fail (`Cartridge::with_sfc_file` / `File::open`); these drivers do not skip or reassemble.
 3. Trace tests write `0x93` to `$000000` before reset (`run_rom_test`); reason unknown.
 4. Snapshot tests call `Ppu::load_state` then `draw_scanline` with no ROM (`run_snapshot_framebuffer_test`).
 
