@@ -36,6 +36,9 @@ jobs:
       - name: Rustfmt
         run: cargo fmt --all -- --check
 
+      - name: WASM check
+        run: cargo check --target wasm32-unknown-unknown -p sres_egui
+
   # Run tests
   test:
     runs-on: ubuntu-latest
