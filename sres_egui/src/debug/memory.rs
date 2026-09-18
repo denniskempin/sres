@@ -1,3 +1,6 @@
+//! `MemoryViewer` virtualizes a 24-bit hex dump (`num_rows = 0xFFFFFF / 16`).
+//! `show` takes `peek: Fn(AddressU24) -> Option<u8>`; `None` renders `XX`. `open_at` scrolls once then clears.
+
 use egui::Context;
 use egui::FontId;
 use egui::Label;
