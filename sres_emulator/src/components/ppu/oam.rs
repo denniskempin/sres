@@ -1,4 +1,4 @@
-//! Implementation of the OAM containing sprite data.
+//! 544-byte OAM (`Oam`, 128 `Sprite`s). Address wraps modulo 544; `get_all_sprites_on_scanline` stops at 32 and returns higher index first.
 use std::fmt::Display;
 use std::fmt::Formatter;
 

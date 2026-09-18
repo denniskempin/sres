@@ -1,3 +1,5 @@
+//! Three APU timers (`ApuTimers` / `ApuTimer`) with a 3-stage divider (base / interval / 4-bit output).
+//! Enable 0→1 resets interval and output; the base counter runs while disabled.
 use crate::common::uint::UInt;
 
 #[derive(Debug, Clone)]

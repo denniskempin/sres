@@ -1,3 +1,6 @@
+//! Trace formatting and debugger snapshot for the SPC700.
+//!
+//! `Spc700Debug::state()` builds `Spc700State` (BSNES `Display`, Mesen `parse_mesen_trace`).
 use std::fmt::Display;
 use std::str::FromStr;
 

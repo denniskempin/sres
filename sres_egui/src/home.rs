@@ -1,3 +1,6 @@
+//! `home_screen` lists `EMBEDDED_ROMS` as clickable cards.
+//! Click loads `Cartridge::with_sfc_data` and invokes the caller's callback.
+
 use std::path::PathBuf;
 
 use egui::Context;

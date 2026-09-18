@@ -1,10 +1,5 @@
-//! High level testing focused on the PPU
-//!
-//! Most tests execute roms and compare the rendered framebuffer against a previously stored
-//! golden image.
-//!
-//! Some tests will use snapshots of the PPU state to run testing in isolation of the CPU
-//! behavior and in absence of ROM files.
+//! Golden-image PPU tests (`System`): ROM framebuffer, PPU `.snapshot`, and debug renders.
+//! Snapshot tests call `Ppu::load_state` then `draw_scanline` with no ROM.
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;

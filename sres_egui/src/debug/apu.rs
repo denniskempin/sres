@@ -1,3 +1,6 @@
+//! `ApuDebugWindow`: eight S-DSP voices and global KON/KOF/noise from `emulator.debug().apu()` (`ApuDebug`).
+//! Sample start/loop bytes come from APU RAM at `sample_directory * 0x100 + source * 4`; skipped when `sample_source == 0`.
+
 use egui::Color32;
 use egui::Context;
 use egui::Stroke;

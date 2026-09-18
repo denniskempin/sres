@@ -1,3 +1,6 @@
+//! 256-entry SPC700 opcode table (`build_opcode_table`).
+//!
+//! `instruction!` macros generate a unique `InstructionDef` per opcode so operand modes inline.
 use super::Spc700;
 use super::Spc700Bus;
 use crate::common::address::Address;

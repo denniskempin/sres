@@ -1,6 +1,6 @@
-//! Each instruction in the [opcode table](build_opcode_table) has an associated
+//! Addressing modes and operand decode/load/store for the SPC700.
 //!
-//! address mode, which is decoded here to handle how the operand is loaded and stored.
+//! Decode (`Operand::decode`) is separate from `DecodedOperand` load/store so an instruction can decode once and access multiple times.
 use core::panic;
 
 use intbits::Bits;

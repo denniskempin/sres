@@ -1,4 +1,5 @@
-//! Fuzzer that loads random SFC data
+//! libfuzzer bin `sfc`: feed input bytes to the cartridge SFC loader.
+//! Discards the loader `Result`; a parse `Err` is a successful iteration.
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;

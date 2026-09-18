@@ -1,4 +1,5 @@
-//! Color types and image abstraction
+//! SNES `Rgb15` (5-bit/channel), host `Rgba32`, palette `ColorIdx`, and `Image`.
+//! `Image` is implemented by egui (`sres_egui`) and by `image` in PPU tests.
 use std::ops::Add;
 use std::ops::Div;
 

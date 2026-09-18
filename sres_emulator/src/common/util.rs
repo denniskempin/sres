@@ -1,4 +1,5 @@
-//! General utility functions and types.
+//! `RingBuffer` (newest-first, capacity `N`), `EdgeDetector`, and hex memory dumps.
+//! `consume_rise`/`consume_fall` clear the latched edge.
 use std::collections::vec_deque::Iter;
 use std::collections::VecDeque;
 use std::io::BufWriter;

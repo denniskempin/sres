@@ -1,3 +1,5 @@
+//! `SystemImpl<PpuT, ApuT>` orchestration: CPU, `MainBusImpl`, debugger, pending framebuffer.
+//! `System` aliases `BatchedSystem`. `debugger().enable()` does not set `debugger_enabled` (per-step device sync).
 pub mod apu;
 pub mod common;
 pub mod components;

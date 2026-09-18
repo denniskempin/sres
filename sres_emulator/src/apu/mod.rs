@@ -1,4 +1,5 @@
-//! Dummy implementation of the audio processing unit.
+//! APU integration layer: `Apu` clocks `Spc700<ApuBus>` and fills `AudioBuffer`.
+//! `update_clock` runs `catch_up_and_promote_channel_out` (SPC catch-up, then deferred CPUIO promotion).
 mod apu_bus;
 mod test;
 mod timers;
