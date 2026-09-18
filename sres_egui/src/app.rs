@@ -1,5 +1,6 @@
-//! `EmulatorApp` (`eframe::App`): home screen until a cartridge is loaded, then `emulator_ui`.
+//! `EmulatorApp` (`eframe::App::ui`): home screen until a cartridge is loaded, then `emulator_ui`.
 //! `load_cartridge` builds `System::with_cartridge` and enables the debugger.
+//! File drops load `.sfc` from `ui()` (native path/bytes, WASM `bytes_async`).
 //! Debugger-off run uses `execute_for_audio_samples`; present via `swap_video_frame` / `AudioOutput::update`.
 
 use std::collections::HashMap;
@@ -86,41 +87,61 @@ impl EmulatorApp {
         self.audio_output.start();
     }
 
+    fn consume_dropped_rom(&mut self, ui: &Ui) {
+        let dropped = ui.input(|input| input.raw.dropped_files.first().cloned());
+        if let Some(drop) = dropped {
+            self.load_dropped_file(&drop);
+        }
+        #[cfg(target_arch = "wasm32")]
+        self.load_pending_dropped_rom();
+    }
+
     fn load_dropped_file(&mut self, drop: &DroppedFileHandle) {
         let path = drop.path();
-        match path.extension().and_then(OsStr::to_str) {
-            Some("sfc") => {
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    if path.is_file() {
-                        self.load_cartridge(Cartridge::with_sfc_file(path).unwrap());
+        if path.extension().and_then(OsStr::to_str) != Some("sfc") {
+            log::warn!("Ignoring dropped file {path:?}: not an .sfc ROM");
+            return;
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let result = if path.is_file() {
+                Cartridge::with_sfc_file(path)
+            } else {
+                match drop.bytes() {
+                    Ok(bytes) => Cartridge::with_sfc_data(&bytes, None),
+                    Err(err) => {
+                        log::error!("Failed to read dropped file {path:?}: {err}");
                         return;
                     }
-                    let bytes = drop.bytes().expect("Failed to read dropped file");
-                    self.load_cartridge(Cartridge::with_sfc_data(&bytes, None).unwrap());
                 }
-                #[cfg(target_arch = "wasm32")]
-                {
-                    let pending = self.pending_dropped_rom.clone();
-                    let drop = drop.clone();
-                    wasm_bindgen_futures::spawn_local(async move {
-                        match drop.bytes_async().await {
-                            Ok(bytes) => *pending.lock().unwrap() = Some(bytes),
-                            Err(err) => log::error!("Failed to read dropped file: {err}"),
-                        }
-                    });
+            };
+            match result {
+                Ok(cartridge) => self.load_cartridge(cartridge),
+                Err(err) => log::error!("Failed to load dropped ROM {path:?}: {err}"),
+            }
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let pending = self.pending_dropped_rom.clone();
+            let drop = drop.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                match drop.bytes_async().await {
+                    Ok(bytes) => *pending.lock().unwrap() = Some(bytes),
+                    Err(err) => log::error!("Failed to read dropped file: {err}"),
                 }
-            }
-            _ => {
-                panic!("Unknown file type");
-            }
+            });
         }
     }
 
     #[cfg(target_arch = "wasm32")]
     fn load_pending_dropped_rom(&mut self) {
         if let Some(bytes) = self.pending_dropped_rom.lock().unwrap().take() {
-            self.load_cartridge(Cartridge::with_sfc_data(&bytes, None).unwrap());
+            match Cartridge::with_sfc_data(&bytes, None) {
+                Ok(cartridge) => self.load_cartridge(cartridge),
+                Err(err) => log::error!("Failed to load dropped ROM: {err}"),
+            }
         }
     }
 
@@ -207,14 +228,6 @@ impl EmulatorApp {
         puffin::GlobalProfiler::lock().new_frame();
         let start = Instant::now();
 
-        // Load new program if a file is dropped on the app
-        let dropped = ui.input(|input| input.raw.dropped_files.first().cloned());
-        if let Some(drop) = dropped {
-            self.load_dropped_file(&drop);
-        }
-        #[cfg(target_arch = "wasm32")]
-        self.load_pending_dropped_rom();
-
         egui::Panel::top("menu_bar").show(ui, |ui| {
             self.menu_bar(ui);
         });
@@ -268,6 +281,7 @@ impl EmulatorApp {
 
 impl eframe::App for EmulatorApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
+        self.consume_dropped_rom(ui);
         if self.loaded_cartridge.is_none() {
             home::home_screen(ui, |cartridge| {
                 self.load_cartridge(cartridge);

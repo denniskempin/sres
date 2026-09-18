@@ -1,5 +1,5 @@
 //! `event_filter_widget` parses `EventFilter` from text or toggles quick-add ranges.
-//! Callers pass either `break_points` or `log_points`; the widget does not distinguish them.
+//! Callers pass `break_points` or `log_points` plus owned `EventFilterInputState`.
 
 use egui::TextStyle;
 use egui::Ui;
