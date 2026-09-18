@@ -22,7 +22,7 @@ Highest value per token: facts that cannot be inferred from the code in one step
 | `//!` header | 1 to 4 lines: what the file owns and the one thing to know before editing it. | Declarative |
 
 Rules:
-- One home per fact. Everywhere else is a pointer. Anti-pattern: the `$2100`/`$4200` register routing table currently appears in root `AGENTS.md`, `sres_emulator/src/main_bus/AGENTS.md`, and the code-review skill's review guide.
+- One home per fact. Everywhere else is a pointer. Anti-pattern: repeating the `$2100`/`$4200` register routing table in root `AGENTS.md`, a directory `AGENTS.md`, and the code-review skill's review guide.
 - Inferable-content test: if `ls` or one `rg` reproduces it, it does not go in `AGENTS.md`. Anti-pattern: the 30-row register-to-handler table in `sres_emulator/src/components/ppu/AGENTS.md`. Register semantics live in `docs/index.md`.
 - A rule that clippy, a test, or `sres_emulator/src/components/mod.rs` already enforces gets one line pointing at the enforcement.
 - A leaf never contradicts the root silently. When it must differ, name the exception and the reason: "Trace tests here use `SyncSystem`, not the default `System`, because batched updates shift register-boundary timing."
