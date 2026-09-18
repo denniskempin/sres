@@ -1,4 +1,4 @@
-//! Implementation of VRAM containing tile and tilemap data.
+//! 64 KiB word VRAM (`Vram`). `VMAIN` sets increment 1/32/128 and after-low vs after-high; remapping bits log error and are ignored.
 use bitcode::Decode;
 use bitcode::Encode;
 use intbits::Bits;
