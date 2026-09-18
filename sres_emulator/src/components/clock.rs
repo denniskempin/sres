@@ -307,7 +307,7 @@ impl Clock {
 
     pub fn hdot(&self) -> u64 {
         let mut counter = self.h_counter;
-        if self.f % 2 == 0 || self.v != 240 {
+        if self.f.is_multiple_of(2) || self.v != 240 {
             // Dot 323 and 327 take 6 cycles on non-short scanlines.
             if self.h_counter > 1292 {
                 counter -= 2;

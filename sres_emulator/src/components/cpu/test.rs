@@ -9,11 +9,11 @@ use std::io::BufRead;
 use std::path::PathBuf;
 
 use itertools::Itertools;
+use liblzma::read::XzDecoder;
 use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
-use xz2::read::XzDecoder;
 
 use super::Cpu;
 use super::StatusFlags;
@@ -146,7 +146,7 @@ fn run_tomharte_test(test_name: &str) {
         println!(
             "Case {:2X}: {}",
             opcode,
-            &test_case.initial.create_cpu().debug().state()
+            test_case.initial.create_cpu().debug().state()
         );
         println!(
             "Result: {}",

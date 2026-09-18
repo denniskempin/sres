@@ -7,16 +7,21 @@ use egui::TextStyle;
 use sres_emulator::System;
 
 use super::event::event_filter_widget;
+use super::event::EventFilterInputState;
 use super::syntax::log_line;
 use crate::debug::InternalLink;
 
 pub struct LogViewer {
     is_open: bool,
+    event_filter_input: EventFilterInputState,
 }
 
 impl LogViewer {
     pub fn new() -> Self {
-        Self { is_open: false }
+        Self {
+            is_open: false,
+            event_filter_input: EventFilterInputState::default(),
+        }
     }
 
     pub fn toggle(&mut self) {
@@ -24,11 +29,15 @@ impl LogViewer {
     }
 
     pub fn show(&mut self, ctx: &Context, emulator: &System, selected: &mut InternalLink) {
+        let Self {
+            is_open,
+            event_filter_input,
+        } = self;
         egui::Window::new("Log Viewer")
-            .open(&mut self.is_open)
+            .open(is_open)
             .show(ctx, |ui| {
                 let mut debugger = emulator.debugger();
-                event_filter_widget(ui, &mut debugger.log_points);
+                event_filter_widget(ui, &mut debugger.log_points, event_filter_input);
 
                 ui.separator();
 

@@ -204,7 +204,7 @@ impl DspEnvelope {
             return false; // Infinite period
         }
 
-        (global_counter.wrapping_add(offset)) % period == 0
+        (global_counter.wrapping_add(offset)).is_multiple_of(period)
     }
 }
 
@@ -457,8 +457,6 @@ impl Display for GainMode {
 #[cfg(test)]
 mod test {
     use std::path::PathBuf;
-
-    use bilge::prelude::*;
 
     use super::*;
     use crate::common::test_util::compare_wav_against_golden;
