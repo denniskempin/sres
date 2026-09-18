@@ -14,7 +14,7 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 
 1. `SystemImpl.debugger_enabled` is not `Debugger.enabled`. Only `debug_until` sets the former, which `sync()`s PPU/APU on every CPU `step()`. `debugger().enable()` (UI, `trace_step_iter`) writes `DEBUG_EVENTS_ENABLED` only.
 2. `Debugger::enable()` / `disable()` are the only stores of process-wide `DEBUG_EVENTS_ENABLED` (zero-cost path: root). `disable()` on one instance turns collection off for the process.
-3. `ExecutionResult::Halt` only if the CPU is already halted at entry. Reaching halt during `execute_until_halt` returns `Normal` after `ppu.sync()` + `apu.sync()`. `Break` skips that flush.
+3. `execute_until` returns `Halt` when `cpu.halted()` is true at the start of a loop iteration, including after halt mid-run if the target is not yet met. `execute_until_halt` uses `should_break = halted()`, so reaching halt during that call returns `Normal` after `ppu.sync()` + `apu.sync()`. `Break` skips that flush.
 4. `force_headless()` skips `draw_scanline`; PPU clock still advances.
 5. Do not hold `SystemDebug` across `SystemDebug::trace_step_iter()` (borrow conflict). That call clears log points and logs only `EventFilter::CpuStep` and `Spc700Step`; `pop_oldest_trace_step` panics on any other `DebugEvent`.
 6. A pending video frame not consumed by `swap_video_frame` is overwritten on the next vblank rise.
