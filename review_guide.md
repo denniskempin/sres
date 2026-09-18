@@ -1,6 +1,6 @@
 # Code Review Guide
 
-Patterns and conventions a code owner should enforce when reviewing SRES pull requests. This guide complements [AGENTS.md](AGENTS.md) with review-focused checklists. When in doubt, the nearest subdirectory `AGENTS.md` is authoritative for that area.
+Patterns and conventions a code owner should enforce when reviewing SRES pull requests. This guide holds only review checks. Architecture, commands, system variants, test taxonomy, and error-handling policy live in [AGENTS.md](AGENTS.md); per-directory facts live in the nearest subdirectory `AGENTS.md`, which is authoritative for that area.
 
 ---
 
@@ -8,7 +8,7 @@ Patterns and conventions a code owner should enforce when reviewing SRES pull re
 
 ### Layer boundaries
 
-SRES is organized in strict layers. Reject PRs that violate this dependency graph:
+Reject PRs that violate this dependency graph:
 
 ```
 sres_egui ──► sres_emulator (public API only)
@@ -47,13 +47,7 @@ common ──► (no emulator layers)
 
 ## 2. System Variants
 
-Choose the correct `SystemImpl` wrapper. This is a common source of flaky or meaningless tests.
-
-| Variant | Alias | PPU/APU timing | Use when |
-|---------|-------|----------------|----------|
-| `BatchedSystem` | `System` | Buffered; flushed at sync points | Default: UI, golden-image/WAV, ROM-outcome tests |
-| `SyncSystem` | — | Cycle-accurate every CPU step | BSNES trace comparison, register-boundary timing bugs |
-| `AsyncSystem` | — | APU on background thread | Benchmarks / perf exploration only |
+The variant table is in [AGENTS.md](AGENTS.md#system-variants). Wrong variant choice is a common source of flaky or meaningless tests.
 
 **Reject:**
 - Trace tests using `System` instead of `SyncSystem`
@@ -64,14 +58,9 @@ Choose the correct `SystemImpl` wrapper. This is a common source of flaky or mea
 
 ### Frontend execution contract
 
-The UI must drive emulation through the public `System` API:
+The UI drives emulation only through the public `System` API (call chain in [AGENTS.md](AGENTS.md#entry-point-call-chain)).
 
-1. `execute_frames` / `execute_for_audio_samples` — advance emulation
-2. `swap_video_frame` — present only when it returns `true` (vblank rise)
-3. `swap_audio_buffer` — exchange audio buffer
-4. `update_joypads` — input
-
-Do not call `cpu.step()` or reach into `MainBusImpl` from the frontend.
+**Reject:** `cpu.step()` calls or `MainBusImpl` access from `sres_egui`; presenting a frame when `swap_video_frame` returned `false`.
 
 ---
 
@@ -98,54 +87,37 @@ Every mutating `read_*` should have a matching `peek_*`. Tests inspecting RAM af
 
 ### Main bus routing & clock ordering
 
-Register routing is owned by `MainBusImpl`:
-
-| Range | Handler |
-|-------|---------|
-| `$2100–$213F` | PPU |
-| `$2140–$217F` | APU |
-| `$4200`, `$4207–$420A`, `$4210–$4212` | Clock |
-| `$4202–$4206` write / `$4214–$4217` read | Multiplication unit |
-| `$420B`, `$420C`, `$4300–$43FF` | DMA controller |
-| `$4218–$421B` | Joypads |
+Register routing is owned by `MainBusImpl`; the range table is in `sres_emulator/src/main_bus/AGENTS.md`.
 
 In `advance_master_clock`, ordering matters: **DMA → clock tick → PPU/APU `update_clock`**. CPU memory access advances clock inside `cycle_read_u8`/`cycle_write_u8`, then notifies devices.
 
-**Reject:** Components calling `advance_master_clock` themselves; PPU reading `$4212` HVBJOY (that belongs to `Clock`).
+**Reject:** Components calling `advance_master_clock` themselves; PPU reading `$4212` HVBJOY (that belongs to `Clock`); new register handling added outside `MainBusImpl` routing.
 
 ---
 
 ## 4. Timing & Performance Patterns
 
+The patterns themselves (master clock, lazy APU catch-up, scanline rendering, zero-cost debug events) are described in [AGENTS.md](AGENTS.md#key-design-patterns). Checks:
+
 ### Master clock
 
-- `Clock` in `components/clock.rs` is the single timing source (`master_clock`, scanline `v`, frame `f`).
-- Components receive `ClockInfo`; they do not increment global time independently.
-- PPU renders one scanline at a time on scanline change; frame swap happens at vblank rise in `SystemImpl::step`.
+**Reject:** A component incrementing time on its own instead of receiving `ClockInfo`; frame swap anywhere other than vblank rise in `SystemImpl::step`.
 
 ### Lazy APU catch-up
 
-SPC700 advances only at sync points — **not every CPU cycle**:
-
-- APUIO read/write (via `catch_up_to_master_clock`)
-- Audio sample boundaries (`CYCLES_PER_SAMPLE` ≈ 671 master cycles)
-- End of `Apu::update_clock`
+Sync points are APUIO read/write (`catch_up_to_master_clock`), audio sample boundaries (`CYCLES_PER_SAMPLE`), and the end of `Apu::update_clock`.
 
 **Reject:** `spc700.step()` in `MainBusImpl::advance_master_clock`; APUIO access without prior catch-up.
 
 ### Batched device sync
 
-- `BatchedBusDeviceU24::read()` flushes before returning.
-- `execute_until`, vblank rise, and debugger stepping call `ppu.sync()` / `apu.sync()`.
-- Writes are buffered; reads force flush.
+`execute_until`, vblank rise, and debugger stepping call `ppu.sync()` / `apu.sync()`; `BatchedBusDeviceU24::read()` flushes before returning.
 
 **Reject:** Removing `sync()` calls for performance without benchmark + trace regression evidence.
 
 ### Zero-cost debug events
 
-- Components hold `DebugEventCollectorRef<T>`; emit via `on_event` / `on_error`.
-- Hot path: `DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed)` guard, then `#[cold]` dispatch.
-- Debugger off by default.
+Hot path is `DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed)` guard, then `#[cold]` dispatch.
 
 **Reject:** Unconditional `Mutex::lock()` on every cycle; `println!` in hot bus paths; always-on trace collection.
 
@@ -153,15 +125,7 @@ SPC700 advances only at sync points — **not every CPU cycle**:
 
 ## 5. Error Handling
 
-Three-tier model — this is non-negotiable:
-
-| Situation | Behavior |
-|-----------|----------|
-| Unimplemented/unmapped hardware | Return `0` on read; silently ignore write; emit `on_error` |
-| Known partial features (HDMA, serial joypad) | `log::warn!` |
-| Internal logic bugs (impossible operand, invariant violation) | `panic!` / `unreachable!` acceptable |
-| Fuzz targets / arbitrary input | Must never panic |
-| File/ROM loading | `anyhow::Result` at boundary |
+The policy for unimplemented and unmapped hardware is in [AGENTS.md](AGENTS.md#error-handling--unimplemented-hardware). Two tiers it does not spell out: known partial features (HDMA, serial joypad) use `log::warn!`; file/ROM loading returns `anyhow::Result` at the boundary.
 
 **Reject:**
 - `panic!` on unmapped register access
@@ -227,31 +191,29 @@ The codebase currently has zero `unsafe` blocks. New `unsafe` requires strong ju
 
 ## 7. Component-Specific Checks
 
+Per-component structure is in each component's `AGENTS.md`. Invariants to enforce:
+
 ### CPU / SPC700
 
-- Expected file layout: `mod.rs`, `status.rs`, `operands.rs`, `opcode_table.rs`, `instructions.rs`, `debug.rs`, `test.rs`
 - Opcode table built at construction (not `static`) — closures monomorphize over `BusT`
 - Operand panics only for impossible enum variants
 - SPC700: explicit bus cycles via `cycle_read_u8` / `cycle_write_u8` / `cycle_io`; no `main_bus` imports
 
 ### PPU
 
-- Scanline renderer: `draw_scanline` on scanline change; visible area only (`screen_y < 224`)
-- Register handlers: `write_<REG>`, `read_<reg>`, `peek_<reg>` using hardware names
+- Rendering only in `draw_scanline`, visible area only (`screen_y < 224`)
+- Register handlers named `write_<reg>`, `read_<reg>`, `peek_<reg>` after the hardware register
 - Generic `TileDecoder` with `PhantomData` — no trait objects in hot path
-- Submodules: `vram.rs`, `cgram.rs`, `oam.rs`, `debug.rs`
 
 ### S-DSP
 
-- `generate_sample(memory: &[u8])` pure over RAM
-- Voice logic in `voice.rs`, BRR in `brr.rs`
-- Golden WAV tests for decoder isolation
+- `generate_sample(memory: &[u8])` stays pure over RAM
+- New decoder logic gets a golden WAV test in isolation
 
 ### APU integration (`apu/`)
 
 - Orchestrates SPC700 + S-DSP; does not duplicate component logic
-- `ApuBus` implements `Spc700Bus` + `Bus<AddressU16>`
-- Timers in `apu/timers.rs`, not a new component
+- Timers stay in `apu/timers.rs`, not a new component
 
 ---
 
@@ -259,23 +221,18 @@ The codebase currently has zero `unsafe` blocks. New `unsafe` requires strong ju
 
 ### Test taxonomy
 
-| Test type | Location | System | Assertion |
-|-----------|----------|--------|-----------|
-| Trace-comparison | `tests/rom_tests/` | `SyncSystem` | `CpuState`/`Spc700State` string vs BSNES |
-| ROM-outcome | `tests/rom_tests/` | `System` | Memory at `stp` via `peek_range` |
-| Golden-image | `tests/ppu_tests/` | `System` | PNG byte match |
-| Golden-WAV | `tests/apu_tests/` | `System` | WAV byte match |
-| Unit (CPU/SPC) | `components/*/test.rs` | `TestBus` / mock collector | JSON traces, cycles |
-| Fuzz | `fuzz/` | — | No panic on arbitrary input |
+The four integration test types are in [AGENTS.md](AGENTS.md#testing-strategy). Two more: unit tests in `components/*/test.rs` run on `TestBus` against TomHarte JSON traces; fuzz targets in `fuzz/` assert no panic on arbitrary input.
 
 ### Asset conventions
 
-| Asset | Naming | LFS | On mismatch |
-|-------|--------|-----|-------------|
-| Trace ROM | `{name}.sfc` + `{name}-trace.log.xz` | Yes | Test fails |
-| Framebuffer | `{name}-framebuffer.png` | Yes | Write `.actual.png`, panic |
-| Audio | `{name}.wav` | Yes | Write `.actual.wav`, panic |
-| Snapshot | `{rom}-{scene}.snapshot` + `.png` | — | Test fails |
+| Asset | Naming | On mismatch |
+|-------|--------|-------------|
+| Trace ROM | `{name}.sfc` + `{name}-trace.log.xz` | Test fails |
+| Framebuffer | `{name}-framebuffer.png` | Write `.actual.png`, panic |
+| Audio | `{name}.wav` | Write `.actual.wav`, panic |
+| Snapshot | `{rom}-{scene}.snapshot` + `.png` | Test fails |
+
+Binary assets are committed directly to git (no LFS).
 
 **Reject:**
 - Committing `.actual.png`/`.actual.wav` as goldens
@@ -323,38 +280,26 @@ Do not commit `corpus/`, `artifacts/`, `coverage/`.
 - Module files start with `//!` describing purpose (1–4 lines).
 - Hardware registers documented with bit diagrams where non-obvious (see DMA in `main_bus/dma.rs`).
 - Non-obvious timing/quirks get a short comment — do not restate the code.
-- Cross-cutting architecture goes in nearest `AGENTS.md`, not duplicated in every file.
-- Update `AGENTS.md` when changing architecture or test strategy.
+- Cross-cutting architecture goes in the root `AGENTS.md`; directory facts in the nearest `AGENTS.md`; nothing duplicated across levels.
+- `AGENTS.md` and `//!` edits follow `.cursor/skills/write-agents-docs/SKILL.md`.
+- Architecture or test-strategy changes update the affected `AGENTS.md` in the same PR.
 
-**Reject:** Stale AGENTS.md after architectural changes; hardware behavior described only in PR description.
+**Reject:** Stale `AGENTS.md` after architectural changes; hardware behavior described only in the PR description; a directory `AGENTS.md` restating root content.
 
 ---
 
 ## 10. Tooling & CI
 
-All PRs should pass `./check-all.sh` (or CI equivalent):
-
-| Check | Command |
-|-------|---------|
-| Tests | `cargo nextest run --workspace` |
-| WASM | `cd sres_egui && trunk build` |
-| Clippy | `cargo clippy --workspace --all-targets` |
-| Format | `cargo fmt --check` |
+All PRs pass `./check-all.sh` (commands listed in [AGENTS.md](AGENTS.md#commands)). CI additionally runs `cargo clippy --workspace --all-targets`, which `check-all.sh` does not; run it locally when touching tests or benches.
 
 ### Formatting (`rustfmt.toml`)
 
-- Nightly Rust required (`rust-toolchain.toml`)
 - `imports_granularity = "Item"` — one symbol per `use` line
 - `group_imports = "StdExternalCrate"` — std → external → crate
 
-### Clippy allows (existing — do not expand without reason)
+### Clippy allows
 
-| Lint | Where | Why |
-|------|-------|-----|
-| `new_without_default` | `System::new`, `Apu::new`, PPU | Constructors need injected deps |
-| `single_match` | `main_bus`, `s_dsp`, `test_bus` | Intentional partial match |
-| `enum_variant_names` | debugger | Event enum naming |
-| `suspicious_arithmetic_impl` | address types | Intentional wrapping |
+Existing `#[allow(clippy::...)]` sites are the full list (`rg 'allow\(clippy'`); each is intentional. Do not add new ones without a comment giving the reason.
 
 **Reject:** `#![allow(clippy::all)]` on modules; stable-only APIs; disabling CI checks instead of fixing root cause.
 
@@ -395,33 +340,6 @@ Use this as a quick gate before approving:
 
 ---
 
-## Quick Reference
-
-| Situation | Mechanism |
-|-----------|-----------|
-| Unmapped SNES register | Return `0` / ignore write + `on_error` |
-| Known missing feature (HDMA) | `log::warn!` |
-| Wrong internal enum/operand | `panic!` / `unreachable!` |
-| Load `.sfc` file | `anyhow::Result` |
-| CPU 8 vs 16 bit | `T: UInt` + M/X dispatch |
-| Address increment | `addr.add(n, Wrap::WrapBank)` |
-| Save state field | `#[derive(Encode, Decode)]` on inner state struct |
-| Default emulation | `BatchedSystem` (`System`) |
-| BSNES trace test | `SyncSystem` |
-| Present frame | `swap_video_frame()` when `true` |
-| Inspect test memory | `peek_range`, not `cycle_read` |
-
----
-
 ## Further Reading
 
-| Topic | Document |
-|-------|----------|
-| Architecture overview | [AGENTS.md](AGENTS.md) |
-| System orchestration | [sres_emulator/src/AGENTS.md](sres_emulator/src/AGENTS.md) |
-| Component rules | [sres_emulator/src/components/AGENTS.md](sres_emulator/src/components/AGENTS.md) |
-| Bus & DMA | [sres_emulator/src/main_bus/AGENTS.md](sres_emulator/src/main_bus/AGENTS.md) |
-| APU integration | [sres_emulator/src/apu/AGENTS.md](sres_emulator/src/apu/AGENTS.md) |
-| Shared types | [sres_emulator/src/common/AGENTS.md](sres_emulator/src/common/AGENTS.md) |
-| Test strategy | [sres_emulator/tests/AGENTS.md](sres_emulator/tests/AGENTS.md) |
-| Hardware reference | [docs/index.md](docs/index.md) |
+[AGENTS.md](AGENTS.md) for architecture; the nearest subdirectory `AGENTS.md` for directory facts (`find . -name AGENTS.md`); [docs/index.md](docs/index.md) for hardware reference.
