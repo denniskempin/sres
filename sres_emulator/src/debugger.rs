@@ -1,7 +1,5 @@
-//! Debugger functionality
-//!
-//! Allows internal components to notify of events during emulation (e.g. memory access),
-//! and allows the front end to set and detect breakpoints on those events.
+//! `Debugger` breakpoints, log points, and a 16384-event `DebugEvent` ring.
+//! `enable()`/`disable()` are the only writers of process-wide `DEBUG_EVENTS_ENABLED`.
 
 use std::fmt::Display;
 use std::fmt::UpperHex;

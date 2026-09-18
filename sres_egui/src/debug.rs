@@ -1,3 +1,6 @@
+//! `DebugUi` shell: `DebugCommand` stepping, panels, and `InternalLink` routing into `debug/` windows.
+//! Starts on `DebugCommand::Pause`; `run_emulator` is the only debug-mode `System` driver.
+
 mod apu;
 mod cpu;
 mod event;

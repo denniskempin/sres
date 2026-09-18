@@ -1,4 +1,5 @@
-//! Implementation of multiplication registers
+//! `MultiplicationUnit`: hardware multiply/divide at `$4202–$4217`.
+//! `$4203`/`$4206` compute immediately. Divisor 0 → quotient and remainder `0xFFFF`.
 use crate::common::address::AddressU24;
 use crate::common::uint::U16Ext;
 

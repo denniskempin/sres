@@ -1,3 +1,6 @@
+//! Frontend helpers: `RingBuffer`, `EguiImageImpl` (`Image` → egui `ColorImage`), and `Instant`.
+//! `Instant` is `std::time::Instant` natively and `Date.now()` milliseconds on WASM.
+
 use std::collections::vec_deque::Iter;
 use std::collections::VecDeque;
 #[cfg(target_arch = "wasm32")]

@@ -1,3 +1,6 @@
+//! `LogViewer`: `event_filter_widget` on `debugger.log_points`, then `log_line` over `log.stack` reversed (oldest first).
+//! Vertical scroll sticks to bottom; address clicks write `InternalLink`.
+
 use egui::Context;
 use egui::ScrollArea;
 use egui::TextStyle;

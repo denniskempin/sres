@@ -1,9 +1,6 @@
-//! Combines [AddressModes]s with instruction implementations to form the opcode table.
-//!
-//! The code is designed so that each opcode gets a unique function that can be optimized by
-//! the compiler specifically for that combination of instruction and address mode.
-//!
-//! To reduce repetitive code, macros are used to build those unique functions.
+//! Combines `AddressMode`s with instruction bodies into the 256-entry opcode table.
+//! Each opcode gets a unique function so the compiler can specialize that instruction/mode pair.
+//! Macros generate those functions.
 use super::operands::AccessMode;
 use super::operands::AddressMode;
 use super::operands::Operand;

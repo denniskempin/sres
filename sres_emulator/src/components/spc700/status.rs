@@ -1,3 +1,6 @@
+//! SPC700 PSR flags (`Spc700StatusFlags`).
+//!
+//! `direct_page` (P) selects DP page `0x00` vs `0x01`. Display/`FromStr` as `nvpbhiZc`.
 use std::fmt::Display;
 use std::str::FromStr;
 

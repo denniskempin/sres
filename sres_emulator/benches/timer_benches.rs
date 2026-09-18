@@ -1,5 +1,5 @@
-//! Benchmark that measures the performances of `PpuTimer::advance_master_clock`.
-//! This function is simple, but called very often during execution.
+//! Criterion micro-bench of `Clock::advance_master_clock`.
+//! One iteration is `44671` steps of `8` master cycles (`357368` = `262 * 1364`, one NTSC frame without the short scanline).
 use std::hint::black_box;
 
 use criterion::criterion_group;

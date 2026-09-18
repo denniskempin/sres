@@ -1,3 +1,6 @@
+//! `EMBEDDED_ROMS` catalog (`CategoryInfo`, `RomFileInfo`).
+//! Bytes are `include!`d from build-generated `OUT_DIR/embedded_roms_generated.rs`.
+
 pub struct CategoryInfo {
     pub name: &'static str,
     pub roms: &'static [RomFileInfo],

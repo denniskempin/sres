@@ -1,3 +1,5 @@
+//! `ManagedBusDeviceU24` wrappers: `SyncBusDevice`, `BatchedBusDeviceU24`, `AsyncBusDeviceU24`.
+//! Batched/async `read()` flushes; `peek()` does not (may be stale).
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::mpsc::sync_channel;

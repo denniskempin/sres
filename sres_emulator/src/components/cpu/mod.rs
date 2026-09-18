@@ -1,4 +1,5 @@
-//! Implementation of the 65816 main cpu of the SNES.
+//! W65C816 CPU (`Cpu`). `step()` runs one instruction then polls NMI/IRQ.
+//! `MainBus` is `Bus<AddressU24>` plus `consume_nmi_interrupt` / `consume_timer_interrupt`.
 mod debug;
 mod instructions;
 mod opcode_table;

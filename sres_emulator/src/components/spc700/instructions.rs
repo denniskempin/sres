@@ -1,3 +1,6 @@
+//! SPC700 instruction bodies (one method per mnemonic).
+//!
+//! Mapped by `build_opcode_table`. Insert explicit `cycle_io` / `cycle_read_u8` to match hardware.
 use intbits::Bits;
 
 use super::operands::Operand;

@@ -1,3 +1,5 @@
+//! `CpuDebug` / `CpuState` for traces and disassembly.
+//! `CpuState::parse_mesen_trace` parses Mesen lines; `Display` emits BSNES-style traces.
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;

@@ -1,3 +1,7 @@
+//! Syntax-colored `cpu_disassembly_line` and `log_line` for every `DebugEvent` variant.
+//! CPU clicks write `InternalLink::CpuMemory` / `CpuProgramCounter`; `ADDR_ANNOTATIONS` names MMIO.
+//! `ApuBus` rows use `label_addr` without setting `InternalLink`.
+
 use std::collections::HashMap;
 
 use egui::Color32;

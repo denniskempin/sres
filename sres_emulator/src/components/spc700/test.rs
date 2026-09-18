@@ -1,7 +1,6 @@
-//! Executes SPC700 tests using test data at https://github.com/TomHarte/ProcessorTests
+//! TomHarte ProcessorTests harness for the SPC700 (`test/{0x..fx}.json.xz`).
 //!
-//! The data provides thousands of test cases with initial CPU state and expected CPU state after
-//! executing one instruction.
+//! Each case builds `Spc700<TestBus>`, `step()`s once, and compares registers, memory, and bus cycles.
 #![cfg(test)]
 
 use std::collections::HashMap;

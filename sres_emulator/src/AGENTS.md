@@ -1,41 +1,46 @@
 # `sres_emulator/src`
 
-Root of the `sres_emulator` library crate. System orchestration, debugger, controller input, and module declarations.
+Library crate root: `SystemImpl` orchestration, `StandardController` packing, and `Debugger`.
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `lib.rs` | `SystemImpl<PpuT, ApuT>` — owns CPU, debugger, framebuffer. Three variants: `BatchedSystem` (default, batched PPU/APU), `SyncSystem` (cycle-accurate), `AsyncSystem` (threaded APU). |
-| `controller.rs` | `StandardController` — 16-bit packed struct for SNES pad input. `to_u16()` for $4218/$4219 format. |
-| `debugger.rs` | `Debugger` with breakpoints, log points, 16k event ring buffer. `EventFilter` for conditions (PC ranges, memory ops, instructions, interrupts). `TraceStepIter` for stepping. Off by default; call `debugger().enable()`. |
+| File | Owns |
+|------|------|
+| `lib.rs` | `SystemImpl<PpuT, ApuT>`. Owns CPU, `DebuggerRef`, pending `Framebuffer`. |
+| `controller.rs` | `StandardController`. `to_u16()` big-endian pack for `$4218`/`$4219`. |
+| `debugger.rs` | `Debugger`, `EventFilter`, `TraceStep`, `DebuggerRef`. Off until `enable()`. |
+
+## Behaviors & Gotchas
+
+1. `SystemImpl.debugger_enabled` is not `Debugger.enabled`. Only `debug_until` sets the former, which `sync()`s PPU/APU on every CPU `step()`. `debugger().enable()` (UI, `trace_step_iter`) writes `DEBUG_EVENTS_ENABLED` only.
+2. `Debugger::enable()` / `disable()` are the only stores of process-wide `DEBUG_EVENTS_ENABLED` (zero-cost path: root). `disable()` on one instance turns collection off for the process.
+3. `ExecutionResult::Halt` only if the CPU is already halted at entry. Reaching halt during `execute_until_halt` returns `Normal` after `ppu.sync()` + `apu.sync()`. `Break` skips that flush.
+4. `force_headless()` skips `draw_scanline`; PPU clock still advances.
+5. Do not hold `SystemDebug` across `SystemDebug::trace_step_iter()` (borrow conflict). That call clears log points and logs only `EventFilter::CpuStep` and `Spc700Step`; `pop_oldest_trace_step` panics on any other `DebugEvent`.
+6. A pending video frame not consumed by `swap_video_frame` is overwritten on the next vblank rise.
+
+## Integration
+
+- Frontends and tests construct `System` / `SyncSystem` / `AsyncSystem` (when to pick: root).
+- `SystemImpl` owns `Cpu<MainBusImpl<PpuT, ApuT>>`. Device wrappers: `main_bus/devices.rs`.
+- `update_joypads` stores raw `u16` on `MainBusImpl` (`$4218`–`$421B`). Pack with `StandardController::to_u16()`.
+
+## Gaps
+
+- HDMA and FastROM: unimplemented; see root. `main_bus/` in this crate is DMA only.
+- Serial joypad `$4016`/`$4017`: unimplemented in `main_bus` (read returns `0`). This layer packs auto-read `$4218`–`$421B` only.
+
+## Tests
+
+- Unit tests live in `debugger.rs` (`EventFilter` parse/format). `lib.rs` and `controller.rs` have none.
+- `cargo nextest run -p sres_emulator --lib`
+- Debugger-only: `cargo nextest run -p sres_emulator --lib -E 'test(debugger::)'`
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
 | `common/` | Shared types, traits, utilities. |
-| `components/` | Reusable components: CPU, PPU, S-DSP, SPC700, cartridge, clock. |
-| `apu/` | APU integration: SPC700 + S-DSP orchestration, timers, APUIO. |
-| `main_bus/` | System bus: memory mapping, DMA/HDMA, device wrappers, interrupts. |
-
-## `lib.rs` Key Details
-
-**Execution methods** (all return `ExecutionResult`):
-- `execute_one_instruction()`, `execute_until_halt()`, `execute_frames(n)`, `execute_scanlines(n)`, `execute_cycles(n)`, `execute_for_audio_samples(n)`, `execute_for_duration(s)`, `debug_until(event_filter)`
-
-**Output:**
-- `swap_video_frame(&mut Framebuffer)` — true on vblank rise
-- `swap_audio_buffer(&mut AudioBuffer)` — exchanges APU sample buffer
-- `update_joypads(joy1, joy2)` — writes to main bus
-- `force_headless()` — disables PPU rendering
-
-**Debug:**
-- `TraceStepIter` yields `TraceStep::Cpu(CpuState)` or `Spc700(Spc700State)`
-- `SystemDebug<'a>` exposes `PpuDebug` + `ApuDebug` (do not hold across `trace_step_iter()` calls)
-
-## Patterns
-
-- **Lazy APU catch-up**: APU advances at sample boundaries and APUIO accesses, not every cycle.
-- **Vblank frame swap**: New frame available on vblank rise only.
-- **Debugger zero-cost**: Events only emitted when `DEBUG_EVENTS_ENABLED` is true.
+| `components/` | Independent hardware: CPU, PPU, S-DSP, SPC700, cartridge, clock. |
+| `apu/` | SPC700 + S-DSP orchestration. |
+| `main_bus/` | Memory map, DMA, device wrappers, interrupts. |

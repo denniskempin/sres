@@ -1,3 +1,4 @@
+//! 32 kHz mono i16 WAV helpers. `compare_wav_against_golden` writes the golden if missing.
 use std::path::Path;
 
 use hound::WavReader;

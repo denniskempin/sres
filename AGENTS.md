@@ -96,7 +96,8 @@ Golden files are auto-created on first run; verify them before committing. Misma
 - **Unmapped memory**: same — return `0` + emit error.
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **HDMA**: not implemented; `$420C` write logs a warning.
-- **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware.
+- **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
+- **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware. Exception: PPU `decode_bgmode` panics on BG modes 4/6/7 (see `sres_emulator/src/components/ppu`).
 - **Fuzz targets** explicitly test that arbitrary input never panics.
 
 ## Reference
@@ -107,14 +108,14 @@ Golden files are auto-created on first run; verify them before committing. Misma
 
 ## Subdirectory AGENTS.md Files
 
-Each module and test directory under `sres_emulator/` has its own `AGENTS.md` (`find . -name AGENTS.md`). Read the nearest one before editing. Directory files hold local facts and never restate this file.
+Each module and test directory under `sres_emulator/` and `sres_egui/src` has its own `AGENTS.md` (`find . -name AGENTS.md`). Read the nearest one before editing. Directory files hold local facts and never restate this file.
 
 ## Environment Gotchas
 
 - **Nightly Rust**: Required. `rust-toolchain.toml` specifies channel; `rust-src` component needed.
 - **libxkbcommon-x11-0**: Runtime dependency for native egui. Install via `apt` if missing.
-- **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). No fetch step is needed.
-- **xa65 assembler**: Needed only to re-assemble hand-written test ROMs. `sudo apt-get install -y xa65`
+- **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
+- **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only.
 - **cargo-nextest**: Preferred runner. `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
 
 ## Important Agent Rules

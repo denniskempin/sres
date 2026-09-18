@@ -1,46 +1,40 @@
-# rom_tests
+# `sres_emulator/tests/rom_tests`
 
-CPU trace-comparison and ROM-outcome tests. Driven by `sres_emulator/tests/rom_tests.rs`.
+Assets for CPU trace-comparison and DMA ROM-outcome tests driven by `../rom_tests.rs`. `SyncSystem` vs `System` mapping is in root Testing Strategy.
 
 ## Files
 
-| Pattern | Purpose |
-|---------|---------|
-| `*.sfc` | Pre-assembled SNES ROMs (Git LFS) |
-| `*.asm` | Source assembly (bass for krom tests, xa65 for hand-written) |
-| `*-trace.log.xz` | XZ-compressed BSNES execution traces |
-| `process.py` | Trims infinite loops from raw traces and compresses to `.xz` |
-| `lib` | Symlink → `../asm_lib`. Shared assembly includes |
+| Pattern | Owns |
+|---------|------|
+| `krom_*.{sfc,asm}` | krom 65816 opcode ROMs; matching `-trace.log.xz` except `krom_msc` |
+| `ppu_timing.{sfc,asm}` | NOP loop for PPU cycle alignment vs BSNES |
+| `play_noise.{sfc,spc}` | Mixed CPU+SPC700; `play_noise.sfc.asm` `insert`s `play_noise.spc` (`play_noise.spc.asm`) |
+| `dma_{vram,cgram,oam}.{sfc,asm}` | ROM-outcome DMA round-trip through VRAM, CGRAM, or OAM |
+| `*-trace.log.xz` | XZ-compressed BSNES traces (`parse_mesen_trace`) |
+| `process.py` | Renames `*.txt` → `*-trace.log`, trims self-`JMP` loops, `xz` compresses |
 
-## Test Types
+## Behaviors & Gotchas
 
-**Trace-comparison** (`run_rom_test`): Load `.sfc`, stream `-trace.log.xz` line-by-line, advance one CPU step per line, compare `CpuState` strings. Mismatch fails immediately.
+1. `run_rom_test` zips one CPU step per trace line. `play_noise` uses `run_rom_test_with_spc700_trace`: buffers out-of-order CPU vs SPC700 steps (`pending_cpu` / `pending_spc`) and asserts both queues empty on APUIO (`$2140`–`$217F`).
+2. `is_cpu_apuio_access` must run on `actual_cpu` before `assert_cpu_trace_eq`; that helper then sets `effective_addr` to `None` on both sides because open bus is unimplemented (root Error Handling).
+3. Mixed traces: a line shorter than 100 characters parses as `Spc700State`, otherwise `CpuState`. `assert_spc_trace_eq` also clears `operand_str` and `master_cycle`.
+4. `play_noise` returns after trace line `19047`.
+5. `process.py` stops a raw log at the first `JMP` whose PC equals the operand effective address (`ppu_timing` is `jmp Start`). The assemble loop in that file is a commented-out string and is not run.
 
-- 23 `krom_*` tests: Peter Lemon's 65816 CPU opcode tests (ADC, AND, ASL, etc.)
-- `ppu_timing`: NOP loop for PPU cycle alignment
-- `play_noise`: Mixed CPU+SPC700 trace. Uses `run_rom_test_with_spc700_trace`. Buffers out-of-order steps, asserts sync at APUIO accesses (`$2140-$217F`)
+## Integration
 
-**ROM-outcome** (`run_test_rom`): Load `.sfc` into `System`, run until CPU halt (`stp`), inspect memory with `cpu.bus.peek_range(...)`.
+- Crate test binary `rom_tests` in `sres_emulator/tests/rom_tests.rs`.
+- CPU-only traces: `Cartridge::with_sfc_file` into `SyncSystem`, then `cpu_step_iter` vs `trace_log_from_xz_file`.
+- `play_noise`: `trace_step_iter` vs `mixed_trace_log_from_xz_file`.
+- Outcome: `run_test_rom` until `halted()`; `dma_vram`, `dma_cgram`, `dma_oam` compare WRAM `$0000` and `$0100` after DMA copy-back.
 
-- `dma_vram`, `dma_cgram`, `dma_oam`: Verify DMA transfer to/from PPU memory
+## Gaps
 
-## Adding Tests
+- `test_krom_msc` is `#[ignore = "Instructions not implemented yet"]` and has no `krom_msc-trace.log.xz`.
+- `play_noise` comparison is truncated at line `19047`.
 
-**Trace-comparison:**
-1. Create `.sfc` ROM
-2. Generate BSNES trace in Mesen format
-3. Run `process.py` to trim infinite loops and compress to `.xz`
-4. Place files with matching basenames
-5. Add `#[test]` calling `run_rom_test("name")` in `rom_tests.rs`
+## Tests
 
-**ROM-outcome:**
-1. Write assembly that halts with `stp` and leaves verifiable state
-2. Assemble to `.sfc`
-3. Add `#[test]` calling `run_test_rom("name")`, assert on `cpu.bus.peek_range(...)`
-
-## Quirks
-
-- **Open bus**: Not implemented. `effective_addr` is cleared during trace comparison.
-- **CPUMSC initial read**: All trace tests manually write `0x93` to `$000000` before reset. Reason unknown.
-- **Git LFS**: `.sfc` and `.xz` files stored in LFS. Missing objects cause test failures.
-- **Toolchains**: krom tests use **bass**; hand-written tests use **xa65**. Assembled outside Rust build.
+- `cargo nextest run -p sres_emulator --test rom_tests` (parent Tests).
+- One test: `cargo nextest run -p sres_emulator --test rom_tests test_play_noise`
+- Ignored: `cargo nextest run -p sres_emulator --test rom_tests test_krom_msc --run-ignored`

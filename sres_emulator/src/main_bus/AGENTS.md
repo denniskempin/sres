@@ -1,76 +1,46 @@
-# `main_bus`
+# `sres_emulator/src/main_bus`
 
-SNES main system bus (65816 CPU memory map, DMA, device wrappers).
-
----
+`MainBusImpl` is the 65816 memory map: LoRom/HiRom decode, MMIO routing, DMA, and PPU/APU device wrappers.
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `mod.rs` | `MainBusImpl`. Memory maps (LoRom/HiRom), bus read/write/peek, register decode, IRQ/NMI delegation to `Clock`. |
-| `devices.rs` | `ManagedBusDeviceU24` trait. Wrappers: `SyncBusDevice`, `BatchedBusDeviceU24`, `AsyncBusDeviceU24`. |
-| `dma.rs` | `DmaController`. 8 channels, MDMAEN trigger, transfer patterns, timing. HDMA is NOT implemented. |
-| `multiplication.rs` | `MultiplicationUnit`. Hardware multiply/divide via `$4202-$4217`. |
+| File | Owns |
+|------|------|
+| `mod.rs` | `MainBusImpl`. LoRom/HiRom decode, `bus_read`/`bus_write`/`bus_peek`, `advance_master_clock`. |
+| `devices.rs` | `ManagedBusDeviceU24`. `SyncBusDevice`, `BatchedBusDeviceU24`, `AsyncBusDeviceU24`. |
+| `dma.rs` | `DmaController`. `$420B` MDMAEN trigger. |
+| `multiplication.rs` | `MultiplicationUnit`. `$4202–$4217`; `$4203`/`$4206` compute immediately. |
 
----
+## Behaviors & Gotchas
 
-## Core Types
+1. `$420B` sets `dma_pending` only. `cycle_write_u8` advances the clock before the write. The next `advance_master_clock` latches `dma_active` via `update_state`; a later call runs `pending_transfers` before `Clock` ticks and PPU/APU `update_clock`.
+2. `cycle_read_u8` pays `clock_speed - 6` through `advance_master_clock`, then the last 6 cycles on `Clock` directly — DMA is not sampled in those 6.
+3. `BatchedBusDeviceU24` and `AsyncBusDeviceU24` `read()` flush; `peek()` does not (may be stale).
+4. Batched and async `update_clock()` enqueue a clock action only when `master_clock` delta is `> 1024`.
+5. `$4206` divisor 0 → quotient (`div_result`) and remainder (`mul_result`) both `0xFFFF`.
 
-- **`MainBusImpl<PpuT, ApuT>`** — Central bus. Implements `Bus<AddressU24>` and `MainBus`.
-- **`DmaController`** — 8-channel DMA. Triggered by write to `$420B` (MDMAEN). Runs before clock advance.
-- **`MultiplicationUnit`** — Math coprocessor. Writes to `$4203`/`$4206` trigger immediate compute.
-- **`MemoryBlock`** — Enum for RAM/RAM/SRAM/Register/Unmapped regions.
+## Hardware Map
 
----
+Ranges → owner. Register bitfields: `docs/index.md`. LoRom/HiRom WRAM/ROM/SRAM: `lorom_memory_map` / `hirom_memory_map` in `mod.rs`.
 
-## Memory Mapping
+| Range | Owner |
+|-------|-------|
+| `$2100–$213F` | PPU |
+| `$2140–$217F` | APU |
+| `$4200–$43FF` | `Clock`, `MultiplicationUnit`, `DmaController`, joy auto-read |
 
-Determined by `MappingMode` (LoRom or HiRom from cartridge header).
+## Integration
 
-- **LoRom**: Banks `$00-$3F` and `$80-$BF`. ROM at `$8000+`. WRAM at `$0000-$1FFF` / `$7E-$7F`. SRAM at `$70-$7D:$0000-$7FFF`.
-- **HiRom**: Banks `$00-$3F` and `$80-$BF`. ROM at `$8000+` (64KB banks). SRAM at `$30-$3F:$6000-$7FFF`.
+- `Cpu<MainBusImpl<PpuT, ApuT>>` calls `cycle_read_u8` / `cycle_write_u8` and `consume_nmi_interrupt` / `consume_timer_interrupt`.
+- `SystemImpl` wraps PPU and APU in `SyncBusDevice` / `BatchedBusDeviceU24` / `AsyncBusDeviceU24` (which variant: root).
+- DMA copies through this bus's `bus_read`/`bus_write`.
 
-Access speeds: FAST (6 cycles), SLOW (8 cycles), XSLOW (12 cycles for `$4000-$41FF`).
+## Gaps
 
----
+- HDMA: `$420C` (root) and `$43x7` log a warning; no transfers run.
+- FastROM and serial `$4016`/`$4017`: see root / src Gaps.
 
-## Register Decoding
+## Tests
 
-| Range | Handler |
-|-------|---------|
-| `$2100-$213F` | PPU |
-| `$2140-$217F` | APU |
-| `$420B`, `$420C`, `$4300-$43FF` | `DmaController` |
-| `$4200`, `$4207-$420A`, `$4210-$4212` | `Clock` (interrupts) |
-| `$4202-$4206` | `MultiplicationUnit` (write) |
-| `$4214-$4217` | `MultiplicationUnit` (read) |
-| `$4218-$421B` | Joypads |
-
-Unmapped access returns `0` and logs an error.
-
----
-
-## Device Wrappers
-
-- **`SyncBusDevice`** — Pass-through, no buffering.
-- **`BatchedBusDeviceU24`** — Buffers writes. Flushes on `read()` or `sync()`. `update_clock()` throttled to >1024 cycles.
-- **`AsyncBusDeviceU24`** — Inner device runs on background thread. Communications via `sync_channel(1024)`.
-
----
-
-## Non-Obvious Behaviors & Gotchas
-
-1. **DMA runs before clock advance.** When a CPU write triggers `$420B`, `dma_pending` is set. On the next `advance_master_clock`, DMA transfers execute **before** `Clock` ticks and PPU/APU update.
-2. **Read triggers flush.** `BatchedBusDeviceU24::read()` and `AsyncBusDeviceU24::read()` force synchronization. Do not rely on peek being cheap if the device is batched/async.
-3. **HDMA is not implemented.** Writing `$420C` logs a warning.
-4. **FastROM is not implemented.** Banks `$80+` memory access speed logic has a TODO.
-5. **Division by zero** in `MultiplicationUnit` returns `0xFFFF` for both quotient and remainder.
-6. **Clock delegation.** `MainBusImpl` does not handle NMI/IRQ timers itself. It delegates to the embedded `Clock` component (`components/clock.rs`).
-
----
-
-## Testing
-
-- `test_lorom_memory_map_image` / `test_hirom_memory_map_image` generate golden `.png` files representing memory layout.
-- `test_hirom_rom_ranges` checks ROM mirror addresses.
+- Unit tests in `mod.rs`: `test_lorom_memory_map_image`, `test_hirom_memory_map_image` (goldens `lorom_memory_map.png` / `hirom_memory_map.png` beside the source), `test_hirom_rom_ranges`.
+- `cargo nextest run -p sres_emulator --lib -E 'test(main_bus::)'`

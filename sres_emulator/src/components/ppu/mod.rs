@@ -1,4 +1,5 @@
-//! Implementation of the Picture Processing Unit
+//! Ricoh 5C77 PPU: `Ppu` facade over serializable `PpuState`, `BusDeviceU24` at `$2100–$213F`.
+//! `update_clock` draws when `v` changes; `draw_scanline` returns if `screen_y >= 224`.
 mod cgram;
 mod debug;
 mod oam;

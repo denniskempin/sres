@@ -1,4 +1,5 @@
-//! Implementation of SFC file parsing.
+//! `Cartridge`: `.sfc` ROM/SRAM load and SNES header parse (`SnesHeader`, `MappingMode`).
+//! Header heuristic tries LoRom at `0x7FC0` and HiRom at `0xFFC0` (non-empty name, mapping match).
 use std::path::Path;
 
 use anyhow::bail;

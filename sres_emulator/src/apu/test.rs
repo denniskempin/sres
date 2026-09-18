@@ -1,3 +1,5 @@
+//! Mesen boot-ROM trace (`INIT_TRACE`) for SPC700 IPL and APUIO handshake.
+//! Direct `step()` tests must `promote_channel_out` before reading `channel_out`.
 #![cfg(test)]
 
 use super::apu_bus::ApuBus;

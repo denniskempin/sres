@@ -1,4 +1,5 @@
-//! Definition of the SNES controller data format.
+//! `StandardController` auto-read joypad bits.
+//! `to_u16()` packs big-endian for `$4218` (JOY1L) / `$4219` (JOY1H).
 use packed_struct::prelude::*;
 
 /// Standard Controller bit layout:

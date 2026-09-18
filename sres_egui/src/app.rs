@@ -1,3 +1,7 @@
+//! `EmulatorApp` (`eframe::App`): home screen until a cartridge is loaded, then `emulator_ui`.
+//! `load_cartridge` builds `System::with_cartridge` and enables the debugger.
+//! Debugger-off run uses `execute_for_audio_samples`; present via `swap_video_frame` / `AudioOutput::update`.
+
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::time::Duration;

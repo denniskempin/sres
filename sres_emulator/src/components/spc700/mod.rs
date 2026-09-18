@@ -1,4 +1,6 @@
-//! Implementation of the SPC700 CPU.
+//! Sony SPC700 audio CPU (`Spc700<BusT: Spc700Bus>`).
+//!
+//! Entry: `step()` (one instruction) and `catch_up_to_master_clock` (lazy catch-up vs master clock).
 mod debug;
 mod instructions;
 mod opcode_table;

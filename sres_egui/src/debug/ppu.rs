@@ -1,3 +1,6 @@
+//! `PpuDebugWindow` tabs (Background, Sprites, VRAM, Palette) over `emulator.debug().ppu()` (`PpuDebug`).
+//! Sprite thumbnails refresh only visible `TableBuilder` rows. Textures start as `ColorImage::example` until first `show`.
+
 use eframe::CreationContext;
 use egui::ColorImage;
 use egui::Context;

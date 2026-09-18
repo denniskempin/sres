@@ -1,3 +1,7 @@
+//! Native and WASM `main` for `EmulatorApp`.
+//! Native parses `ResArgs` (optional `.sfc`, optional chrome trace) and calls `eframe::run_native`.
+//! WASM starts `eframe::WebRunner` on `#emulator_canvas` with no cartridge.
+
 pub mod app;
 pub mod audio;
 pub mod debug;

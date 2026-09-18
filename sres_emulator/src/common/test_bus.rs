@@ -1,3 +1,5 @@
+//! Test-only `Bus`: sparse memory and a recorded `Cycle` log (`Read`/`Write`/`Internal`).
+//! Unmapped reads record `None` and return `0`.
 #![cfg(test)]
 
 use std::collections::HashMap;

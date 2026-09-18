@@ -1,3 +1,5 @@
+//! One S-DSP `Voice`: ADSR/GAIN envelope, volume, pitch, BRR.
+//! KON (`trigger_on`) starts decode; output is L+R folded to `i16`.
 #![allow(dead_code)]
 use std::fmt::Display;
 

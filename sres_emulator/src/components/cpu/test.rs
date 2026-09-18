@@ -1,7 +1,5 @@
-//! Executes CPU-only tests using test data at https://github.com/TomHarte/ProcessorTests
-//!
-//! The data provides thousands of test cases with initial CPU state and expected CPU state after
-//! executing one instruction.
+//! TomHarte 65816 ProcessorTests harness (`test/*.json.xz`).
+//! `run_tomharte_test` per nibble file. Skips `0x44` MVP and `0x54` MVN.
 #![cfg(test)]
 
 use std::collections::HashMap;

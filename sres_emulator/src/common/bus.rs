@@ -1,4 +1,5 @@
-//! Generic Bus trait that can be used with both U16 and U24 addresses.
+//! `Bus<AddressT>` cycle interface (CPU U24 and SPC700 U16) and `BusDeviceU24`.
+//! 16-bit helpers take `Wrap` for the high-byte address.
 
 use std::ops::RangeInclusive;
 

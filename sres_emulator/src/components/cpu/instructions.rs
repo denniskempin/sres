@@ -1,10 +1,5 @@
-//! Implements the 65816 CPU instruction set.
-//!
-//! One function per instruction, each named after the mnemonic. They are mapped to opcodes by the
-//! (opcode table)[build_opcode_table].
-//!
-//! Some functions are implemented for u8 and u16 using generics. This allows the opcode table
-//! to use the same implementation for operating on both u8 and u16 sized registers.
+//! 65816 instruction bodies. One function per mnemonic.
+//! ALU/load/store are generic over `T: UInt` so the opcode table shares u8 and u16 implementations.
 use super::operands::AddressMode;
 use super::operands::Operand;
 use super::status::StatusFlags;

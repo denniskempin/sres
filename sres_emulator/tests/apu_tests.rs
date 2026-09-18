@@ -1,4 +1,4 @@
-//! High level testing focused on the APU.
+//! Golden-WAV APU tests (`System`): run a ROM, capture `AudioBuffer`, compare via `compare_wav_against_golden`.
 
 use std::path::PathBuf;
 

@@ -1,4 +1,5 @@
-//! Main bus used by the 65816 CPU.
+//! `MainBusImpl`: 65816 system bus with LoRom/HiRom decode and MMIO routing.
+//! CPU entry: `cycle_read_u8` / `cycle_write_u8`. DMA runs inside `advance_master_clock`.
 pub mod devices;
 
 mod dma;

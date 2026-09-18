@@ -1,28 +1,44 @@
-# sres_emulator/src/common
+# `sres_emulator/src/common`
 
-Foundational types and utilities shared across the emulator.
+Foundational types shared by all emulator layers.
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `address.rs` | Typed addresses (`AddressU24`, `AddressU16`, `AddressU15`) with explicit wrapping. |
-| `bus.rs` | `Bus` trait (generic over address width), `BusDeviceU24` for memory-mapped I/O. |
-| `clock.rs` | `ClockInfo`: master-clock to scanline/frame conversion. |
-| `uint.rs` | `UInt` trait for generic 8/16-bit ops, `VariableLengthUInt`, bit manipulation. |
-| `util.rs` | `RingBuffer`, `EdgeDetector`, hex formatting. |
-| `logging.rs` | `SresLogger` with trace ring buffer and colored output. |
-| `debug_events.rs` | `DebugEventCollector`/`DebugEventCollectorRef` with zero-cost disabled path. |
-| `test_util.rs` | WAV golden-file comparison for audio tests. |
-| `test_bus.rs` | `TestBus` with cycle recording and sparse memory (test-only). |
-| `image.rs` | SNES color types (`Rgb15`, `Rgba32`) and `Image` trait. |
+| File | Owns |
+|------|------|
+| `mod.rs` | Module declarations. |
+| `address.rs` | `Address`, `Wrap`, `AddressU24`, `AddressU16`, `AddressU15`, `InstructionMeta`. |
+| `bus.rs` | `Bus<AddressT>`, `BusDeviceU24`. |
+| `clock.rs` | `ClockInfo`. |
+| `debug_events.rs` | `DebugEventCollector`, `DebugEventCollectorRef`, `DEBUG_EVENTS_ENABLED`. |
+| `image.rs` | `Rgb15`, `Rgba32`, `ColorIdx`, `Image`. |
+| `logging.rs` | `SresLogger`, `init()`, `test_init()`. |
+| `test_bus.rs` | `TestBus`, `Cycle`, `SparseMemory`. File is `#![cfg(test)]`. |
+| `test_util.rs` | `compare_wav_against_golden`, 32 kHz mono i16 WAV. |
+| `uint.rs` | `UInt`, `UIntTruncate`, `VariableLengthUInt`, `U8Ext`/`U16Ext`/`U32Ext`. |
+| `util.rs` | `RingBuffer`, `EdgeDetector`, `format_memory`. |
 
-## Key Details
+## Behaviors & Gotchas
 
-- **Addresses**: All arithmetic uses explicit `Wrap` parameter (`WrapPage`, `WrapBank`, `NoWrap`). Never use raw `+`/`-`.
-- **Bus**: Generic over `AddressT`, reused for both U24 (CPU) and U16 (SPC700) buses.
-- **Clock**: `master_clock` is the single source of truth. Components receive `ClockInfo`, don't track their own timing.
-- **UInt**: `UInt` trait lets CPU instructions work generically for 8-bit and 16-bit modes.
-- **Logging**: `trace_as_context_only` buffers trace logs; dumped only when warning/error occurs.
-- **Debug Events**: `DEBUG_EVENTS_ENABLED` atomic flag + `#[cold]` dispatch = zero-cost when disabled.
-- **Image**: PPU renders `Rgb15`, converted to `Rgba32` at presentation time.
+1. `AddressU24`/`AddressU16` have no `Add`/`Sub`. Use `add`/`sub`/`add_signed` with `Wrap` (`WrapPage`, `WrapBank`, `NoWrap`). `AddressU16` `WrapBank` is `unimplemented!()`. `AddressU15` (PPU VRAM) does not implement `Address`; `+`/`-` wrap with `& 0x7FFF`.
+2. `ClockInfo::from_mesen_vhf` maps Mesen traces, which increment `f` at vblank (`v = 225`), not `v = 0`. Use `from_master_clock` elsewhere. `vblank()` is `v >= 225`. Short scanline and 6-cycle dots: `components/clock.rs`.
+3. `init()` reads `SRES_LOG` (default `error`) and sets `trace_as_context_only`. Traces buffer (20 lines) and dump on the next non-`Trace` record, not only warnings. `test_init(verbose)` sets `trace_as_context_only = !verbose`. `init` and `test_init` share one `Once`; the first caller wins.
+4. `TestBus` records `Cycle::Read`/`Write`/`Internal` on every bus cycle. Unmapped reads store `None` and return `0`.
+
+## Integration
+
+- `MainBus: Bus<AddressU24>` (CPU) and `Spc700Bus: Bus<AddressU16>` (SPC700). `MainBusImpl` implements `Bus<AddressU24>`; devices implement `BusDeviceU24`.
+- PPU VRAM/OAM use `AddressU15` and `Rgb15`. `Image` is implemented in `sres_egui` and `tests/ppu_tests.rs`.
+- `SystemImpl` and `components/clock.rs` consume `ClockInfo` and `EdgeDetector`.
+- Components emit through `DebugEventCollectorRef`. `Debugger` stores events in `RingBuffer`.
+- Native frontend calls `logging::init()`. Tests call `logging::test_init`. CPU tests use `TestBus` and `debug_events::test::mock_collector`. APU tests use `compare_wav_against_golden`.
+
+## Gaps
+
+- No unimplemented SNES hardware in this directory. Unmapped/unimplemented-register policy is in root. `AddressU16` `WrapBank` panics (`unimplemented!()`), which matches root (panics are internal logic errors).
+
+## Tests
+
+- Unit tests: `clock.rs` (`from_mesen_vhf`), `uint.rs` (BCD add). Other files have none. `debug_events::test` is a mock helper.
+- `cargo nextest run -p sres_emulator --lib -E 'test(common::)'`
+
