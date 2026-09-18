@@ -96,6 +96,7 @@ Golden files are auto-created on first run and committed to Git LFS. Mismatches 
 - **Unmapped memory**: same — return `0` + emit error.
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **HDMA**: not implemented; `$420C` write logs a warning.
+- **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
 - **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware.
 - **Fuzz targets** explicitly test that arbitrary input never panics.
 
@@ -107,6 +108,7 @@ Golden files are auto-created on first run and committed to Git LFS. Mismatches 
 
 | Path | Coverage |
 |---|---|
+| `sres_egui/src/AGENTS.md` | Native/WASM frontend |
 | `sres_emulator/src/AGENTS.md` | System orchestration, controller, debugger |
 | `sres_emulator/src/common/AGENTS.md` | Shared types, traits, utilities |
 | `sres_emulator/src/components/AGENTS.md` | Component rules, cartridge, clock |
