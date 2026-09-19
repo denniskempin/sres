@@ -26,6 +26,7 @@ Catch-up matches Mesen2 `SpcClockSpeedAdjustment` (+40 Hz).
 4. `$F1` `clear_apuio12` zeros `channel_in[0]`/`[1]` and `clear_channel_out` on channels 0 and 2 (drops pending). `clear_apuio34` zeros `channel_in[2]`/`[3]` only.
 5. `AudioBuffer` at `MAX_AUDIO_BUFFER_SIZE` (32000) is `clear()`ed and an error is logged (`update_clock`).
 6. Direct `Spc700::step` tests must call `promote_channel_out` before inspecting `channel_out`.
+7. `$F2` reads return the last written byte, including bit 7 (ares `io.dspAddress`). Nesdev says bit 7 reads 0; `ADC $F2,#$10` / `CMP $F2,#$8F` never exits if it is masked. DSP access still uses bits 0–6; bit 7 only blocks `$F3` writes.
 
 ## Hardware Map
 
@@ -51,5 +52,5 @@ Register semantics: `docs/index.md`.
 
 ## Tests
 
-- Lib tests: Mesen IPL trace (`test.rs` `INIT_TRACE`) and timer unit tests (`timers.rs`).
+- Lib tests: Mesen IPL trace (`test.rs` `INIT_TRACE`), timer unit tests (`timers.rs`), `$F2` DSPADDR readback (`apu_bus.rs` `dspaddr_reads_back_written_bit7`).
 - `cargo nextest run -p sres_emulator --lib -E 'test(apu::)'`

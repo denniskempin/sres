@@ -102,7 +102,9 @@ impl Bus<AddressU16> for ApuBus {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         match addr.0 {
             0x00F1 => Some(self.control.0),
-            0x00F2 => Some(self.dsp_register_select.bits(0..=6)),
+            0x00F2 => Some(
+                self.dsp_register_select.bits(0..=6) | (u8::from(self.dsp_register_readonly) << 7),
+            ),
             0x00F3 => Some(self.dsp.read_register(self.dsp_register_select)),
             0x00F4..=0x00F7 => Some(self.channel_in[addr.0 as usize - 0x00F4]),
             0x00FA..=0x00FC => Some(0), // Timer targets are write-only
@@ -236,3 +238,25 @@ const IPL_BOOT_ROM: [u8; 64] = [
     0xCB, 0xF4, 0xD7, 0x00, 0xFC, 0xD0, 0xF3, 0xAB, 0x01, 0x10, 0xEF, 0x7E, 0xF4, 0x10, 0xEB, 0xBA,
     0xF6, 0xDA, 0x00, 0xBA, 0xF4, 0xC4, 0xF4, 0xDD, 0x5D, 0xD0, 0xDB, 0x1F, 0x00, 0x00, 0xC0, 0xFF,
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::bus::Bus;
+    use crate::common::debug_events::test::mock_collector;
+
+    #[test]
+    fn dspaddr_reads_back_written_bit7() {
+        let mut bus = ApuBus::new(mock_collector());
+        bus.cycle_write_u8(AddressU16(0x00F2), 0x8F);
+        assert_eq!(bus.peek_u8(AddressU16(0x00F2)), Some(0x8F));
+        bus.cycle_write_u8(AddressU16(0x00F2), 0x0F);
+        assert_eq!(bus.peek_u8(AddressU16(0x00F2)), Some(0x0F));
+
+        bus.cycle_write_u8(AddressU16(0x00F2), 0x7F);
+        let value = bus.cycle_read_u8(AddressU16(0x00F2));
+        assert_eq!(value, 0x7F);
+        bus.cycle_write_u8(AddressU16(0x00F2), value.wrapping_add(0x10));
+        assert_eq!(bus.peek_u8(AddressU16(0x00F2)), Some(0x8F));
+    }
+}
