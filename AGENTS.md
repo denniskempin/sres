@@ -19,6 +19,7 @@ SRES is a SNES emulator in Rust.
 - Test: `cargo nextest run --workspace` (or `cargo test`)
 - Full check: `./check-all.sh`
 - Fix: `./fix-all.sh`
+- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`coverage` on PRs and `main`; Pages `deploy` on `main` only)
 
 ## Architecture Overview
 
