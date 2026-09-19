@@ -121,11 +121,6 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 - **cargo-nextest**: Preferred runner. `cargo binstall -y cargo-nextest`
 - **trunk**: WASM bundler for `sres_egui`. `cargo binstall -y trunk`. `./check-all.sh` unsets `NO_COLOR` (trunk clap rejects `NO_COLOR=1`). `bass` is not invoked there.
 
-## Cursor Cloud specific instructions
-
-- Dashboard environment is authoritative. `.devcontainer/` is local VS Code only and is not the Cloud Agent base.
-- Validate tooling with `./check-all.sh` (nextest, trunk, clippy, rustfmt). Assemble a ROM with `bass path/to/file.asm`.
-
 ## Important Agent Rules
 - **Concise**: Speak concisely, drop conversational fillers, pleasantries, rambling explanations. Use simple and direct language.
 - **Push back**: Do not blindly agree with inefficient, illogical or requests that lead to bad outcomes. Push back by stating the technical blocker in direct language.
