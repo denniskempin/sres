@@ -51,7 +51,7 @@ jobs:
       - uses: taiki-e/install-action@cargo-nextest
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-x11-0
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-x11-0 xvfb mesa-vulkan-drivers libegl1
 
       - name: Tests
         run: ./check-all.sh test

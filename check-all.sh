@@ -20,7 +20,12 @@ run_clippy() {
 
 run_test() {
   banner "Tests"
-  cargo nextest run --workspace --locked
+  # egui_kittest/wgpu needs an X display. GitHub-hosted runners have none.
+  if [[ -z "${DISPLAY:-}" ]] && command -v xvfb-run >/dev/null; then
+    xvfb-run --auto-servernum cargo nextest run --workspace --locked
+  else
+    cargo nextest run --workspace --locked
+  fi
 }
 
 run_wasm() {

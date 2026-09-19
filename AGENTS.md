@@ -17,7 +17,7 @@ SRES is a SNES emulator in Rust.
 - Lint: `cargo clippy --workspace --all-targets --locked`
 - Format: `cargo fmt --all -- --check`
 - Test: `cargo nextest run --workspace --locked` (or `cargo test`)
-- Full check: `./check-all.sh` (same as CI `health`/`test`/`wasm`; pass those names for a subset)
+- Full check: `./check-all.sh` (same commands as CI; subset: `fmt`, `clippy`, `test`, `wasm`)
 - Fix: `./fix-all.sh`
 - CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`)
 
