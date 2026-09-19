@@ -1,6 +1,6 @@
 # `sres_emulator/tests/rom_tests`
 
-Assets for CPU trace-comparison and DMA ROM-outcome tests driven by `../rom_tests.rs`. `SyncSystem` vs `System` mapping is in root Testing Strategy.
+Assets for CPU trace-comparison and ROM-outcome tests driven by `../rom_tests.rs`. `SyncSystem` vs `System` mapping is in root Testing Strategy.
 
 ## Files
 
@@ -10,6 +10,7 @@ Assets for CPU trace-comparison and DMA ROM-outcome tests driven by `../rom_test
 | `ppu_timing.{sfc,asm}` | NOP loop for PPU cycle alignment vs BSNES |
 | `play_noise.{sfc,spc}` | Mixed CPU+SPC700; `play_noise.sfc.asm` `insert`s `play_noise.spc` (`play_noise.spc.asm`) |
 | `dma_{vram,cgram,oam}.{sfc,asm}` | ROM-outcome DMA round-trip through VRAM, CGRAM, or OAM |
+| `wai_nmi.{sfc,asm}` | ROM-outcome WAI until vblank NMI; ordering-sensitive sentinels at `$0000`/`$0001` |
 | `*-trace.log.xz` | XZ-compressed BSNES traces (`parse_mesen_trace`) |
 | `process.py` | Renames `*.txt` → `*-trace.log`, trims self-`JMP` loops, `xz` compresses |
 
@@ -26,7 +27,7 @@ Assets for CPU trace-comparison and DMA ROM-outcome tests driven by `../rom_test
 - Crate test binary `rom_tests` in `sres_emulator/tests/rom_tests.rs`.
 - CPU-only traces: `Cartridge::with_sfc_file` into `SyncSystem`, then `cpu_step_iter` vs `trace_log_from_xz_file`.
 - `play_noise`: `trace_step_iter` vs `mixed_trace_log_from_xz_file`.
-- Outcome: `run_test_rom` until `halted()`; `dma_vram`, `dma_cgram`, `dma_oam` compare WRAM `$0000` and `$0100` after DMA copy-back.
+- Outcome: `run_test_rom` until `halted()`, asserting `< 10_000_000` steps. `dma_vram`, `dma_cgram`, `dma_oam` compare WRAM `$0000` and `$0100` after DMA copy-back. `wai_nmi` checks `$0000`/`$0001` == `$A5` and halt PC in `$00:8000–$00FFFF`.
 
 ## Gaps
 

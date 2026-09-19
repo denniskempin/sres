@@ -1,5 +1,5 @@
-//! CPU integration tests: BSNES trace-comparison (`SyncSystem`) and DMA ROM-outcome (`System`).
-//! Traces: `run_rom_test`. Outcome: `run_test_rom` until `stp`.
+//! CPU integration tests: BSNES trace-comparison (`SyncSystem`) and ROM-outcome (`System`).
+//! Traces: `run_rom_test`. Outcome: `run_test_rom` until `stp`, bounded.
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io;
@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use pretty_assertions::assert_eq;
+use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::logging;
 use sres_emulator::common::util::format_memory;
@@ -327,6 +328,28 @@ pub fn test_dma_oam() {
     );
 }
 
+#[test]
+pub fn test_wai_nmi() {
+    let cpu = run_test_rom("wai_nmi");
+
+    assert_eq!(
+        cpu.bus.peek_u8(AddressU24::new(0, 0x0000)),
+        Some(0xA5),
+        "NMI did not run; WAI did not stall until vblank"
+    );
+    assert_eq!(
+        cpu.bus.peek_u8(AddressU24::new(0, 0x0001)),
+        Some(0xA5),
+        "deferred-poll failure signature is $0000 == $A5, $0001 == $00: wake fell through to fetch, lda $0000 read 0, sta $0001 stored 0, then NMI wrote $A5"
+    );
+
+    let halt_pc = cpu.debug().state().instruction.address;
+    assert!(
+        halt_pc.bank == 0 && (0x8000..=0xFFFF).contains(&halt_pc.offset),
+        "halt PC {halt_pc} is outside $00:8000-$00FFFF (native NMI vector still $0000?)"
+    );
+}
+
 fn run_test_rom(test_name: &str) -> CpuT {
     logging::test_init(false);
 
@@ -336,8 +359,11 @@ fn run_test_rom(test_name: &str) -> CpuT {
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
     system.cpu.reset();
 
+    let mut steps = 0u64;
     while !system.cpu.halted() {
+        assert!(steps < 10_000_000, "ROM did not reach stp");
         system.cpu.step();
+        steps += 1;
     }
     system.cpu
 }
