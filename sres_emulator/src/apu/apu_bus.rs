@@ -1,6 +1,5 @@
 //! `ApuBus`: SPC700 bus (RAM, IPL ROM, timers, `SDsp`, `$F4–$F7` CPUIO).
 //! CPUIO writes stay in `channel_out_pending` until `promote_channel_out`.
-//! `$F2` reads back the last written byte (bit 7 included); DSP access still uses bits 0–6.
 use std::collections::VecDeque;
 
 use intbits::Bits;
@@ -103,7 +102,6 @@ impl Bus<AddressU16> for ApuBus {
     fn peek_u8(&self, addr: AddressU16) -> Option<u8> {
         match addr.0 {
             0x00F1 => Some(self.control.0),
-            // Full last-written byte, including bit 7. Ares `io.dspAddress`.
             0x00F2 => Some(
                 self.dsp_register_select.bits(0..=6) | (u8::from(self.dsp_register_readonly) << 7),
             ),

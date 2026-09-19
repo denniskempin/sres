@@ -52,5 +52,5 @@ Register semantics: `docs/index.md`.
 
 ## Tests
 
-- Lib tests: Mesen IPL trace (`test.rs` `INIT_TRACE`) and timer unit tests (`timers.rs`).
+- Lib tests: Mesen IPL trace (`test.rs` `INIT_TRACE`), timer unit tests (`timers.rs`), `$F2` DSPADDR readback (`apu_bus.rs` `dspaddr_reads_back_written_bit7`).
 - `cargo nextest run -p sres_emulator --lib -E 'test(apu::)'`
