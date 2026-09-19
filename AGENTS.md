@@ -14,7 +14,7 @@ SRES is a SNES emulator in Rust.
 
 - Build: `cargo build`
 - Run (headless): `DISPLAY=:1 cargo run`
-- Lint: `cargo clippy --workspace`
+- Lint: `cargo clippy --workspace --all-targets` (`./check-all.sh` clippy is `--workspace` only)
 - Format: `cargo fmt --check`
 - Test: `cargo nextest run --workspace` (or `cargo test`)
 - Full check: `./check-all.sh`
