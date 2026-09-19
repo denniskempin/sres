@@ -15,6 +15,6 @@
 	"forwardPorts": [
 		8080
 	],
-	"updateContentCommand": "git lfs pull",
+	"updateContentCommand": "rustup show && rustup target add wasm32-unknown-unknown",
 	"remoteUser": "vscode"
 }

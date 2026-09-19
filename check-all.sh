@@ -4,7 +4,7 @@ printf '\e[1m\e[32m---------------------------- Tests --------------------------
 cargo nextest run --workspace
 echo
 printf '\e[1m\e[32m-------------------------- WASM Build ----------------------------------\e[0m\n'
-(cd sres_egui && trunk build)
+(cd sres_egui && env -u NO_COLOR trunk build)
 echo
 printf '\e[1m\e[32m---------------------------- Clippy ------------------------------------\e[0m\n'
 cargo clippy --workspace
