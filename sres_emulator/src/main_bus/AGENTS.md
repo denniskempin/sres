@@ -21,6 +21,7 @@
 5. Batched and async `update_clock()` enqueue a clock action only when `master_clock` delta is `> 1024`.
 6. `$4206` divisor 0 → quotient (`div_result`) and remainder (`mul_result`) both `0xFFFF`.
 7. GP-DMA A-bus increment uses `Wrap::NoWrap` (docs say bank-wrap); HDMA uses `Wrap::WrapBank`.
+8. `hdma_reload` always `bus_read`s one table byte (8 cycles) even when `NLTRn & 0x7F != 0`; that byte is discarded.
 
 ## Hardware Map
 
