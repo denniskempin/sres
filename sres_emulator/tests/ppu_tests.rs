@@ -187,6 +187,7 @@ fn generate_dkc_ppu_snapshots() {
 
 #[test]
 fn test_dkc_jungle() {
+    // Title-attract jungle. Missing HDMA freezes sky/mountain colors; not in-game Jungle Hijinxs.
     run_snapshot_framebuffer_test("dkc-jungle");
 }
 
