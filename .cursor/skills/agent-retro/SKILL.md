@@ -48,7 +48,7 @@ Cap: at most 5 `AGENTS.md` edits and 2 skill create/improve items. Prefer deleti
 | Multi-step procedure the agent should not invent | Skill (improve existing first) |
 | User preference or one-off task detail | Nowhere in this skill |
 
-A skill is the wrong home for a fact. `AGENTS.md` is the wrong home for an 8-step workflow.
+A skill is the wrong home for a fact. `AGENTS.md` is the wrong home for an 8-step workflow. A missing command (`bass foo.asm`, a nextest filter) is one `AGENTS.md` line, not a skill. If you propose a skill, `AGENTS.md` gets only a Reference pointer, not the same steps.
 
 ## Generalization gate
 
@@ -66,6 +66,7 @@ Every proposal must pass all of these:
 | Trace mismatch on one CPU test | "Use `SyncSystem` for that test ROM" | Trace-comparison tests use `SyncSystem` (root Testing Strategy). If that row exists, fix discoverability, do not duplicate |
 | Agent guessed a nextest filter | "The command for this file is …" | Directory `## Tests` must include the exact filtered command that runs today |
 | Agent updated one PPU snapshot by hand | Skill named after that snapshot | Skill only if golden-image update is a reused multi-step procedure (regenerate, inspect `.actual.png`, commit). Name the test type, not the asset |
+| Agent tried `bass -o` then ca65 for one DMA ROM | Skill `assemble-dma-wram` plus the same `bass` flags in root `AGENTS.md` | One `## Tests` / Environment Gotchas line: `bass foo.asm` from the source dir, no `-o`. A skill only if assemble → commit binary → wire driver is a reused procedure; then `AGENTS.md` points at the skill |
 
 ## Skill proposals
 
@@ -136,5 +137,6 @@ Answer each before sending the report. Any "no" means go back.
 - Every proposal has `Would help when` naming a different task?
 - No ROM, game, or issue in proposed lines unless it is a test fixture?
 - Nothing already documented, inferable by one `rg`, or a one-off?
+- No skill whose only payload is a single command? No `AGENTS.md` line that restates a proposed skill's steps?
 - Caps respected (5 `AGENTS.md`, 2 skills)?
 - `Apply` is `not-requested` unless the user asked to apply?
