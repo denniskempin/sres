@@ -1,5 +1,6 @@
-//! `Clock`: master clock, NMI, and H/V timer IRQs.
-//! `advance_master_clock` ticks timing in chunks of ≤64 so edges are not skipped.
+//! `Clock`: master clock, NMI, H/V timer IRQs, and HDMA trigger latches.
+//! `advance_master_clock` ticks in chunks of ≤64 so edges are not skipped.
+//! HDMA setup latches at V=0 h≥12; run latches at V<225 h≥1104.
 
 use bitcode::Decode;
 use bitcode::Encode;
@@ -29,6 +30,10 @@ pub struct Clock {
     nmi_flag: bool,
     nmi_interrupt: bool,
     vblank_occurred: bool,
+    hdma_setup_pending: bool,
+    hdma_setup_latched: bool,
+    hdma_run_pending: bool,
+    hdma_run_latched: bool,
 }
 
 impl Clock {
@@ -123,6 +128,18 @@ impl Clock {
     pub fn consume_vblank(&mut self) -> bool {
         let value = self.vblank_occurred;
         self.vblank_occurred = false;
+        value
+    }
+
+    pub fn consume_hdma_setup(&mut self) -> bool {
+        let value = self.hdma_setup_pending;
+        self.hdma_setup_pending = false;
+        value
+    }
+
+    pub fn consume_hdma_run(&mut self) -> bool {
+        let value = self.hdma_run_pending;
+        self.hdma_run_pending = false;
         value
     }
 
@@ -287,11 +304,22 @@ impl Clock {
             self.h_counter -= h_duration;
             self.v += 1;
             self.dram_refresh_position = 538 - ((self.master_clock - self.h_counter) & 7);
+            self.hdma_run_latched = false;
         }
 
         if self.v >= 262 {
             self.v -= 262;
             self.f += 1;
+            self.hdma_setup_latched = false;
+        }
+
+        if self.v == 0 && !self.hdma_setup_latched && self.h_counter >= 12 {
+            self.hdma_setup_latched = true;
+            self.hdma_setup_pending = true;
+        }
+        if self.v < 225 && !self.hdma_run_latched && self.h_counter >= 1104 {
+            self.hdma_run_latched = true;
+            self.hdma_run_pending = true;
         }
 
         self.vblank_detector.update_signal(self.v >= 225);
@@ -352,6 +380,10 @@ impl Default for Clock {
             nmi_flag: false,
             nmi_interrupt: false,
             vblank_occurred: false,
+            hdma_setup_pending: false,
+            hdma_setup_latched: false,
+            hdma_run_pending: false,
+            hdma_run_latched: false,
         }
     }
 }
@@ -547,5 +579,81 @@ mod tests {
             // For the first 4 cycles NMI will remain high, so the internal nmi_flag will still be set.
             assert_eq!(timer.nmi_flag, *expected_internal_nmi);
         }
+    }
+
+    type HdmaEvent = (u64, u64, u64);
+
+    fn collect_hdma_events(step: u64, end_f: u64) -> (Vec<HdmaEvent>, Vec<HdmaEvent>) {
+        let mut clock = Clock::default();
+        let mut setups = Vec::new();
+        let mut runs = Vec::new();
+        while clock.f < end_f {
+            clock.advance_master_clock(step);
+            if clock.consume_hdma_setup() {
+                setups.push((clock.f, clock.v, clock.h_counter));
+            }
+            if clock.consume_hdma_run() {
+                runs.push((clock.f, clock.v, clock.h_counter));
+            }
+        }
+        (setups, runs)
+    }
+
+    fn assert_hdma_triggers(step: u64) {
+        let (setups, runs) = collect_hdma_events(step, 1);
+        let frame0_setups: Vec<_> = setups.iter().filter(|(f, _, _)| *f == 0).collect();
+        let frame0_runs: Vec<_> = runs.iter().filter(|(f, _, _)| *f == 0).collect();
+        assert_eq!(
+            frame0_setups.len(),
+            1,
+            "step={step}: expected one setup on frame 0, got {frame0_setups:?}"
+        );
+        assert_eq!(frame0_setups[0].1, 0, "step={step}: setup must fire on V=0");
+        assert_eq!(
+            frame0_runs.len(),
+            225,
+            "step={step}: expected one run per line V=0..224, got {}",
+            frame0_runs.len()
+        );
+        let run_lines: Vec<u64> = frame0_runs.iter().map(|(_, v, _)| *v).collect();
+        assert_eq!(run_lines, (0..225).collect::<Vec<_>>());
+        assert!(
+            runs.iter().all(|(_, v, _)| *v < 225),
+            "step={step}: run must not fire on V≥225, got {runs:?}"
+        );
+    }
+
+    #[test]
+    fn test_hdma_triggers_default_unlatched() {
+        let mut clock = Clock::default();
+        assert!(!clock.consume_hdma_setup());
+        assert!(!clock.consume_hdma_run());
+        assert!(!clock.hdma_setup_latched);
+        assert!(!clock.hdma_run_latched);
+    }
+
+    #[test]
+    fn test_hdma_triggers_64_cycle_step() {
+        assert_hdma_triggers(64);
+    }
+
+    #[test]
+    fn test_hdma_triggers_6_cycle_step() {
+        assert_hdma_triggers(6);
+    }
+
+    #[test]
+    fn test_hdma_setup_on_wrap_past_h12() {
+        let mut clock = Clock {
+            v: 261,
+            h_counter: 1360,
+            ..Default::default()
+        };
+        clock.advance_master_clock(64);
+        assert_eq!(clock.v, 0);
+        assert!(clock.h_counter >= 12);
+        assert!(clock.consume_hdma_setup());
+        assert!(!clock.consume_hdma_setup());
+        assert!(!clock.consume_hdma_run());
     }
 }

@@ -86,13 +86,13 @@ Examples from this repo:
 |------|---------|
 | `sres_emulator/src/components/cpu/opcode_table.rs` | Good: says what it combines, why each opcode gets a unique function, and that macros do it. |
 | `sres_emulator/src/apu/mod.rs` ("Dummy implementation of the audio processing unit.") | Stale: the module is the real APU integration layer. |
-| `sres_emulator/src/main_bus/dma.rs` ("Implementation of DMA functionality in the main bus.") | Too thin: restates the filename; should name `DmaController`, the `$420B` trigger, and that HDMA is unimplemented. |
+| `sres_emulator/src/main_bus/dma.rs` ("Implementation of DMA functionality in the main bus.") | Too thin: restates the filename; should name `DmaController`, the `$420B` trigger, and that HDMA sequencing lives in `hdma.rs`. |
 
 ## Hard rules
 
 - Never paste struct, enum, or trait bodies. Name the type and the file. (`sres_emulator/src/apu/AGENTS.md` embeds `pub struct Apu {...}`; it goes stale on any field edit.)
 - Every file, type, register, constant, and command named must exist. Verify with `rg` or by running it before writing it.
-- Every "not implemented" claim must match the code and the root error-handling section. (`sres_emulator/src/AGENTS.md` says `main_bus/` covers "DMA/HDMA"; HDMA is unimplemented.)
+- Every "not implemented" claim must match the code and the root error-handling section.
 - Backticks for all identifiers. `$XXXX` for SNES addresses. Hardware register names (`INIDISP`, `MDMAEN`), not prose descriptions.
 - Tables for 3+ items of the same shape; bullets otherwise. Nested bullets at most one level.
 - No "simple", "just", "easy", or marketing adjectives. Present tense, active voice.
