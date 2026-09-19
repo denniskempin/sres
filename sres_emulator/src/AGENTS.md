@@ -27,7 +27,7 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 
 ## Gaps
 
-- HDMA and FastROM: unimplemented; see root. `main_bus/` in this crate is DMA only.
+- FastROM: unimplemented; see root.
 - Serial joypad `$4016`/`$4017`: unimplemented in `main_bus` (read returns `0`). This layer packs auto-read `$4218`–`$421B` only.
 
 ## Tests
@@ -43,4 +43,4 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 | `common/` | Shared types, traits, utilities. |
 | `components/` | Independent hardware: CPU, PPU, S-DSP, SPC700, cartridge, clock. |
 | `apu/` | SPC700 + S-DSP orchestration. |
-| `main_bus/` | Memory map, DMA, device wrappers, interrupts. |
+| `main_bus/` | Memory map, DMA, HDMA, device wrappers, interrupts. |

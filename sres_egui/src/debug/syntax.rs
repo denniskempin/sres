@@ -462,7 +462,7 @@ lazy_static! {
             (0x4307, "DASB0"),    // DMA0 Bank for HDMA
             (0x4308, "A2A0L"),    // DMA0 HDMA Table Address Low
             (0x4309, "A2A0H"),    // DMA0 HDMA Table Address High
-            (0x430A, "NTLR0"),    // DMA0 HDMA Line Counter
+            (0x430A, "NLTR0"),    // DMA0 HDMA Line Counter
         ]
         .iter()
         .cloned()

@@ -1,8 +1,9 @@
 //! `MainBusImpl`: 65816 system bus with LoRom/HiRom decode and MMIO routing.
-//! CPU entry: `cycle_read_u8` / `cycle_write_u8`. DMA runs inside `advance_master_clock`.
+//! CPU entry: `cycle_read_u8` / `cycle_write_u8`. DMA and HDMA run inside `advance_master_clock`.
 pub mod devices;
 
 mod dma;
+mod hdma;
 mod multiplication;
 
 use dma::DmaController;
@@ -170,7 +171,23 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
         }
     }
 
+    fn update_device_clocks(&mut self) {
+        self.ppu.update_clock(self.clock.clock_info());
+        self.apu.update_clock(self.clock.clock_info());
+    }
+
     fn advance_master_clock(&mut self, cycles: u64) {
+        if self.clock.consume_hdma_setup() && self.dma_controller.hdma_enabled() != 0 {
+            let duration = self.hdma_setup();
+            self.clock.advance_master_clock(duration);
+            self.update_device_clocks();
+        }
+        if self.clock.consume_hdma_run() && self.dma_controller.hdma_any_active() {
+            let duration = self.hdma_run();
+            self.clock.advance_master_clock(duration);
+            self.update_device_clocks();
+        }
+
         if let Some((transfers, duration)) = self
             .dma_controller
             .pending_transfers(self.clock_info().master_clock, self.clock_speed)
@@ -184,8 +201,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
         self.dma_controller.update_state();
 
         self.clock.advance_master_clock(cycles);
-        self.ppu.update_clock(self.clock.clock_info());
-        self.apu.update_clock(self.clock.clock_info());
+        self.update_device_clocks();
     }
 }
 
@@ -200,8 +216,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> Bus<AddressU24> for MainBusImpl<Ppu
         self.advance_master_clock(self.clock_speed - 6);
         let value = self.bus_read(addr);
         self.clock.advance_master_clock(6);
-        self.ppu.update_clock(self.clock.clock_info());
-        self.apu.update_clock(self.clock.clock_info());
+        self.update_device_clocks();
         value
     }
 
@@ -228,6 +243,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> Bus<AddressU24> for MainBusImpl<Ppu
     fn reset(&mut self) {
         self.clock = Clock::default();
         self.ppu.reset();
+        self.dma_controller.reset();
         self.advance_master_clock(186);
     }
 }
