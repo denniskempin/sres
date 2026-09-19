@@ -94,11 +94,12 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                     self.bus_write(b_addr, value);
                 }
 
+                let next = a_addr.add(1_u16, Wrap::WrapBank);
                 let channel = &mut self.dma_controller.channels_mut()[channel_idx];
                 if indirect {
-                    channel.das = channel.das.wrapping_add(1);
+                    channel.das = next.offset;
                 } else {
-                    channel.table_address = channel.table_address.wrapping_add(1);
+                    channel.table_address = next.offset;
                 }
                 cycles += 8;
             }
@@ -131,7 +132,8 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             let channel = &self.dma_controller.channels()[channel_idx];
             (channel.bus_a_address.bank, channel.table_address)
         };
-        let data = self.bus_read(AddressU24::new(bank, table_address));
+        let table_addr = AddressU24::new(bank, table_address);
+        let data = self.bus_read(table_addr);
         let mut cycles = 8;
 
         let (should_fetch_indirect, table_after_count) = {
@@ -140,7 +142,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 return cycles;
             }
             channel.line_counter = data;
-            channel.table_address = channel.table_address.wrapping_add(1);
+            channel.table_address = table_addr.add(1_u16, Wrap::WrapBank).offset;
             channel.hdma_completed = data == 0;
             channel.hdma_do_transfer = !channel.hdma_completed;
             (
@@ -150,11 +152,12 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
         };
 
         if should_fetch_indirect {
-            let lo = self.bus_read(AddressU24::new(bank, table_after_count));
-            let hi = self.bus_read(AddressU24::new(bank, table_after_count.wrapping_add(1)));
+            let pointer_addr = AddressU24::new(bank, table_after_count);
+            let lo = self.bus_read(pointer_addr);
+            let hi = self.bus_read(pointer_addr.add(1_u16, Wrap::WrapBank));
             let channel = &mut self.dma_controller.channels_mut()[channel_idx];
             channel.das = u16::from_le_bytes([lo, hi]);
-            channel.table_address = table_after_count.wrapping_add(2);
+            channel.table_address = pointer_addr.add(2_u16, Wrap::WrapBank).offset;
             cycles += 16;
         }
 
@@ -169,6 +172,7 @@ mod tests {
     use crate::common::bus::Bus;
     use crate::common::bus::BusDeviceU24;
     use crate::common::clock::ClockInfo;
+    use crate::common::uint::U16Ext;
     use crate::components::cartridge::Cartridge;
     use crate::components::cpu::MainBus;
     use crate::debugger::Debugger;
@@ -230,11 +234,11 @@ mod tests {
     ) {
         bus.bus_write(addr(0x4300), dmap);
         bus.bus_write(addr(0x4301), bbad);
-        bus.bus_write(addr(0x4302), a1t as u8);
-        bus.bus_write(addr(0x4303), (a1t >> 8) as u8);
+        bus.bus_write(addr(0x4302), a1t.low_byte());
+        bus.bus_write(addr(0x4303), a1t.high_byte());
         bus.bus_write(addr(0x4304), a1b);
-        bus.bus_write(addr(0x4305), das as u8);
-        bus.bus_write(addr(0x4306), (das >> 8) as u8);
+        bus.bus_write(addr(0x4305), das.low_byte());
+        bus.bus_write(addr(0x4306), das.high_byte());
         bus.bus_write(addr(0x4307), dasb);
     }
 
