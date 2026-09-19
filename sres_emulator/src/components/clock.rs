@@ -581,7 +581,9 @@ mod tests {
         }
     }
 
-    fn collect_hdma_events(step: u64, end_f: u64) -> (Vec<(u64, u64, u64)>, Vec<(u64, u64, u64)>) {
+    type HdmaEvent = (u64, u64, u64);
+
+    fn collect_hdma_events(step: u64, end_f: u64) -> (Vec<HdmaEvent>, Vec<HdmaEvent>) {
         let mut clock = Clock::default();
         let mut setups = Vec::new();
         let mut runs = Vec::new();
