@@ -105,7 +105,7 @@ Golden files are auto-created on first run; verify them before committing. Misma
 
 - `docs/index.md` — indexed hardware reference docs (fullsnes.txt extracts and nesdev.org articles). Covers PPU, APU, DMA, memory maps, CPU opcodes, timing, and controllers. Use keyword search within the index to find the relevant file.
 - `.cursor/skills/code-review/SKILL.md` — independent code-owner review of a plan or a diff via a readonly subagent. Checks: `.cursor/skills/code-review/references/review-guide.md`.
-- `.cursor/skills/implement-hardware/SKILL.md` — plan and implement a Gaps item (research, Clock triggers, idle cycle cost, tests without `bass`).
+- `.cursor/skills/implement-hardware/SKILL.md` — plan and implement a Gaps item (research, Clock triggers, idle cycle cost, tests).
 - `.cursor/skills/linear-ticket/SKILL.md` — file a Linear implementation ticket from a plan.
 - `.cursor/skills/write-agents-docs/SKILL.md` — follow it when editing any `AGENTS.md` or `//!` file header.
 
@@ -118,7 +118,7 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 - **Nightly Rust**: Required. `rust-toolchain.toml` specifies channel; `rust-src` component needed.
 - **libxkbcommon-x11-0**: Runtime dependency for native egui. Install via `apt` if missing.
 - **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
-- **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only. Not on PATH in Cloud Agent VMs; write Rust unit tests or reuse committed ROMs.
+- **bass**: Assembler for test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load committed `.sfc` only. Assemble with `bass file.asm` from the source directory.
 - **cargo-nextest**: Preferred runner. `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
 
 ## Important Agent Rules
