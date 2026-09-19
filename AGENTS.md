@@ -119,7 +119,7 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 - **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
 - **bass**: ARM9 v18 Linux binary from [GitHub Releases](https://github.com/ARM9/bass/releases/tag/v18) (`bass-ubuntu.zip`). Assembles test ROM sources (`arch snes.cpu` / `arch snes.smp`); drivers load committed `.sfc` only.
 - **cargo-nextest**: Preferred runner. `cargo binstall -y cargo-nextest`
-- **trunk**: WASM bundler for `sres_egui`. `cargo binstall -y trunk`. `./check-all.sh` runs `trunk build`; `bass` is not invoked there.
+- **trunk**: WASM bundler for `sres_egui`. `cargo binstall -y trunk`. `./check-all.sh` unsets `NO_COLOR` (trunk clap rejects `NO_COLOR=1`). `bass` is not invoked there.
 
 ## Cursor Cloud specific instructions
 
