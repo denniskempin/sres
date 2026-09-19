@@ -11,4 +11,5 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && rm -rf /var/lib/apt/lists/*
 
 COPY install-tools.sh /tmp/install-tools.sh
-RUN bash /tmp/install-tools.sh && rm /tmp/install-tools.sh
+USER vscode
+RUN bash /tmp/install-tools.sh

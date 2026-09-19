@@ -20,15 +20,7 @@ if ! command -v bass >/dev/null 2>&1; then
     "https://github.com/ARM9/bass/releases/download/v18/bass-ubuntu.zip"
   unzip -q "${tmp}/bass-ubuntu.zip" -d "${tmp}"
   install -m 0755 "${tmp}/bass" "${BIN_DIR}/bass"
-  # bass loads `name.arch` from `architectures/` next to the binary, then
-  # `~/.local/share/bass/architectures/`.
-  mkdir -p "${BIN_DIR}/architectures" "${HOME}/.local/share/bass/architectures"
-  cp -a "${tmp}/architectures/." "${BIN_DIR}/architectures/"
+  mkdir -p "${HOME}/.local/share/bass/architectures"
   cp -a "${tmp}/architectures/." "${HOME}/.local/share/bass/architectures/"
-  if [ "$(id -u)" -eq 0 ]; then
-    install -m 0755 "${tmp}/bass" /usr/local/bin/bass
-    mkdir -p /usr/local/bin/architectures
-    cp -a "${tmp}/architectures/." /usr/local/bin/architectures/
-  fi
   rm -rf "${tmp}"
 fi
