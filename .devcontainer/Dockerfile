@@ -7,8 +7,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
         libasound2-dev \
         libxkbcommon-x11-0 \
         pkg-config \
-        g++ \
-        make \
+        unzip \
     && rm -rf /var/lib/apt/lists/*
 
 COPY install-tools.sh /tmp/install-tools.sh

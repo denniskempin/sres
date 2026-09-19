@@ -117,7 +117,7 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 - **Nightly Rust**: Required. `rust-toolchain.toml` specifies channel; `rust-src` and `wasm32-unknown-unknown` needed.
 - **Native egui**: `libasound2-dev` and `libxkbcommon-x11-0`. Headless run: `DISPLAY=:1 cargo run`.
 - **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
-- **bass**: ARM9 fork (`git clone https://github.com/ARM9/bass.git && cd bass/bass && make && make install`). Current g++ needs `#include <stdexcept>` at the top of `nall/arithmetic/natural.hpp` before `make`. Assembles test ROM sources (`arch snes.cpu` / `arch snes.smp`); drivers load committed `.sfc` only.
+- **bass**: ARM9 v18 Linux binary from [GitHub Releases](https://github.com/ARM9/bass/releases/tag/v18) (`bass-ubuntu.zip`). Assembles test ROM sources (`arch snes.cpu` / `arch snes.smp`); drivers load committed `.sfc` only.
 - **cargo-nextest**: Preferred runner. `cargo binstall -y cargo-nextest`
 - **trunk**: WASM bundler for `sres_egui`. `cargo binstall -y trunk`. `./check-all.sh` runs `trunk build`; `bass` is not invoked there.
 
