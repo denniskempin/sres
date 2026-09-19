@@ -14,12 +14,12 @@ SRES is a SNES emulator in Rust.
 
 - Build: `cargo build`
 - Run (headless): `DISPLAY=:1 cargo run`
-- Lint: `cargo clippy --workspace --all-targets` (`./check-all.sh` clippy is `--workspace` only)
-- Format: `cargo fmt --check`
-- Test: `cargo nextest run --workspace` (or `cargo test`)
-- Full check: `./check-all.sh`
+- Lint: `cargo clippy --workspace --all-targets --locked`
+- Format: `cargo fmt --all -- --check`
+- Test: `cargo nextest run --workspace --locked` (or `cargo test`)
+- Full check: `./check-all.sh` (same as CI `health`/`test`/`wasm`; pass those names for a subset)
 - Fix: `./fix-all.sh`
-- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`coverage` on PRs and `main`; Pages `deploy` on `main` only)
+- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`)
 
 ## Architecture Overview
 
@@ -119,6 +119,7 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 - **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
 - **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only.
 - **cargo-nextest**: Preferred runner. `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
+- **trunk**: WASM bundler for `./check-all.sh wasm`. `cargo install trunk` or CI `taiki-e/install-action@trunk`.
 
 ## Cursor Cloud specific instructions
 
