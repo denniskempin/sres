@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: "Run an independent SRES code-owner review via a readonly subagent. Use when the user asks to review a PR, diff, or changes; mentions review_guide or code review; or wants a pre-merge review. Do not review inline — launch the subagent and consume its report."
+description: "Run an independent SRES code-owner review via a readonly subagent. Use when the user asks to review a PR, diff, or changes; mentions review_guide or code review; or wants a pre-merge review. Do not review inline — launch the subagent and consume its report. Do not use to retro a conversation for AGENTS.md or skill gaps (that is agent-retro)."
 ---
 
 # SRES code review
@@ -15,7 +15,7 @@ Use this skill when any of these is true:
 - The user names a PR, diff, or uncommitted changes to review
 - You are about to open or update a PR and want an independent owner review
 
-Do not use this skill for Bugbot or security review (those have their own subagents). Do not use it to author `AGENTS.md` (that is `write-agents-docs`).
+Do not use this skill for Bugbot or security review (those have their own subagents). Do not use it to author `AGENTS.md` (that is `write-agents-docs`). Do not use it to retro a conversation for `AGENTS.md` or skill gaps (that is `agent-retro`).
 
 ## Procedure
 
