@@ -94,15 +94,19 @@ impl<BusT: MainBus> Cpu<BusT> {
     pub fn step(&mut self) {
         if self.execution_state == ExecutionState::Waiting {
             let start = self.bus.clock_info().master_clock;
-            while !self.bus.interrupt_pending()
-                && self.bus.clock_info().master_clock.saturating_sub(start) < WAI_WAIT_CYCLE_BUDGET
-            {
+            let mut io_cycles = 0u64;
+            while !self.bus.interrupt_pending() {
+                let elapsed_master = self.bus.clock_info().master_clock.saturating_sub(start);
+                // TestBus does not advance master_clock; MainBusImpl::cycle_io is 6 master cycles.
+                let elapsed = elapsed_master.max(io_cycles.saturating_mul(6));
+                if elapsed >= WAI_WAIT_CYCLE_BUDGET {
+                    self.debug_event_collector
+                        .on_error("WAI wait exceeded two-frame cycle budget".to_string());
+                    warn!("WAI wait exceeded two-frame cycle budget");
+                    break;
+                }
                 self.bus.cycle_io();
-            }
-            if !self.bus.interrupt_pending() {
-                self.debug_event_collector
-                    .on_error("WAI wait exceeded two-frame cycle budget".to_string());
-                warn!("WAI wait exceeded two-frame cycle budget");
+                io_cycles += 1;
             }
             self.execution_state = ExecutionState::Running;
             self.poll_interrupts();
@@ -279,5 +283,20 @@ mod tests {
         reg.set(0xFF_u8);
         assert_eq!(reg.get::<u8>(), 0xFF);
         assert_eq!(reg.get::<u16>(), 0x12FF);
+    }
+
+    #[test]
+    fn wai_wait_on_test_bus_hits_cycle_cap() {
+        use crate::common::debug_events::test::mock_collector;
+        use crate::common::test_bus::TestBus;
+
+        let mut bus = TestBus::default();
+        bus.memory.set(AddressU24::new(0, 0x8000), 0xCB);
+        let mut cpu = Cpu::new(bus, mock_collector());
+        cpu.pc = AddressU24::new(0, 0x8000);
+        cpu.step();
+        assert_eq!(cpu.execution_state, ExecutionState::Waiting);
+        cpu.step();
+        assert_eq!(cpu.execution_state, ExecutionState::Running);
     }
 }
