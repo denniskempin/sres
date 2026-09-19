@@ -1,9 +1,15 @@
 FROM mcr.microsoft.com/devcontainers/rust:latest
 
+# Local VS Code only. Cloud Agent environments are dashboard-managed and do not
+# build this image.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install xa65 git-lfs
+    && apt-get -y install --no-install-recommends \
+        libasound2-dev \
+        libxkbcommon-x11-0 \
+        pkg-config \
+        g++ \
+        make \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN curl -LsSf "https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz" | tar zxf - -C "$CARGO_HOME/bin"
-RUN cargo binstall -y cargo-watch
-RUN cargo binstall -y cargo-nextest
-
+COPY install-tools.sh /tmp/install-tools.sh
+RUN bash /tmp/install-tools.sh && rm /tmp/install-tools.sh
