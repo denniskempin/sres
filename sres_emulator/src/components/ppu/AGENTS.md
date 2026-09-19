@@ -16,7 +16,7 @@ Ricoh 5C77 PPU. `Ppu` facade over serializable `PpuState`.
 
 1. `decode_bgmode` panics on modes 4, 6, and 7. Exception to root (never panic for unimplemented hardware): `write_bgmode` stores `BgMode::Mode4` / `Mode6` / `Mode7`; the first visible `draw_scanline` hits `_ => panic!("Unsupported BG mode")`.
 2. Mode 2 sets BG3 `BitDepth::Opt` (offset-per-tile) but `decode_bgmode` only decodes BG1/BG2 as 4bpp; `Opt` is never read.
-3. `update_clock`: `disabled` (`INIDISP` bit 7) returns without drawing or advancing `current_clock`. Otherwise, when `v` changes, call `draw_scanline` unless `headless`, then store `last_drawn_scanline`. `draw_scanline` returns if `screen_y >= 224`.
+3. `update_clock`: `disabled` (`INIDISP` bit 7) returns without drawing or advancing `current_clock`. Otherwise, when `v` changes, call `draw_scanline` of the **new** `v` (start of that line) unless `headless`, then store `last_drawn_scanline`. Mid-line register writes apply before `draw_scanline(v+1)`. `draw_scanline` returns if `screen_y >= 224`.
 4. `get_all_sprites_on_scanline` iterates OAM 0..128, breaks when `len > 32`, then reverses so higher index is first and lower index wins. `CGADSUB` bit 4 is stored on `Oam.color_math_enabled`; the Object branch of `draw_scanline` never reads it.
 5. `bgofs_latch` and `bghofs_latch` in `PpuState` are shared by all `BGnHOFS` / `BGnVOFS` writes.
 6. `write_m7a` / `write_m7b` update `m7a_mul` / `m7b_mul` for `read_mpy` (`$2134–$2136`) only. No affine Mode 7 render.

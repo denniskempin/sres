@@ -18,6 +18,8 @@
 3. `BatchedBusDeviceU24` and `AsyncBusDeviceU24` `read()` flush; `peek()` does not (may be stale).
 4. Batched and async `update_clock()` enqueue a clock action only when `master_clock` delta is `> 1024`.
 5. `$4206` divisor 0 → quotient (`div_result`) and remainder (`mul_result`) both `0xFFFF`.
+6. `Bus::reset` rebuilds `Clock` and PPU only. `DmaController` state (`dma_pending`, channel regs) survives.
+7. GP-DMA A-bus increment uses `Wrap::NoWrap`. Docs say bank wrap. Do not change without the `dma_*` ROM-outcome tests.
 
 ## Hardware Map
 
@@ -34,6 +36,7 @@ Ranges → owner. Register bitfields: `docs/index.md`. LoRom/HiRom WRAM/ROM/SRAM
 - `Cpu<MainBusImpl<PpuT, ApuT>>` calls `cycle_read_u8` / `cycle_write_u8` and `consume_nmi_interrupt` / `consume_timer_interrupt` / `interrupt_pending`. `SystemImpl` calls `consume_vblank` for frame swap.
 - `SystemImpl` wraps PPU and APU in `SyncBusDevice` / `BatchedBusDeviceU24` / `AsyncBusDeviceU24` (which variant: root).
 - DMA copies through this bus's `bus_read`/`bus_write`.
+- Unit tests can construct `MainBusImpl::new` with any `BusDeviceU24`. `Cartridge::with_program` mapping: `components`.
 
 ## Gaps
 

@@ -18,7 +18,7 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 4. DRAM refresh: when `h_counter` crosses `dram_refresh_position`, add 40 to `h_counter` and `master_clock`. Position starts at 538, then `538 - ((master_clock - h_counter) & 7)` each line.
 5. Dots 323 and 327 take 6 cycles on non-short scanlines (`hdot` after `h_counter` 1292 and 1310).
 6. `$4210` read does not clear `nmi_flag` when `v == 225 && h_counter <= 2` (`read_rdnmi`).
-7. `advance_master_clock` ticks in chunks of ≤64 so NMI/timer edges are not skipped.
+7. `advance_master_clock` ticks in chunks of ≤64 so NMI/timer edges are not skipped. A `prev_h < N && h_counter >= N` check **before** the scanline wrap misses N near 0: the wrap chunk can go 1360→1424 then subtract to ~60, so `prev_h` is never `< N`. DRAM refresh at ~538 never sits in a wrap chunk. New H-events at small `h` need a per-line latch after the wrap.
 8. H/V IRQ fires on the rise of the match (`EdgeDetector`), not while the match stays true.
 9. `Clock` owns `master_clock` and emits `ClockInfo`; other components consume `ClockInfo` (`common`).
 10. `interrupt_pending()` is `nmi_interrupt || timer_interrupt` (non-destructive). `$4211` (`read_timeup`) clears both `timer_flag` and `timer_interrupt`.
@@ -32,7 +32,7 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 
 - `MainBusImpl` owns `Clock`, calls `advance_master_clock`, and `consume_nmi_interrupt` / `consume_timer_interrupt` / `interrupt_pending` / `consume_vblank`.
 - `MainBusImpl` copies ROM/SRAM and `MappingMode` from `Cartridge` for LoRom/HiRom decode.
-- `SystemImpl::with_cartridge` and tests construct the system from `Cartridge`.
+- `SystemImpl::with_cartridge` and tests construct the system from `Cartridge`. `Cartridge::with_program` uses `SnesHeader::default()` (LoRom); ROM index 0 is `$00:8000`. `sram` is empty.
 
 ## Gaps
 

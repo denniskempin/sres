@@ -27,7 +27,7 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 
 ## Gaps
 
-- HDMA and FastROM: unimplemented; see root. `main_bus/` in this crate is DMA only.
+- FastROM: unimplemented; see root. `main_bus/` in this crate is DMA only.
 - Serial joypad `$4016`/`$4017`: unimplemented in `main_bus` (read returns `0`). This layer packs auto-read `$4218`–`$421B` only.
 
 ## Tests

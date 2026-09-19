@@ -22,6 +22,7 @@ Assets for CPU trace-comparison and ROM-outcome tests driven by `../rom_tests.rs
 3. Mixed traces: a line shorter than 100 characters parses as `Spc700State`, otherwise `CpuState`. `assert_spc_trace_eq` also clears `operand_str` and `master_cycle`.
 4. `play_noise` returns after trace line `19047`.
 5. `process.py` stops a raw log at the first `JMP` whose PC equals the operand effective address (`ppu_timing` is `jmp Start`). The assemble loop in that file is a commented-out string and is not run.
+6. `assert_cpu_trace_eq` compares the full `CpuState` string, including `V:`/`H:` (root Testing Strategy). Extra master cycles on an idle frame fail every `krom_*` / `ppu_timing` test. That suite is the regression gate for any `advance_master_clock` cost change.
 
 ## Integration
 
