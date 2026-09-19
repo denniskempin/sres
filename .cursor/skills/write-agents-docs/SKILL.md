@@ -1,11 +1,11 @@
 ---
 name: write-agents-docs
-description: "Write or refresh AGENTS.md files and //! file headers in the SRES repo. Use after an architectural or test-strategy change, when a directory lacks an AGENTS.md, or when asked to improve agent documentation."
+description: "Write or refresh AGENTS.md files and //! file headers in the SRES repo. Use after an architectural or test-strategy change, when a directory lacks an AGENTS.md, or when applying agreed AGENTS.md edits. Do not use to mine a conversation for what to document (that is agent-retro)."
 ---
 
 # Writing AGENTS.md and `//!` headers
 
-Scope: `AGENTS.md` files and the leading `//!` block of `.rs` files. Not in scope: `///` item docs, code changes, `.cursor/skills/code-review/`. Policy lives in the root `AGENTS.md`; the code-review skill enforces it. Do not restate it.
+Scope: `AGENTS.md` files and the leading `//!` block of `.rs` files. Not in scope: `///` item docs, code changes, conversation retrospectives (`.cursor/skills/agent-retro/`), `.cursor/skills/` authorship. Policy lives in the root `AGENTS.md`; the code-review skill enforces it. Do not restate it.
 
 ## How these files are consumed
 
