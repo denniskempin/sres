@@ -78,7 +78,7 @@ Flag each miss:
 | Policy | A skill restates root `AGENTS.md` architecture, commands, variants, or error-handling |
 | Agents | `.cursor/agents/` or `.github/agents/` file names a tool, MCP, or workflow this repo does not use |
 | Links | A markdown link from a skill, review-guide, or `AGENTS.md` Reference does not resolve |
-| Budgets | Root `AGENTS.md` over 150 lines; a directory `AGENTS.md` over 100 |
+| Budgets | A file exceeds the cap in `write-agents-docs` Budgets |
 
 Stale `AGENTS.md` / `//!` facts go through `write-agents-docs` (template, budgets, self-check). Do not invent a second authorship procedure. A reused multi-step procedure with no skill is a create/improve item here only when it is not conversation-sourced (`agent-retro`).
 
@@ -109,12 +109,7 @@ Skip `trunk build` unless frontend, WASM deps, or the deploy job changed.
 
 ### 4. CI alignment and speed
 
-Compare the step-1 table. A documented exception is not a finding. Undocumented drift is a finding: document it in `AGENTS.md` Commands (one line) or align the scripts.
-
-Documented exceptions (do not "fix" without a reason):
-
-- `./check-all.sh` clippy is `--workspace` only; CI is `--workspace --all-targets` (root Commands; review-guide §10)
-- Pages `deploy` runs on push to `main` only (root Commands)
+Compare the step-1 table. A documented exception in root `AGENTS.md` Commands or review-guide §10 is not a finding. Undocumented drift is a finding: document it in `AGENTS.md` Commands (one line) or align the scripts. Do not "fix" a documented exception without a reason.
 
 Required shape:
 
