@@ -31,7 +31,7 @@ Ranges → owner. Register bitfields: `docs/index.md`. LoRom/HiRom WRAM/ROM/SRAM
 
 ## Integration
 
-- `Cpu<MainBusImpl<PpuT, ApuT>>` calls `cycle_read_u8` / `cycle_write_u8` and `consume_nmi_interrupt` / `consume_timer_interrupt`.
+- `Cpu<MainBusImpl<PpuT, ApuT>>` calls `cycle_read_u8` / `cycle_write_u8` and `consume_nmi_interrupt` / `consume_timer_interrupt` / `interrupt_pending`. `SystemImpl` calls `consume_vblank` for frame swap.
 - `SystemImpl` wraps PPU and APU in `SyncBusDevice` / `BatchedBusDeviceU24` / `AsyncBusDeviceU24` (which variant: root).
 - DMA copies through this bus's `bus_read`/`bus_write`.
 

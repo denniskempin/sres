@@ -5,6 +5,7 @@ use super::operands::Operand;
 use super::status::StatusFlags;
 use super::Cpu;
 use super::EmuVectorTable;
+use super::ExecutionState;
 use super::MainBus;
 use super::NativeVectorTable;
 use crate::common::address::Address;
@@ -475,7 +476,7 @@ pub fn stp(cpu: &mut Cpu<impl MainBus>) {
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
-    cpu.halt = true;
+    cpu.execution_state = ExecutionState::Stopped;
 }
 
 pub fn sty<T: UInt>(cpu: &mut Cpu<impl MainBus>, operand: &Operand) {
@@ -656,6 +657,7 @@ pub fn wai(cpu: &mut Cpu<impl MainBus>) {
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
     cpu.bus.cycle_io();
+    cpu.execution_state = ExecutionState::Waiting;
 }
 
 pub fn mvn(cpu: &mut Cpu<impl MainBus>, operand: &Operand) {
