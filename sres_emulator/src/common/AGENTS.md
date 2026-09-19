@@ -29,7 +29,7 @@ Foundational types shared by all emulator layers.
 
 - `MainBus: Bus<AddressU24>` (CPU) and `Spc700Bus: Bus<AddressU16>` (SPC700). `MainBusImpl` implements `Bus<AddressU24>`; devices implement `BusDeviceU24`.
 - PPU VRAM uses `AddressU15`. CGRAM and `Framebuffer` use `Rgb15`. OAM RAM uses `OamAddr`; sprite nametables are `AddressU15`. `Image` is implemented in `sres_egui` and `tests/ppu_tests.rs`.
-- `components/clock.rs` uses `EdgeDetector`. `SystemImpl` consumes `ClockInfo` and `consume_vblank`.
+- `components/clock.rs` uses `EdgeDetector`. `SystemImpl` consumes `ClockInfo`.
 - Components emit through `DebugEventCollectorRef`. `Debugger` stores events in `RingBuffer`.
 - Native frontend calls `logging::init()`. Tests call `logging::test_init`. CPU tests use `TestBus` and `debug_events::test::mock_collector`. APU tests use `compare_wav_against_golden`.
 
