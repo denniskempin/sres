@@ -120,6 +120,11 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 - **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only.
 - **cargo-nextest**: Preferred runner. `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
 
+## Cursor Cloud specific instructions
+
+- After the environment loads, update `main` from origin before branching: `git fetch origin main`, then `git pull --ff-only origin main` if already on `main`, otherwise create the work branch from `origin/main`. Snapshot checkouts lag the remote default branch. Stay on an existing PR branch if this run already has one.
+- After a pull request is merged, delete its remote head branch: `git push origin --delete <branch>`. Never delete `main`.
+
 ## Important Agent Rules
 - **Concise**: Speak concisely, drop conversational fillers, pleasantries, rambling explanations. Use simple and direct language.
 - **Push back**: Do not blindly agree with inefficient, illogical or requests that lead to bad outcomes. Push back by stating the technical blocker in direct language.
