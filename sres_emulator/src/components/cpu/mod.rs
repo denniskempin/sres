@@ -1,5 +1,5 @@
-//! W65C816 CPU (`Cpu`). `step()` runs one instruction then polls NMI/IRQ.
-//! `MainBus` is `Bus<AddressU24>` plus `consume_nmi_interrupt` / `consume_timer_interrupt`.
+//! W65C816 CPU (`Cpu`). `step()` runs one instruction then polls NMI/IRQ; idles while `Waiting`.
+//! `MainBus` is `Bus<AddressU24>` plus `consume_nmi_interrupt` / `consume_timer_interrupt` / `interrupt_pending`.
 mod debug;
 mod instructions;
 mod opcode_table;
@@ -9,6 +9,7 @@ mod test;
 
 use intbits::Bits;
 use log::info;
+use log::warn;
 
 pub use self::debug::CpuDebug;
 pub use self::debug::CpuEvent;
@@ -24,6 +25,16 @@ use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::UInt;
 use crate::common::uint::UIntSize;
 
+/// Two-frame master-cycle budget for a `Waiting` idle inside `step()`.
+const WAI_WAIT_CYCLE_BUDGET: u64 = 2 * 262 * 1364;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ExecutionState {
+    Running,
+    Waiting,
+    Stopped,
+}
+
 pub struct Cpu<BusT: MainBus> {
     pub bus: BusT,
     pc: AddressU24,
@@ -35,7 +46,7 @@ pub struct Cpu<BusT: MainBus> {
     db: u8,
     status: StatusFlags,
     emulation_mode: bool,
-    halt: bool,
+    execution_state: ExecutionState,
     instruction_table: [Instruction<BusT>; 256],
     debug_event_collector: DebugEventCollectorRef<CpuEvent>,
 }
@@ -55,17 +66,18 @@ impl<BusT: MainBus> Cpu<BusT> {
             status: StatusFlags::default(),
             pc: AddressU24::default(),
             emulation_mode: true,
-            halt: false,
+            execution_state: ExecutionState::Running,
             instruction_table: build_opcode_table(),
             debug_event_collector,
         }
     }
 
     pub fn halted(&self) -> bool {
-        self.halt
+        self.execution_state == ExecutionState::Stopped
     }
 
     pub fn reset(&mut self) {
+        self.execution_state = ExecutionState::Running;
         self.bus.reset();
         self.pc = AddressU24 {
             bank: 0,
@@ -80,6 +92,27 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     pub fn step(&mut self) {
+        if self.execution_state == ExecutionState::Waiting {
+            let start = self.bus.clock_info().master_clock;
+            let mut io_cycles = 0u64;
+            while !self.bus.interrupt_pending() {
+                let elapsed_master = self.bus.clock_info().master_clock.saturating_sub(start);
+                // TestBus does not advance master_clock; MainBusImpl::cycle_io is 6 master cycles.
+                let elapsed = elapsed_master.max(io_cycles.saturating_mul(6));
+                if elapsed >= WAI_WAIT_CYCLE_BUDGET {
+                    self.debug_event_collector
+                        .on_error("WAI wait exceeded two-frame cycle budget".to_string());
+                    warn!("WAI wait exceeded two-frame cycle budget");
+                    break;
+                }
+                self.bus.cycle_io();
+                io_cycles += 1;
+            }
+            self.execution_state = ExecutionState::Running;
+            self.poll_interrupts();
+            return;
+        }
+
         let opcode = self.bus.cycle_read_u8(self.pc);
         self.debug_event_collector
             .on_event(CpuEvent::Step(self.debug().state()));
@@ -87,7 +120,13 @@ impl<BusT: MainBus> Cpu<BusT> {
             info!(target: "cpu_step", "{}", self.debug().state());
         }
         (self.instruction_table[opcode as usize].execute)(self);
+        self.poll_interrupts();
+    }
 
+    fn poll_interrupts(&mut self) {
+        if self.execution_state == ExecutionState::Waiting && self.bus.interrupt_pending() {
+            self.execution_state = ExecutionState::Running;
+        }
         if self.bus.consume_nmi_interrupt() {
             self.interrupt(NativeVectorTable::Nmi);
         }
@@ -183,6 +222,7 @@ impl<BusT: MainBus> Cpu<BusT> {
 pub trait MainBus: Bus<AddressU24> {
     fn consume_nmi_interrupt(&mut self) -> bool;
     fn consume_timer_interrupt(&mut self) -> bool;
+    fn interrupt_pending(&self) -> bool;
     fn clock_info(&self) -> ClockInfo;
 }
 
@@ -243,5 +283,20 @@ mod tests {
         reg.set(0xFF_u8);
         assert_eq!(reg.get::<u8>(), 0xFF);
         assert_eq!(reg.get::<u16>(), 0x12FF);
+    }
+
+    #[test]
+    fn wai_wait_on_test_bus_hits_cycle_cap() {
+        use crate::common::debug_events::test::mock_collector;
+        use crate::common::test_bus::TestBus;
+
+        let mut bus = TestBus::default();
+        bus.memory.set(AddressU24::new(0, 0x8000), 0xCB);
+        let mut cpu = Cpu::new(bus, mock_collector());
+        cpu.pc = AddressU24::new(0, 0x8000);
+        cpu.step();
+        assert_eq!(cpu.execution_state, ExecutionState::Waiting);
+        cpu.step();
+        assert_eq!(cpu.execution_state, ExecutionState::Running);
     }
 }

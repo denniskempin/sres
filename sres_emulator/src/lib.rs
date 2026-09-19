@@ -10,7 +10,6 @@ pub mod main_bus;
 use std::ops::Deref;
 use std::sync::MutexGuard;
 
-use common::util::EdgeDetector;
 use components::ppu::Framebuffer;
 use components::ppu::PpuDebug;
 pub use debugger::TraceStep;
@@ -87,7 +86,6 @@ pub struct SystemImpl<PpuT: ManagedBusDeviceU24<Ppu>, ApuT: ManagedBusDeviceU24<
     pub cpu: Cpu<MainBusImpl<PpuT, ApuT>>,
     debugger: DebuggerRef,
     debugger_enabled: bool,
-    vblank_detector: EdgeDetector,
     has_pending_video_frame: bool,
     pending_video_frame: Framebuffer,
 }
@@ -98,7 +96,6 @@ impl<PpuT: ManagedBusDeviceU24<Ppu>, ApuT: ManagedBusDeviceU24<Apu>> SystemImpl<
             cpu,
             debugger,
             debugger_enabled: false,
-            vblank_detector: EdgeDetector::new(),
             has_pending_video_frame: false,
             pending_video_frame: Framebuffer::default(),
         };
@@ -295,9 +292,7 @@ impl<PpuT: ManagedBusDeviceU24<Ppu>, ApuT: ManagedBusDeviceU24<Apu>> SystemImpl<
             self.cpu.bus.apu.sync();
         }
 
-        self.vblank_detector
-            .update_signal(self.cpu.bus.clock_info().vblank());
-        if self.vblank_detector.consume_rise() {
+        if self.cpu.bus.consume_vblank() {
             self.cpu.bus.ppu.sync();
             self.cpu.bus.apu.sync();
             self.cpu

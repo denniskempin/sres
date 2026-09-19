@@ -28,6 +28,7 @@ pub struct Clock {
     nmi_enable: bool,
     nmi_flag: bool,
     nmi_interrupt: bool,
+    vblank_occurred: bool,
 }
 
 impl Clock {
@@ -95,6 +96,7 @@ impl Clock {
                 self.nmi_interrupt = true;
             }
             self.nmi_flag = true;
+            self.vblank_occurred = true;
         }
 
         if self.vblank_detector.consume_fall() {
@@ -111,6 +113,16 @@ impl Clock {
     pub fn consume_nmi_interrupt(&mut self) -> bool {
         let value = self.nmi_interrupt;
         self.nmi_interrupt = false;
+        value
+    }
+
+    pub fn interrupt_pending(&self) -> bool {
+        self.nmi_interrupt || self.timer_interrupt
+    }
+
+    pub fn consume_vblank(&mut self) -> bool {
+        let value = self.vblank_occurred;
+        self.vblank_occurred = false;
         value
     }
 
@@ -182,6 +194,7 @@ impl Clock {
     fn read_timeup(&mut self) -> u8 {
         let value = self.peek_timeup().unwrap();
         self.timer_flag = false;
+        self.timer_interrupt = false;
         value
     }
 
@@ -338,6 +351,7 @@ impl Default for Clock {
             nmi_enable: false,
             nmi_flag: false,
             nmi_interrupt: false,
+            vblank_occurred: false,
         }
     }
 }
@@ -436,8 +450,8 @@ mod tests {
         // H=64: Timer should trigger
         timer.advance_master_clock(1);
         assert_eq!(timer.hdot(), 64);
-        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
         assert!(timer.consume_timer_interrupt());
+        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
 
         // Still H=64: Flags should remain false because they have been consumed
         timer.advance_master_clock(1);
@@ -448,8 +462,8 @@ mod tests {
         // Next scanline H=64: Timer should trigger again
         timer.advance_master_clock(1324);
         assert_eq!(timer.hdot(), 64);
-        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
         assert!(timer.consume_timer_interrupt());
+        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
     }
 
     #[test]
@@ -469,8 +483,8 @@ mod tests {
         // V=2: Timer should trigger
         timer.advance_master_clock(1324);
         assert_eq!(timer.v, 2);
-        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
         assert!(timer.consume_timer_interrupt());
+        assert_eq!(timer.bus_read(0x4211.into()), 0x80);
 
         // Still V=2: Flags should remain false because they have been consumed
         timer.advance_master_clock(100);

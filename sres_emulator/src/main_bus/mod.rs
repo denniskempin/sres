@@ -152,6 +152,10 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
         }
     }
 
+    pub fn consume_vblank(&mut self) -> bool {
+        self.clock.consume_vblank()
+    }
+
     pub fn update_joypads(&mut self, joy1: u16, joy2: u16) {
         self.joy1 = joy1;
         self.joy2 = joy2;
@@ -235,6 +239,10 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBus for MainBusImpl<PpuT, ApuT>
 
     fn consume_timer_interrupt(&mut self) -> bool {
         self.clock.consume_timer_interrupt()
+    }
+
+    fn interrupt_pending(&self) -> bool {
+        self.clock.interrupt_pending()
     }
 
     fn clock_info(&self) -> ClockInfo {
@@ -369,6 +377,10 @@ impl MainBus for crate::common::test_bus::TestBus<AddressU24> {
     }
 
     fn consume_timer_interrupt(&mut self) -> bool {
+        false
+    }
+
+    fn interrupt_pending(&self) -> bool {
         false
     }
 

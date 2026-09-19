@@ -21,6 +21,8 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 7. `advance_master_clock` ticks in chunks of ≤64 so NMI/timer edges are not skipped.
 8. H/V IRQ fires on the rise of the match (`EdgeDetector`), not while the match stays true.
 9. `Clock` owns `master_clock` and emits `ClockInfo`; other components consume `ClockInfo` (`common`).
+10. `interrupt_pending()` is `nmi_interrupt || timer_interrupt` (non-destructive). `$4211` (`read_timeup`) clears both `timer_flag` and `timer_interrupt`.
+11. `consume_vblank()` is a sticky latch set on vblank rise (same edge as NMI). `SystemImpl` uses it for frame swap so a `Waiting` idle that spans the edge still captures the frame.
 
 ## Hardware Map
 
@@ -28,7 +30,7 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 
 ## Integration
 
-- `MainBusImpl` owns `Clock`, calls `advance_master_clock`, and `consume_nmi_interrupt` / `consume_timer_interrupt`.
+- `MainBusImpl` owns `Clock`, calls `advance_master_clock`, and `consume_nmi_interrupt` / `consume_timer_interrupt` / `interrupt_pending` / `consume_vblank`.
 - `MainBusImpl` copies ROM/SRAM and `MappingMode` from `Cartridge` for LoRom/HiRom decode.
 - `SystemImpl::with_cartridge` and tests construct the system from `Cartridge`.
 
