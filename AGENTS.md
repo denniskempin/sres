@@ -28,7 +28,7 @@ SRES is a SNES emulator in Rust.
 
 **`sres_emulator` (`lib.rs`)** — System orchestration. `SystemImpl<PpuT, ApuT>` has three variants: `BatchedSystem` (default, batched PPU/APU), `SyncSystem` (cycle-accurate), `AsyncSystem` (threaded PPU and APU). Owns the CPU, `MainBusImpl`, `Apu`, debugger, and framebuffer.
 
-**`main_bus/`** — 65816 memory map, LoRom/HiRom address decoding, 8-channel DMA, hardware multiply/divide, and NMI/IRQ delegation to `Clock`. Connects CPU to all devices.
+**`main_bus/`** — 65816 memory map, LoRom/HiRom address decoding, 8-channel DMA and HDMA, hardware multiply/divide, and NMI/IRQ delegation to `Clock`. Connects CPU to all devices.
 
 **`apu/`** — APU integration layer. Orchestrates `Spc700` + `S-DSP`. `ApuBus` provides APU RAM, IPL ROM, timers, and APUIO ports. Outputs 32 kHz `AudioBuffer`.
 
@@ -41,7 +41,7 @@ SRES is a SNES emulator in Rust.
 | `spc700/` | Sony SPC700 | Audio CPU |
 | `s_dsp/` | Sony S-DSP | 8-voice BRR sample playback, 32 kHz output |
 | `cartridge` | ROM/SRAM | LoRom/HiRom header parsing |
-| `clock` | Timer/IRQ | NMI, H/V timer IRQs, scanline timing |
+| `clock` | Timer/IRQ | NMI, H/V timer IRQs, HDMA trigger latches |
 
 **`common/`** — Foundational types used by all layers: `AddressU24/U16/U15`, `Bus` trait, `UInt` (u8/u16 generic), `ClockInfo`, `DebugEventCollector`, `Rgb15/Rgba32/Image`.
 
@@ -96,7 +96,6 @@ Golden files are auto-created on first run; verify them before committing. Misma
 - **Unimplemented registers**: reads return `0`, writes are silently ignored. Both emit a `DebugEvent` error (visible in debugger; no panic). Exception: PPU unhandled I/O uses `log::warn`, not a `DebugEvent` (see `sres_emulator/src/components/ppu`).
 - **Unmapped memory**: same — return `0` + emit error.
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
-- **HDMA**: not implemented; `$420C` write logs a warning.
 - **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
 - **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware. Exception: PPU `decode_bgmode` panics on BG modes 4/6/7 (see `sres_emulator/src/components/ppu`).
 - **Fuzz targets** in `sres_emulator/fuzz/` are intended to test that arbitrary input never panics. The bins are stale and do not compile.
