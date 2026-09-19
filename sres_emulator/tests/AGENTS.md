@@ -8,7 +8,7 @@ Cargo integration tests for `sres_emulator`. Taxonomy and System-variant mapping
 |------|------|
 | `rom_tests.rs` | Trace-comparison (`SyncSystem`, `run_rom_test`) and ROM-outcome (`System`, `run_test_rom` until `stp`, `< 10_000_000` steps) |
 | `ppu_tests.rs` | ROM framebuffer and debug-render (`System`); snapshot tests (`Ppu` only, no ROM) |
-| `apu_tests.rs` | Golden-WAV (`System`); `play_noise` RAM/DSP; `dkc_apuio_transfer` ARAM sentinel |
+| `apu_tests.rs` | Golden-WAV (`System`, `compare_wav_against_golden`); `play_noise` RAM/DSP asserts |
 
 ## Subdirectories
 
@@ -33,7 +33,7 @@ Cargo integration tests for `sres_emulator`. Taxonomy and System-variant mapping
 - Drivers load `Cartridge::with_sfc_file` into `System` or `SyncSystem`. Snapshot tests construct `Ppu` directly.
 - Trace compares `CpuState` strings from xz Mesen logs via `SystemDebug::cpu_step_iter`.
 - ROM-outcome asserts `cpu.bus.peek_range` after `halted()`.
-- WAV tests use `debug_until` / `execute_for_audio_samples` / `execute_frames` then `swap_audio_buffer`. `play_noise` does not. `dkc_apuio_transfer` uses `execute_frames` until `halted()`.
+- WAV tests use `debug_until` / `execute_for_audio_samples` / `execute_frames` then `swap_audio_buffer`. `play_noise` does not.
 
 ## Tests
 
