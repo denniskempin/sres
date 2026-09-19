@@ -8,7 +8,7 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 |------|------|
 | `mod.rs` | Module declarations; isolation rules (comments in this file). |
 | `cartridge.rs` | `Cartridge`, `SnesHeader`, `MappingMode`. `.sfc` / SRAM load; LoRom vs HiRom header heuristic. |
-| `clock.rs` | `Clock`. Master clock, NMI, H/V timers. Entry: `advance_master_clock`. |
+| `clock.rs` | `Clock`. Master clock, NMI, H/V timers, HDMA setup/run latches. Entry: `advance_master_clock`. |
 
 ## Behaviors & Gotchas
 
@@ -23,6 +23,7 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 9. `Clock` owns `master_clock` and emits `ClockInfo`; other components consume `ClockInfo` (`common`).
 10. `interrupt_pending()` is `nmi_interrupt || timer_interrupt` (non-destructive). `$4211` (`read_timeup`) clears both `timer_flag` and `timer_interrupt`.
 11. `consume_vblank()` is a sticky latch set on vblank rise (same edge as NMI). `SystemImpl` uses it for frame swap so a `Waiting` idle that spans the edge still captures the frame.
+12. HDMA: after the scanline wrap, latch setup once per frame at V=0 h≥12 and run once per line at V<225 h≥1104. `consume_hdma_setup` / `consume_hdma_run` clear the pending flags. A wrap-chunk that lands past h=12 still raises setup (the DRAM-refresh edge idiom does not).
 
 ## Hardware Map
 
@@ -30,7 +31,7 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 
 ## Integration
 
-- `MainBusImpl` owns `Clock`, calls `advance_master_clock`, and `consume_nmi_interrupt` / `consume_timer_interrupt` / `interrupt_pending` / `consume_vblank`.
+- `MainBusImpl` owns `Clock`, calls `advance_master_clock`, and `consume_nmi_interrupt` / `consume_timer_interrupt` / `interrupt_pending` / `consume_vblank` / `consume_hdma_setup` / `consume_hdma_run`.
 - `MainBusImpl` copies ROM/SRAM and `MappingMode` from `Cartridge` for LoRom/HiRom decode.
 - `SystemImpl::with_cartridge` and tests construct the system from `Cartridge`.
 
