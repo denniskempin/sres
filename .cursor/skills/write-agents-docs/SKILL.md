@@ -92,7 +92,7 @@ Examples from this repo:
 
 - Never paste struct, enum, or trait bodies. Name the type and the file. (`sres_emulator/src/apu/AGENTS.md` embeds `pub struct Apu {...}`; it goes stale on any field edit.)
 - Every file, type, register, constant, and command named must exist. Verify with `rg` or by running it before writing it.
-- Every "not implemented" claim must match the code and the root error-handling section. (`sres_emulator/src/AGENTS.md` says `main_bus/` covers "DMA/HDMA"; HDMA is unimplemented.)
+- Every "not implemented" claim must match the code and the root error-handling section. (`sres_emulator/src/AGENTS.md` Gaps must not restate root HDMA; leaf `main_bus/` owns the `$420C` warning.)
 - Backticks for all identifiers. `$XXXX` for SNES addresses. Hardware register names (`INIDISP`, `MDMAEN`), not prose descriptions.
 - Tables for 3+ items of the same shape; bullets otherwise. Nested bullets at most one level.
 - No "simple", "just", "easy", or marketing adjectives. Present tense, active voice.

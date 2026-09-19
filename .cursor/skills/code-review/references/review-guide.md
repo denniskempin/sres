@@ -127,7 +127,7 @@ Hot path is `DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed)` guard, then `#[cold]`
 
 ## 5. Error Handling
 
-The policy for unimplemented and unmapped hardware is in [AGENTS.md](../../../../AGENTS.md#error-handling--unimplemented-hardware). Two tiers it does not spell out: known partial features (HDMA, serial joypad) use `log::warn!`; file/ROM loading returns `anyhow::Result` at the boundary.
+The policy for unimplemented and unmapped hardware is in [AGENTS.md](../../../../AGENTS.md#error-handling--unimplemented-hardware). Two tiers it does not spell out: known partial features (serial joypad, HDMA) use `log::warn!`; file/ROM loading returns `anyhow::Result` at the boundary.
 
 **Reject:**
 - `panic!` on unmapped register access
@@ -135,7 +135,7 @@ The policy for unimplemented and unmapped hardware is in [AGENTS.md](../../../..
 - Silently ignoring unmapped access without debug event
 - `Result` in hot emulation paths (`step`, `bus_read`)
 
-**Examples:** `sres_emulator/src/main_bus/mod.rs` (unmapped reads), `sres_emulator/src/main_bus/dma.rs` (HDMA warning)
+**Examples:** `sres_emulator/src/main_bus/mod.rs` (unmapped reads; serial `$4016`/`$4017` warning)
 
 ### Panic vs warn decision table
 
