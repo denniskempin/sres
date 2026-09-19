@@ -350,6 +350,22 @@ pub fn test_wai_nmi() {
     );
 }
 
+#[test]
+pub fn test_wai_irq() {
+    let cpu = run_test_rom("wai_irq");
+
+    assert_eq!(
+        cpu.bus.peek_u8(AddressU24::new(0, 0x0000)),
+        Some(0x00),
+        "IRQ handler ran; I=1 should skip the vector"
+    );
+    assert_eq!(
+        cpu.bus.peek_u8(AddressU24::new(0, 0x0001)),
+        Some(0x80),
+        "TIMEUP was not set; WAI did not wake on H-IRQ"
+    );
+}
+
 fn run_test_rom(test_name: &str) -> CpuT {
     logging::test_init(false);
 
