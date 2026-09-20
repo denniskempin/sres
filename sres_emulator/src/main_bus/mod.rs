@@ -120,7 +120,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                         .on_unimplemented(UnimplementedBehavior::SerialJoypadRead);
                     0
                 }
-                0x4200..=0x420D => 0,
+                0x4200..=0x420F => 0,
                 0x4210..=0x4212 => self.clock.bus_read(addr),
                 0x4213 => {
                     self.debug_event_collector
@@ -197,6 +197,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                     self.debug_event_collector
                         .on_unimplemented(UnimplementedBehavior::Memsel);
                 }
+                0x420E | 0x420F => {}
                 0x4210..=0x421F => {}
                 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 _ => {
