@@ -88,6 +88,7 @@ fn event_filter_quick_add(ui: &mut Ui, event_filters: &mut Vec<EventFilter>) {
         log_point_button(ui, "Step", EventFilter::CpuProgramCounter(0..u32::MAX));
         log_point_button(ui, "Irq", EventFilter::Interrupt(None));
         log_point_button(ui, "Err", EventFilter::ExecutionError);
+        log_point_button(ui, "Unimpl", EventFilter::Unimplemented);
         ui.label("Bus");
         log_point_button(ui, "R", EventFilter::CpuMemoryRead(0..u32::MAX));
         log_point_button(ui, "W", EventFilter::CpuMemoryWrite(0..u32::MAX));
@@ -155,7 +156,7 @@ fn event_filter_help_window(ui: &mut Ui, show: &mut bool) {
             ui.label("  irq [type]          - Interrupt (optional type: nmi, etc.)");
             ui.label("  s-pc <address/range> - SPC700 program counter");
             ui.label(
-                "  unimplemented       - unimplemented hardware (also the Unimplemented pane)",
+                "  unimplemented       - unimplemented hardware (Unimplemented pane checkbox)",
             );
             ui.separator();
 

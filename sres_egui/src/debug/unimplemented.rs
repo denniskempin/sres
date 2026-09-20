@@ -1,4 +1,4 @@
-//! Unimplemented-behavior pane: hit counts, break-on-hit, and reset.
+//! Unimplemented-behavior pane: hit counts, `EventFilter::Unimplemented` break checkbox, and reset.
 //! Inspection only; does not execute.
 
 use egui::Context;
@@ -6,6 +6,7 @@ use egui::ScrollArea;
 use egui::TextStyle;
 use egui::Ui;
 use sres_emulator::common::unimplemented::UnimplementedBehavior;
+use sres_emulator::debugger::EventFilter;
 use sres_emulator::System;
 
 pub struct UnimplementedViewer {
@@ -28,15 +29,16 @@ impl UnimplementedViewer {
             .show(ctx, |ui| {
                 let mut debugger = emulator.debugger();
                 let hits = debugger.unimplemented_hits();
+                let mut break_on = debugger.has_break_point(&EventFilter::Unimplemented);
                 let mut reset = false;
                 ScrollArea::vertical().show(ui, |ui| {
-                    unimplemented_widget(
-                        ui,
-                        &hits,
-                        &mut debugger.break_on_unimplemented,
-                        &mut reset,
-                    );
+                    unimplemented_widget(ui, &hits, &mut break_on, &mut reset);
                 });
+                if break_on {
+                    debugger.add_break_point(EventFilter::Unimplemented);
+                } else {
+                    debugger.remove_break_point(&EventFilter::Unimplemented);
+                }
                 if reset {
                     debugger.clear_unimplemented_counts();
                 }
@@ -47,10 +49,10 @@ impl UnimplementedViewer {
 pub fn unimplemented_widget(
     ui: &mut Ui,
     hits: &[(UnimplementedBehavior, u64)],
-    break_on_unimplemented: &mut bool,
+    break_on: &mut bool,
     reset: &mut bool,
 ) {
-    ui.checkbox(break_on_unimplemented, "Break when reached");
+    ui.checkbox(break_on, "Break when reached");
     if ui.button("Reset counts").clicked() {
         *reset = true;
     }

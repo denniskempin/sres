@@ -203,7 +203,6 @@ pub struct Debugger {
     pub log: RingBuffer<DebugEvent, LOG_BUFFER_SIZE>,
     pub break_reason: Option<BreakReason>,
     pub enabled: bool,
-    pub break_on_unimplemented: bool,
     unimplemented_counts: HashMap<UnimplementedBehavior, u64>,
 }
 
@@ -215,7 +214,6 @@ impl Debugger {
             log: RingBuffer::default(),
             break_reason: None,
             enabled: false,
-            break_on_unimplemented: false,
             unimplemented_counts: HashMap::new(),
         }))
     }
@@ -385,14 +383,7 @@ impl DebugErrorCollector for Debugger {
     #[cold]
     fn on_unimplemented(&mut self, behavior: UnimplementedBehavior) {
         *self.unimplemented_counts.entry(behavior).or_insert(0) += 1;
-        let event = DebugEvent::Unimplemented(behavior);
-        if self.break_on_unimplemented && self.break_reason.is_none() {
-            self.break_reason = Some(BreakReason {
-                event: event.clone(),
-                trigger: EventFilter::Unimplemented,
-            });
-        }
-        self.collect_debug_event(event);
+        self.collect_debug_event(DebugEvent::Unimplemented(behavior));
     }
 }
 
@@ -528,7 +519,7 @@ mod test {
         );
         assert!(d.take_break_reason().is_none());
 
-        d.break_on_unimplemented = true;
+        d.add_break_point(EventFilter::Unimplemented);
         d.on_unimplemented(UnimplementedBehavior::PpuStat78Read);
         let reason = d.take_break_reason().expect("break on unimplemented");
         assert_eq!(reason.trigger, EventFilter::Unimplemented);
