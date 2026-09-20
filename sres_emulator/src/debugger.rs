@@ -574,4 +574,50 @@ mod test {
         );
         system.debugger().disable();
     }
+
+    #[test]
+    fn ppu_named_hits_and_stat77_peek_silent() {
+        use crate::common::bus::BusDeviceU24;
+        use crate::common::debug_events::DebugEventCollectorRef;
+        use crate::components::ppu::Ppu;
+
+        let debugger = Debugger::new();
+        debugger.lock().unwrap().enable();
+        let mut ppu = Ppu::with_collector(DebugEventCollectorRef(debugger.clone()));
+        ppu.write(AddressU24::new(0, 0x2105), 4);
+        let _ = ppu.peek(AddressU24::new(0, 0x213E));
+        {
+            let hits = debugger.lock().unwrap().unimplemented_hits();
+            assert!(hits.contains(&(UnimplementedBehavior::PpuBgMode4, 1)));
+            assert!(hits.contains(&(UnimplementedBehavior::PpuOffsetPerTile, 1)));
+            assert!(!hits
+                .iter()
+                .any(|(b, _)| *b == UnimplementedBehavior::PpuStat77Read));
+        }
+        let _ = ppu.read(AddressU24::new(0, 0x213E));
+        assert!(debugger
+            .lock()
+            .unwrap()
+            .unimplemented_hits()
+            .contains(&(UnimplementedBehavior::PpuStat77Read, 1)));
+        debugger.lock().unwrap().disable();
+    }
+
+    #[test]
+    fn clock_write_only_mmio_does_not_panic() {
+        let mut system = crate::System::new();
+        system.debugger().enable();
+        let _ = system.cpu.bus.bus_read(AddressU24::new(0, 0x4200));
+        system.cpu.bus.bus_write(AddressU24::new(0, 0x4210), 0);
+        let hits = system.debugger().unimplemented_hits();
+        assert!(hits.iter().any(|(b, _)| matches!(
+            b,
+            UnimplementedBehavior::RegisterRead(addr) if addr.offset == 0x4200
+        )));
+        assert!(hits.iter().any(|(b, _)| matches!(
+            b,
+            UnimplementedBehavior::RegisterWrite(addr) if addr.offset == 0x4210
+        )));
+        system.debugger().disable();
+    }
 }

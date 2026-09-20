@@ -97,7 +97,7 @@ Golden files are auto-created on first run; verify them before committing. Misma
 - **Unimplemented hardware**: reads return `0`, writes are ignored. Sites call `on_unimplemented(UnimplementedBehavior)` (`common/unimplemented.rs`). `Debugger` increments per-variant counts and can `break_on_unimplemented`; hits are not ring-logged unless `EventFilter::Unimplemented` is a log point. Never panic. PPU unhandled I/O also `log::warn`.
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
-- **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware. Exception: PPU `decode_bgmode` panics on BG modes 4/6/7 (see `sres_emulator/src/components/ppu`).
+- **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware.
 - **Fuzz targets** in `sres_emulator/fuzz/` are intended to test that arbitrary input never panics. The bins are stale and do not compile.
 
 ## Reference

@@ -14,7 +14,7 @@ Ricoh 5C77 PPU. `Ppu` facade over serializable `PpuState`.
 
 ## Behaviors & Gotchas
 
-1. `decode_bgmode` panics on modes 4, 6, and 7. Exception to root (never panic for unimplemented hardware): `write_bgmode` stores `BgMode::Mode4` / `Mode6` / `Mode7`; the first visible `draw_scanline` hits `_ => panic!("Unsupported BG mode")`.
+1. `decode_bgmode` does not draw BG pixels for modes 4, 6, and 7 (`PpuBgMode4`/`6`/`7` on `write_bgmode`); sprites and backdrop still composite.
 2. Mode 2 sets BG3 `BitDepth::Opt` (offset-per-tile) but `decode_bgmode` only decodes BG1/BG2 as 4bpp; `Opt` is never read.
 3. `update_clock`: `disabled` (`INIDISP` bit 7) returns without drawing or advancing `current_clock`. Otherwise, when `v` changes, call `draw_scanline` unless `headless`, then store `last_drawn_scanline`. `draw_scanline` returns if `screen_y >= 224`.
 4. `get_all_sprites_on_scanline` iterates OAM 0..128, breaks when `len > 32`, then reverses so higher index is first and lower index wins. `CGADSUB` bit 4 is stored on `Oam.color_math_enabled`; the Object branch of `draw_scanline` never reads it.
@@ -38,15 +38,14 @@ Bitfields: `docs/index.md`.
 
 ## Gaps
 
-Unimplemented PPU features follow root (ignore write / read 0) unless noted. Unhandled I/O: `on_unimplemented` plus `log::warn` / `log::error`. `peek_*` is silent.
+Unimplemented PPU features follow root (ignore write / read 0) unless noted. Named variants fire on write; `PpuUnhandledRead`/`Write` remain backstop. `peek_*` is silent.
 
-- Windows `$2126–$212B`, MOSAIC `$2106`: unmatched (`PpuUnhandledWrite`).
+- Windows (`$2123–$212B`, `$212E–$212F`) / MOSAIC (`$2106`) / CGWSEL (`$2130`) / SETINI (`$2133`) / M7SEL (`$211A`) / M7C–M7Y (`$211D–$2120`): named write variants. `VMAIN` bits 2–3: `PpuVramRemap` (gotcha 7).
+- `INIDISP` bits 0–3: `PpuInidispBrightness` when not `$F`; only bit 7 (`disabled`) affects rendering.
+- Hi-res (modes 5/6): `PpuHiRes`. Offset-per-tile (modes 2/4/6): `PpuOffsetPerTile`.
+- Modes 4/6/7: `PpuBgMode4`/`6`/`7`; BG layers draw-nothing (gotcha 1).
+- OBJ color math: `PpuObjColorMath` — CGADSUB bit 4 stored, compositor ignores (gotcha 4).
 - STAT77/STAT78 reads: `PpuStat77Read` / `PpuStat78Read`.
-- `INIDISP` bits 0–3 (brightness): ignored; only bit 7 (`disabled`) is used.
-- Hi-res and interlace: Mode 5 still draws 256 pixels; Mode 6 panics (gotcha 1).
-- Offset-per-tile (modes 2/4/6): not applied (mode 2: gotcha 2; 4/6 panic).
-- Modes 4/6/7: panic in `decode_bgmode` (exception to root).
-- OBJ color math: stored, ignored (gotcha 4).
 
 ## Tests
 

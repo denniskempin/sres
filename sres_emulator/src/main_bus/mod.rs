@@ -80,7 +80,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0x2100..=0x213F => self.ppu.peek(addr),
                 0x2140..=0x217F => self.apu.peek(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_peek(addr),
+                0x4210..=0x4212 => self.clock.bus_peek(addr),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
                 0x4218 => Some(self.joy1.low_byte()),
                 0x4219 => Some(self.joy1.high_byte()),
@@ -101,7 +101,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0x2100..=0x213F => self.ppu.read(addr),
                 0x2140..=0x217F => self.apu.read(addr),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_read(addr),
+                0x4210..=0x4212 => self.clock.bus_read(addr),
                 0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4016..=0x4017 => {
                     self.debug_event_collector
@@ -135,14 +135,25 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             .on_event(MainBusEvent::Write(addr, value));
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
-            MemoryBlock::Rom(offset) => self.rom[offset] = value,
+            MemoryBlock::Rom(offset) => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::RomWrite(addr));
+                self.rom[offset] = value;
+            }
             MemoryBlock::Sram(offset) => self.sram[offset] = value,
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.write(addr, value),
                 0x2140..=0x217F => self.apu.write(addr, value),
                 0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
-                0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_write(addr, value),
+                0x4200 => {
+                    if value & 1 != 0 {
+                        self.debug_event_collector
+                            .on_unimplemented(UnimplementedBehavior::JoypadAutoReadEnable);
+                    }
+                    self.clock.bus_write(addr, value);
+                }
+                0x4207..=0x420A => self.clock.bus_write(addr, value),
                 _ => {
                     self.debug_event_collector
                         .on_unimplemented(UnimplementedBehavior::RegisterWrite(addr));

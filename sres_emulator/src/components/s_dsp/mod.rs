@@ -64,7 +64,40 @@ impl SDsp {
     pub fn write_register(&mut self, reg: u8, value: u8) {
         match reg {
             0x5D => self.dir = value,
-            0x6C => self.flg = value.into(),
+            0x6C => {
+                self.flg = value.into();
+                if self.flg.mute() {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::DspFlgMute);
+                }
+                if self.flg.reset() {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::DspFlgReset);
+                }
+            }
+            0x0C | 0x1C => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspMvol);
+            }
+            0x5C => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspKoff);
+            }
+            0x7C => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspEndx);
+            }
+            0x2D => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspPmon);
+                self.raw[reg as usize] = value;
+            }
+            0x0D | 0x2C | 0x3C | 0x4D | 0x6D | 0x7D => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspEcho);
+                self.raw[reg as usize] = value;
+            }
+            0x3D => self.raw[reg as usize] = value,
             reg => match reg.low_nibble() {
                 0x0..=0x9 => {
                     self.voices[reg.high_nibble() as usize].write_register(reg.low_nibble(), value)
@@ -80,6 +113,11 @@ impl SDsp {
                             .on_unimplemented(UnimplementedBehavior::DspUnhandledRegister(reg));
                     }
                 },
+                0xF => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::DspEcho);
+                    self.raw[reg as usize] = value;
+                }
                 _ => {
                     self.debug_event_collector
                         .on_unimplemented(UnimplementedBehavior::DspUnhandledRegister(reg));

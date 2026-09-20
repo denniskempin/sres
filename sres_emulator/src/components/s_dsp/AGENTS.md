@@ -43,8 +43,7 @@ Semantics: `docs/index.md`.
 
 ## Gaps
 
-- Echo/FIR (`$0D` EFB, `$2C`/`$3C` EVOL, `$4D` EON, `$6D`/`$7D` ESA/EDL, `$xF` FIR): not implemented. Writes emit `DspUnhandledRegister` and are ignored (`$xC` other than KON) or stored in `raw` unused. No panic (root).
-- `$5C` (KOFF) does not set `trigger_off`. `Flg.mute` / `Flg.reset` unused. MVOL, PMON, ENDX unimplemented.
+- Echo/FIR: `DspEcho`. `$5C` KOFF: `DspKoff` (does not set `trigger_off`). `$0C`/`$1C` MVOL: `DspMvol`. `$2D` PMON: `DspPmon`. `$7C` ENDX: `DspEndx`. `Flg.mute` / `Flg.reset`: `DspFlgMute` / `DspFlgReset`. `$3D` NON is implemented. Unknown regs: `DspUnhandledRegister`.
 
 ## Tests
 

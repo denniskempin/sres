@@ -33,7 +33,7 @@ Catch-up matches Mesen2 `SpcClockSpeedAdjustment` (+40 Hz).
 | Range | Owner |
 |-------|-------|
 | `$2140–$2143` | S-CPU APUIO (`Apu` `BusDeviceU24`) |
-| `$F1–$FF` | SPC MMIO (`ApuBus`) |
+| `$F0–$FF` | SPC MMIO (`ApuBus`) |
 | `$FFC0–$FFFF` | IPL ROM when `ipl_rom_enabled` |
 
 Register semantics: `docs/index.md`.
@@ -48,7 +48,7 @@ Register semantics: `docs/index.md`.
 
 ## Gaps
 
-- Unimplemented-register / unmapped / open-bus policy: root. This directory has no additional unimplemented MMIO.
+- `$F0` TEST: `ApuTestRegisterRead`/`Write`. `$F1` CONTROL read: `ApuControlRead`. `$F3` while DSPADDR bit 7: `ApuDspDataReadonlyWrite`. `$FD`–`$FF` writes: `ApuTimerOutputWrite`. S-DSP register gaps: `s_dsp`.
 
 ## Tests
 

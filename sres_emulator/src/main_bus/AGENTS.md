@@ -45,6 +45,8 @@ Ranges → owner. Register bitfields: `docs/index.md`. LoRom/HiRom WRAM/ROM/SRAM
 - HDMA trigger window is V=0..224 (no 239-line overscan; `Clock` does not see SETINI).
 - No 5A22 errata (DMA-then-HDMA crash, INIDISP `BBADn=$00` failure, last-channel one-byte indirect read, `irqLock`).
 - `$420C` reads stay unmapped (write-only). `$43xC–$43xE` emit `DmaUnusedRegister`.
+- ROM writes emit `RomWrite` and still mutate `rom`.
+- NMITIMEN bit 0 writes emit `JoypadAutoReadEnable`. `$4200`/`$4207`–`$420A` reads use the register catch-all (not `Clock`, which would panic). `$4210`–`$4212` writes use the register catch-all.
 - GP-DMA A-bus increment keeps `Wrap::NoWrap` (gotcha 7). FastROM and serial `$4016`/`$4017`: see root / src Gaps.
 
 ## Tests

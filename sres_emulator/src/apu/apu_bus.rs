@@ -10,6 +10,7 @@ use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
 use crate::common::debug_events::noop_collector;
 use crate::common::debug_events::DebugEventCollectorRef;
+use crate::common::unimplemented::UnimplementedBehavior;
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
 
@@ -141,6 +142,16 @@ impl Bus<AddressU16> for ApuBus {
 
         // Handle timer output reads specially (they reset on read)
         let value = match addr.0 {
+            0x00F0 => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::ApuTestRegisterRead);
+                self.peek_u8(addr).unwrap_or_default()
+            }
+            0x00F1 => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::ApuControlRead);
+                self.peek_u8(addr).unwrap_or_default()
+            }
             0x00FD..=0x00FF => {
                 let timer_id = addr.0 as usize - 0x00FD;
                 self.timers.read_output(timer_id)
@@ -168,6 +179,11 @@ impl Bus<AddressU16> for ApuBus {
         self.spc_cycle += 2;
 
         match addr.0 {
+            0x00F0 => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::ApuTestRegisterWrite);
+                self.ram[addr.0 as usize] = value;
+            }
             0x00F1 => self.write_control(value),
             0x00F2 => {
                 self.dsp_register_readonly = value.bit(7);
@@ -175,6 +191,8 @@ impl Bus<AddressU16> for ApuBus {
             }
             0x00F3 => {
                 if self.dsp_register_readonly {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::ApuDspDataReadonlyWrite);
                     return;
                 }
                 self.dsp.write_register(self.dsp_register_select, value);
@@ -190,7 +208,10 @@ impl Bus<AddressU16> for ApuBus {
                 let timer_id = addr.0 as usize - 0x00FA;
                 self.timers.write_target(timer_id, value);
             }
-            0x00FD..=0x00FF => {} // Timer outputs are read-only
+            0x00FD..=0x00FF => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::ApuTimerOutputWrite);
+            }
             _ => self.ram[addr.0 as usize] = value,
         }
 

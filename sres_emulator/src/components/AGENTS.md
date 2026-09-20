@@ -37,8 +37,8 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 
 ## Gaps
 
-- `SnesHeader.fast_rom` (mapping bit 5) is parsed and never used. FastROM speed: root.
-- NMITIMEN bit 0 and HVBJOY bit 0 (joypad auto-read) are ignored; `$4212` bit 0 stays 0. Serial/auto-read packing: parent.
+- `SnesHeader.fast_rom` (mapping bit 5) is parsed and never used. FastROM speed: root; not logged per cycle.
+- NMITIMEN bit 0 writes: `JoypadAutoReadEnable` in `main_bus`. `$4212` bit 0 stays 0.
 
 ## Tests
 
