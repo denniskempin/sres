@@ -156,7 +156,7 @@ fn event_filter_help_window(ui: &mut Ui, show: &mut bool) {
             ui.label("  irq [type]          - Interrupt (optional type: nmi, etc.)");
             ui.label("  s-pc <address/range> - SPC700 program counter");
             ui.label(
-                "  unimplemented       - unimplemented hardware (Unimplemented pane checkbox)",
+                "  unimplemented       - unimplemented hardware (pane checkbox and Unimpl quick-add)",
             );
             ui.separator();
 

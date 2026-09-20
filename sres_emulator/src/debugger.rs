@@ -518,6 +518,10 @@ mod test {
             ]
         );
         assert!(d.take_break_reason().is_none());
+        assert!(d
+            .log
+            .iter()
+            .all(|e| !matches!(e, DebugEvent::Unimplemented(_))));
 
         d.add_break_point(EventFilter::Unimplemented);
         d.on_unimplemented(UnimplementedBehavior::PpuStat78Read);
@@ -527,6 +531,10 @@ mod test {
             reason.event,
             DebugEvent::Unimplemented(UnimplementedBehavior::PpuStat78Read)
         );
+        assert!(d
+            .log
+            .iter()
+            .all(|e| !matches!(e, DebugEvent::Unimplemented(_))));
         d.disable();
     }
 
