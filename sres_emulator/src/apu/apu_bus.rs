@@ -8,6 +8,7 @@ use log::trace;
 use super::timers::ApuTimers;
 use crate::common::address::AddressU16;
 use crate::common::bus::Bus;
+use crate::common::debug_events::noop_collector;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::components::s_dsp::SDsp;
 use crate::components::spc700::Spc700Bus;
@@ -43,6 +44,13 @@ pub struct ApuBus {
 impl ApuBus {
     #[allow(clippy::new_without_default)]
     pub fn new(debug_event_collector: DebugEventCollectorRef<ApuBusEvent>) -> Self {
+        Self::with_dsp_collector(debug_event_collector, noop_collector())
+    }
+
+    pub fn with_dsp_collector(
+        debug_event_collector: DebugEventCollectorRef<ApuBusEvent>,
+        dsp_collector: DebugEventCollectorRef<()>,
+    ) -> Self {
         Self {
             debug_event_collector: debug_event_collector.clone(),
             spc_cycle: 6,
@@ -54,7 +62,7 @@ impl ApuBus {
             timers: ApuTimers::new(),
             dsp_register_readonly: false,
             dsp_register_select: 0,
-            dsp: Default::default(),
+            dsp: SDsp::new(dsp_collector),
             control: ApuControlRegister::default(),
         }
     }

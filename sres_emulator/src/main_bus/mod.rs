@@ -16,6 +16,7 @@ use crate::common::bus::BusDeviceU24;
 use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U16Ext;
+use crate::common::unimplemented::UnimplementedBehavior;
 use crate::components::cartridge::Cartridge;
 use crate::components::cartridge::MappingMode;
 use crate::components::clock::Clock;
@@ -103,7 +104,8 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_read(addr),
                 0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4016..=0x4017 => {
-                    log::warn!("Serial Joypad not implemented");
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::SerialJoypadRead);
                     0
                 }
                 0x4218 => self.joy1.low_byte(),
@@ -112,13 +114,13 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0x421B => self.joy2.high_byte(),
                 _ => {
                     self.debug_event_collector
-                        .on_error(format!("Read from unimplemented register {addr}"));
+                        .on_unimplemented(UnimplementedBehavior::RegisterRead(addr));
                     0
                 }
             },
             MemoryBlock::Unmapped => {
                 self.debug_event_collector
-                    .on_error(format!("Read from unmapped memory region {addr}"));
+                    .on_unimplemented(UnimplementedBehavior::UnmappedRead(addr));
                 0
             }
         };
@@ -143,12 +145,12 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0x4200 | 0x4207..=0x420A | 0x4210..=0x4212 => self.clock.bus_write(addr, value),
                 _ => {
                     self.debug_event_collector
-                        .on_error(format!("Write to unimplemented register {addr} = {value}"));
+                        .on_unimplemented(UnimplementedBehavior::RegisterWrite(addr));
                 }
             },
             MemoryBlock::Unmapped => {
                 self.debug_event_collector
-                    .on_error(format!("Write to unmapped region {addr}"));
+                    .on_unimplemented(UnimplementedBehavior::UnmappedWrite(addr));
             }
         }
     }

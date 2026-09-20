@@ -19,7 +19,7 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 
 | Directory | Purpose |
 |-----------|---------|
-| `debug/` | Debugger UI panels (CPU, PPU, APU, memory, log, syntax) |
+| `debug/` | Debugger UI panels (CPU, PPU, APU, memory, log, unimplemented, syntax) |
 
 ## Behaviors & Gotchas
 

@@ -43,7 +43,7 @@ Semantics: `docs/index.md`.
 
 ## Gaps
 
-- Echo/FIR (`$0D` EFB, `$2C`/`$3C` EVOL, `$4D` EON, `$6D`/`$7D` ESA/EDL, `$xF` FIR): not implemented. Writes ignored (`$xC` other than KON) or stored in `raw` unused. No panic (root). No `DebugEvent`.
+- Echo/FIR (`$0D` EFB, `$2C`/`$3C` EVOL, `$4D` EON, `$6D`/`$7D` ESA/EDL, `$xF` FIR): not implemented. Writes emit `DspUnhandledRegister` and are ignored (`$xC` other than KON) or stored in `raw` unused. No panic (root).
 - `$5C` (KOFF) does not set `trigger_off`. `Flg.mute` / `Flg.reset` unused. MVOL, PMON, ENDX unimplemented.
 
 ## Tests

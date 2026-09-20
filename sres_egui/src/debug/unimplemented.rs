@@ -1,0 +1,100 @@
+//! Unimplemented-behavior pane: hit counts, break-on-hit, and reset.
+//! Inspection only; does not execute.
+
+use egui::Context;
+use egui::ScrollArea;
+use egui::TextStyle;
+use egui::Ui;
+use sres_emulator::common::unimplemented::UnimplementedBehavior;
+use sres_emulator::System;
+
+pub struct UnimplementedViewer {
+    is_open: bool,
+}
+
+impl UnimplementedViewer {
+    pub fn new() -> Self {
+        Self { is_open: false }
+    }
+
+    pub fn toggle(&mut self) {
+        self.is_open = !self.is_open;
+    }
+
+    pub fn show(&mut self, ctx: &Context, emulator: &System) {
+        let Self { is_open } = self;
+        egui::Window::new("Unimplemented")
+            .open(is_open)
+            .show(ctx, |ui| {
+                let mut debugger = emulator.debugger();
+                let hits = debugger.unimplemented_hits();
+                let mut reset = false;
+                unimplemented_widget(ui, &hits, &mut debugger.break_on_unimplemented, &mut reset);
+                if reset {
+                    debugger.clear_unimplemented_counts();
+                }
+            });
+    }
+}
+
+pub fn unimplemented_widget(
+    ui: &mut Ui,
+    hits: &[(UnimplementedBehavior, u64)],
+    break_on_unimplemented: &mut bool,
+    reset: &mut bool,
+) {
+    ui.checkbox(break_on_unimplemented, "Break when reached");
+    if ui.button("Reset counts").clicked() {
+        *reset = true;
+    }
+    ui.separator();
+
+    if hits.is_empty() {
+        ui.label("No unimplemented behaviors reached.");
+        return;
+    }
+
+    let text_style = TextStyle::Monospace;
+    let style = ui.style_mut();
+    style.override_text_style = Some(text_style.clone());
+    let row_height = ui.text_style_height(&text_style);
+
+    ScrollArea::vertical().auto_shrink(false).show_rows(
+        ui,
+        row_height,
+        hits.len(),
+        |ui, row_range| {
+            for (behavior, count) in hits[row_range].iter() {
+                ui.horizontal(|ui| {
+                    ui.label(format!("{count:>8}"));
+                    ui.label(behavior.to_string());
+                });
+            }
+        },
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use sres_emulator::common::address::AddressU24;
+    use sres_emulator::common::unimplemented::UnimplementedBehavior;
+
+    use super::*;
+
+    #[test]
+    fn unimplemented_widget_snapshot() {
+        let hits = [
+            (UnimplementedBehavior::SerialJoypadRead, 42),
+            (
+                UnimplementedBehavior::RegisterRead(AddressU24::new(0x00, 0x4201)),
+                7,
+            ),
+            (UnimplementedBehavior::PpuStat77Read, 1),
+        ];
+        let mut break_on = true;
+        crate::test_utils::widget_snapshot("unimplemented/unimplemented_widget", |ui| {
+            let mut reset = false;
+            unimplemented_widget(ui, &hits, &mut break_on, &mut reset);
+        });
+    }
+}

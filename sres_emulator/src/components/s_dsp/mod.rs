@@ -11,7 +11,10 @@ use bilge::prelude::*;
 use intbits::Bits;
 
 use self::voice::Voice;
+use crate::common::debug_events::noop_collector;
+use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U8Ext;
+use crate::common::unimplemented::UnimplementedBehavior;
 
 pub struct SDsp {
     raw: [u8; 128],
@@ -20,9 +23,31 @@ pub struct SDsp {
     flg: Flg,
     noise_generator: NoiseGenerator,
     global_counter: u16,
+    debug_event_collector: DebugEventCollectorRef<()>,
 }
 
 impl SDsp {
+    pub fn new(debug_event_collector: DebugEventCollectorRef<()>) -> Self {
+        Self {
+            raw: [0; 128],
+            voices: [
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+            ],
+            dir: 0,
+            flg: Flg::default(),
+            noise_generator: NoiseGenerator::new(),
+            global_counter: 0,
+            debug_event_collector,
+        }
+    }
+
     pub fn read_register(&self, reg: u8) -> u8 {
         match reg {
             0x5D => self.dir,
@@ -50,9 +75,16 @@ impl SDsp {
                             voice.trigger_on = value.bit(idx);
                         }
                     }
-                    _ => {}
+                    _ => {
+                        self.debug_event_collector
+                            .on_unimplemented(UnimplementedBehavior::DspUnhandledRegister(reg));
+                    }
                 },
-                _ => self.raw[reg as usize] = value,
+                _ => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::DspUnhandledRegister(reg));
+                    self.raw[reg as usize] = value;
+                }
             },
         }
     }
@@ -90,23 +122,7 @@ impl SDsp {
 
 impl Default for SDsp {
     fn default() -> Self {
-        Self {
-            raw: [0; 128],
-            voices: [
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-            ],
-            dir: 0,
-            flg: Flg::default(),
-            noise_generator: NoiseGenerator::new(),
-            global_counter: 0,
-        }
+        Self::new(noop_collector())
     }
 }
 

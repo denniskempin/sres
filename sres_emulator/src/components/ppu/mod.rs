@@ -22,11 +22,14 @@ use crate::common::address::AddressU15;
 use crate::common::address::AddressU24;
 use crate::common::bus::BusDeviceU24;
 use crate::common::clock::ClockInfo;
+use crate::common::debug_events::noop_collector;
+use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::image::Image;
 use crate::common::image::Rgb15;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U32Ext;
 use crate::common::uint::U8Ext;
+use crate::common::unimplemented::UnimplementedBehavior;
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Encode, Decode, strum::Display)]
 pub enum BackgroundId {
@@ -41,6 +44,7 @@ pub struct Ppu {
     disabled: bool,
     headless: bool,
     state: PpuState,
+    debug_event_collector: DebugEventCollectorRef<()>,
 }
 
 #[derive(Encode, Decode)]
@@ -117,9 +121,11 @@ impl BusDeviceU24 for Ppu {
             0x2137 => self.read_shvl(),
             0x213C => self.read_ophct(),
             0x213D => self.read_opvct(),
-            0x213E => self.peek_stat77(),
+            0x213E => self.read_stat77(),
             0x213F => self.read_stat78(),
             _ => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::PpuUnhandledRead(addr.offset));
                 log::warn!("PPU: Unhandled read from {:04X}", addr.offset);
                 0
             }
@@ -168,11 +174,15 @@ impl BusDeviceU24 for Ppu {
             0x2132 => self.write_coldata(value),
             0x211B => self.write_m7a(value),
             0x211C => self.write_m7b(value),
-            _ => log::warn!(
-                "PPU: Unhandled write to {:04X} = {:02X}",
-                addr.offset,
-                value
-            ),
+            _ => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::PpuUnhandledWrite(addr.offset));
+                log::warn!(
+                    "PPU: Unhandled write to {:04X} = {:02X}",
+                    addr.offset,
+                    value
+                );
+            }
         }
     }
 
@@ -203,10 +213,15 @@ enum Layer {
 impl Ppu {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
+        Self::with_collector(noop_collector())
+    }
+
+    pub fn with_collector(debug_event_collector: DebugEventCollectorRef<()>) -> Self {
         Self {
             disabled: false,
             headless: false,
             state: PpuState::default(),
+            debug_event_collector,
         }
     }
 
@@ -867,8 +882,14 @@ impl Ppu {
     /// ||+------- Master/slave mode (PPU1 pin 25)
     /// |+-------- Range over flag (sprite tile overflow)
     /// +--------- Time over flag (sprite overflow)
-    fn peek_stat77(&self) -> u8 {
+    fn read_stat77(&mut self) -> u8 {
+        self.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::PpuStat77Read);
         log::warn!("STAT77 not implemented");
+        self.peek_stat77()
+    }
+
+    fn peek_stat77(&self) -> u8 {
         0
     }
 
@@ -890,11 +911,13 @@ impl Ppu {
         self.state.counter_latch = false;
         self.state.h_counter_latch = false;
         self.state.v_counter_latch = false;
+        self.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::PpuStat78Read);
+        log::warn!("STAT78 not implemented");
         self.peek_stat78()
     }
 
     fn peek_stat78(&self) -> u8 {
-        log::warn!("STAT78 not implemented");
         0
     }
 }

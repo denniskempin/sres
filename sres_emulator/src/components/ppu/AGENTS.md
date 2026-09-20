@@ -38,9 +38,10 @@ Bitfields: `docs/index.md`.
 
 ## Gaps
 
-Unimplemented PPU features follow root (ignore write / read 0) unless noted. Unhandled I/O: `log::warn` / `log::error`, not a `DebugEvent` (root exception).
+Unimplemented PPU features follow root (ignore write / read 0) unless noted. Unhandled I/O: `on_unimplemented` plus `log::warn` / `log::error`. `peek_*` is silent.
 
-- Windows `$2126–$212B`, MOSAIC `$2106`: unmatched, warn + ignore.
+- Windows `$2126–$212B`, MOSAIC `$2106`: unmatched (`PpuUnhandledWrite`).
+- STAT77/STAT78 reads: `PpuStat77Read` / `PpuStat78Read`.
 - `INIDISP` bits 0–3 (brightness): ignored; only bit 7 (`disabled`) is used.
 - Hi-res and interlace: Mode 5 still draws 256 pixels; Mode 6 panics (gotcha 1).
 - Offset-per-tile (modes 2/4/6): not applied (mode 2: gotcha 2; 4/6 panic).

@@ -44,7 +44,7 @@ Ranges → owner. Register bitfields: `docs/index.md`. LoRom/HiRom WRAM/ROM/SRAM
 - HDMA does not interrupt an in-progress GP-DMA; a GP-DMA spanning trigger points runs at most one deferred setup/run afterwards.
 - HDMA trigger window is V=0..224 (no 239-line overscan; `Clock` does not see SETINI).
 - No 5A22 errata (DMA-then-HDMA crash, INIDISP `BBADn=$00` failure, last-channel one-byte indirect read, `irqLock`).
-- `$420C` reads stay unmapped (write-only). `$43xC–$43xE` writes emit `on_error`.
+- `$420C` reads stay unmapped (write-only). `$43xC–$43xE` emit `DmaUnusedRegister`.
 - GP-DMA A-bus increment keeps `Wrap::NoWrap` (gotcha 7). FastROM and serial `$4016`/`$4017`: see root / src Gaps.
 
 ## Tests
