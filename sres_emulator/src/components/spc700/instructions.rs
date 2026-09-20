@@ -15,6 +15,7 @@ use crate::common::address::Wrap;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U8Ext;
 use crate::common::uint::UInt;
+use crate::common::unimplemented::UnimplementedBehavior;
 
 impl<BusT: Spc700Bus> Spc700<BusT> {
     ////////////////////////////////////////////////////////////////////////////////
@@ -644,6 +645,8 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.bus.cycle_io();
         self.bus.cycle_read_u8(self.pc);
         self.bus.cycle_io();
+        self.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::Spc700Sleep);
     }
 
     pub fn stop(&mut self) {
@@ -653,5 +656,7 @@ impl<BusT: Spc700Bus> Spc700<BusT> {
         self.bus.cycle_io();
         self.bus.cycle_read_u8(self.pc);
         self.bus.cycle_io();
+        self.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::Spc700Stop);
     }
 }

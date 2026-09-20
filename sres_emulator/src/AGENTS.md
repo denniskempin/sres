@@ -8,7 +8,7 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 |------|------|
 | `lib.rs` | `SystemImpl<PpuT, ApuT>`. Owns CPU, `DebuggerRef`, pending `Framebuffer`. |
 | `controller.rs` | `StandardController`. `to_u16()` big-endian pack for `$4218`/`$4219`. |
-| `debugger.rs` | `Debugger`, `EventFilter`, `TraceStep`, `DebuggerRef`. Off until `enable()`. |
+| `debugger.rs` | `Debugger`, `EventFilter`, `TraceStep`, `DebuggerRef`, unimplemented hit counts. Off until `enable()`. |
 
 ## Behaviors & Gotchas
 
@@ -28,11 +28,11 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 ## Gaps
 
 - FastROM: unimplemented; see root.
-- Serial joypad `$4016`/`$4017`: unimplemented in `main_bus` (read returns `0`). This layer packs auto-read `$4218`–`$421B` only.
+- Serial joypad `$4016`/`$4017`: `SerialJoypadRead` / `SerialJoypadWrite` in `main_bus`. This layer packs auto-read `$4218`–`$421B` only. Unknown MMIO: `on_error` in `main_bus`.
 
 ## Tests
 
-- Unit tests live in `debugger.rs` (`EventFilter` parse/format). `lib.rs` and `controller.rs` have none.
+- Unit tests live in `debugger.rs` (`EventFilter` parse/format, unimplemented counts/break/`peek`). `lib.rs` and `controller.rs` have none.
 - `cargo nextest run -p sres_emulator --lib`
 - Debugger-only: `cargo nextest run -p sres_emulator --lib -E 'test(debugger::)'`
 
