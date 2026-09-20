@@ -34,7 +34,7 @@ Bitfields: `docs/index.md`.
 
 - `MainBusImpl` routes `$2100–$213F` to `Ppu` and calls `update_clock` after the clock tick.
 - `SystemImpl` owns `Ppu` (`framebuffer`, `swap_framebuffer`, `debug`).
-- Snapshot tests `load_state` then `draw_scanline` with no ROM (`tests/ppu_tests`).
+- Snapshot tests `load_state`, replay `{name}.writes`, then `draw_scanline` with no ROM (`tests/ppu_tests`).
 
 ## Gaps
 
