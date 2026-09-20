@@ -38,7 +38,7 @@ Bitfields: `docs/index.md`.
 
 ## Gaps
 
-Unimplemented PPU features follow root (ignore write / read 0) unless noted. Named variants fire on write; `PpuUnhandledRead`/`Write` remain backstop. `peek_*` is silent.
+Unimplemented PPU features follow root (ignore write / read 0) unless noted. Named variants fire on access. Unknown offsets are `on_error`. Write-only reads (`$2100–$2133`) and read-only writes (`$2134–$213F`) are explicit no-ops. `peek_*` is silent.
 
 - Windows (`$2123–$212B`, `$212E–$212F`) / MOSAIC (`$2106`) / CGWSEL (`$2130`) / SETINI (`$2133`) / M7SEL (`$211A`) / M7C–M7Y (`$211D–$2120`): named write variants. `VMAIN` bits 2–3: `PpuVramRemap` (gotcha 7).
 - `INIDISP` bits 0–3: `PpuInidispBrightness` when not `$F`; only bit 7 (`disabled`) affects rendering.

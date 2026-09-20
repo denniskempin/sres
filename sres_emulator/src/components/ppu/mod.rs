@@ -113,33 +113,36 @@ impl BusDeviceU24 for Ppu {
     const NAME: &'static str = "PPU";
     fn read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
+            0x2100..=0x2133 => 0,
+            0x2134..=0x2136 => self.read_mpy(addr),
+            0x2137 => self.read_shvl(),
             0x2138 => self.state.oam.read_oamdataread(),
             0x2139 => self.state.vram.read_vmdatalread(),
             0x213A => self.state.vram.read_vmdatahread(),
             0x213B => self.state.cgram.read_cgdataread(),
-            0x2134..=0x2136 => self.read_mpy(addr),
-            0x2137 => self.read_shvl(),
             0x213C => self.read_ophct(),
             0x213D => self.read_opvct(),
             0x213E => self.read_stat77(),
             0x213F => self.read_stat78(),
             _ => {
                 self.debug_event_collector
-                    .on_unimplemented(UnimplementedBehavior::PpuUnhandledRead(addr.offset));
+                    .on_error(format!("PPU: unknown offset {:04X} read", addr.offset));
                 log::warn!("PPU: Unhandled read from {:04X}", addr.offset);
                 0
             }
         }
     }
 
+    #[allow(clippy::match_same_arms)]
     fn peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
+            0x2100..=0x2133 => None,
+            0x2134..=0x2136 => Some(self.read_mpy(addr)),
+            0x2137 => Some(self.peek_shvl()),
             0x2138 => Some(self.state.oam.peek_oamdataread()),
             0x2139 => Some(self.state.vram.peek_vmdatalread()),
             0x213A => Some(self.state.vram.peek_vmdatahread()),
             0x213B => Some(self.state.cgram.peek_cgdataread()),
-            0x2134..=0x2136 => Some(self.read_mpy(addr)),
-            0x2137 => Some(self.peek_shvl()),
             0x213C => Some(self.peek_ophct()),
             0x213D => Some(self.peek_opvct()),
             0x213E => Some(self.peek_stat77()),
@@ -156,6 +159,7 @@ impl BusDeviceU24 for Ppu {
             0x2103 => self.state.oam.write_oamaddh(value),
             0x2104 => self.state.oam.write_oamdata(value),
             0x2105 => self.write_bgmode(value),
+            0x2106 => self.report_unimplemented(UnimplementedBehavior::PpuMosaicWrite),
             0x2107..=0x210A => self.write_bgnsc(addr, value),
             0x210B => self.write_bg12nba(value),
             0x210C => self.write_bg34nba(value),
@@ -173,12 +177,13 @@ impl BusDeviceU24 for Ppu {
             0x2118 => self.state.vram.write_vmdatal(value),
             0x2119 => self.state.vram.write_vmdatah(value),
             0x211A => self.report_unimplemented(UnimplementedBehavior::PpuMode7SelWrite),
+            0x211B => self.write_m7a(value),
+            0x211C => self.write_m7b(value),
             0x211D..=0x2120 => {
                 self.report_unimplemented(UnimplementedBehavior::PpuMode7MatrixWrite)
             }
             0x2121 => self.state.cgram.write_cgadd(value),
             0x2122 => self.state.cgram.write_cgdata(value),
-            0x2106 => self.report_unimplemented(UnimplementedBehavior::PpuMosaicWrite),
             0x2123..=0x212B | 0x212E..=0x212F => {
                 self.report_unimplemented(UnimplementedBehavior::PpuWindowWrite)
             }
@@ -188,11 +193,10 @@ impl BusDeviceU24 for Ppu {
             0x2131 => self.write_cdadsub(value),
             0x2132 => self.write_coldata(value),
             0x2133 => self.report_unimplemented(UnimplementedBehavior::PpuSetiniWrite),
-            0x211B => self.write_m7a(value),
-            0x211C => self.write_m7b(value),
+            0x2134..=0x213F => {}
             _ => {
                 self.debug_event_collector
-                    .on_unimplemented(UnimplementedBehavior::PpuUnhandledWrite(addr.offset));
+                    .on_error(format!("PPU: unknown offset {:04X} write", addr.offset));
                 log::warn!(
                     "PPU: Unhandled write to {:04X} = {:02X}",
                     addr.offset,
@@ -1296,5 +1300,84 @@ mod tests {
             ppu.write(AddressU24::new(0, 0x2105), mode);
             ppu.draw_scanline(0);
         }
+    }
+
+    #[test]
+    fn mmio_write_only_reads_return_zero() {
+        let mut ppu = Ppu::new();
+        for offset in 0x2100..=0x2133 {
+            let addr = AddressU24::new(0, offset);
+            assert_eq!(ppu.peek(addr), None, "peek ${offset:04X}");
+            assert_eq!(ppu.read(addr), 0, "read ${offset:04X}");
+        }
+    }
+
+    #[test]
+    fn mmio_read_only_writes_are_ignored() {
+        let mut ppu = Ppu::new();
+        for offset in 0x2134..=0x213F {
+            let addr = AddressU24::new(0, offset);
+            ppu.write(addr, 0xFF);
+            assert!(ppu.peek(addr).is_some(), "peek ${offset:04X}");
+        }
+    }
+
+    #[test]
+    fn mmio_unknown_offset_is_silent_on_peek() {
+        let mut ppu = Ppu::new();
+        let addr = AddressU24::new(0, 0x2000);
+        assert_eq!(ppu.peek(addr), None);
+        assert_eq!(ppu.read(addr), 0);
+        ppu.write(addr, 0xFF);
+    }
+
+    #[test]
+    fn mmio_decode_uses_on_error_only_for_unknown_offsets() {
+        use crate::common::debug_events::DebugEventCollectorRef;
+        use crate::debugger::DebugEvent;
+        use crate::debugger::Debugger;
+        use crate::debugger::EventFilter;
+
+        let debugger = Debugger::new();
+        debugger.lock().unwrap().enable();
+        debugger
+            .lock()
+            .unwrap()
+            .add_log_point(EventFilter::ExecutionError);
+        let mut ppu = Ppu::with_collector(DebugEventCollectorRef(debugger.clone()));
+
+        for offset in 0x2100..=0x2133 {
+            let _ = ppu.read(AddressU24::new(0, offset));
+        }
+        for offset in 0x2134..=0x213F {
+            ppu.write(AddressU24::new(0, offset), 0xFF);
+        }
+        let _ = ppu.peek(AddressU24::new(0, 0x2000));
+        {
+            let mut d = debugger.lock().unwrap();
+            assert!(d.unimplemented_hits().is_empty());
+            assert!(d
+                .drain_events(|e| match e {
+                    DebugEvent::Error(_) => Some(()),
+                    _ => None,
+                })
+                .is_empty());
+        }
+
+        let _ = ppu.read(AddressU24::new(0, 0x2000));
+        ppu.write(AddressU24::new(0, 0x2140), 0);
+        {
+            let mut d = debugger.lock().unwrap();
+            assert!(d.unimplemented_hits().is_empty());
+            let errors = d.drain_events(|e| match e {
+                DebugEvent::Error(msg) => Some(msg.clone()),
+                _ => None,
+            });
+            assert_eq!(errors.len(), 2, "{errors:?}");
+            assert!(errors.iter().any(|e| e.contains("2000")), "{errors:?}");
+            assert!(errors.iter().any(|e| e.contains("2140")), "{errors:?}");
+        }
+
+        debugger.lock().unwrap().disable();
     }
 }

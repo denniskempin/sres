@@ -94,7 +94,8 @@ Golden files are auto-created on first run; verify them before committing. Misma
 
 ## Error Handling & Unimplemented Hardware
 
-- **Unimplemented hardware**: reads return `0`, writes are ignored. Sites call `on_unimplemented(UnimplementedBehavior)` (`common/unimplemented.rs`). `Debugger` increments per-variant counts and can `break_on_unimplemented`; hits are not ring-logged unless `EventFilter::Unimplemented` is a log point. Never panic. PPU unhandled I/O also `log::warn`.
+- **Unimplemented hardware**: known registers or features that are not emulated. Reads return `0`, writes are ignored. Sites call `on_unimplemented(UnimplementedBehavior)` (`common/unimplemented.rs`). `Debugger` increments per-variant counts and can `break_on_unimplemented`; hits are not ring-logged unless `EventFilter::Unimplemented` is a log point. Never panic.
+- **Unknown registers**: MMIO addresses not in the hardware register map (`docs/nesdev.org/mmio_register_table.md`, `docs/fullsnes/io_map.md`). Reads return `0`, writes are ignored. Sites call `on_error`. Match statements list every known register; the `_` arm is `on_error`. PPU unknown I/O also `log::warn`. Never panic.
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
 - **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware.

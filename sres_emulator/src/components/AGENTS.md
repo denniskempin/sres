@@ -27,7 +27,7 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 
 ## Hardware Map
 
-- `Clock` MMIO: `$4200`, `$4207`–`$420A`, `$4210`–`$4212` (routed by `main_bus`). Semantics: `docs/index.md`.
+- `Clock` MMIO: `$4200`, `$4207`–`$420A`, `$4210`–`$4212` (routed by `main_bus`). Write-only reads and read-only writes stay in `main_bus` (not `Clock`). Semantics: `docs/index.md`.
 
 ## Integration
 
@@ -37,8 +37,8 @@ Independent SNES hardware. Isolation rules are in `mod.rs`; `main_bus/` and `lib
 
 ## Gaps
 
-- `SnesHeader.fast_rom` (mapping bit 5) is parsed and never used. FastROM speed: root; not logged per cycle.
-- NMITIMEN bit 0 writes: `JoypadAutoReadEnable` in `main_bus`. `$4212` bit 0 stays 0.
+- `SnesHeader.fast_rom` (mapping bit 5) is parsed and never used. FastROM: `Memsel` in `main_bus`; speed: root.
+- NMITIMEN bit 0 writes: `JoypadAutoReadEnable` in `main_bus`. `$4212` bit 0 stays 0. Unknown I/O: `on_error` in `main_bus`.
 
 ## Tests
 

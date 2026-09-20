@@ -36,7 +36,7 @@ Foundational types shared by all emulator layers.
 
 ## Gaps
 
-- No unimplemented SNES hardware in this directory. Unmapped/unimplemented-register policy is in root. `AddressU16` `WrapBank` panics (`unimplemented!()`), which matches root (panics are internal logic errors).
+- No SNES MMIO in this directory. Unknown-register policy is root `on_error`. `AddressU16` `WrapBank` panics (`unimplemented!()`), which matches root (panics are internal logic errors).
 
 ## Tests
 

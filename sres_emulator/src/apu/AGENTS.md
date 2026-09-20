@@ -48,7 +48,7 @@ Register semantics: `docs/index.md`.
 
 ## Gaps
 
-- `$F0` TEST: `ApuTestRegisterRead`/`Write`. `$F1` CONTROL read: `ApuControlRead`. `$F3` while DSPADDR bit 7: `ApuDspDataReadonlyWrite`. `$FD`–`$FF` writes: `ApuTimerOutputWrite`. S-DSP register gaps: `s_dsp`.
+- `$F0` TEST: `ApuTestRegisterRead`/`Write`. `$F1` CONTROL read: `ApuControlRead`. `$F3` while DSPADDR bit 7: `ApuDspDataReadonlyWrite`. `$FD`–`$FF` writes: `ApuTimerOutputWrite`. `$F0–$FF` is exhaustive in `cycle_read_u8`/`cycle_write_u8`; unknown CPU MMIO is `main_bus`. S-DSP register gaps: `s_dsp`.
 
 ## Tests
 

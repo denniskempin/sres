@@ -72,7 +72,6 @@ pub fn unimplemented_widget(
 
 #[cfg(test)]
 mod tests {
-    use sres_emulator::common::address::AddressU24;
     use sres_emulator::common::unimplemented::UnimplementedBehavior;
 
     use super::*;
@@ -81,10 +80,7 @@ mod tests {
     fn unimplemented_widget_snapshot() {
         let hits = [
             (UnimplementedBehavior::SerialJoypadRead, 42),
-            (
-                UnimplementedBehavior::RegisterRead(AddressU24::new(0x00, 0x4201)),
-                7,
-            ),
+            (UnimplementedBehavior::Wrio, 7),
             (UnimplementedBehavior::PpuStat77Read, 1),
         ];
         let mut break_on = true;

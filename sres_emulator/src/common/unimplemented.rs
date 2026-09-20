@@ -1,5 +1,6 @@
 //! Named SNES hardware gaps reported to the debugger.
 //! Call `DebugEventCollectorRef::on_unimplemented` from execute/read/write, never from `peek_*`.
+//! Unknown MMIO (not in the hardware register map) uses `on_error`, not this enum.
 
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -8,20 +9,20 @@ use crate::common::address::AddressU24;
 
 /// A distinct unimplemented hardware behavior.
 ///
-/// Catch-all variants carry the address or register so unknown MMIO is still countable.
-/// Named unit variants are preferred at known sites.
+/// Every variant is a known register or feature. Unknown MMIO is `on_error`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum UnimplementedBehavior {
-    RegisterRead(AddressU24),
-    RegisterWrite(AddressU24),
     UnmappedRead(AddressU24),
     UnmappedWrite(AddressU24),
     RomWrite(AddressU24),
     SerialJoypadRead,
+    SerialJoypadWrite,
     JoypadAutoReadEnable,
-    DmaUnusedRegister(AddressU24),
-    PpuUnhandledRead(u16),
-    PpuUnhandledWrite(u16),
+    WramDataPort,
+    WramAddressPort,
+    Wrio,
+    Rdio,
+    Memsel,
     PpuStat77Read,
     PpuStat78Read,
     PpuMosaicWrite,
@@ -38,7 +39,6 @@ pub enum UnimplementedBehavior {
     PpuOffsetPerTile,
     PpuHiRes,
     PpuObjColorMath,
-    DspUnhandledRegister(u8),
     DspKoff,
     DspMvol,
     DspEcho,
@@ -62,16 +62,17 @@ pub enum UnimplementedBehavior {
 impl Display for UnimplementedBehavior {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::RegisterRead(addr) => write!(f, "unimplemented register read {addr}"),
-            Self::RegisterWrite(addr) => write!(f, "unimplemented register write {addr}"),
             Self::UnmappedRead(addr) => write!(f, "unmapped memory read {addr}"),
             Self::UnmappedWrite(addr) => write!(f, "unmapped memory write {addr}"),
             Self::RomWrite(addr) => write!(f, "ROM write {addr}"),
             Self::SerialJoypadRead => write!(f, "serial joypad read ($4016/$4017)"),
+            Self::SerialJoypadWrite => write!(f, "serial joypad write ($4016)"),
             Self::JoypadAutoReadEnable => write!(f, "joypad auto-read enable (NMITIMEN bit 0)"),
-            Self::DmaUnusedRegister(addr) => write!(f, "DMA unused register {addr}"),
-            Self::PpuUnhandledRead(offset) => write!(f, "PPU unhandled read ${offset:04X}"),
-            Self::PpuUnhandledWrite(offset) => write!(f, "PPU unhandled write ${offset:04X}"),
+            Self::WramDataPort => write!(f, "WRAM data port ($2180)"),
+            Self::WramAddressPort => write!(f, "WRAM address port ($2181–$2183)"),
+            Self::Wrio => write!(f, "WRIO write ($4201)"),
+            Self::Rdio => write!(f, "RDIO read ($4213)"),
+            Self::Memsel => write!(f, "MEMSEL FastROM enable ($420D)"),
             Self::PpuStat77Read => write!(f, "PPU STAT77 read ($213E)"),
             Self::PpuStat78Read => write!(f, "PPU STAT78 read ($213F)"),
             Self::PpuMosaicWrite => write!(f, "PPU MOSAIC write ($2106)"),
@@ -88,7 +89,6 @@ impl Display for UnimplementedBehavior {
             Self::PpuOffsetPerTile => write!(f, "PPU offset-per-tile"),
             Self::PpuHiRes => write!(f, "PPU hi-res render"),
             Self::PpuObjColorMath => write!(f, "PPU OBJ color math"),
-            Self::DspUnhandledRegister(reg) => write!(f, "S-DSP unhandled register ${reg:02X}"),
             Self::DspKoff => write!(f, "S-DSP KOFF write ($5C)"),
             Self::DspMvol => write!(f, "S-DSP MVOL write ($0C/$1C)"),
             Self::DspEcho => write!(f, "S-DSP echo/FIR write"),

@@ -79,13 +79,17 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.peek(addr),
                 0x2140..=0x217F => self.apu.peek(addr),
-                0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
+                0x2180 => Some(0),
+                0x4016..=0x4017 => Some(0),
                 0x4210..=0x4212 => self.clock.bus_peek(addr),
+                0x4213 => Some(0),
                 0x4214..=0x4217 => self.multiplication.bus_peek(addr),
                 0x4218 => Some(self.joy1.low_byte()),
                 0x4219 => Some(self.joy1.high_byte()),
                 0x421A => Some(self.joy2.low_byte()),
                 0x421B => Some(self.joy2.high_byte()),
+                0x421C..=0x421F => Some(0),
+                0x4300..=0x43FF => self.dma_controller.bus_peek(addr),
                 _ => None,
             },
             MemoryBlock::Unmapped => None,
@@ -100,21 +104,38 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.read(addr),
                 0x2140..=0x217F => self.apu.read(addr),
-                0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_read(addr),
-                0x4210..=0x4212 => self.clock.bus_read(addr),
-                0x4214..=0x4217 => self.multiplication.bus_read(addr),
+                0x2180 => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::WramDataPort);
+                    0
+                }
+                0x2181..=0x2183 => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::WramAddressPort);
+                    0
+                }
                 0x4016..=0x4017 => {
                     self.debug_event_collector
                         .on_unimplemented(UnimplementedBehavior::SerialJoypadRead);
                     0
                 }
+                0x4200..=0x420D => 0,
+                0x4210..=0x4212 => self.clock.bus_read(addr),
+                0x4213 => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::Rdio);
+                    0
+                }
+                0x4214..=0x4217 => self.multiplication.bus_read(addr),
                 0x4218 => self.joy1.low_byte(),
                 0x4219 => self.joy1.high_byte(),
                 0x421A => self.joy2.low_byte(),
                 0x421B => self.joy2.high_byte(),
+                0x421C..=0x421F => 0,
+                0x4300..=0x43FF => self.dma_controller.bus_read(addr),
                 _ => {
                     self.debug_event_collector
-                        .on_unimplemented(UnimplementedBehavior::RegisterRead(addr));
+                        .on_error(format!("unknown register read {addr}"));
                     0
                 }
             },
@@ -144,8 +165,18 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             MemoryBlock::Register => match addr.offset {
                 0x2100..=0x213F => self.ppu.write(addr, value),
                 0x2140..=0x217F => self.apu.write(addr, value),
-                0x420B | 0x420C | 0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
-                0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
+                0x2180 => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::WramDataPort);
+                }
+                0x2181..=0x2183 => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::WramAddressPort);
+                }
+                0x4016 => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::SerialJoypadWrite);
+                }
                 0x4200 => {
                     if value & 1 != 0 {
                         self.debug_event_collector
@@ -153,10 +184,22 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                     }
                     self.clock.bus_write(addr, value);
                 }
+                0x4201 => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::Wrio);
+                }
+                0x4202..=0x4206 => self.multiplication.bus_write(addr, value),
                 0x4207..=0x420A => self.clock.bus_write(addr, value),
+                0x420B | 0x420C => self.dma_controller.bus_write(addr, value),
+                0x420D => {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::Memsel);
+                }
+                0x4210..=0x421F => {}
+                0x4300..=0x43FF => self.dma_controller.bus_write(addr, value),
                 _ => {
                     self.debug_event_collector
-                        .on_unimplemented(UnimplementedBehavior::RegisterWrite(addr));
+                        .on_error(format!("unknown register write {addr}"));
                 }
             },
             MemoryBlock::Unmapped => {

@@ -28,7 +28,7 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 ## Gaps
 
 - FastROM: unimplemented; see root.
-- Serial joypad `$4016`/`$4017`: `UnimplementedBehavior::SerialJoypadRead` in `main_bus`. This layer packs auto-read `$4218`–`$421B` only.
+- Serial joypad `$4016`/`$4017`: `SerialJoypadRead` / `SerialJoypadWrite` in `main_bus`. This layer packs auto-read `$4218`–`$421B` only. Unknown MMIO: `on_error` in `main_bus`.
 
 ## Tests
 

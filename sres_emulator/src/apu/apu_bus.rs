@@ -1,4 +1,4 @@
-//! `ApuBus`: SPC700 bus (RAM, IPL ROM, timers, `SDsp`, `$F4–$F7` CPUIO).
+//! `ApuBus`: SPC700 bus (RAM, IPL ROM, timers, `SDsp`, `$F0–$FF` MMIO).
 //! CPUIO writes stay in `channel_out_pending` until `promote_channel_out`.
 use std::collections::VecDeque;
 
@@ -136,11 +136,12 @@ impl Bus<AddressU16> for ApuBus {
         self.timers.update(1);
     }
 
+    #[allow(clippy::match_same_arms)] // `$F0–$FF` stays listed even when the body is peek/RAM.
     fn cycle_read_u8(&mut self, addr: AddressU16) -> u8 {
         trace!("{:08} [SPC] read {addr}", self.master_clock);
         self.spc_cycle += 2;
 
-        // Handle timer output reads specially (they reset on read)
+        // `$F0–$FF` is exhaustive. `_` is APU RAM (and IPL overlay via peek), not unknown I/O.
         let value = match addr.0 {
             0x00F0 => {
                 self.debug_event_collector
@@ -152,6 +153,11 @@ impl Bus<AddressU16> for ApuBus {
                     .on_unimplemented(UnimplementedBehavior::ApuControlRead);
                 self.peek_u8(addr).unwrap_or_default()
             }
+            0x00F2 => self.peek_u8(addr).unwrap_or_default(),
+            0x00F3 => self.peek_u8(addr).unwrap_or_default(),
+            0x00F4..=0x00F7 => self.peek_u8(addr).unwrap_or_default(),
+            0x00F8..=0x00F9 => self.ram[addr.0 as usize],
+            0x00FA..=0x00FC => self.peek_u8(addr).unwrap_or_default(),
             0x00FD..=0x00FF => {
                 let timer_id = addr.0 as usize - 0x00FD;
                 self.timers.read_output(timer_id)
@@ -168,6 +174,7 @@ impl Bus<AddressU16> for ApuBus {
         value
     }
 
+    #[allow(clippy::match_same_arms)] // `$F8`/`$F9` is RAM; `_` is also RAM, not unknown I/O.
     fn cycle_write_u8(&mut self, addr: AddressU16, value: u8) {
         self.debug_event_collector
             .on_event(ApuBusEvent::Write(addr, value));
@@ -178,6 +185,7 @@ impl Bus<AddressU16> for ApuBus {
         let write_cycle = self.spc_cycle;
         self.spc_cycle += 2;
 
+        // `$F0–$FF` is exhaustive. `_` is APU RAM, not unknown I/O.
         match addr.0 {
             0x00F0 => {
                 self.debug_event_collector
@@ -203,6 +211,9 @@ impl Bus<AddressU16> for ApuBus {
                 let channel = addr.0 as usize - 0x00F4;
                 self.channel_out_pending
                     .push_back((channel, write_cycle, value));
+            }
+            0x00F8..=0x00F9 => {
+                self.ram[addr.0 as usize] = value;
             }
             0x00FA..=0x00FC => {
                 let timer_id = addr.0 as usize - 0x00FA;
@@ -287,5 +298,24 @@ mod tests {
         assert_eq!(value, 0x7F);
         bus.cycle_write_u8(AddressU16(0x00F2), value.wrapping_add(0x10));
         assert_eq!(bus.peek_u8(AddressU16(0x00F2)), Some(0x8F));
+    }
+
+    #[test]
+    fn f8_f9_and_below_f0_are_ram() {
+        let mut bus = ApuBus::new(mock_collector());
+        bus.cycle_write_u8(AddressU16(0x00EF), 0xAB);
+        bus.cycle_write_u8(AddressU16(0x00F8), 0x12);
+        bus.cycle_write_u8(AddressU16(0x00F9), 0x34);
+        assert_eq!(bus.cycle_read_u8(AddressU16(0x00EF)), 0xAB);
+        assert_eq!(bus.cycle_read_u8(AddressU16(0x00F8)), 0x12);
+        assert_eq!(bus.cycle_read_u8(AddressU16(0x00F9)), 0x34);
+    }
+
+    #[test]
+    fn f0_test_write_stores_ram() {
+        let mut bus = ApuBus::new(mock_collector());
+        bus.cycle_write_u8(AddressU16(0x00F0), 0x0A);
+        assert_eq!(bus.ram[0x00F0], 0x0A);
+        assert_eq!(bus.cycle_read_u8(AddressU16(0x00F0)), 0x0A);
     }
 }

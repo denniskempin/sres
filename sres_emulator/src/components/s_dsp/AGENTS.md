@@ -43,7 +43,7 @@ Semantics: `docs/index.md`.
 
 ## Gaps
 
-- Echo/FIR: `DspEcho`. `$5C` KOFF: `DspKoff` (does not set `trigger_off`). `$0C`/`$1C` MVOL: `DspMvol`. `$2D` PMON: `DspPmon`. `$7C` ENDX: `DspEndx`. `Flg.mute` / `Flg.reset`: `DspFlgMute` / `DspFlgReset`. `$3D` NON is implemented. KON is only `$4C`. Unknown regs: `DspUnhandledRegister`.
+- Echo/FIR: `DspEcho`. `$5C` KOFF: `DspKoff` (does not set `trigger_off`). `$0C`/`$1C` MVOL: `DspMvol`. `$2D` PMON: `DspPmon`. `$7C` ENDX: `DspEndx`. `Flg.mute` / `Flg.reset`: `DspFlgMute` / `DspFlgReset`. `$3D` NON is implemented. KON is only `$4C`. Unused `$1D`/`$xA`/`$xB`/`$xE` are explicit (store in `raw`). Unknown is `on_error`.
 
 ## Tests
 

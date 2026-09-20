@@ -13,7 +13,6 @@ use crate::common::address::Wrap;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U8Ext;
-use crate::common::unimplemented::UnimplementedBehavior;
 
 pub struct DmaController {
     dma_channels: [DmaChannel; 8],
@@ -144,7 +143,7 @@ impl DmaController {
             Some(value) => value,
             None => {
                 self.debug_event_collector
-                    .on_unimplemented(UnimplementedBehavior::DmaUnusedRegister(addr));
+                    .on_error(format!("unknown DMA register read {addr}"));
                 0
             }
         }
@@ -152,9 +151,9 @@ impl DmaController {
 
     pub fn bus_peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
-            0x43..=0x43FF => {
+            0x4300..=0x437F => {
                 let low_byte = addr.offset.low_byte();
-                let channel = low_byte.high_nibble() as usize % 8;
+                let channel = low_byte.high_nibble() as usize;
                 match low_byte.low_nibble() {
                     0x0 => Some(self.peek_dmapn(channel)),
                     0x1 => Some(self.peek_bbadn(channel)),
@@ -179,9 +178,9 @@ impl DmaController {
         match addr.offset {
             0x420B => self.write_mdmaen(value),
             0x420C => self.write_hdmaen(value),
-            0x43..=0x43FF => {
+            0x4300..=0x437F => {
                 let low_byte = addr.offset.low_byte();
-                let channel = low_byte.high_nibble() as usize % 8;
+                let channel = low_byte.high_nibble() as usize;
                 match low_byte.low_nibble() {
                     0x0 => self.write_dmapn(channel, value),
                     0x1 => self.write_bbadn(channel, value),
@@ -197,13 +196,13 @@ impl DmaController {
                     0xB | 0xF => self.write_unusedn(channel, value),
                     _ => {
                         self.debug_event_collector
-                            .on_unimplemented(UnimplementedBehavior::DmaUnusedRegister(addr));
+                            .on_error(format!("unknown DMA register write {addr}"));
                     }
                 }
             }
             _ => {
                 self.debug_event_collector
-                    .on_unimplemented(UnimplementedBehavior::DmaUnusedRegister(addr));
+                    .on_error(format!("unknown DMA register write {addr}"));
             }
         }
     }
@@ -376,7 +375,6 @@ impl DmaController {
     }
 
     /// Register 43NB / 43NF: UNUSEDn - unused RW byte (shared).
-    /// `$43xC–$43xE` are unused on hardware and emit `DmaUnusedRegister`.
     fn write_unusedn(&mut self, channel: usize, value: u8) {
         self.dma_channels[channel].unused = value;
     }

@@ -607,17 +607,43 @@ mod test {
     fn clock_write_only_mmio_does_not_panic() {
         let mut system = crate::System::new();
         system.debugger().enable();
+        system.debugger().add_log_point(EventFilter::ExecutionError);
         let _ = system.cpu.bus.bus_read(AddressU24::new(0, 0x4200));
         system.cpu.bus.bus_write(AddressU24::new(0, 0x4210), 0);
-        let hits = system.debugger().unimplemented_hits();
-        assert!(hits.iter().any(|(b, _)| matches!(
-            b,
-            UnimplementedBehavior::RegisterRead(addr) if addr.offset == 0x4200
-        )));
-        assert!(hits.iter().any(|(b, _)| matches!(
-            b,
-            UnimplementedBehavior::RegisterWrite(addr) if addr.offset == 0x4210
-        )));
+        assert!(system.debugger().unimplemented_hits().is_empty());
+        assert!(system
+            .debugger()
+            .log
+            .iter()
+            .all(|e| !matches!(e, DebugEvent::Error(_))));
+        system.debugger().disable();
+    }
+
+    #[test]
+    fn unknown_register_is_error() {
+        use crate::common::bus::Bus;
+
+        let mut system = crate::System::new();
+        system.debugger().enable();
+        system.debugger().add_log_point(EventFilter::ExecutionError);
+        let addr = AddressU24::new(0x00, 0x2200);
+
+        let _ = system.cpu.bus.peek_u8(addr);
+        assert!(system.debugger().unimplemented_hits().is_empty());
+        assert!(system
+            .debugger()
+            .log
+            .iter()
+            .all(|e| !matches!(e, DebugEvent::Error(_))));
+
+        let _ = system.cpu.bus.bus_read(addr);
+        system.cpu.bus.bus_write(addr, 0);
+        assert!(system.debugger().unimplemented_hits().is_empty());
+        assert!(system
+            .debugger()
+            .log
+            .iter()
+            .any(|e| matches!(e, DebugEvent::Error(_))));
         system.debugger().disable();
     }
 }
