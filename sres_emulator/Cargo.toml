@@ -22,7 +22,7 @@ colored = "3"
 puffin = "0.20"
 itertools = "0.15"
 strum = { version = "0.28", features = ["derive"] }
-bilge = "0.4"
+bilge = "0.5"
 bitcode = "0.6.9"
 hound = "3.5"
 lazy_static = "1.5"
