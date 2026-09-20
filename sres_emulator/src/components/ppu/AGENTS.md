@@ -18,9 +18,10 @@ Ricoh 5C77 PPU. `Ppu` facade over serializable `PpuState`.
 2. Mode 2 sets BG3 `BitDepth::Opt` (offset-per-tile) but `decode_bgmode` only decodes BG1/BG2 as 4bpp; `Opt` is never read.
 3. `update_clock`: `disabled` (`INIDISP` bit 7) returns without drawing or advancing `current_clock`. Otherwise, when `v` changes, call `draw_scanline` unless `headless`, then store `last_drawn_scanline`. `draw_scanline` returns if `screen_y >= 224`.
 4. `get_all_sprites_on_scanline` iterates OAM 0..128, breaks when `len > 32`, then reverses so higher index is first and lower index wins. `CGADSUB` bit 4 is stored on `Oam.color_math_enabled`; the Object branch of `draw_scanline` never reads it.
-5. `bgofs_latch` and `bghofs_latch` in `PpuState` are shared by all `BGnHOFS` / `BGnVOFS` writes.
-6. `write_m7a` / `write_m7b` update `m7a_mul` / `m7b_mul` for `read_mpy` (`$2134–$2136`) only. No affine Mode 7 render.
-7. `VMAIN` bits 2–3 parse address remapping and `log::error`; the address is not remapped.
+5. `draw_scanline` skips Div2 (`CGADSUB` bit 6) on COLDATA backdrop pixels when `CGWSEL` bit 1 is set (`PpuState.color_math_use_subscreen`). Bit 1 defaults to 0 (fixed color as opaque addend).
+6. `bgofs_latch` and `bghofs_latch` in `PpuState` are shared by all `BGnHOFS` / `BGnVOFS` writes.
+7. `write_m7a` / `write_m7b` update `m7a_mul` / `m7b_mul` for `read_mpy` (`$2134–$2136`) only. No affine Mode 7 render.
+8. `VMAIN` bits 2–3 parse address remapping and `log::error`; the address is not remapped.
 
 ## Hardware Map
 
@@ -41,6 +42,7 @@ Bitfields: `docs/index.md`.
 Unimplemented PPU features follow root (ignore write / read 0) unless noted. Unhandled I/O: `log::warn` / `log::error`, not a `DebugEvent` (root exception).
 
 - Windows `$2126–$212B`, MOSAIC `$2106`: unmatched, warn + ignore.
+- `CGWSEL` bits 7–4 (windows / force-main-black) and bit 0 (direct color): ignored. Bit 1 is stored (gotcha 5).
 - `INIDISP` bits 0–3 (brightness): ignored; only bit 7 (`disabled`) is used.
 - Hi-res and interlace: Mode 5 still draws 256 pixels; Mode 6 panics (gotcha 1).
 - Offset-per-tile (modes 2/4/6): not applied (mode 2: gotcha 2; 4/6 panic).

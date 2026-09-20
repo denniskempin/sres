@@ -39,6 +39,6 @@ Foundational types shared by all emulator layers.
 
 ## Tests
 
-- Unit tests: `clock.rs` (`from_mesen_vhf`), `uint.rs` (BCD add). Other files have none. `debug_events::test` is a mock helper.
+- Unit tests: `clock.rs` (`from_mesen_vhf`), `uint.rs` (BCD add), `image.rs` (`Rgb15::color_math`). Other files have none. `debug_events::test` is a mock helper.
 - `cargo nextest run -p sres_emulator --lib -E 'test(common::)'`
 
