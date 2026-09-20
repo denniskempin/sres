@@ -80,6 +80,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0x2100..=0x213F => self.ppu.peek(addr),
                 0x2140..=0x217F => self.apu.peek(addr),
                 0x2180 => Some(0),
+                0x2181..=0x2183 => Some(0),
                 0x4016..=0x4017 => Some(0),
                 0x4210..=0x4212 => self.clock.bus_peek(addr),
                 0x4213 => Some(0),
@@ -177,6 +178,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                     self.debug_event_collector
                         .on_unimplemented(UnimplementedBehavior::SerialJoypadWrite);
                 }
+                0x4017 => {}
                 0x4200 => {
                     if value & 1 != 0 {
                         self.debug_event_collector

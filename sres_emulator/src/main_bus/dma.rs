@@ -166,7 +166,7 @@ impl DmaController {
                     0x8 => Some(self.peek_a2anl(channel)),
                     0x9 => Some(self.peek_a2anh(channel)),
                     0xA => Some(self.peek_nltrn(channel)),
-                    0xB | 0xF => Some(self.peek_unusedn(channel)),
+                    0xB..=0xF => Some(self.peek_unusedn(channel)),
                     _ => None,
                 }
             }
@@ -193,11 +193,8 @@ impl DmaController {
                     0x8 => self.write_a2anl(channel, value),
                     0x9 => self.write_a2anh(channel, value),
                     0xA => self.write_nltrn(channel, value),
-                    0xB | 0xF => self.write_unusedn(channel, value),
-                    _ => {
-                        self.debug_event_collector
-                            .on_error(format!("unknown DMA register write {addr}"));
-                    }
+                    0xB..=0xF => self.write_unusedn(channel, value),
+                    _ => unreachable!("low_nibble is 0..=15"),
                 }
             }
             _ => {
@@ -374,7 +371,7 @@ impl DmaController {
         self.dma_channels[channel].line_counter
     }
 
-    /// Register 43NB / 43NF: UNUSEDn - unused RW byte (shared).
+    /// Register 43NB / 43NC–43NE / 43NF: unused RW bytes (B/F shared on hardware).
     fn write_unusedn(&mut self, channel: usize, value: u8) {
         self.dma_channels[channel].unused = value;
     }

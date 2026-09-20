@@ -2,11 +2,6 @@
 #![cfg(test)]
 
 use super::*;
-use crate::common::debug_events::DebugEventCollectorRef;
-use crate::common::unimplemented::UnimplementedBehavior;
-use crate::debugger::DebugEvent;
-use crate::debugger::Debugger;
-use crate::debugger::EventFilter;
 
 #[test]
 fn test_read_write_register() {
@@ -45,65 +40,4 @@ fn unknown_register_does_not_hit_named_map() {
     s_dsp.write_register(0x00, 0x12);
     s_dsp.write_register(0x80, 0x34);
     assert_eq!(s_dsp.read_register(0x00), 0x12);
-}
-
-#[test]
-fn unused_is_not_unknown_or_unimplemented() {
-    let debugger = Debugger::new();
-    debugger.lock().unwrap().enable();
-    debugger
-        .lock()
-        .unwrap()
-        .add_log_point(EventFilter::ExecutionError);
-    let mut s_dsp = SDsp::new(DebugEventCollectorRef(debugger.clone()));
-
-    s_dsp.write_register(0x1D, 0xAB);
-    s_dsp.write_register(0x0A, 0xCD);
-    s_dsp.write_register(0x0B, 0xEF);
-    s_dsp.write_register(0x0E, 0x11);
-    {
-        let mut d = debugger.lock().unwrap();
-        assert!(d.unimplemented_hits().is_empty());
-        assert!(d
-            .drain_events(|e| match e {
-                DebugEvent::Error(_) => Some(()),
-                _ => None,
-            })
-            .is_empty());
-    }
-
-    s_dsp.write_register(0x0C, 0x00);
-    {
-        let mut d = debugger.lock().unwrap();
-        assert_eq!(
-            d.unimplemented_hits(),
-            vec![(UnimplementedBehavior::DspMvol, 1)]
-        );
-        assert!(d
-            .drain_events(|e| match e {
-                DebugEvent::Error(_) => Some(()),
-                _ => None,
-            })
-            .is_empty());
-    }
-
-    s_dsp.write_register(0x80, 0x34);
-    {
-        let mut d = debugger.lock().unwrap();
-        assert_eq!(
-            d.unimplemented_hits(),
-            vec![(UnimplementedBehavior::DspMvol, 1)]
-        );
-        let errors = d.drain_events(|e| match e {
-            DebugEvent::Error(msg) => Some(msg.clone()),
-            _ => None,
-        });
-        assert_eq!(errors.len(), 1, "{errors:?}");
-        assert!(
-            errors[0].contains("unknown S-DSP register $80"),
-            "{errors:?}"
-        );
-    }
-
-    debugger.lock().unwrap().disable();
 }

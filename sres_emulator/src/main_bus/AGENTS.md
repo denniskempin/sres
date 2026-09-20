@@ -44,7 +44,7 @@ Ranges → owner. Register bitfields: `docs/index.md`. LoRom/HiRom WRAM/ROM/SRAM
 - HDMA does not interrupt an in-progress GP-DMA; a GP-DMA spanning trigger points runs at most one deferred setup/run afterwards.
 - HDMA trigger window is V=0..224 (no 239-line overscan; `Clock` does not see SETINI).
 - No 5A22 errata (DMA-then-HDMA crash, INIDISP `BBADn=$00` failure, last-channel one-byte indirect read, `irqLock`).
-- Named unimplemented: `WramDataPort`, `WramAddressPort`, `Wrio`, `Rdio`, `Memsel`, `SerialJoypadWrite`, `SerialJoypadRead`, `JoypadAutoReadEnable`. Unknown I/O and `$43xC`–`$43xE` open bus emit `on_error`.
+- Named unimplemented: `WramDataPort`, `WramAddressPort`, `Wrio`, `Rdio`, `Memsel`, `SerialJoypadWrite`, `SerialJoypadRead`, `JoypadAutoReadEnable`. Unknown I/O emits `on_error`. `$4017` writes and `$43xC`–`$43xE` are explicit no-ops.
 - ROM writes emit `RomWrite` and still mutate `rom`.
 - GP-DMA A-bus increment keeps `Wrap::NoWrap` (gotcha 7). FastROM speed: root.
 

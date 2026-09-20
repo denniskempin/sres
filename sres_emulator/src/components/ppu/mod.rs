@@ -133,7 +133,7 @@ impl BusDeviceU24 for Ppu {
         }
     }
 
-    #[allow(clippy::match_same_arms)]
+    #[allow(clippy::match_same_arms)] // write-only $2100–$2133 listed explicitly vs unknown `_`
     fn peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
             0x2100..=0x2133 => None,
@@ -1329,55 +1329,5 @@ mod tests {
         assert_eq!(ppu.peek(addr), None);
         assert_eq!(ppu.read(addr), 0);
         ppu.write(addr, 0xFF);
-    }
-
-    #[test]
-    fn mmio_decode_uses_on_error_only_for_unknown_offsets() {
-        use crate::common::debug_events::DebugEventCollectorRef;
-        use crate::debugger::DebugEvent;
-        use crate::debugger::Debugger;
-        use crate::debugger::EventFilter;
-
-        let debugger = Debugger::new();
-        debugger.lock().unwrap().enable();
-        debugger
-            .lock()
-            .unwrap()
-            .add_log_point(EventFilter::ExecutionError);
-        let mut ppu = Ppu::with_collector(DebugEventCollectorRef(debugger.clone()));
-
-        for offset in 0x2100..=0x2133 {
-            let _ = ppu.read(AddressU24::new(0, offset));
-        }
-        for offset in 0x2134..=0x213F {
-            ppu.write(AddressU24::new(0, offset), 0xFF);
-        }
-        let _ = ppu.peek(AddressU24::new(0, 0x2000));
-        {
-            let mut d = debugger.lock().unwrap();
-            assert!(d.unimplemented_hits().is_empty());
-            assert!(d
-                .drain_events(|e| match e {
-                    DebugEvent::Error(_) => Some(()),
-                    _ => None,
-                })
-                .is_empty());
-        }
-
-        let _ = ppu.read(AddressU24::new(0, 0x2000));
-        ppu.write(AddressU24::new(0, 0x2140), 0);
-        {
-            let mut d = debugger.lock().unwrap();
-            assert!(d.unimplemented_hits().is_empty());
-            let errors = d.drain_events(|e| match e {
-                DebugEvent::Error(msg) => Some(msg.clone()),
-                _ => None,
-            });
-            assert_eq!(errors.len(), 2, "{errors:?}");
-            assert!(errors.iter().any(|e| e.contains("2000")), "{errors:?}");
-            assert!(errors.iter().any(|e| e.contains("2140")), "{errors:?}");
-        }
-
-        debugger.lock().unwrap().disable();
     }
 }

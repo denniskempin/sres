@@ -7,7 +7,7 @@ SPC700 + S-DSP orchestration: `Apu` drives `Spc700<ApuBus>` from the master cloc
 | File | Owns |
 |------|------|
 | `mod.rs` | `Apu`; `catch_up_and_promote_channel_out` / `update_clock`; `AudioBuffer`; `ApuDebug` |
-| `apu_bus.rs` | `ApuBus` (`Spc700Bus`); `$F4–$F7` CPUIO; `promote_channel_out`; `ApuControlRegister`; IPL ROM |
+| `apu_bus.rs` | `ApuBus` (`Spc700Bus`); `$F0–$FF` MMIO; `$F4–$F7` CPUIO; `promote_channel_out`; `ApuControlRegister`; IPL ROM |
 | `timers.rs` | `ApuTimers` / `ApuTimer`; three timers; 3-stage divider |
 | `test.rs` | Mesen boot-ROM trace (`INIT_TRACE`) |
 
