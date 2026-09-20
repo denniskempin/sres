@@ -292,7 +292,7 @@ Do not commit `corpus/`, `artifacts/`, `coverage/`.
 
 ## 10. Tooling & CI
 
-All PRs pass `./check-all.sh` (commands listed in [AGENTS.md](../../../../AGENTS.md#commands)). CI additionally runs `cargo clippy --workspace --all-targets`, which `check-all.sh` does not; run it locally when touching tests or benches.
+All PRs pass `./check-all.sh` (commands listed in [AGENTS.md](../../../../AGENTS.md#commands)). CI runs the same script (`fmt`/`clippy`, `test`, `wasm`).
 
 ### Formatting (`rustfmt.toml`)
 

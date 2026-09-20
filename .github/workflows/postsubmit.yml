@@ -11,90 +11,90 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded PR runs; keep in-progress `main` deploys.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
 
 jobs:
-  # Check formatting and clippy
+  # fmt + clippy. Commands: `./check-all.sh fmt clippy`
   health:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: postsubmit
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-x11-0
 
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets
+      - name: Format and Clippy
+        run: ./check-all.sh fmt clippy
 
-      - name: Rustfmt
-        run: cargo fmt --all -- --check
-
-      - name: WASM check
-        run: cargo check --target wasm32-unknown-unknown -p sres_egui
-
-  # Run tests
+  # Workspace tests (sres_emulator + sres_egui). Command: `./check-all.sh test`
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@cargo-nextest
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
-
-      - name: Build
-        run: cargo build --workspace --all-targets
-
-      - name: Run Tests
-        run: cargo nextest run --verbose -p sres_emulator
-
-  # Run tests with coverage
-  coverage:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@cargo-nextest
-      - uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
-
-      - name: Run Tests
-        run: cargo llvm-cov nextest -p sres_emulator --codecov --output-path codecov.json
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v6
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: codecov.json
-          fail_ci_if_error: true
+          shared-key: postsubmit
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@cargo-nextest
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-x11-0 xvfb mesa-vulkan-drivers libegl1 libgl1-mesa-dri
+
+      - name: Tests
+        env:
+          # GitHub-hosted runners have no GPU. llvmpipe/lavapipe need these.
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          WGPU_BACKEND: gl,vulkan
+        run: ./check-all.sh test
+
+  # Trunk WASM build. Command: `./check-all.sh wasm`
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: postsubmit
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@trunk
+
+      - name: WASM build
+        run: ./check-all.sh wasm
 
   # Single required check for pull requests targeting main.
   # Keep this job id stable; `.github/rulesets/require-postsubmit.json` requires it.
   required:
     if: always()
-    needs: [health, test, coverage]
+    needs: [health, test, wasm]
     runs-on: ubuntu-latest
     steps:
       - name: Verify required jobs
         run: |
           test "${{ needs.health.result }}" = "success"
           test "${{ needs.test.result }}" = "success"
-          test "${{ needs.coverage.result }}" = "success"
+          test "${{ needs.wasm.result }}" = "success"
 
-  # Build and deploy to GitHub Pages
+  # Build and deploy to GitHub Pages (not a PR check; `./check-all.sh wasm` already built without --public-url)
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [required]
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
       pages: write
@@ -105,6 +105,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: postsubmit
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@trunk
 
       - name: Build
