@@ -18,7 +18,7 @@ Assets for three PPU test kinds: ROM→framebuffer, snapshot→framebuffer, and 
 
 1. `test_colourmath` does not use `run_framebuffer_test` or `{name}-framebuffer.png`. After 30 frames it compares `colourmath-0.png` … `colourmath-4.png`; each scene advances with `update_joypads(64, 0)`, one frame, `update_joypads(0, 0)`, then 5 frames.
 2. `generate_smw_ppu_snapshots`, `generate_tloz_ppu_snapshots`, and `generate_dkc_ppu_snapshots` are `#[ignore]`. They `force_headless()`, replay `{rom}.input.json` when present, and write `{rom}-{scene}.snapshot` via `save_ppu_state` (not the `.png`). Need the gitignored `{rom}.sfc` locally.
-3. `{rom}.input.json` updates the pad only on listed frames; the last `u16` sticks until a later entry (recordings pair press then `0`). DKC has no recording: `dkc-jungle` is the title-attract jungle at generator frame `1800` (`PpuState` freezes one HDMA-less register set), not in-game Jungle Hijinxs. DKC does not use `$4218` auto-read.
+3. `{rom}.input.json` updates the pad only on listed frames; the last `u16` sticks until a later entry (recordings pair press then `0`). DKC has no recording: `dkc-jungle` is the title-attract jungle at generator frame `1800` (`PpuState` freezes one HDMA-less register set), not in-game Jungle Hijinxs. DKC does not use `$4218` auto-read. TLOZ USA intro is longer than the previous generator cuts; `tloz.input.json` Start/A after the title reaches Link's house for `tloz-game`.
 4. `krom_interlace_rpg` enables unimplemented interlace/high-res and still supplies the debug-render goldens.
 5. `krom_hdma_redspace` is the HDMA golden (CGRAM gradient via channel 0). A black image means HDMA did not run.
 
