@@ -22,11 +22,14 @@ use crate::common::address::AddressU15;
 use crate::common::address::AddressU24;
 use crate::common::bus::BusDeviceU24;
 use crate::common::clock::ClockInfo;
+use crate::common::debug_events::noop_collector;
+use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::image::Image;
 use crate::common::image::Rgb15;
 use crate::common::uint::U16Ext;
 use crate::common::uint::U32Ext;
 use crate::common::uint::U8Ext;
+use crate::common::unimplemented::UnimplementedBehavior;
 
 #[derive(Default, Copy, Clone, Debug, PartialEq, Encode, Decode, strum::Display)]
 pub enum BackgroundId {
@@ -41,6 +44,7 @@ pub struct Ppu {
     disabled: bool,
     headless: bool,
     state: PpuState,
+    debug_event_collector: DebugEventCollectorRef<()>,
 }
 
 #[derive(Encode, Decode)]
@@ -109,31 +113,36 @@ impl BusDeviceU24 for Ppu {
     const NAME: &'static str = "PPU";
     fn read(&mut self, addr: AddressU24) -> u8 {
         match addr.offset {
+            0x2100..=0x2133 => 0,
+            0x2134..=0x2136 => self.read_mpy(addr),
+            0x2137 => self.read_shvl(),
             0x2138 => self.state.oam.read_oamdataread(),
             0x2139 => self.state.vram.read_vmdatalread(),
             0x213A => self.state.vram.read_vmdatahread(),
             0x213B => self.state.cgram.read_cgdataread(),
-            0x2134..=0x2136 => self.read_mpy(addr),
-            0x2137 => self.read_shvl(),
             0x213C => self.read_ophct(),
             0x213D => self.read_opvct(),
-            0x213E => self.peek_stat77(),
+            0x213E => self.read_stat77(),
             0x213F => self.read_stat78(),
             _ => {
+                self.debug_event_collector
+                    .on_error(format!("PPU: unknown offset {:04X} read", addr.offset));
                 log::warn!("PPU: Unhandled read from {:04X}", addr.offset);
                 0
             }
         }
     }
 
+    #[allow(clippy::match_same_arms)] // write-only $2100–$2133 listed explicitly vs unknown `_`
     fn peek(&self, addr: AddressU24) -> Option<u8> {
         match addr.offset {
+            0x2100..=0x2133 => None,
+            0x2134..=0x2136 => Some(self.read_mpy(addr)),
+            0x2137 => Some(self.peek_shvl()),
             0x2138 => Some(self.state.oam.peek_oamdataread()),
             0x2139 => Some(self.state.vram.peek_vmdatalread()),
             0x213A => Some(self.state.vram.peek_vmdatahread()),
             0x213B => Some(self.state.cgram.peek_cgdataread()),
-            0x2134..=0x2136 => Some(self.read_mpy(addr)),
-            0x2137 => Some(self.peek_shvl()),
             0x213C => Some(self.peek_ophct()),
             0x213D => Some(self.peek_opvct()),
             0x213E => Some(self.peek_stat77()),
@@ -150,29 +159,50 @@ impl BusDeviceU24 for Ppu {
             0x2103 => self.state.oam.write_oamaddh(value),
             0x2104 => self.state.oam.write_oamdata(value),
             0x2105 => self.write_bgmode(value),
+            0x2106 => self.report_unimplemented(UnimplementedBehavior::PpuMosaicWrite),
             0x2107..=0x210A => self.write_bgnsc(addr, value),
             0x210B => self.write_bg12nba(value),
             0x210C => self.write_bg34nba(value),
             0x210D | 0x210F | 0x2111 | 0x2113 => self.write_bgnhofs(addr, value),
             0x210E | 0x2110 | 0x2112 | 0x2114 => self.write_bgnvofs(addr, value),
-            0x2115 => self.state.vram.write_vmain(value),
+            0x2115 => {
+                self.state.vram.write_vmain(value);
+                if value.bits(2..=3) != 0 {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::PpuVramRemap);
+                }
+            }
             0x2116 => self.state.vram.write_vmaddl(value),
             0x2117 => self.state.vram.write_vmaddh(value),
             0x2118 => self.state.vram.write_vmdatal(value),
             0x2119 => self.state.vram.write_vmdatah(value),
-            0x2121 => self.state.cgram.write_cgadd(value),
-            0x2122 => self.state.cgram.write_cgdata(value),
-            0x212C => self.write_tm(value),
-            0x212D => self.write_ts(value),
-            0x2131 => self.write_cdadsub(value),
-            0x2132 => self.write_coldata(value),
+            0x211A => self.report_unimplemented(UnimplementedBehavior::PpuMode7SelWrite),
             0x211B => self.write_m7a(value),
             0x211C => self.write_m7b(value),
-            _ => log::warn!(
-                "PPU: Unhandled write to {:04X} = {:02X}",
-                addr.offset,
-                value
-            ),
+            0x211D..=0x2120 => {
+                self.report_unimplemented(UnimplementedBehavior::PpuMode7MatrixWrite)
+            }
+            0x2121 => self.state.cgram.write_cgadd(value),
+            0x2122 => self.state.cgram.write_cgdata(value),
+            0x2123..=0x212B | 0x212E..=0x212F => {
+                self.report_unimplemented(UnimplementedBehavior::PpuWindowWrite)
+            }
+            0x212C => self.write_tm(value),
+            0x212D => self.write_ts(value),
+            0x2130 => self.report_unimplemented(UnimplementedBehavior::PpuCgwselWrite),
+            0x2131 => self.write_cdadsub(value),
+            0x2132 => self.write_coldata(value),
+            0x2133 => self.report_unimplemented(UnimplementedBehavior::PpuSetiniWrite),
+            0x2134..=0x213F => {}
+            _ => {
+                self.debug_event_collector
+                    .on_error(format!("PPU: unknown offset {:04X} write", addr.offset));
+                log::warn!(
+                    "PPU: Unhandled write to {:04X} = {:02X}",
+                    addr.offset,
+                    value
+                );
+            }
         }
     }
 
@@ -203,11 +233,20 @@ enum Layer {
 impl Ppu {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
+        Self::with_collector(noop_collector())
+    }
+
+    pub fn with_collector(debug_event_collector: DebugEventCollectorRef<()>) -> Self {
         Self {
             disabled: false,
             headless: false,
             state: PpuState::default(),
+            debug_event_collector,
         }
+    }
+
+    fn report_unimplemented(&mut self, behavior: UnimplementedBehavior) {
+        self.debug_event_collector.on_unimplemented(behavior);
     }
 
     /// Only used for benchmarks, runs full PPU emulation but does not render
@@ -423,7 +462,9 @@ impl Ppu {
                 self.decode_bg::<Bpp2Decoder>(screen_y, BG2, &mut (*bg_data)[1]);
                 &[S3, H1, S2, H2, S1, L1, S0, L2]
             }
-            _ => panic!("Unsupported BG mode: {}", self.state.bgmode),
+            BgMode::Mode4 => &[S3, H1, S2, H2, S1, L1, S0, L2],
+            BgMode::Mode6 => &[S3, H1, S2, S1, L1, S0],
+            BgMode::Mode7 => &[S3, S2, S1, L1, S0],
         }
     }
 
@@ -503,6 +544,9 @@ impl Ppu {
     fn write_inidisp(&mut self, value: u8) {
         log::info!("INIDISP = {value:08b}");
         self.disabled = value.bit(7);
+        if value.bits(0..=3) != 0xF {
+            self.report_unimplemented(UnimplementedBehavior::PpuInidispBrightness);
+        }
     }
 
     /// Register 2105: BGMODE
@@ -528,6 +572,21 @@ impl Ppu {
             7 => BgMode::Mode7,
             _ => unreachable!(),
         };
+        match self.state.bgmode {
+            BgMode::Mode4 => self.report_unimplemented(UnimplementedBehavior::PpuBgMode4),
+            BgMode::Mode6 => self.report_unimplemented(UnimplementedBehavior::PpuBgMode6),
+            BgMode::Mode7 => self.report_unimplemented(UnimplementedBehavior::PpuBgMode7),
+            _ => {}
+        }
+        if matches!(
+            self.state.bgmode,
+            BgMode::Mode2 | BgMode::Mode4 | BgMode::Mode6
+        ) {
+            self.report_unimplemented(UnimplementedBehavior::PpuOffsetPerTile);
+        }
+        if matches!(self.state.bgmode, BgMode::Mode5 | BgMode::Mode6) {
+            self.report_unimplemented(UnimplementedBehavior::PpuHiRes);
+        }
         self.state.bg3_priority = value.bit(3);
 
         use BitDepth::*;
@@ -700,6 +759,9 @@ impl Ppu {
             background.color_math_enabled = value.bit(i);
         }
         self.state.oam.color_math_enabled = value.bit(4);
+        if value.bit(4) {
+            self.report_unimplemented(UnimplementedBehavior::PpuObjColorMath);
+        }
         self.state.color_math_backdrop_enabled = value.bit(5);
         self.state.color_math_half = value.bit(6);
         self.state.color_math_operation = match value.bit(7) {
@@ -867,8 +929,14 @@ impl Ppu {
     /// ||+------- Master/slave mode (PPU1 pin 25)
     /// |+-------- Range over flag (sprite tile overflow)
     /// +--------- Time over flag (sprite overflow)
-    fn peek_stat77(&self) -> u8 {
+    fn read_stat77(&mut self) -> u8 {
+        self.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::PpuStat77Read);
         log::warn!("STAT77 not implemented");
+        self.peek_stat77()
+    }
+
+    fn peek_stat77(&self) -> u8 {
         0
     }
 
@@ -890,11 +958,13 @@ impl Ppu {
         self.state.counter_latch = false;
         self.state.h_counter_latch = false;
         self.state.v_counter_latch = false;
+        self.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::PpuStat78Read);
+        log::warn!("STAT78 not implemented");
         self.peek_stat78()
     }
 
     fn peek_stat78(&self) -> u8 {
-        log::warn!("STAT78 not implemented");
         0
     }
 }
@@ -1214,5 +1284,50 @@ impl TileDecoder for Bpp8Decoder {
             + ((self.planes[5].bit(pixel_idx) as u8) << 5)
             + ((self.planes[6].bit(pixel_idx) as u8) << 6)
             + ((self.planes[7].bit(pixel_idx) as u8) << 7)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::address::AddressU24;
+    use crate::common::bus::BusDeviceU24;
+
+    #[test]
+    fn unsupported_bg_modes_do_not_panic() {
+        let mut ppu = Ppu::new();
+        for mode in [4_u8, 6, 7] {
+            ppu.write(AddressU24::new(0, 0x2105), mode);
+            ppu.draw_scanline(0);
+        }
+    }
+
+    #[test]
+    fn mmio_write_only_reads_return_zero() {
+        let mut ppu = Ppu::new();
+        for offset in 0x2100..=0x2133 {
+            let addr = AddressU24::new(0, offset);
+            assert_eq!(ppu.peek(addr), None, "peek ${offset:04X}");
+            assert_eq!(ppu.read(addr), 0, "read ${offset:04X}");
+        }
+    }
+
+    #[test]
+    fn mmio_read_only_writes_are_ignored() {
+        let mut ppu = Ppu::new();
+        for offset in 0x2134..=0x213F {
+            let addr = AddressU24::new(0, offset);
+            ppu.write(addr, 0xFF);
+            assert!(ppu.peek(addr).is_some(), "peek ${offset:04X}");
+        }
+    }
+
+    #[test]
+    fn mmio_unknown_offset_is_silent_on_peek() {
+        let mut ppu = Ppu::new();
+        let addr = AddressU24::new(0, 0x2000);
+        assert_eq!(ppu.peek(addr), None);
+        assert_eq!(ppu.read(addr), 0);
+        ppu.write(addr, 0xFF);
     }
 }

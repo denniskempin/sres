@@ -8,7 +8,7 @@
 |------|------|
 | `mod.rs` | `MainBusImpl`. LoRom/HiRom decode, `bus_read`/`bus_write`/`bus_peek`, `advance_master_clock`. |
 | `devices.rs` | `ManagedBusDeviceU24`. `SyncBusDevice`, `BatchedBusDeviceU24`, `AsyncBusDeviceU24`. |
-| `dma.rs` | `DmaController`. `$420B` MDMAEN, `$420C` HDMAEN, channel `$43x0–$43xB`/`$43xF`. |
+| `dma.rs` | `DmaController`. `$420B` MDMAEN, `$420C` HDMAEN, channel `$43x0–$43xF`. |
 | `hdma.rs` | `hdma_setup` / `hdma_reload` / `hdma_run` on `MainBusImpl`. |
 | `multiplication.rs` | `MultiplicationUnit`. `$4202–$4217`; `$4203`/`$4206` compute immediately. |
 
@@ -44,8 +44,9 @@ Ranges → owner. Register bitfields: `docs/index.md`. LoRom/HiRom WRAM/ROM/SRAM
 - HDMA does not interrupt an in-progress GP-DMA; a GP-DMA spanning trigger points runs at most one deferred setup/run afterwards.
 - HDMA trigger window is V=0..224 (no 239-line overscan; `Clock` does not see SETINI).
 - No 5A22 errata (DMA-then-HDMA crash, INIDISP `BBADn=$00` failure, last-channel one-byte indirect read, `irqLock`).
-- `$420C` reads stay unmapped (write-only). `$43xC–$43xE` writes emit `on_error`.
-- GP-DMA A-bus increment keeps `Wrap::NoWrap` (gotcha 7). FastROM and serial `$4016`/`$4017`: see root / src Gaps.
+- Named unimplemented: `WramDataPort`, `WramAddressPort`, `Wrio`, `Rdio`, `Memsel`, `SerialJoypadWrite`, `SerialJoypadRead`, `JoypadAutoReadEnable`. Unknown I/O emits `on_error`. `$4017` writes, `$420E`–`$420F`, and `$43xC`–`$43xE` are explicit no-ops.
+- ROM writes emit `RomWrite` and still mutate `rom`.
+- GP-DMA A-bus increment keeps `Wrap::NoWrap` (gotcha 7). FastROM speed: root.
 
 ## Tests
 

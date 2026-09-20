@@ -24,6 +24,7 @@ use crate::common::clock::ClockInfo;
 use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::UInt;
 use crate::common::uint::UIntSize;
+use crate::common::unimplemented::UnimplementedBehavior;
 
 /// Two-frame master-cycle budget for a `Waiting` idle inside `step()`.
 const WAI_WAIT_CYCLE_BUDGET: u64 = 2 * 262 * 1364;
@@ -147,6 +148,16 @@ impl<BusT: MainBus> Cpu<BusT> {
     }
 
     fn interrupt(&mut self, handler: NativeVectorTable) {
+        if self.emulation_mode {
+            let behavior = match handler {
+                NativeVectorTable::Nmi => UnimplementedBehavior::CpuEmulationModeNmi,
+                NativeVectorTable::Irq => UnimplementedBehavior::CpuEmulationModeIrq,
+                NativeVectorTable::Cop | NativeVectorTable::Break => {
+                    UnimplementedBehavior::CpuEmulationModeBreakException
+                }
+            };
+            self.debug_event_collector.on_unimplemented(behavior);
+        }
         self.debug_event_collector
             .on_event(CpuEvent::Interrupt(handler));
         self.stack_push_u24(u32::from(self.pc));

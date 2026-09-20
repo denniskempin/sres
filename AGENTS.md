@@ -52,7 +52,7 @@ SRES is a SNES emulator in Rust.
 - **Generic CPU bus**: `Cpu<BusT: MainBus>` and `Spc700<BusT: Spc700Bus>` — bus injected at compile time.
 - **8/16-bit dispatch**: CPU instructions generic over `T: UInt`; dispatch by M/X status flags at runtime.
 - **PPU scanline renderer**: Draws one scanline at a time; new frame available only on vblank rise.
-- **Zero-cost debug**: `DebugEventCollector` guarded by `DEBUG_EVENTS_ENABLED` atomic; `#[cold]` dispatch.
+- **Zero-cost debug**: `DebugEventCollector` guarded by `DEBUG_EVENTS_ENABLED` atomic; `#[cold]` dispatch (`on_event` / `on_error` / `on_unimplemented`).
 - **Save states**: `PpuState` encoded with `bitcode`. APU and CPU are not snapshotted.
 
 ## System Variants
@@ -94,11 +94,11 @@ Golden files are auto-created on first run; verify them before committing. Misma
 
 ## Error Handling & Unimplemented Hardware
 
-- **Unimplemented registers**: reads return `0`, writes are silently ignored. Both emit a `DebugEvent` error (visible in debugger; no panic). Exception: PPU unhandled I/O uses `log::warn`, not a `DebugEvent` (see `sres_emulator/src/components/ppu`).
-- **Unmapped memory**: same — return `0` + emit error.
+- **Unimplemented hardware**: known registers or features that are not emulated. Reads return `0`, writes are ignored. Sites call `on_unimplemented(UnimplementedBehavior)` (`common/unimplemented.rs`). `Debugger` increments per-variant counts. Break and ring-log use `EventFilter::Unimplemented` like other events. Never panic.
+- **Unknown registers**: MMIO addresses not in the hardware register map (`docs/nesdev.org/mmio_register_table.md`, `docs/fullsnes/io_map.md`). Reads return `0`, writes are ignored. Sites call `on_error`. Match statements list every known register; the `_` arm is `on_error`. PPU unknown I/O also `log::warn`. Never panic.
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
-- **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware. Exception: PPU `decode_bgmode` panics on BG modes 4/6/7 (see `sres_emulator/src/components/ppu`).
+- **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware.
 - **Fuzz targets** in `sres_emulator/fuzz/` are intended to test that arbitrary input never panics. The bins are stale and do not compile.
 
 ## Reference

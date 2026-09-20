@@ -116,7 +116,9 @@ impl BatchedSystem {
             Cpu::new(
                 MainBusImpl::new(
                     cartridge,
-                    BatchedBusDeviceU24::new(Ppu::new()),
+                    BatchedBusDeviceU24::new(Ppu::with_collector(DebugEventCollectorRef(
+                        debugger.clone(),
+                    ))),
                     BatchedBusDeviceU24::new(Apu::new(debugger.clone())),
                     debugger.clone(),
                 ),
@@ -139,7 +141,9 @@ impl SyncSystem {
             Cpu::new(
                 MainBusImpl::new(
                     cartridge,
-                    SyncBusDevice::new(Ppu::new()),
+                    SyncBusDevice::new(Ppu::with_collector(DebugEventCollectorRef(
+                        debugger.clone(),
+                    ))),
                     SyncBusDevice::new(Apu::new(debugger.clone())),
                     debugger.clone(),
                 ),
@@ -162,7 +166,9 @@ impl AsyncSystem {
             Cpu::new(
                 MainBusImpl::new(
                     cartridge,
-                    AsyncBusDeviceU24::new(Ppu::new()),
+                    AsyncBusDeviceU24::new(Ppu::with_collector(DebugEventCollectorRef(
+                        debugger.clone(),
+                    ))),
                     AsyncBusDeviceU24::new(Apu::new(debugger.clone())),
                     debugger.clone(),
                 ),

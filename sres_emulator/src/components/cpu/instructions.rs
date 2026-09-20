@@ -12,6 +12,7 @@ use crate::common::address::Address;
 use crate::common::address::AddressU24;
 use crate::common::address::Wrap;
 use crate::common::uint::UInt;
+use crate::common::unimplemented::UnimplementedBehavior;
 
 pub fn nop(cpu: &mut Cpu<impl MainBus>) {
     cpu.bus.cycle_io();
@@ -166,6 +167,10 @@ pub fn rti(cpu: &mut Cpu<impl MainBus>) {
     cpu.bus.cycle_io();
     cpu.status = StatusFlags::from(cpu.stack_pop_u8());
     cpu.update_register_sizes();
+    if cpu.emulation_mode {
+        cpu.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::CpuEmulationModeRtiReturn);
+    }
     cpu.pc = AddressU24::from(cpu.stack_pop_u24()).sub(1_u8, Wrap::WrapBank);
 }
 
@@ -264,6 +269,10 @@ pub fn bvs(cpu: &mut Cpu<impl MainBus>, operand: &Operand) {
 }
 
 pub fn brk(cpu: &mut Cpu<impl MainBus>, _operand: &Operand) {
+    if cpu.emulation_mode {
+        cpu.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::CpuEmulationModeBreakException);
+    }
     cpu.stack_push_u24(u32::from(cpu.pc));
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;
@@ -286,6 +295,10 @@ pub fn brk(cpu: &mut Cpu<impl MainBus>, _operand: &Operand) {
 }
 
 pub fn cop(cpu: &mut Cpu<impl MainBus>, _: &Operand) {
+    if cpu.emulation_mode {
+        cpu.debug_event_collector
+            .on_unimplemented(UnimplementedBehavior::CpuEmulationModeBreakException);
+    }
     cpu.stack_push_u24(u32::from(cpu.pc));
     cpu.stack_push_u8(u8::from(cpu.status));
     cpu.status.irq_disable = true;

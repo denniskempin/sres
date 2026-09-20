@@ -30,7 +30,11 @@ Sony SPC700 8-bit audio CPU. Entry points: `step()` and `catch_up_to_master_cloc
 
 - `Apu` owns `Spc700<ApuBus>` and calls `catch_up_to_master_clock`. CPUIO, timers, IPL: `apu/`.
 - Production `Spc700Bus`: `ApuBus` (`apu/apu_bus.rs`). Tests: `TestBus<AddressU16>` in `test.rs`.
-- `step()` emits `Spc700Event::Step` then dispatches `opcode_table`.
+- `Spc700Event::Step` goes to `DebugEventCollectorRef`.
+
+## Gaps
+
+- `sleep` (`$EF`) / `stop` (`$FF`): `Spc700Sleep` / `Spc700Stop`. Dummy cycles only; do not halt.
 
 ## Tests
 

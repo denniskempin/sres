@@ -1,6 +1,7 @@
-//! `Debugger` breakpoints, log points, and a 16384-event `DebugEvent` ring.
+//! `Debugger` breakpoints, log points, unimplemented hit counts, and a 16384-event `DebugEvent` ring.
 //! `enable()`/`disable()` are the only writers of process-wide `DEBUG_EVENTS_ENABLED`.
 
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::fmt::UpperHex;
 use std::ops::Range;
@@ -16,6 +17,7 @@ use crate::common::address::AddressU24;
 use crate::common::debug_events::DebugErrorCollector;
 use crate::common::debug_events::DebugEventCollector;
 use crate::common::debug_events::DEBUG_EVENTS_ENABLED;
+use crate::common::unimplemented::UnimplementedBehavior;
 use crate::common::util::RingBuffer;
 use crate::components::cpu::CpuEvent;
 use crate::components::cpu::CpuState;
@@ -47,6 +49,7 @@ pub enum DebugEvent {
     ApuBus(ApuBusEvent),
     Spc700(Spc700Event),
     Error(String),
+    Unimplemented(UnimplementedBehavior),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -62,6 +65,7 @@ pub enum EventFilter {
     Spc700ProgramCounter(Range<u16>),
     Spc700MemoryRead(Range<u16>),
     Spc700MemoryWrite(Range<u16>),
+    Unimplemented,
 }
 
 impl EventFilter {
@@ -100,6 +104,7 @@ impl EventFilter {
             (Spc700MemoryWrite(range), ApuBus(ApuBusEvent::Write(addr, _))) => {
                 range.contains(&addr.0)
             }
+            (EventFilter::Unimplemented, DebugEvent::Unimplemented(_)) => true,
 
             _ => false,
         }
@@ -124,6 +129,7 @@ impl FromStr for EventFilter {
             "s-pc" => Spc700ProgramCounter(parse_range(arg)?),
             "step" => CpuStep,
             "s-step" => Spc700Step,
+            "unimplemented" => Unimplemented,
             &_ => CpuInstruction(s.to_string()),
         })
     }
@@ -150,6 +156,7 @@ impl Display for EventFilter {
             Spc700ProgramCounter(range) => write!(f, "spc-pc{}", format_range(range)),
             Spc700MemoryRead(range) => write!(f, "spc-r{}", format_range(range)),
             Spc700MemoryWrite(range) => write!(f, "spc-w{}", format_range(range)),
+            Unimplemented => write!(f, "unimplemented"),
         }
     }
 }
@@ -196,6 +203,7 @@ pub struct Debugger {
     pub log: RingBuffer<DebugEvent, LOG_BUFFER_SIZE>,
     pub break_reason: Option<BreakReason>,
     pub enabled: bool,
+    unimplemented_counts: HashMap<UnimplementedBehavior, u64>,
 }
 
 impl Debugger {
@@ -206,6 +214,7 @@ impl Debugger {
             log: RingBuffer::default(),
             break_reason: None,
             enabled: false,
+            unimplemented_counts: HashMap::new(),
         }))
     }
 
@@ -326,6 +335,23 @@ impl Debugger {
         }
     }
 
+    pub fn unimplemented_hits(&self) -> Vec<(UnimplementedBehavior, u64)> {
+        let mut hits: Vec<_> = self
+            .unimplemented_counts
+            .iter()
+            .map(|(behavior, count)| (*behavior, *count))
+            .collect();
+        hits.sort_by(|a, b| {
+            b.1.cmp(&a.1)
+                .then_with(|| a.0.to_string().cmp(&b.0.to_string()))
+        });
+        hits
+    }
+
+    pub fn clear_unimplemented_counts(&mut self) {
+        self.unimplemented_counts.clear();
+    }
+
     fn collect_debug_event(&mut self, event: DebugEvent) {
         let break_trigger = self
             .break_points
@@ -352,6 +378,12 @@ impl DebugErrorCollector for Debugger {
     #[cold]
     fn on_error(&mut self, message: String) {
         self.collect_debug_event(DebugEvent::Error(message));
+    }
+
+    #[cold]
+    fn on_unimplemented(&mut self, behavior: UnimplementedBehavior) {
+        *self.unimplemented_counts.entry(behavior).or_insert(0) += 1;
+        self.collect_debug_event(DebugEvent::Unimplemented(behavior));
     }
 }
 
@@ -467,5 +499,264 @@ mod test {
         check_format("irq nmi", Interrupt(Some(NativeVectorTable::Nmi)));
         check_format("r 10:1F", CpuMemoryRead(0x10..0x20));
         check_format("w", CpuMemoryWrite(0..u32::MAX));
+        check_format("unimplemented", Unimplemented);
+    }
+
+    #[test]
+    fn unimplemented_hits_count_and_break() {
+        let debugger = Debugger::new();
+        let mut d = debugger.lock().unwrap();
+        d.enable();
+        d.on_unimplemented(UnimplementedBehavior::SerialJoypadRead);
+        d.on_unimplemented(UnimplementedBehavior::SerialJoypadRead);
+        d.on_unimplemented(UnimplementedBehavior::PpuStat77Read);
+        assert_eq!(
+            d.unimplemented_hits(),
+            vec![
+                (UnimplementedBehavior::SerialJoypadRead, 2),
+                (UnimplementedBehavior::PpuStat77Read, 1),
+            ]
+        );
+        assert!(d.take_break_reason().is_none());
+        assert!(d
+            .log
+            .iter()
+            .all(|e| !matches!(e, DebugEvent::Unimplemented(_))));
+
+        d.add_break_point(EventFilter::Unimplemented);
+        d.on_unimplemented(UnimplementedBehavior::PpuStat78Read);
+        let reason = d.take_break_reason().expect("break on unimplemented");
+        assert_eq!(reason.trigger, EventFilter::Unimplemented);
+        assert_eq!(
+            reason.event,
+            DebugEvent::Unimplemented(UnimplementedBehavior::PpuStat78Read)
+        );
+        assert!(d
+            .log
+            .iter()
+            .all(|e| !matches!(e, DebugEvent::Unimplemented(_))));
+        d.disable();
+    }
+
+    #[test]
+    fn unimplemented_gated_by_debug_events_enabled() {
+        use crate::common::debug_events::DebugEventCollectorRef;
+
+        let debugger = Debugger::new();
+        let collector: DebugEventCollectorRef<()> = DebugEventCollectorRef(debugger.clone());
+        collector.on_unimplemented(UnimplementedBehavior::SerialJoypadRead);
+        assert!(debugger.lock().unwrap().unimplemented_hits().is_empty());
+
+        debugger.lock().unwrap().enable();
+        collector.on_unimplemented(UnimplementedBehavior::SerialJoypadRead);
+        assert_eq!(
+            debugger.lock().unwrap().unimplemented_hits(),
+            vec![(UnimplementedBehavior::SerialJoypadRead, 1)]
+        );
+        debugger.lock().unwrap().disable();
+    }
+
+    #[test]
+    fn peek_does_not_count_unimplemented() {
+        use crate::common::bus::Bus;
+
+        let mut system = crate::System::new();
+        system.debugger().enable();
+        let addr = AddressU24::new(0x00, 0x4016);
+        let _ = system.cpu.bus.peek_u8(addr);
+        assert!(system.debugger().unimplemented_hits().is_empty());
+
+        let _ = system.cpu.bus.bus_read(addr);
+        assert_eq!(
+            system.debugger().unimplemented_hits(),
+            vec![(UnimplementedBehavior::SerialJoypadRead, 1)]
+        );
+        system.debugger().disable();
+    }
+
+    #[test]
+    fn ppu_named_hits_and_stat77_peek_silent() {
+        use crate::common::bus::BusDeviceU24;
+        use crate::common::debug_events::DebugEventCollectorRef;
+        use crate::components::ppu::Ppu;
+
+        let debugger = Debugger::new();
+        debugger.lock().unwrap().enable();
+        let mut ppu = Ppu::with_collector(DebugEventCollectorRef(debugger.clone()));
+        ppu.write(AddressU24::new(0, 0x2105), 4);
+        let _ = ppu.peek(AddressU24::new(0, 0x213E));
+        {
+            let hits = debugger.lock().unwrap().unimplemented_hits();
+            assert!(hits.contains(&(UnimplementedBehavior::PpuBgMode4, 1)));
+            assert!(hits.contains(&(UnimplementedBehavior::PpuOffsetPerTile, 1)));
+            assert!(!hits
+                .iter()
+                .any(|(b, _)| *b == UnimplementedBehavior::PpuStat77Read));
+        }
+        let _ = ppu.read(AddressU24::new(0, 0x213E));
+        assert!(debugger
+            .lock()
+            .unwrap()
+            .unimplemented_hits()
+            .contains(&(UnimplementedBehavior::PpuStat77Read, 1)));
+        debugger.lock().unwrap().disable();
+    }
+
+    #[test]
+    fn clock_write_only_mmio_does_not_panic() {
+        let mut system = crate::System::new();
+        system.debugger().enable();
+        system.debugger().add_log_point(EventFilter::ExecutionError);
+        let _ = system.cpu.bus.bus_read(AddressU24::new(0, 0x4200));
+        system.cpu.bus.bus_write(AddressU24::new(0, 0x4210), 0);
+        assert!(system.debugger().unimplemented_hits().is_empty());
+        assert!(system
+            .debugger()
+            .log
+            .iter()
+            .all(|e| !matches!(e, DebugEvent::Error(_))));
+        system.debugger().disable();
+    }
+
+    #[test]
+    fn unknown_register_is_error() {
+        use crate::common::bus::Bus;
+
+        let mut system = crate::System::new();
+        system.debugger().enable();
+        system.debugger().add_log_point(EventFilter::ExecutionError);
+        let addr = AddressU24::new(0x00, 0x2200);
+
+        let _ = system.cpu.bus.peek_u8(addr);
+        assert!(system.debugger().unimplemented_hits().is_empty());
+        assert!(system
+            .debugger()
+            .log
+            .iter()
+            .all(|e| !matches!(e, DebugEvent::Error(_))));
+
+        let _ = system.cpu.bus.bus_read(addr);
+        system.cpu.bus.bus_write(addr, 0);
+        assert!(system.debugger().unimplemented_hits().is_empty());
+        assert!(system
+            .debugger()
+            .log
+            .iter()
+            .any(|e| matches!(e, DebugEvent::Error(_))));
+        system.debugger().disable();
+    }
+
+    #[test]
+    fn ppu_unknown_offset_is_error_not_unimplemented() {
+        use crate::common::bus::BusDeviceU24;
+        use crate::common::debug_events::DebugEventCollectorRef;
+        use crate::components::ppu::Ppu;
+
+        let debugger = Debugger::new();
+        debugger.lock().unwrap().enable();
+        debugger
+            .lock()
+            .unwrap()
+            .add_log_point(EventFilter::ExecutionError);
+        let mut ppu = Ppu::with_collector(DebugEventCollectorRef(debugger.clone()));
+
+        for offset in 0x2100..=0x2133 {
+            let _ = ppu.read(AddressU24::new(0, offset));
+        }
+        for offset in 0x2134..=0x213F {
+            ppu.write(AddressU24::new(0, offset), 0xFF);
+        }
+        let _ = ppu.peek(AddressU24::new(0, 0x2000));
+        {
+            let mut d = debugger.lock().unwrap();
+            assert!(d.unimplemented_hits().is_empty());
+            assert!(d
+                .drain_events(|e| match e {
+                    DebugEvent::Error(_) => Some(()),
+                    _ => None,
+                })
+                .is_empty());
+        }
+
+        let _ = ppu.read(AddressU24::new(0, 0x2000));
+        ppu.write(AddressU24::new(0, 0x2140), 0);
+        {
+            let mut d = debugger.lock().unwrap();
+            assert!(d.unimplemented_hits().is_empty());
+            let errors = d.drain_events(|e| match e {
+                DebugEvent::Error(msg) => Some(msg.clone()),
+                _ => None,
+            });
+            assert_eq!(errors.len(), 2, "{errors:?}");
+            assert!(errors.iter().any(|e| e.contains("2000")), "{errors:?}");
+            assert!(errors.iter().any(|e| e.contains("2140")), "{errors:?}");
+        }
+        debugger.lock().unwrap().disable();
+    }
+
+    #[test]
+    fn dsp_unused_is_not_unknown_or_unimplemented() {
+        use crate::common::debug_events::DebugEventCollectorRef;
+        use crate::components::s_dsp::SDsp;
+
+        let debugger = Debugger::new();
+        debugger.lock().unwrap().enable();
+        debugger
+            .lock()
+            .unwrap()
+            .add_log_point(EventFilter::ExecutionError);
+        let mut s_dsp = SDsp::new(DebugEventCollectorRef(debugger.clone()));
+
+        s_dsp.write_register(0x1D, 0xAB);
+        s_dsp.write_register(0x0A, 0xCD);
+        s_dsp.write_register(0x0B, 0xEF);
+        s_dsp.write_register(0x0E, 0x11);
+        {
+            let mut d = debugger.lock().unwrap();
+            assert!(d.unimplemented_hits().is_empty());
+            assert!(d
+                .drain_events(|e| match e {
+                    DebugEvent::Error(_) => Some(()),
+                    _ => None,
+                })
+                .is_empty());
+        }
+
+        s_dsp.write_register(0x0C, 0x00);
+        {
+            let mut d = debugger.lock().unwrap();
+            assert_eq!(
+                d.unimplemented_hits(),
+                vec![(UnimplementedBehavior::DspMvol, 1)]
+            );
+            assert!(d
+                .drain_events(|e| match e {
+                    DebugEvent::Error(_) => Some(()),
+                    _ => None,
+                })
+                .is_empty());
+        }
+
+        s_dsp.write_register(0x80, 0x34);
+        let _ = s_dsp.read_register(0x80);
+        {
+            let mut d = debugger.lock().unwrap();
+            assert_eq!(
+                d.unimplemented_hits(),
+                vec![(UnimplementedBehavior::DspMvol, 1)]
+            );
+            let errors = d.drain_events(|e| match e {
+                DebugEvent::Error(msg) => Some(msg.clone()),
+                _ => None,
+            });
+            assert_eq!(errors.len(), 2, "{errors:?}");
+            assert!(
+                errors
+                    .iter()
+                    .all(|e| e.contains("unknown S-DSP register $80")),
+                "{errors:?}"
+            );
+        }
+        debugger.lock().unwrap().disable();
     }
 }

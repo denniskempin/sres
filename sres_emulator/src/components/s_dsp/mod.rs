@@ -1,6 +1,5 @@
 //! `SDsp`: register file, `Voice` array, `NoiseGenerator`, and mix.
 //! Entry: `generate_sample`. KON `$4C` starts a voice; DIR `$5D`; FLG `$6C`.
-#![allow(clippy::single_match)]
 
 mod brr;
 mod pitch;
@@ -11,7 +10,10 @@ use bilge::prelude::*;
 use intbits::Bits;
 
 use self::voice::Voice;
+use crate::common::debug_events::noop_collector;
+use crate::common::debug_events::DebugEventCollectorRef;
 use crate::common::uint::U8Ext;
+use crate::common::unimplemented::UnimplementedBehavior;
 
 pub struct SDsp {
     raw: [u8; 128],
@@ -20,40 +22,115 @@ pub struct SDsp {
     flg: Flg,
     noise_generator: NoiseGenerator,
     global_counter: u16,
+    debug_event_collector: DebugEventCollectorRef<()>,
 }
 
 impl SDsp {
+    pub fn new(debug_event_collector: DebugEventCollectorRef<()>) -> Self {
+        Self {
+            raw: [0; 128],
+            voices: [
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+                Voice::default(),
+            ],
+            dir: 0,
+            flg: Flg::default(),
+            noise_generator: NoiseGenerator::new(),
+            global_counter: 0,
+            debug_event_collector,
+        }
+    }
+
     pub fn read_register(&self, reg: u8) -> u8 {
+        // DSPADDR selects with bits 0–6 (128 registers). Values ≥128 must not
+        // decode as a named register via nibble matching.
         match reg {
             0x5D => self.dir,
             0x6C => self.flg.value,
-            reg => match reg.low_nibble() {
+            0x00..=0x7F => match reg.low_nibble() {
                 0x0..=0x9 => {
                     self.voices[reg.high_nibble() as usize].read_register(reg.low_nibble())
                 }
                 _ => self.raw[reg as usize],
             },
+            _ => {
+                self.debug_event_collector
+                    .on_error(format!("unknown S-DSP register ${reg:02X}"));
+                0
+            }
         }
     }
 
     pub fn write_register(&mut self, reg: u8, value: u8) {
+        // DSPADDR selects with bits 0–6 (128 registers). Values ≥128 must not
+        // decode as a named register via nibble matching.
         match reg {
             0x5D => self.dir = value,
-            0x6C => self.flg = value.into(),
-            reg => match reg.low_nibble() {
-                0x0..=0x9 => {
-                    self.voices[reg.high_nibble() as usize].write_register(reg.low_nibble(), value)
+            0x6C => {
+                self.flg = value.into();
+                if self.flg.mute() {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::DspFlgMute);
                 }
-                0xC => match reg.high_nibble() {
-                    0x4 => {
-                        for (idx, voice) in self.voices.iter_mut().enumerate() {
-                            voice.trigger_on = value.bit(idx);
-                        }
-                    }
-                    _ => {}
-                },
-                _ => self.raw[reg as usize] = value,
-            },
+                if self.flg.reset() {
+                    self.debug_event_collector
+                        .on_unimplemented(UnimplementedBehavior::DspFlgReset);
+                }
+            }
+            0x0C | 0x1C => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspMvol);
+            }
+            0x5C => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspKoff);
+            }
+            0x7C => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspEndx);
+            }
+            0x2D => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspPmon);
+                self.raw[reg as usize] = value;
+            }
+            0x0D | 0x2C | 0x3C | 0x4D | 0x6D | 0x7D | 0x0F | 0x1F | 0x2F | 0x3F | 0x4F | 0x5F
+            | 0x6F | 0x7F => {
+                self.debug_event_collector
+                    .on_unimplemented(UnimplementedBehavior::DspEcho);
+                self.raw[reg as usize] = value;
+            }
+            0x3D => self.raw[reg as usize] = value,
+            0x4C => {
+                for (idx, voice) in self.voices.iter_mut().enumerate() {
+                    voice.trigger_on = value.bit(idx);
+                }
+            }
+            0x1D => self.raw[reg as usize] = value,
+            0x0A | 0x1A | 0x2A | 0x3A | 0x4A | 0x5A | 0x6A | 0x7A | 0x0B | 0x1B | 0x2B | 0x3B
+            | 0x4B | 0x5B | 0x6B | 0x7B | 0x0E | 0x1E | 0x2E | 0x3E | 0x4E | 0x5E | 0x6E | 0x7E => {
+                self.raw[reg as usize] = value;
+            }
+            0x00..=0x09
+            | 0x10..=0x19
+            | 0x20..=0x29
+            | 0x30..=0x39
+            | 0x40..=0x49
+            | 0x50..=0x59
+            | 0x60..=0x69
+            | 0x70..=0x79 => {
+                self.voices[reg.high_nibble() as usize].write_register(reg.low_nibble(), value)
+            }
+            _ => {
+                self.debug_event_collector
+                    .on_error(format!("unknown S-DSP register ${reg:02X}"));
+            }
         }
     }
 
@@ -90,23 +167,7 @@ impl SDsp {
 
 impl Default for SDsp {
     fn default() -> Self {
-        Self {
-            raw: [0; 128],
-            voices: [
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-                Voice::default(),
-            ],
-            dir: 0,
-            flg: Flg::default(),
-            noise_generator: NoiseGenerator::new(),
-            global_counter: 0,
-        }
+        Self::new(noop_collector())
     }
 }
 
