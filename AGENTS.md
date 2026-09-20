@@ -107,6 +107,7 @@ Golden files are auto-created on first run; verify them before committing. Misma
 - `.cursor/skills/code-review/SKILL.md` — independent code-owner review via a readonly subagent. Checks: `.cursor/skills/code-review/references/review-guide.md`.
 - `.cursor/skills/write-agents-docs/SKILL.md` — follow it when editing any `AGENTS.md` or `//!` file header.
 - `.cursor/skills/agent-retro/SKILL.md` — review a conversation and propose generalized `AGENTS.md` or skill changes. Suggest only; apply `AGENTS.md` edits with `write-agents-docs`.
+- `.cursor/skills/health-audit/SKILL.md` — periodic housekeeping: agent/skill files, crate/toolchain freshness, CI alignment and speed.
 
 ## Subdirectory AGENTS.md Files
 
