@@ -48,15 +48,22 @@ impl SDsp {
     }
 
     pub fn read_register(&self, reg: u8) -> u8 {
+        // DSPADDR selects with bits 0–6 (128 registers). Values ≥128 must not
+        // decode as a named register via nibble matching.
         match reg {
             0x5D => self.dir,
             0x6C => self.flg.value,
-            reg => match reg.low_nibble() {
+            0x00..=0x7F => match reg.low_nibble() {
                 0x0..=0x9 => {
                     self.voices[reg.high_nibble() as usize].read_register(reg.low_nibble())
                 }
                 _ => self.raw[reg as usize],
             },
+            _ => {
+                self.debug_event_collector
+                    .on_error(format!("unknown S-DSP register ${reg:02X}"));
+                0
+            }
         }
     }
 

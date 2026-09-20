@@ -39,5 +39,6 @@ fn unknown_register_does_not_hit_named_map() {
     let mut s_dsp = SDsp::default();
     s_dsp.write_register(0x00, 0x12);
     s_dsp.write_register(0x80, 0x34);
+    assert_eq!(s_dsp.read_register(0x80), 0);
     assert_eq!(s_dsp.read_register(0x00), 0x12);
 }

@@ -739,6 +739,7 @@ mod test {
         }
 
         s_dsp.write_register(0x80, 0x34);
+        let _ = s_dsp.read_register(0x80);
         {
             let mut d = debugger.lock().unwrap();
             assert_eq!(
@@ -749,9 +750,11 @@ mod test {
                 DebugEvent::Error(msg) => Some(msg.clone()),
                 _ => None,
             });
-            assert_eq!(errors.len(), 1, "{errors:?}");
+            assert_eq!(errors.len(), 2, "{errors:?}");
             assert!(
-                errors[0].contains("unknown S-DSP register $80"),
+                errors
+                    .iter()
+                    .all(|e| e.contains("unknown S-DSP register $80")),
                 "{errors:?}"
             );
         }
