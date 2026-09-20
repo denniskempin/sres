@@ -1,5 +1,6 @@
 //! `MainBusImpl`: 65816 system bus with LoRom/HiRom decode and MMIO routing.
 //! CPU entry: `cycle_read_u8` / `cycle_write_u8`. DMA and HDMA run inside `advance_master_clock`.
+//! `MainBusEvent` read/write records include `master_clock` at emit time.
 pub mod devices;
 
 mod dma;
@@ -25,8 +26,8 @@ use crate::debugger::DebuggerRef;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MainBusEvent {
-    Read(AddressU24, u8),
-    Write(AddressU24, u8),
+    Read(AddressU24, u8, u64),
+    Write(AddressU24, u8, u64),
 }
 
 pub struct MainBusImpl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> {
@@ -146,15 +147,21 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0
             }
         };
-        self.debug_event_collector
-            .on_event(MainBusEvent::Read(addr, value));
+        self.debug_event_collector.on_event(MainBusEvent::Read(
+            addr,
+            value,
+            self.clock.clock_info().master_clock,
+        ));
         value
     }
 
     #[allow(clippy::single_match)]
     pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
-        self.debug_event_collector
-            .on_event(MainBusEvent::Write(addr, value));
+        self.debug_event_collector.on_event(MainBusEvent::Write(
+            addr,
+            value,
+            self.clock.clock_info().master_clock,
+        ));
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
             MemoryBlock::Rom(offset) => {

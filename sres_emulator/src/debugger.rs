@@ -1,5 +1,6 @@
 //! `Debugger` breakpoints, log points, unimplemented hit counts, and a 16384-event `DebugEvent` ring.
 //! `enable()`/`disable()` are the only writers of process-wide `DEBUG_EVENTS_ENABLED`.
+//! `CpuMemoryWrite`/`Read` ranges with `end <= 0x10000` also match the offset on banks `$00–$3F` and `$80–$BF`.
 
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -68,6 +69,17 @@ pub enum EventFilter {
     Unimplemented,
 }
 
+/// 24-bit match, plus 16-bit register ranges on SNES MMIO mirror banks.
+/// `$7E2100` (WRAM) does not match `0x2100..0x2140`.
+fn cpu_memory_in_range(addr: AddressU24, range: &Range<u32>) -> bool {
+    if range.contains(&u32::from(addr)) {
+        return true;
+    }
+    range.end <= 0x10000
+        && matches!(addr.bank, 0x00..=0x3F | 0x80..=0xBF)
+        && range.contains(&(addr.offset as u32))
+}
+
 impl EventFilter {
     pub fn matches(&self, event: &DebugEvent) -> bool {
         use DebugEvent::*;
@@ -80,11 +92,11 @@ impl EventFilter {
             (CpuInstruction(instr), Cpu(CpuEvent::Step(cpu))) => {
                 instr == &cpu.instruction.operation
             }
-            (CpuMemoryRead(range), MainBus(MainBusEvent::Read(addr, _))) => {
-                range.contains(&u32::from(*addr))
+            (CpuMemoryRead(range), MainBus(MainBusEvent::Read(addr, _, _))) => {
+                cpu_memory_in_range(*addr, range)
             }
-            (CpuMemoryWrite(range), MainBus(MainBusEvent::Write(addr, _))) => {
-                range.contains(&u32::from(*addr))
+            (CpuMemoryWrite(range), MainBus(MainBusEvent::Write(addr, _, _))) => {
+                cpu_memory_in_range(*addr, range)
             }
             (ExecutionError, Error(_)) => true,
             (Interrupt(expected_handler), Cpu(CpuEvent::Interrupt(handler))) => {
@@ -500,6 +512,24 @@ mod test {
         check_format("r 10:1F", CpuMemoryRead(0x10..0x20));
         check_format("w", CpuMemoryWrite(0..u32::MAX));
         check_format("unimplemented", Unimplemented);
+    }
+
+    #[test]
+    fn cpu_memory_write_matches_ppu_register_mirrors() {
+        let filter = EventFilter::CpuMemoryWrite(0x2100..0x2140);
+        let event = |bank, offset| {
+            DebugEvent::MainBus(MainBusEvent::Write(AddressU24::new(bank, offset), 0x00, 0))
+        };
+        assert!(filter.matches(&event(0x00, 0x2122)));
+        assert!(filter.matches(&event(0x80, 0x2122)));
+        assert!(filter.matches(&event(0x01, 0x2100)));
+        assert!(!filter.matches(&event(0x7E, 0x2122)));
+        assert!(!filter.matches(&event(0x00, 0x2140)));
+        assert!(!filter.matches(&event(0x00, 0x4200)));
+
+        let wram = EventFilter::CpuMemoryWrite(0x7E2100..0x7E2140);
+        assert!(wram.matches(&event(0x7E, 0x2122)));
+        assert!(!wram.matches(&event(0x00, 0x2122)));
     }
 
     #[test]
