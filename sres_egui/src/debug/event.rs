@@ -154,6 +154,9 @@ fn event_filter_help_window(ui: &mut Ui, show: &mut bool) {
             ui.label("  <instruction>       - CPU instruction (e.g. LDA, JMP)");
             ui.label("  irq [type]          - Interrupt (optional type: nmi, etc.)");
             ui.label("  s-pc <address/range> - SPC700 program counter");
+            ui.label(
+                "  unimplemented       - unimplemented hardware (also the Unimplemented pane)",
+            );
             ui.separator();
 
             ui.label("Address formats:");
