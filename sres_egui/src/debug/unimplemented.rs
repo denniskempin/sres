@@ -29,7 +29,14 @@ impl UnimplementedViewer {
                 let mut debugger = emulator.debugger();
                 let hits = debugger.unimplemented_hits();
                 let mut reset = false;
-                unimplemented_widget(ui, &hits, &mut debugger.break_on_unimplemented, &mut reset);
+                ScrollArea::vertical().show(ui, |ui| {
+                    unimplemented_widget(
+                        ui,
+                        &hits,
+                        &mut debugger.break_on_unimplemented,
+                        &mut reset,
+                    );
+                });
                 if reset {
                     debugger.clear_unimplemented_counts();
                 }
@@ -54,24 +61,13 @@ pub fn unimplemented_widget(
         return;
     }
 
-    let text_style = TextStyle::Monospace;
-    let style = ui.style_mut();
-    style.override_text_style = Some(text_style.clone());
-    let row_height = ui.text_style_height(&text_style);
-
-    ScrollArea::vertical().auto_shrink(false).show_rows(
-        ui,
-        row_height,
-        hits.len(),
-        |ui, row_range| {
-            for (behavior, count) in hits[row_range].iter() {
-                ui.horizontal(|ui| {
-                    ui.label(format!("{count:>8}"));
-                    ui.label(behavior.to_string());
-                });
-            }
-        },
-    );
+    ui.style_mut().override_text_style = Some(TextStyle::Monospace);
+    for (behavior, count) in hits {
+        ui.horizontal(|ui| {
+            ui.label(format!("{count:>8}"));
+            ui.label(behavior.to_string());
+        });
+    }
 }
 
 #[cfg(test)]
