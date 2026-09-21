@@ -350,12 +350,10 @@ fn encode_ppu_writes(writes: &[PpuBusWrite]) -> Vec<u8> {
 }
 
 fn decode_ppu_writes(bytes: &[u8]) -> Vec<PpuBusWrite> {
-    assert!(
-        bytes.len().is_multiple_of(PPU_WRITE_RECORD_LEN),
-        "truncated PPU write log"
-    );
-    bytes
-        .chunks_exact(PPU_WRITE_RECORD_LEN)
+    let (chunks, remainder) = bytes.as_chunks::<PPU_WRITE_RECORD_LEN>();
+    assert!(remainder.is_empty(), "truncated PPU write log");
+    chunks
+        .iter()
         .map(|chunk| PpuBusWrite {
             master_clock: u64::from_le_bytes(chunk[0..8].try_into().unwrap()),
             offset: u16::from_le_bytes(chunk[8..10].try_into().unwrap()),
