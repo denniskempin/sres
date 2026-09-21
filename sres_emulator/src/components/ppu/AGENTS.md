@@ -18,9 +18,10 @@ Ricoh 5C77 PPU. `Ppu` facade over serializable `PpuState`.
 2. Mode 2 sets BG3 `BitDepth::Opt` (offset-per-tile) but `decode_bgmode` only decodes BG1/BG2 as 4bpp; `Opt` is never read.
 3. `update_clock`: `disabled` (`INIDISP` bit 7) returns without drawing or advancing `current_clock`. Otherwise, when `v` changes, call `draw_scanline` unless `headless`, then store `last_drawn_scanline`. `draw_scanline` returns if `screen_y >= 224`.
 4. `get_all_sprites_on_scanline` iterates OAM 0..128, breaks when `len > 32`, then reverses so higher index is first and lower index wins. `CGADSUB` bit 4 is stored on `Oam.color_math_enabled`; the Object branch of `draw_scanline` never reads it.
-5. `bgofs_latch` and `bghofs_latch` in `PpuState` are shared by all `BGnHOFS` / `BGnVOFS` writes.
-6. `write_m7a` / `write_m7b` update `m7a_mul` / `m7b_mul` for `read_mpy` (`$2134–$2136`) only. No affine Mode 7 render.
-7. `VMAIN` bits 2–3 parse address remapping and `log::error`; the address is not remapped.
+5. `draw_scanline` skips Div2 (`CGADSUB` bit 6) on COLDATA backdrop pixels when `CGWSEL` bit 1 is set (`PpuState.color_math_use_subscreen`). Bit 1 defaults to 0 (fixed color as opaque addend).
+6. `bgofs_latch` and `bghofs_latch` in `PpuState` are shared by all `BGnHOFS` / `BGnVOFS` writes.
+7. `write_m7a` / `write_m7b` update `m7a_mul` / `m7b_mul` for `read_mpy` (`$2134–$2136`) only. No affine Mode 7 render.
+8. `VMAIN` bits 2–3 parse address remapping, `log::error`, and fire `PpuVramRemap`; the address is not remapped.
 
 ## Hardware Map
 
@@ -40,7 +41,8 @@ Bitfields: `docs/index.md`.
 
 Unimplemented PPU features follow root (ignore write / read 0) unless noted. Named variants fire on access. Unknown offsets are `on_error`. Write-only reads (`$2100–$2133`) and read-only writes (`$2134–$213F`) are explicit no-ops. `peek_*` is silent.
 
-- Windows (`$2123–$212B`, `$212E–$212F`) / MOSAIC (`$2106`) / CGWSEL (`$2130`) / SETINI (`$2133`) / M7SEL (`$211A`) / M7C–M7Y (`$211D–$2120`): named write variants. `VMAIN` bits 2–3: `PpuVramRemap` (gotcha 7).
+- Windows (`$2123–$212B`, `$212E–$212F`) / MOSAIC (`$2106`) / SETINI (`$2133`) / M7SEL (`$211A`) / M7C–M7Y (`$211D–$2120`): named write variants. `VMAIN` bits 2–3: `PpuVramRemap` (gotcha 8).
+- `CGWSEL` (`$2130`): bit 1 stored (gotcha 5). Bits 7–4 and 0: `PpuCgwselWrite`.
 - `INIDISP` bits 0–3: `PpuInidispBrightness` when not `$F`; only bit 7 (`disabled`) affects rendering.
 - Hi-res (modes 5/6): `PpuHiRes`. Offset-per-tile (modes 2/4/6): `PpuOffsetPerTile`.
 - Modes 4/6/7: `PpuBgMode4`/`6`/`7`; BG layers draw-nothing (gotcha 1).

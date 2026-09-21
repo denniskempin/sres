@@ -66,6 +66,7 @@ pub struct PpuState {
     color_math_backdrop_enabled: bool,
     color_math_operation: ColorMathOperation,
     color_math_half: bool,
+    color_math_use_subscreen: bool,
     fixed_color: Rgb15,
 
     mode7_latch: u8,
@@ -96,6 +97,7 @@ impl Default for PpuState {
             color_math_backdrop_enabled: false,
             color_math_operation: ColorMathOperation::Add,
             color_math_half: false,
+            color_math_use_subscreen: false,
             mode7_latch: 0,
             m7a_mul: 0,
             m7b_mul: 0,
@@ -189,7 +191,7 @@ impl BusDeviceU24 for Ppu {
             }
             0x212C => self.write_tm(value),
             0x212D => self.write_ts(value),
-            0x2130 => self.report_unimplemented(UnimplementedBehavior::PpuCgwselWrite),
+            0x2130 => self.write_cgwsel(value),
             0x2131 => self.write_cdadsub(value),
             0x2132 => self.write_coldata(value),
             0x2133 => self.report_unimplemented(UnimplementedBehavior::PpuSetiniWrite),
@@ -292,58 +294,63 @@ impl Ppu {
         let mut obj_data: [(u8, u8); 256] = [(0, 0); 256];
         self.decode_obj(screen_y, &mut obj_data);
 
-        // Render sub screen first, it'll be used for blending while rendering the main screen.
+        // Subscreen addend: COLDATA backdrop, plus TS layers when CGWSEL bit 1 is set.
+        // Div2 applies only on opaque subscreen pixels (or on every pixel in fixed-color mode).
+        let use_subscreen = self.state.color_math_use_subscreen;
         let mut raw_sub = [self.state.fixed_color; 256];
-        for layer in layers.iter().rev() {
-            match layer {
-                Layer::Background(id, layer_priority) => {
-                    let bg = self.state.backgrounds[*id as usize];
-                    if bg.bit_depth == BitDepth::Disabled || !bg.subscreen_enabled {
-                        continue;
-                    }
-                    for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
-                        if layer_priority != priority {
+        let mut sub_opaque = [!use_subscreen; 256];
+        if use_subscreen {
+            for layer in layers.iter().rev() {
+                match layer {
+                    Layer::Background(id, layer_priority) => {
+                        let bg = self.state.backgrounds[*id as usize];
+                        if bg.bit_depth == BitDepth::Disabled || !bg.subscreen_enabled {
                             continue;
                         }
-                        if *pixel > 0 {
-                            raw_sub[x] = self.state.cgram[bg.palette_addr + pixel];
+                        for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
+                            if layer_priority != priority {
+                                continue;
+                            }
+                            if *pixel > 0 {
+                                raw_sub[x] = self.state.cgram[bg.palette_addr + pixel];
+                                sub_opaque[x] = true;
+                            }
                         }
                     }
-                }
-                Layer::Object(layer_priority) => {
-                    if !self.state.oam.sub_enabled {
-                        continue;
-                    }
-                    for (x, (pixel, priority)) in obj_data.iter().enumerate() {
-                        if layer_priority != priority {
+                    Layer::Object(layer_priority) => {
+                        if !self.state.oam.sub_enabled {
                             continue;
                         }
-                        if *pixel > 0 {
-                            raw_sub[x] = self.state.cgram[*pixel];
+                        for (x, (pixel, priority)) in obj_data.iter().enumerate() {
+                            if layer_priority != priority {
+                                continue;
+                            }
+                            if *pixel > 0 {
+                                raw_sub[x] = self.state.cgram[*pixel];
+                                sub_opaque[x] = true;
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Pre-invert subscreen so we don't have to branch for each pixel
-        let sub = match self.state.color_math_operation {
-            ColorMathOperation::Add => {
-                raw_sub.map(|pixel| (pixel.r() as i16, pixel.g() as i16, pixel.b() as i16))
-            }
-            ColorMathOperation::Subtract => raw_sub.map(|pixel| {
-                (
-                    -(pixel.r() as i16),
-                    -(pixel.g() as i16),
-                    -(pixel.b() as i16),
-                )
-            }),
+        let subtract = matches!(
+            self.state.color_math_operation,
+            ColorMathOperation::Subtract
+        );
+        let half_enabled = self.state.color_math_half;
+        let blend = |main: Rgb15, x: usize| {
+            main.color_math(raw_sub[x], subtract, half_enabled && sub_opaque[x])
         };
-        let div_factor = if self.state.color_math_half { 2 } else { 1 };
 
         // Render main screen
         let mut scanline = if self.state.color_math_backdrop_enabled {
-            sub.map(|pixel| (self.state.cgram[0] + pixel) / div_factor)
+            let mut line = [self.state.cgram[0]; 256];
+            for (x, pixel) in line.iter_mut().enumerate() {
+                *pixel = blend(*pixel, x);
+            }
+            line
         } else {
             [self.state.cgram[0]; 256]
         };
@@ -355,24 +362,17 @@ impl Ppu {
                     if bg.bit_depth == BitDepth::Disabled || !bg.main_enabled {
                         continue;
                     }
-                    if bg.color_math_enabled {
-                        for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
-                            if layer_priority != priority {
-                                continue;
-                            }
-                            if *pixel > 0 {
-                                scanline[x] = (self.state.cgram[bg.palette_addr + pixel] + sub[x])
-                                    / div_factor;
-                            }
+                    for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
+                        if layer_priority != priority {
+                            continue;
                         }
-                    } else {
-                        for (x, (pixel, priority)) in bg_data[*id as usize].iter().enumerate() {
-                            if layer_priority != priority {
-                                continue;
-                            }
-                            if *pixel > 0 {
-                                scanline[x] = self.state.cgram[bg.palette_addr + pixel];
-                            }
+                        if *pixel > 0 {
+                            let color = self.state.cgram[bg.palette_addr + pixel];
+                            scanline[x] = if bg.color_math_enabled {
+                                blend(color, x)
+                            } else {
+                                color
+                            };
                         }
                     }
                 }
@@ -739,6 +739,22 @@ impl Ppu {
             background.subscreen_enabled = value.bit(i);
         }
         self.state.oam.sub_enabled = value.bit(4);
+    }
+
+    /// Register 2130: CGWSEL - Color math control A
+    /// 7  bit  0
+    /// ---- ----
+    /// MMSS ..AD
+    /// ||||   ||
+    /// ||||   |+- Direct color (unimplemented)
+    /// ||||   +-- Addend (0 = fixed color, 1 = subscreen)
+    /// ||++------ Sub screen color window (unimplemented)
+    /// ++-------- Main screen color window black (unimplemented)
+    fn write_cgwsel(&mut self, value: u8) {
+        self.state.color_math_use_subscreen = value.bit(1);
+        if value.bits(4..=7) != 0 || value.bit(0) {
+            self.report_unimplemented(UnimplementedBehavior::PpuCgwselWrite);
+        }
     }
 
     /// Register 2131: CGADSUB - Color math control
