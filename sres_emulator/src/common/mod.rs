@@ -9,4 +9,5 @@ pub mod logging;
 pub mod test_bus;
 pub mod test_util;
 pub mod uint;
+pub mod unimplemented;
 pub mod util;

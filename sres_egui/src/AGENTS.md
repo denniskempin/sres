@@ -19,7 +19,7 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 
 | Directory | Purpose |
 |-----------|---------|
-| `debug/` | Debugger UI panels (CPU, PPU, APU, memory, log, syntax) |
+| `debug/` | Debugger UI panels (CPU, PPU, APU, memory, log, unimplemented, syntax) |
 
 ## Behaviors & Gotchas
 
@@ -48,4 +48,4 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 ## Tests
 
 - No tests in this directory. `test_utils.rs` feeds `debug/` `egui_kittest` snapshots (`UPDATE_SNAPSHOTS=1` writes `sres_egui/tests/snapshots/`).
-- Crate: `cargo test -p sres_egui` (`egui_kittest` in `sres_egui/Cargo.toml` `[dev-dependencies]`; four `debug/` tests listed).
+- Crate: `cargo test -p sres_egui` (`egui_kittest` in `sres_egui/Cargo.toml` `[dev-dependencies]`; tests listed in `debug/AGENTS.md`).

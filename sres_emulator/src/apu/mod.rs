@@ -45,7 +45,10 @@ impl Apu {
     pub fn new(debugger: DebuggerRef) -> Self {
         Self {
             spc700: Spc700::new(
-                ApuBus::new(DebugEventCollectorRef(debugger.clone())),
+                ApuBus::with_dsp_collector(
+                    DebugEventCollectorRef(debugger.clone()),
+                    DebugEventCollectorRef(debugger.clone()),
+                ),
                 DebugEventCollectorRef(debugger.clone()),
             ),
             sample_buffer: AudioBuffer::new(),

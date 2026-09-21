@@ -8,6 +8,7 @@ mod log_viewer;
 mod memory;
 mod ppu;
 mod syntax;
+mod unimplemented;
 
 use std::fmt::Debug;
 use std::time::Duration;
@@ -28,6 +29,7 @@ use sres_emulator::common::util::RingBuffer;
 use sres_emulator::debugger::BreakReason;
 use sres_emulator::ExecutionResult;
 use sres_emulator::System;
+use unimplemented::UnimplementedViewer;
 
 use crate::util::Instant;
 
@@ -39,6 +41,7 @@ pub struct DebugUi {
     memory_viewer: MemoryViewer,
     past_emulation_times: RingBuffer<Duration, 60>,
     log_viewer: LogViewer,
+    unimplemented_viewer: UnimplementedViewer,
     selected_memory_location: InternalLink,
     pub show_profiler: bool,
     break_reason: Option<BreakReason>,
@@ -55,6 +58,7 @@ impl DebugUi {
             memory_viewer: MemoryViewer::new("CPU Bus"),
             show_profiler: false,
             log_viewer: LogViewer::new(),
+            unimplemented_viewer: UnimplementedViewer::new(),
             past_emulation_times: RingBuffer::default(),
             selected_memory_location: InternalLink::None,
             break_reason: None,
@@ -131,6 +135,7 @@ impl DebugUi {
         } */
         self.log_viewer
             .show(ctx, emulator, &mut self.selected_memory_location);
+        self.unimplemented_viewer.show(ctx, emulator);
 
         match self.selected_memory_location {
             InternalLink::None => (),
@@ -192,6 +197,9 @@ impl DebugUi {
             }
             if ui.button("Log Viewer").clicked() {
                 self.log_viewer.toggle();
+            }
+            if ui.button("Unimplemented").clicked() {
+                self.unimplemented_viewer.toggle();
             }
         });
     }

@@ -63,6 +63,9 @@ pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
             Error(reason) => {
                 label_error(ui, format!("Error: {reason:?}"));
             }
+            Unimplemented(behavior) => {
+                label_error(ui, format!("Unimplemented: {behavior}"));
+            }
             Cpu(CpuEvent::Step(state)) => {
                 label_cpu(ui);
                 cpu_log_line(ui, state, selected);
@@ -309,6 +312,9 @@ mod tests {
             )),
             // Error
             DebugEvent::Error("Unexpected opcode 0xFF at 00:8042".to_string()),
+            DebugEvent::Unimplemented(
+                sres_emulator::common::unimplemented::UnimplementedBehavior::SerialJoypadRead,
+            ),
         ];
 
         crate::test_utils::widget_snapshot("syntax/syntax_widgets", |ui| {

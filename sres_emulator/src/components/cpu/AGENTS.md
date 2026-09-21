@@ -36,7 +36,7 @@ W65C816 (65816) CPU core.
 
 ## Gaps
 
-- Emulation-mode NMI/IRQ: `interrupt()` always uses `NativeVectorTable` and `stack_push_u24`; `EmuVectorTable::Nmi` / `Irq` are unused.
+- Emulation-mode exceptions: `CpuEmulationModeNmi` / `Irq` / `BreakException` / `RtiReturn`. `interrupt()` still uses `NativeVectorTable` and `stack_push_u24`; `EmuVectorTable::Nmi` / `Irq` unused.
 
 ## Tests
 
