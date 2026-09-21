@@ -7,7 +7,7 @@ Cargo integration tests for `sres_emulator`. Taxonomy and System-variant mapping
 | File | Owns |
 |------|------|
 | `rom_tests.rs` | Trace-comparison (`SyncSystem`, `run_rom_test`) and ROM-outcome (`System`, `run_test_rom` until `stp`, `< 10_000_000` steps) |
-| `ppu_tests.rs` | ROM framebuffer and debug-render (`System`); snapshot tests (`Ppu` only, no ROM) |
+| `ppu_tests.rs` | ROM framebuffer and debug-render (`System`); snapshot tests (`Ppu` + `.writes`, no ROM) |
 | `apu_tests.rs` | Golden-WAV (`System`, `compare_wav_against_golden`); `play_noise` RAM/DSP asserts |
 
 ## Subdirectories
@@ -15,7 +15,7 @@ Cargo integration tests for `sres_emulator`. Taxonomy and System-variant mapping
 | Directory | Purpose |
 |-----------|---------|
 | `rom_tests/` | `.sfc`, BSNES `-trace.log.xz`, assembly for `rom_tests.rs` |
-| `ppu_tests/` | `.sfc`, golden `.png`, `.snapshot` for `ppu_tests.rs` |
+| `ppu_tests/` | `.sfc`, golden `.png`, `.snapshot`, `.writes` for `ppu_tests.rs` |
 | `apu_tests/` | `.sfc`, golden `.wav`, assembly for `apu_tests.rs` |
 | `asm_lib/` | Shared bass includes |
 | `lib/` | Symlink → `asm_lib/` |
@@ -25,7 +25,7 @@ Cargo integration tests for `sres_emulator`. Taxonomy and System-variant mapping
 1. Sources are bass (`arch snes.cpu` / `arch snes.smp`). Cargo does not assemble; tests load committed `.sfc`.
 2. Missing ROM or trace files fail (`Cartridge::with_sfc_file` / `File::open`); these drivers do not skip or reassemble.
 3. Trace tests write `0x93` to `$000000` before reset (`run_rom_test`); reason unknown.
-4. Snapshot tests call `Ppu::load_state` then `draw_scanline` with no ROM (`run_snapshot_framebuffer_test`).
+4. Snapshot tests call `Ppu::load_state`, replay `{name}.writes` (missing = none), then `draw_scanline` with no ROM (`run_snapshot_framebuffer_test`).
 
 ## Integration
 
