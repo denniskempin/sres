@@ -1,7 +1,7 @@
 //! `EmulatorApp` (`eframe::App::ui`): home screen until a cartridge is loaded, then `emulator_ui`.
 //! `load_cartridge` builds `System::with_cartridge` and enables the debugger.
 //! File drops load `.sfc` from `ui()` (native path/bytes, WASM `bytes_async`).
-//! Debugger-off run uses `execute_for_audio_samples`; present via `swap_video_frame` / `AudioOutput::update`.
+//! Debugger-off run uses `execute_for_audio_samples` when audio is playing, else `execute_for_duration`.
 
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -244,8 +244,13 @@ impl EmulatorApp {
 
         if !self.emulator.debugger().enabled() {
             puffin::set_scopes_on(false);
-            self.emulator
-                .execute_for_audio_samples(self.audio_output.samples_needed_to_maintain_buffer());
+            if self.audio_output.is_playing() {
+                self.emulator.execute_for_audio_samples(
+                    self.audio_output.samples_needed_to_maintain_buffer(),
+                );
+            } else {
+                self.emulator.execute_for_duration(stable_dt);
+            }
         } else {
             puffin::set_scopes_on(self.debug_ui.show_profiler);
             self.debug_ui.run_emulator(&mut self.emulator, stable_dt);
