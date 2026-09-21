@@ -1,5 +1,6 @@
 //! `DebugEventCollectorRef` for components to emit debugger events.
 //! `on_event`/`on_error`/`on_unimplemented` no-op unless `DEBUG_EVENTS_ENABLED` (zero-cost path: root).
+//! `on_event_with` builds the event only when collection is on.
 use std::ops::Deref;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -31,6 +32,13 @@ impl<EventT> DebugEventCollectorRef<EventT> {
     pub fn on_event(&self, event: EventT) {
         if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
             self.dispatch_event(event);
+        }
+    }
+
+    #[inline(always)]
+    pub fn on_event_with(&self, make: impl FnOnce() -> EventT) {
+        if DEBUG_EVENTS_ENABLED.load(Ordering::Relaxed) {
+            self.dispatch_event(make());
         }
     }
 

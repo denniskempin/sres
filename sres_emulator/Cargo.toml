@@ -33,7 +33,6 @@ pretty_assertions = "1.4"
 criterion = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-bitcode = "0.6.9"
 liblzma = { version = "0.4", features = ["static"] }
 image = { version = "0.25", features = ["png"] }
 rasciigraph = "0.3"

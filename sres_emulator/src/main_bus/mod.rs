@@ -147,21 +147,17 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 0
             }
         };
-        self.debug_event_collector.on_event(MainBusEvent::Read(
-            addr,
-            value,
-            self.clock.clock_info().master_clock,
-        ));
+        self.debug_event_collector.on_event_with(|| {
+            MainBusEvent::Read(addr, value, self.clock.clock_info().master_clock)
+        });
         value
     }
 
     #[allow(clippy::single_match)]
     pub fn bus_write(&mut self, addr: AddressU24, value: u8) {
-        self.debug_event_collector.on_event(MainBusEvent::Write(
-            addr,
-            value,
-            self.clock.clock_info().master_clock,
-        ));
+        self.debug_event_collector.on_event_with(|| {
+            MainBusEvent::Write(addr, value, self.clock.clock_info().master_clock)
+        });
         match self.memory_map(addr) {
             MemoryBlock::Ram(offset) => self.wram[offset] = value,
             MemoryBlock::Rom(offset) => {

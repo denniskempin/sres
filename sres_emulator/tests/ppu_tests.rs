@@ -33,14 +33,11 @@ pub fn test_krom_hdma_redspace_snapshot_replay() {
 
     let rom_path = test_dir().join("krom_hdma_redspace.sfc");
     let mut system = System::with_cartridge(&Cartridge::with_sfc_file(&rom_path).unwrap());
-    system.execute_frames(10);
+    // `run_framebuffer_test(..., 10)` swaps the vblank of frame 9. Capture that visible frame.
+    system.execute_frames(9);
     execute_until_v0(&mut system);
     let state = system.save_ppu_state();
-
-    enable_ppu_write_log(&mut system);
-    system.execute_scanlines(224);
-    let writes = drain_ppu_writes(&mut system);
-    disable_ppu_write_log(&mut system);
+    let writes = capture_visible_ppu_writes(&mut system);
 
     let mut ppu = Ppu::new();
     ppu.load_state(&state).unwrap();
@@ -271,21 +268,16 @@ fn generate_ppu_snapshots(rom_name: &str, snapshots: &[(&str, u64)]) {
                 system.save_ppu_state(),
             )
             .unwrap();
-
-            enable_ppu_write_log(&mut system);
-            system.execute_scanlines(224);
-            let writes = drain_ppu_writes(&mut system);
-            disable_ppu_write_log(&mut system);
             std::fs::write(
                 test_dir().join(format!("{rom_name}-{test_name}.writes")),
-                bitcode::encode(&writes),
+                encode_ppu_writes(&capture_visible_ppu_writes(&mut system)),
             )
             .unwrap();
         }
     }
 }
 
-#[derive(bitcode::Encode, bitcode::Decode)]
+#[derive(Clone, Copy)]
 struct PpuBusWrite {
     master_clock: u64,
     offset: u16,
@@ -313,6 +305,23 @@ fn disable_ppu_write_log(system: &mut System) {
     debugger.disable();
 }
 
+fn capture_visible_ppu_writes(system: &mut System) -> Vec<PpuBusWrite> {
+    enable_ppu_write_log(system);
+    let start_f = system.clock_info().f;
+    let mut writes = Vec::new();
+    while system.clock_info().f == start_f && system.clock_info().v < 224 {
+        system.execute_scanlines(1);
+        let batch = drain_ppu_writes(system);
+        assert!(
+            batch.len() < sres_emulator::debugger::LOG_BUFFER_SIZE,
+            "PPU write log filled the debugger ring; oldest HDMA writes were dropped"
+        );
+        writes.extend(batch);
+    }
+    disable_ppu_write_log(system);
+    writes
+}
+
 fn drain_ppu_writes(system: &mut System) -> Vec<PpuBusWrite> {
     let mut writes = system.debugger().drain_events(|event| match event {
         DebugEvent::MainBus(MainBusEvent::Write(addr, value, master_clock)) => Some(PpuBusWrite {
@@ -328,12 +337,39 @@ fn drain_ppu_writes(system: &mut System) -> Vec<PpuBusWrite> {
     writes
 }
 
+const PPU_WRITE_RECORD_LEN: usize = 11;
+
+fn encode_ppu_writes(writes: &[PpuBusWrite]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(writes.len() * PPU_WRITE_RECORD_LEN);
+    for write in writes {
+        out.extend_from_slice(&write.master_clock.to_le_bytes());
+        out.extend_from_slice(&write.offset.to_le_bytes());
+        out.push(write.value);
+    }
+    out
+}
+
+fn decode_ppu_writes(bytes: &[u8]) -> Vec<PpuBusWrite> {
+    assert!(
+        bytes.len().is_multiple_of(PPU_WRITE_RECORD_LEN),
+        "truncated PPU write log"
+    );
+    bytes
+        .chunks_exact(PPU_WRITE_RECORD_LEN)
+        .map(|chunk| PpuBusWrite {
+            master_clock: u64::from_le_bytes(chunk[0..8].try_into().unwrap()),
+            offset: u16::from_le_bytes(chunk[8..10].try_into().unwrap()),
+            value: chunk[10],
+        })
+        .collect()
+}
+
 fn load_ppu_writes(snapshot_name: &str) -> Vec<PpuBusWrite> {
     let path = test_dir().join(format!("{snapshot_name}.writes"));
     if !path.exists() {
         return Vec::new();
     }
-    bitcode::decode(&std::fs::read(path).unwrap()).unwrap()
+    decode_ppu_writes(&std::fs::read(path).unwrap())
 }
 
 fn replay_ppu_writes(ppu: &mut Ppu, writes: &[PpuBusWrite]) {

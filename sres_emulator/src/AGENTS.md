@@ -32,7 +32,7 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 
 ## Tests
 
-- Unit tests live in `debugger.rs` (`EventFilter` parse/format/PPU-mirror match, unimplemented counts/break/`peek`). `lib.rs` and `controller.rs` have none.
+- Unit tests live in `debugger.rs` (`EventFilter` parse/format/PPU-mirror match for read and write, unimplemented counts/break/`peek`). `lib.rs` and `controller.rs` have none.
 - `cargo nextest run -p sres_emulator --lib`
 - Debugger-only: `cargo nextest run -p sres_emulator --lib -E 'test(debugger::)'`
 

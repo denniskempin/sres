@@ -207,7 +207,7 @@ pub type DebuggerRef = Arc<Mutex<Debugger>>;
 /// The number of events the Debugger can store.
 /// This has to be quite large, since during a DMA we can generate a lot of events
 /// on a single CPU step.
-const LOG_BUFFER_SIZE: usize = 16384;
+pub const LOG_BUFFER_SIZE: usize = 16384;
 
 pub struct Debugger {
     pub log_points: Vec<EventFilter>,
@@ -515,21 +515,38 @@ mod test {
     }
 
     #[test]
-    fn cpu_memory_write_matches_ppu_register_mirrors() {
-        let filter = EventFilter::CpuMemoryWrite(0x2100..0x2140);
-        let event = |bank, offset| {
+    fn cpu_memory_matches_ppu_register_mirrors() {
+        let write_filter = EventFilter::CpuMemoryWrite(0x2100..0x2140);
+        let read_filter = EventFilter::CpuMemoryRead(0x2100..0x2140);
+        let write = |bank, offset| {
             DebugEvent::MainBus(MainBusEvent::Write(AddressU24::new(bank, offset), 0x00, 0))
         };
-        assert!(filter.matches(&event(0x00, 0x2122)));
-        assert!(filter.matches(&event(0x80, 0x2122)));
-        assert!(filter.matches(&event(0x01, 0x2100)));
-        assert!(!filter.matches(&event(0x7E, 0x2122)));
-        assert!(!filter.matches(&event(0x00, 0x2140)));
-        assert!(!filter.matches(&event(0x00, 0x4200)));
+        let read = |bank, offset| {
+            DebugEvent::MainBus(MainBusEvent::Read(AddressU24::new(bank, offset), 0x00, 0))
+        };
+        for event in [
+            write(0x00, 0x2122),
+            write(0x80, 0x2122),
+            write(0x01, 0x2100),
+        ] {
+            assert!(write_filter.matches(&event));
+        }
+        for event in [read(0x00, 0x2122), read(0x80, 0x2122), read(0x01, 0x2100)] {
+            assert!(read_filter.matches(&event));
+        }
+        assert!(!write_filter.matches(&write(0x7E, 0x2122)));
+        assert!(!read_filter.matches(&read(0x7E, 0x2122)));
+        assert!(!write_filter.matches(&write(0x00, 0x2140)));
+        assert!(!read_filter.matches(&read(0x00, 0x2140)));
+        assert!(!write_filter.matches(&write(0x00, 0x4200)));
+        assert!(!read_filter.matches(&read(0x00, 0x4200)));
 
-        let wram = EventFilter::CpuMemoryWrite(0x7E2100..0x7E2140);
-        assert!(wram.matches(&event(0x7E, 0x2122)));
-        assert!(!wram.matches(&event(0x00, 0x2122)));
+        let wram_write = EventFilter::CpuMemoryWrite(0x7E2100..0x7E2140);
+        let wram_read = EventFilter::CpuMemoryRead(0x7E2100..0x7E2140);
+        assert!(wram_write.matches(&write(0x7E, 0x2122)));
+        assert!(wram_read.matches(&read(0x7E, 0x2122)));
+        assert!(!wram_write.matches(&write(0x00, 0x2122)));
+        assert!(!wram_read.matches(&read(0x00, 0x2122)));
     }
 
     #[test]
