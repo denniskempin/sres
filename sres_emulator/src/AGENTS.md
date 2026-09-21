@@ -18,6 +18,7 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 4. `force_headless()` skips `draw_scanline`; PPU clock still advances.
 5. Do not hold `SystemDebug` across `SystemDebug::trace_step_iter()` (borrow conflict). That call clears log points and logs only `EventFilter::CpuStep` and `Spc700Step`; `pop_oldest_trace_step` panics on any other `DebugEvent`.
 6. Frame swap latches on `Clock` vblank rise (`consume_vblank`) so a `Waiting` idle that spans vblank still captures the frame. A pending video frame not consumed by `swap_video_frame` is overwritten on the next vblank rise.
+7. `collect_debug_event` is the only break and ring-log path for `DebugEvent` (`debugger.rs:355`). A new variant needs an `EventFilter` arm in `matches`; there is no parallel `break_on_*` field.
 
 ## Integration
 
@@ -28,7 +29,7 @@ Library crate root: `SystemImpl` orchestration, `StandardController` packing, an
 ## Gaps
 
 - FastROM: unimplemented; see root.
-- Serial joypad `$4016`/`$4017`: `SerialJoypadRead` / `SerialJoypadWrite` in `main_bus`. This layer packs auto-read `$4218`–`$421B` only. Unknown MMIO: `on_error` in `main_bus`.
+- Serial joypad `$4016`/`$4017`: `SerialJoypadRead` / `SerialJoypadWrite` in `main_bus`. This layer packs auto-read `$4218`–`$421B` only.
 
 ## Tests
 
