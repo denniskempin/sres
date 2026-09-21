@@ -286,7 +286,7 @@ Do not commit `corpus/`, `artifacts/`, `coverage/`.
 - `AGENTS.md` and `//!` edits follow `.cursor/skills/write-agents-docs/SKILL.md`.
 - Architecture or test-strategy changes update the affected `AGENTS.md` in the same PR.
 
-**Reject:** Stale `AGENTS.md` after architectural changes; hardware behavior described only in the PR description; a directory `AGENTS.md` restating root content.
+**Reject:** Stale `AGENTS.md` after architectural changes, including a stale root `## Entry Point Call Chain` or `## Testing Strategy`; hardware behavior described only in the PR description; a directory `AGENTS.md` restating root content.
 
 ---
 
@@ -337,7 +337,7 @@ Use this as a quick gate before approving:
 - [ ] Fuzz-safe if touching arbitrary-input paths
 
 ### Documentation
-- [ ] Relevant `AGENTS.md` updated if architecture changed
+- [ ] Relevant `AGENTS.md` updated if architecture changed (including root call chain / test taxonomy)
 - [ ] Register comments for new hardware
 
 ---
