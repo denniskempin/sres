@@ -95,7 +95,8 @@ Golden files are auto-created on first run; verify them before committing. Misma
 ## Error Handling & Unimplemented Hardware
 
 - **Unimplemented hardware**: known registers or features that are not emulated. Reads return `0`, writes are ignored. Sites call `on_unimplemented(UnimplementedBehavior)` (`common/unimplemented.rs`). `Debugger` increments per-variant counts. Break and ring-log use `EventFilter::Unimplemented` like other events. Never panic.
-- **Unknown registers**: MMIO addresses not in the hardware register map (`docs/nesdev.org/mmio_register_table.md`, `docs/fullsnes/io_map.md`). Reads return `0`, writes are ignored. Sites call `on_error`. Match statements list every known register; the `_` arm is `on_error`. PPU unknown I/O also `log::warn`. Never panic.
+- **Unknown registers**: MMIO addresses not in the hardware register map (`docs/nesdev.org/mmio_register_table.md`, `docs/fullsnes/io_map.md`). Reads return `0`, writes are ignored. Sites call `on_error`. The `_` arm is `on_error`. PPU unknown I/O also `log::warn`. Never panic.
+- **Unused/reserved MMIO**: bytes the I/O map lists as unused or reserved. List them as explicit match arms (no-op or store-and-readback). Do not send them through `_` or `on_unimplemented`.
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
 - **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware.
@@ -119,7 +120,7 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 - **libxkbcommon-x11-0**: Runtime dependency for native egui. Install via `apt` if missing.
 - **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
 - **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only.
-- **cargo-nextest**: Preferred runner. `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
+- **cargo-nextest**: Preferred runner. `-E` uses nextest expression syntax (`|` is OR, `+` is AND). `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
 - **trunk**: WASM bundler for `./check-all.sh wasm`. `cargo install trunk` or CI `taiki-e/install-action@trunk`.
 
 ## Cursor Cloud specific instructions
