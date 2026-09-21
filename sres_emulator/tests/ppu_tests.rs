@@ -189,7 +189,7 @@ fn test_smw_level() {
 fn generate_tloz_ppu_snapshots() {
     generate_ppu_snapshots(
         "tloz",
-        &[("triforce", 900), ("title", 1800), ("game", 3000)],
+        &[("triforce", 1350), ("title", 3300), ("game", 4000)],
     );
 }
 
