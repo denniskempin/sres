@@ -87,7 +87,7 @@ cpal callback (sres_egui/src/audio.rs)
 |---|---|---|---|
 | Trace-comparison | `tests/rom_tests/` | `SyncSystem` | CPU instruction correctness vs BSNES |
 | ROM-outcome | `tests/rom_tests/` | `System` | DMA, memory behavior; inspect memory at `stp` |
-| Golden-image | `tests/ppu_tests/` | `System` (ROM) / `Ppu` (snapshots) | PPU rendering correctness; diff against `.png` |
+| Golden-image | `tests/ppu_tests/` | `System` (ROM) / `Ppu` (snapshots + mid-frame writes) | PPU rendering correctness; diff against `.png` |
 | Golden-WAV | `tests/apu_tests/` | `System` | SPC700/S-DSP vs `.wav` (`play_noise` is RAM/DSP, not WAV) |
 
 Golden files are auto-created on first run; verify them before committing. Mismatches write `.actual.png` / `.actual.wav`.

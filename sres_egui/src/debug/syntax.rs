@@ -44,17 +44,17 @@ pub fn log_line(ui: &mut Ui, event: &DebugEvent, selected: &mut InternalLink) {
     use DebugEvent::*;
     ui.horizontal(|ui| {
         match event {
-            MainBus(MainBusEvent::Read(addr, value)) => {
+            MainBus(MainBusEvent::Read(addr, value, master_clock)) => {
                 label_cpu(ui);
                 label_read(ui, "R");
                 label_cpu_effective_addr(ui, *addr, selected);
-                label_normal(ui, format!("= {value:02X}"));
+                label_normal(ui, format!("= {value:02X} @{master_clock}"));
             }
-            MainBus(MainBusEvent::Write(addr, value)) => {
+            MainBus(MainBusEvent::Write(addr, value, master_clock)) => {
                 label_cpu(ui);
                 label_write(ui, "W");
                 label_cpu_effective_addr(ui, *addr, selected);
-                label_normal(ui, format!("= {value:02X}"));
+                label_normal(ui, format!("= {value:02X} @{master_clock}"));
             }
             Cpu(CpuEvent::Interrupt(interrupt)) => {
                 label_cpu(ui);
@@ -247,15 +247,18 @@ mod tests {
             DebugEvent::MainBus(sres_emulator::main_bus::MainBusEvent::Read(
                 AddressU24::new(0x00, 0x2100), // annotated: INIDISP
                 0x0F,
+                1234,
             )),
             DebugEvent::MainBus(sres_emulator::main_bus::MainBusEvent::Read(
                 AddressU24::new(0x7E, 0x0100), // plain hex address
                 0xAB,
+                5678,
             )),
             // MainBus write
             DebugEvent::MainBus(sres_emulator::main_bus::MainBusEvent::Write(
                 AddressU24::new(0x00, 0x2118), // annotated: VMDATAL
                 0x42,
+                90,
             )),
             // CPU step without effective address
             DebugEvent::Cpu(CpuEvent::Step(CpuState {
