@@ -48,5 +48,5 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 ## Tests
 
 - Interpolator tests in `audio.rs` (`resample_identity_at_ratio_one`, `resample_empty_queue_is_none`, `resample_underrun_holds_current`, `resample_constant_stays_constant`, `resample_two_thirds_midpoint`).
-- `test_utils.rs` feeds `debug/` `egui_kittest` snapshots (`UPDATE_SNAPSHOTS=1` writes `sres_egui/tests/snapshots/`).
+- `test_utils.rs` feeds `debug/` `egui_kittest` snapshots (`UPDATE_SNAPSHOTS=1` writes `sres_egui/tests/snapshots/`). After adding a widget row, open the PNG: `fit_contents` (`test_utils.rs:38`) can clip the last line so the golden still matches.
 - Crate: `cargo test -p sres_egui` (`egui_kittest` in `sres_egui/Cargo.toml` `[dev-dependencies]`; debug tests listed in `debug/AGENTS.md`).
