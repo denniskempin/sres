@@ -12,7 +12,7 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 | `debug.rs` | `DebugUi`, `DebugCommand`, `InternalLink`; module file for `debug/` |
 | `test_utils.rs` | `widget_snapshot` / `snapshot_options` for `egui_kittest` PNG goldens |
 | `util.rs` | `RingBuffer`, `EguiImageImpl` (`Image` → egui `ColorImage`), cfg-split `Instant` |
-| `audio.rs` | `AudioOutput`: cpal stream + `Arc<Mutex<AudioBufferQueue>>`; `update` calls `swap_audio_buffer` |
+| `audio.rs` | `AudioOutput`: device-rate cpal stream + linear resample from 32 kHz `AudioBufferQueue` |
 | `home.rs` | `home_screen`: clickable `EMBEDDED_ROMS` cards; loads with `Cartridge::with_sfc_data` |
 
 ## Subdirectories
@@ -23,29 +23,30 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 
 ## Behaviors & Gotchas
 
-1. `load_cartridge` enables the debugger (`app.rs:84`); `DebugUi` starts on `DebugCommand::Pause` (`debug.rs:51`). Debugger-off playback uses `execute_for_audio_samples` (`app.rs:247-248`). Debug `Run` uses `execute_for_duration(stable_dt)` (`debug.rs:75`).
-2. `main_display` updates the egui texture only when `swap_video_frame` returns true (`app.rs:212-216`). `emulator_ui` always `request_repaint` (`app.rs:280`).
+1. `load_cartridge` enables the debugger (`app.rs:84`); `DebugUi` starts on `DebugCommand::Pause` (`debug.rs:54`). Debugger-off playback uses `execute_for_audio_samples` when `is_playing` (`app.rs:247-250`), else `execute_for_duration(stable_dt)` (`app.rs:252`). Debug `Run` uses `execute_for_duration(stable_dt)` (`debug.rs:79`).
+2. `main_display` updates the egui texture only when `swap_video_frame` returns true (`app.rs:212-216`). `emulator_ui` always `request_repaint` (`app.rs:285`).
 3. Native `main` may pass a CLI `Cartridge`; WASM always starts with `None` and shows `home_screen` (`main.rs:53-61`, `main.rs:90`).
 4. `Instant` is `std::time::Instant` natively and `Date.now()` milliseconds on WASM (`util.rs:80-114`).
-5. The cpal callback drains `AudioBufferQueue` on the audio thread; UI-thread `AudioOutput::update` pushes via `swap_audio_buffer` (`audio.rs:97-127`). Each APU `i16` is written to both stereo channels (`audio.rs:107-108`).
+5. The cpal stream uses the device default rate/channels/format; APU samples stay 32 kHz. The callback linearly resamples (`audio.rs:134-142`); underrun holds the last sample. `update` always `swap_audio_buffer`s and discards if the stream is down (`audio.rs:150-161`). Each APU `i16` is duplicated across output channels.
 6. `EMBEDDED_ROMS` is generated at build time from `sres_egui/roms/<category>/*.sfc` into `OUT_DIR/embedded_roms_generated.rs` (`embedded_roms.rs:21-22`).
-7. `App::ui` consumes drops before home/emulator (`app.rs:286`). Non-`.sfc` is ignored with `log::warn` (`app.rs:101-103`). Native prefers `with_sfc_file` when `path.is_file()`, else `bytes()` (`app.rs:107-122`). WASM `bytes_async` writes `pending_dropped_rom` (`app.rs:125-135`); `load_pending_dropped_rom` takes the bytes on a later frame so the MutexGuard is not held across `load_cartridge` (`app.rs:138-148`).
+7. `App::ui` consumes drops before home/emulator (`app.rs:291`). Non-`.sfc` is ignored with `log::warn` (`app.rs:102`). Native prefers `with_sfc_file` when `path.is_file()`, else `bytes()` (`app.rs:107-122`). WASM `bytes_async` writes `pending_dropped_rom` (`app.rs:125-135`); `load_pending_dropped_rom` takes the bytes on a later frame so the MutexGuard is not held across `load_cartridge` (`app.rs:139-148`).
 
 ## Integration
 
 - Native `main` and WASM `WebRunner` construct `EmulatorApp`. Root owns `cargo run` / `trunk serve`.
 - `EmulatorApp` owns `System` (root: UI uses `BatchedSystem`). Public execution: `with_cartridge`, `execute_for_audio_samples` / `execute_for_duration` / `execute_frames` / `execute_scanlines` / `execute_one_instruction`, `swap_video_frame`, `swap_audio_buffer`, `update_joypads`, `debugger()`.
 - `Cartridge` and `Framebuffer` come from `sres_emulator::components::{cartridge,ppu}` (not re-exported by `lib.rs`).
-- Playback does not call `cpu.step()`. `DebugUi::modals` peeks with `emulator.cpu.bus.peek_u8` (`debug.rs:148`).
+- Playback does not call `cpu.step()`. `DebugUi::modals` peeks with `emulator.cpu.bus.peek_u8` (`debug.rs:153`).
 - `home_screen` and file drops call `load_cartridge`. `AudioOutput::update` is the sole `swap_audio_buffer` site.
 
 ## Gaps
 
 - Dropped ROMs are not persisted (WASM `web-sys` Storage is unused).
-- `InternalLink::Spc700ProgramCounter` is a no-op (`debug.rs:143`).
-- puffin profiler window is commented out (`debug.rs:129-131`).
+- `InternalLink::Spc700ProgramCounter` is a no-op (`debug.rs:148`).
+- puffin profiler window is commented out (`debug.rs:133-135`).
 
 ## Tests
 
-- No tests in this directory. `test_utils.rs` feeds `debug/` `egui_kittest` snapshots (`UPDATE_SNAPSHOTS=1` writes `sres_egui/tests/snapshots/`).
-- Crate: `cargo test -p sres_egui` (`egui_kittest` in `sres_egui/Cargo.toml` `[dev-dependencies]`; tests listed in `debug/AGENTS.md`).
+- Interpolator tests in `audio.rs` (`resample_identity_at_ratio_one`, `resample_empty_queue_is_none`, `resample_underrun_holds_current`, `resample_constant_stays_constant`, `resample_two_thirds_midpoint`).
+- `test_utils.rs` feeds `debug/` `egui_kittest` snapshots (`UPDATE_SNAPSHOTS=1` writes `sres_egui/tests/snapshots/`).
+- Crate: `cargo test -p sres_egui` (`egui_kittest` in `sres_egui/Cargo.toml` `[dev-dependencies]`; debug tests listed in `debug/AGENTS.md`).

@@ -72,11 +72,11 @@ SRES is a SNES emulator in Rust.
 ```
 EmulatorApp::ui()                        // eframe::App
   → system.update_joypads(joy1, 0)       // joy2 is always 0
-  → system.execute_for_audio_samples(n)  // normal play; debugger uses execute_for_duration
+  → system.execute_for_audio_samples(n)  // audio-paced play; debugger / no stream: execute_for_duration
   → AudioOutput::update()                // UI thread: system.swap_audio_buffer()
   → system.swap_video_frame()            // true on vblank rise
 cpal callback (sres_egui/src/audio.rs)
-  → drain AudioBufferQueue               // does not touch System
+  → resample AudioBufferQueue to device rate  // does not touch System
 ```
 
 `execute_*` → `execute_until` → `step()` → `cpu.step()` → `MainBusImpl::bus_read/write` → PPU/APU/DMA/Clock.
