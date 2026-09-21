@@ -9,6 +9,7 @@ use anyhow::anyhow;
 use cpal::traits::DeviceTrait;
 use cpal::traits::HostTrait;
 use cpal::traits::StreamTrait;
+use cpal::FromSample;
 use cpal::SampleFormat;
 use cpal::SizedSample;
 use cpal::Stream;
@@ -82,6 +83,9 @@ impl AudioOutput {
         let sample_format = supported_config.sample_format();
         let config: StreamConfig = supported_config.into();
         let channels = config.channels as usize;
+        if channels == 0 {
+            return Err(anyhow!("output channel count is 0"));
+        }
         let sample_rate = config.sample_rate;
         if sample_rate == 0 {
             return Err(anyhow!("output sample rate is 0"));
@@ -90,9 +94,18 @@ impl AudioOutput {
         self.output_sample_rate = Some(sample_rate);
 
         match sample_format {
-            SampleFormat::F32 => self.build_stream::<f32>(&device, config, channels, step),
+            SampleFormat::I8 => self.build_stream::<i8>(&device, config, channels, step),
             SampleFormat::I16 => self.build_stream::<i16>(&device, config, channels, step),
+            SampleFormat::I24 => self.build_stream::<cpal::I24>(&device, config, channels, step),
+            SampleFormat::I32 => self.build_stream::<i32>(&device, config, channels, step),
+            SampleFormat::I64 => self.build_stream::<i64>(&device, config, channels, step),
+            SampleFormat::U8 => self.build_stream::<u8>(&device, config, channels, step),
             SampleFormat::U16 => self.build_stream::<u16>(&device, config, channels, step),
+            SampleFormat::U24 => self.build_stream::<cpal::U24>(&device, config, channels, step),
+            SampleFormat::U32 => self.build_stream::<u32>(&device, config, channels, step),
+            SampleFormat::U64 => self.build_stream::<u64>(&device, config, channels, step),
+            SampleFormat::F32 => self.build_stream::<f32>(&device, config, channels, step),
+            SampleFormat::F64 => self.build_stream::<f64>(&device, config, channels, step),
             other => Err(anyhow!("unsupported audio sample format: {other:?}")),
         }
     }
@@ -102,23 +115,26 @@ impl AudioOutput {
         TARGET_BUFFER_SIZE.saturating_sub(buffer_size)
     }
 
-    fn build_stream<T: SampleConverter>(
+    fn build_stream<T>(
         &self,
         device: &cpal::Device,
         config: StreamConfig,
         channels: usize,
         step: f64,
-    ) -> anyhow::Result<Stream> {
+    ) -> anyhow::Result<Stream>
+    where
+        T: SizedSample + FromSample<i16>,
+    {
         let buffer_queue = self.buffer_queue.clone();
         Ok(device.build_output_stream(
             config,
-            move |data: &mut [T::Output], _: &cpal::OutputCallbackInfo| {
+            move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 if let Ok(mut queue) = buffer_queue.lock() {
                     for frame in data.chunks_mut(channels) {
                         let sample = queue
                             .next_output_sample(step)
-                            .map(T::convert)
-                            .unwrap_or_else(T::silence);
+                            .map(T::from_sample)
+                            .unwrap_or(T::EQUILIBRIUM);
                         for channel_sample in frame.iter_mut() {
                             *channel_sample = sample;
                         }
@@ -208,7 +224,8 @@ impl AudioBufferQueue {
 
     /// Linearly interpolate 32 kHz APU samples to the output rate.
     /// `step` is `APU_SAMPLE_RATE / output_sample_rate` in APU-sample units per output frame.
-    /// On underrun returns `None` (silence) and does not advance `phase`.
+    /// On underrun holds `current` and does not advance `phase`.
+    /// Returns `None` only when the queue has not produced a sample yet.
     fn next_output_sample(&mut self, step: f64) -> Option<i16> {
         if self.current.is_none() {
             self.current = Some(self.next_sample()?);
@@ -219,22 +236,24 @@ impl AudioBufferQueue {
         let output = if self.phase <= 0.0 {
             current
         } else {
-            lerp_i16(current, self.peek_sample()?, self.phase)
+            match self.peek_sample() {
+                Some(next) => lerp_i16(current, next, self.phase),
+                None => return Some(current),
+            }
         };
 
         let new_phase = self.phase + step;
         let consume = new_phase.floor() as usize;
         if consume > self.len() {
-            if self.len() == 0 {
-                self.current = None;
-                self.phase = 0.0;
-            }
             return Some(output);
         }
 
         self.phase = new_phase;
-        for _ in 0..consume {
-            self.current = self.next_sample();
+        while self.phase >= 1.0 {
+            let Some(sample) = self.next_sample() else {
+                break;
+            };
+            self.current = Some(sample);
             self.phase -= 1.0;
         }
         if self.phase < 0.0 {
@@ -263,43 +282,6 @@ fn lerp_i16(a: i16, b: i16, t: f64) -> i16 {
     mixed.round() as i16
 }
 
-/// Handles conversion between different sample formats
-trait SampleConverter {
-    type Output: SizedSample;
-    fn convert(input: i16) -> Self::Output;
-    fn silence() -> Self::Output;
-}
-
-impl SampleConverter for f32 {
-    type Output = f32;
-    fn convert(input: i16) -> Self::Output {
-        input as f32 / 32768.0
-    }
-    fn silence() -> Self::Output {
-        0.0
-    }
-}
-
-impl SampleConverter for i16 {
-    type Output = i16;
-    fn convert(input: i16) -> Self::Output {
-        input
-    }
-    fn silence() -> Self::Output {
-        0
-    }
-}
-
-impl SampleConverter for u16 {
-    type Output = u16;
-    fn convert(input: i16) -> Self::Output {
-        ((input as i32 + 32768) as u32).min(65535) as u16
-    }
-    fn silence() -> Self::Output {
-        32768
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -321,7 +303,27 @@ mod tests {
         assert_eq!(queue.next_output_sample(1.0), Some(20));
         assert_eq!(queue.next_output_sample(1.0), Some(30));
         assert_eq!(queue.next_output_sample(1.0), Some(40));
+        assert_eq!(queue.next_output_sample(1.0), Some(40));
+    }
+
+    #[test]
+    fn resample_empty_queue_is_none() {
+        let mut queue = AudioBufferQueue::default();
         assert_eq!(queue.next_output_sample(1.0), None);
+    }
+
+    #[test]
+    fn resample_underrun_holds_current() {
+        let mut queue = queue_from_samples(&[10, 20]);
+        assert_eq!(queue.next_output_sample(1.0), Some(10));
+        assert_eq!(queue.next_output_sample(1.0), Some(20));
+        assert_eq!(queue.next_output_sample(1.0), Some(20));
+
+        let mut extra = AudioBuffer::new();
+        extra.push_sample(30);
+        queue.push_buffer(extra);
+        assert_eq!(queue.next_output_sample(1.0), Some(20));
+        assert_eq!(queue.next_output_sample(1.0), Some(30));
     }
 
     #[test]
@@ -343,7 +345,7 @@ mod tests {
             (i32::from(mid) - 20_000).abs() <= 1,
             "expected ~20000, got {mid}"
         );
-        assert_eq!(queue.next_output_sample(step), None);
-        assert_eq!(queue.next_output_sample(step), None);
+        assert_eq!(queue.next_output_sample(step), Some(30_000));
+        assert_eq!(queue.next_output_sample(step), Some(30_000));
     }
 }

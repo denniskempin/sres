@@ -27,7 +27,7 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 2. `main_display` updates the egui texture only when `swap_video_frame` returns true (`app.rs:212-216`). `emulator_ui` always `request_repaint` (`app.rs:285`).
 3. Native `main` may pass a CLI `Cartridge`; WASM always starts with `None` and shows `home_screen` (`main.rs:53-61`, `main.rs:90`).
 4. `Instant` is `std::time::Instant` natively and `Date.now()` milliseconds on WASM (`util.rs:80-114`).
-5. The cpal stream uses the device default rate/channels/format; APU samples stay 32 kHz. The callback linearly resamples (`audio.rs:116-124`); `update` always `swap_audio_buffer`s and discards if the stream is down (`audio.rs:134-143`). Each APU `i16` is duplicated across output channels.
+5. The cpal stream uses the device default rate/channels/format; APU samples stay 32 kHz. The callback linearly resamples (`audio.rs:134-142`); underrun holds the last sample. `update` always `swap_audio_buffer`s and discards if the stream is down (`audio.rs:150-161`). Each APU `i16` is duplicated across output channels.
 6. `EMBEDDED_ROMS` is generated at build time from `sres_egui/roms/<category>/*.sfc` into `OUT_DIR/embedded_roms_generated.rs` (`embedded_roms.rs:21-22`).
 7. `App::ui` consumes drops before home/emulator (`app.rs:291`). Non-`.sfc` is ignored with `log::warn` (`app.rs:102`). Native prefers `with_sfc_file` when `path.is_file()`, else `bytes()` (`app.rs:107-122`). WASM `bytes_async` writes `pending_dropped_rom` (`app.rs:125-135`); `load_pending_dropped_rom` takes the bytes on a later frame so the MutexGuard is not held across `load_cartridge` (`app.rs:139-148`).
 
@@ -47,6 +47,6 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 
 ## Tests
 
-- Interpolator tests in `audio.rs` (`resample_identity_at_ratio_one`, `resample_constant_stays_constant`, `resample_two_thirds_midpoint`).
+- Interpolator tests in `audio.rs` (`resample_identity_at_ratio_one`, `resample_empty_queue_is_none`, `resample_underrun_holds_current`, `resample_constant_stays_constant`, `resample_two_thirds_midpoint`).
 - `test_utils.rs` feeds `debug/` `egui_kittest` snapshots (`UPDATE_SNAPSHOTS=1` writes `sres_egui/tests/snapshots/`).
 - Crate: `cargo test -p sres_egui` (`egui_kittest` in `sres_egui/Cargo.toml` `[dev-dependencies]`; debug tests listed in `debug/AGENTS.md`).
