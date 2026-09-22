@@ -107,7 +107,7 @@ Capture mid-frame MMIO with `Debugger` `EventFilter` log points, not a device-sp
 
 - `docs/index.md` — indexed hardware reference docs (fullsnes.txt extracts and nesdev.org articles). Covers PPU, APU, DMA, memory maps, CPU opcodes, timing, and controllers. Use keyword search within the index to find the relevant file.
 - `.cursor/skills/code-review/SKILL.md` — independent code-owner review via a readonly subagent. Checks: `.cursor/skills/code-review/references/review-guide.md`.
-- `.cursor/skills/linear-issue/SKILL.md` — plan, implement, review, or submit a Linear `SRE-#` issue.
+- `.cursor/skills/linear-issue/SKILL.md` — plan, implement, review, or submit a Linear `SRES-#` issue.
 - `.cursor/skills/write-agents-docs/SKILL.md` — follow it when editing any `AGENTS.md` or `//!` file header.
 - `.cursor/skills/agent-retro/SKILL.md` — review a conversation and propose generalized `AGENTS.md` or skill changes. Suggest only; apply `AGENTS.md` edits with `write-agents-docs`.
 - `.cursor/skills/health-audit/SKILL.md` — periodic housekeeping: agent/skill files, crate/toolchain freshness, CI alignment and speed.

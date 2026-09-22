@@ -1,11 +1,11 @@
 ---
 name: health-audit
-description: "Periodic SRES housekeeping: review agent/skill files, crate and toolchain freshness, and CI alignment/speed. Use when the user asks for a health audit, housekeeping, crate updates, CI hygiene, or skill/AGENTS.md alignment across the repo. Do not use to author AGENTS.md after an architecture change (write-agents-docs), to retro a conversation (agent-retro), to work a Linear SRE-# issue (linear-issue), or to review a feature PR (code-review)."
+description: "Periodic SRES housekeeping: review agent/skill files, crate and toolchain freshness, and CI alignment/speed. Use when the user asks for a health audit, housekeeping, crate updates, CI hygiene, or skill/AGENTS.md alignment across the repo. Do not use to author AGENTS.md after an architecture change (write-agents-docs), to retro a conversation (agent-retro), to work a Linear SRES-# issue (linear-issue), or to review a feature PR (code-review)."
 ---
 
 # Health audit
 
-Periodic housekeeping across agent/skill files, crates/toolchain, and CI. Policy, commands, and test taxonomy live in root `AGENTS.md`. `AGENTS.md` / `//!` authorship is [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md). Conversation mining is [../agent-retro/SKILL.md](../agent-retro/SKILL.md). Feature diffs are [../code-review/SKILL.md](../code-review/SKILL.md). Linear `SRE-#` workflows are [../linear-issue/SKILL.md](../linear-issue/SKILL.md). Do not restate those.
+Periodic housekeeping across agent/skill files, crates/toolchain, and CI. Policy, commands, and test taxonomy live in root `AGENTS.md`. `AGENTS.md` / `//!` authorship is [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md). Conversation mining is [../agent-retro/SKILL.md](../agent-retro/SKILL.md). Feature diffs are [../code-review/SKILL.md](../code-review/SKILL.md). Linear `SRES-#` workflows are [../linear-issue/SKILL.md](../linear-issue/SKILL.md). Do not restate those.
 
 ## When
 
@@ -20,7 +20,7 @@ Do not use for:
 
 - Writing `AGENTS.md` after a known architecture or test-strategy change (`write-agents-docs`)
 - Conversation retro (`agent-retro`)
-- Working a Linear `SRE-#` issue (`linear-issue`)
+- Working a Linear `SRES-#` issue (`linear-issue`)
 - Reviewing a feature PR or diff (`code-review`)
 - Implementing hardware or tests
 
@@ -173,7 +173,7 @@ After CI or crate edits, run the verify set in step 3. After skill/docs-only edi
 - Root `AGENTS.md` — Commands, Environment Gotchas, Reference
 - [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md) — `AGENTS.md` / `//!` edits
 - [../agent-retro/SKILL.md](../agent-retro/SKILL.md) — conversation-sourced doc proposals
-- [../linear-issue/SKILL.md](../linear-issue/SKILL.md) — Linear `SRE-#` plan/implement/review/submit
+- [../linear-issue/SKILL.md](../linear-issue/SKILL.md) — Linear `SRES-#` plan/implement/review/submit
 - [../code-review/references/review-guide.md](../code-review/references/review-guide.md) §10 — Tooling & CI
 - `.github/workflows/postsubmit.yml`, `.github/rulesets/require-postsubmit.json`, `check-all.sh`, `fix-all.sh`, `rust-toolchain.toml`
 

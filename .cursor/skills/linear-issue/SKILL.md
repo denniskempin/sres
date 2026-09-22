@@ -1,17 +1,17 @@
 ---
 name: linear-issue
-description: "Work a SRES Linear issue (SRE-# / SRES-#): plan and post, implement the posted plan, review its PR, or submit/merge/close. Use when the user names SRE-N or SRES-N. Pick the step from the ask (default: plan). Do not use to review a diff with no Linear id (code-review), author AGENTS.md (write-agents-docs), retro a conversation (agent-retro), or run housekeeping (health-audit)."
+description: "Work a SRES Linear issue (SRES-#): plan and post, implement the posted plan, review its PR, or submit/merge/close. Use when the user names SRES-N (or the old SRE-N alias). Pick the step from the ask (default: plan). Do not use to review a diff with no Linear id (code-review), author AGENTS.md (write-agents-docs), retro a conversation (agent-retro), or run housekeeping (health-audit)."
 ---
 
 # Linear issues
 
 Orchestrate one SRES Linear issue. Policy, commands, tests, and git rules live in root `AGENTS.md`. Diff review is [../code-review/SKILL.md](../code-review/SKILL.md). `AGENTS.md` / `//!` edits are [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md). Do not restate those.
 
-The Linear team is **SRES**. Issue identifiers are **`SRE-N`**. Treat `SRES-N` as `SRE-N`.
+The Linear team is **SRES**. Issue identifiers are **`SRES-N`**. Treat `SRE-N` as `SRES-N` (old prefix; Linear still aliases it).
 
 ## When
 
-Use when the user names `SRE-N` or `SRES-N`. This skill is the parent workflow. Call `code-review` for Review and as a pre-merge gate; do not skip it.
+Use when the user names `SRES-N` or `SRE-N`. This skill is the parent workflow. Call `code-review` for Review and as a pre-merge gate; do not skip it.
 
 Do not use when there is no Linear id (`code-review`), the task is `AGENTS.md` authorship (`write-agents-docs`), a conversation retro (`agent-retro`), or housekeeping (`health-audit`).
 
@@ -29,7 +29,7 @@ Do **only** the steps the ask names, in this order. Default if the id is the onl
 ## Shared setup
 
 1. Discover Linear tool schemas (`GetDynamicTools` namespace `Linear`) before the first call. If the namespace is `needsAuth`, authenticate.
-2. `get_issue` with `includeRelations` on `SRE-N`. `list_comments` (oldest first). Stop if the issue is `Canceled`.
+2. Normalize `SRE-N` → `SRES-N`. `get_issue` with `includeRelations` on `SRES-N`. `list_comments` (oldest first). Stop if the issue is `Canceled`.
 3. Read the issue, comments, attachments, related issues, and `gitBranchName`. Related issues own their own scope; do not take that work unless the posted plan says so.
 4. `git fetch origin main`. Stay on an existing PR branch for this issue if this run already has one. Never commit on `main`. Create a work branch only in Implement.
 
@@ -41,7 +41,7 @@ Create a plan and post it on the issue. Do not implement.
 
 1. Set status `In Progress` unless it is already `Done` (then validate only; do not reopen unless the user asked to implement).
 2. Check **current `origin/main`**, not a stale attachment branch. Confirm whether the stated bug or gap still exists (code plus a command or focused test). Stale GitHub attachments can 404; ignore them unless `gh` / REST shows the PR still exists.
-3. Do not cherry-pick an old `cursor/SRE-N-*` branch without re-validating against `main`.
+3. Do not cherry-pick an old `cursor/SRES-N-*` or `cursor/SRE-N-*` branch without re-validating against `main`.
 4. Post one top-level comment with this shape (markdown, literal newlines):
 
 ```
@@ -74,7 +74,7 @@ Implement the plan **found on the Linear issue**.
 
 1. Take the newest comment whose heading is `## Implementation plan`. If none exists, run Plan first, then continue.
 2. If `main` has moved past the plan's sha, re-validate the still-exists section. If the plan is wrong, post an updated plan, then implement that update.
-3. Branch from `origin/main` if this run has no PR branch. Prefer Linear `gitBranchName`, else `cursor/sre-N-short-slug`.
+3. Branch from `origin/main` if this run has no PR branch. Prefer Linear `gitBranchName`, else `cursor/sres-N-short-slug`.
 4. Implement only the posted scope. Hardware gaps follow root Error Handling (unimplemented / unknown / unused); do not panic. Keep `on_unimplemented` until the plan removes that variant.
 5. Tests and `AGENTS.md` / `//!`: follow root `AGENTS.md` and `write-agents-docs`. Run the commands in the plan.
 6. Before opening a PR, run [../code-review/SKILL.md](../code-review/SKILL.md) (you authored the diff). Fix blockers; re-review once.
@@ -104,7 +104,7 @@ Submit is explicit permission to merge this issue's PR, delete its head branch, 
 
 ## Gotchas
 
-- Identifier is `SRE-N`, not `SRES-N`. The MCP `get_issue` id is `SRE-N`.
+- Identifier is `SRES-N`. The MCP `get_issue` id is `SRES-N`. `SRE-N` still resolves as an alias; always record and write `SRES-N`.
 - Agent-session threads are stubs. Plans and reviews are new top-level comments.
 - `gh` GraphQL `pr view` can 500 when REST works.
 - Draft PRs stay draft through Implement. Ready is Submit.
@@ -121,7 +121,7 @@ Submit is explicit permission to merge this issue's PR, delete its head branch, 
 
 Answer each before finishing. Any "no" means go back.
 
-- Linear id normalized to `SRE-N` and the issue fetched?
+- Linear id normalized to `SRES-N` and the issue fetched?
 - Only requested steps ran?
 - Plan posted as a top-level comment with the heading `## Implementation plan`?
 - Implement followed that comment, not a new invented plan?
