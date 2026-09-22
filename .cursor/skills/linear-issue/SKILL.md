@@ -31,7 +31,7 @@ Do **only** the steps the ask names, in this order. Default if the id is the onl
 1. Discover Linear tool schemas (`GetDynamicTools` namespace `Linear`) before the first call. If the namespace is `needsAuth`, authenticate.
 2. `get_issue` with `includeRelations` on `SRE-N`. `list_comments` (oldest first). Stop if the issue is `Canceled`.
 3. Read the issue, comments, attachments, related issues, and `gitBranchName`. Related issues own their own scope; do not take that work unless the posted plan says so.
-4. `git fetch origin main`. Stay on an existing PR branch for this issue if this run already has one; otherwise branch from `origin/main` (root Cursor Cloud instructions). Never commit on `main`.
+4. `git fetch origin main`. Stay on an existing PR branch for this issue if this run already has one. Never commit on `main`. Create a work branch only in Implement.
 
 Linear writes: `save_comment` (new top-level comment; do not reply to the agent-session stub). `save_issue` for status (`In Progress`, `In Review`, `Done`) and `links`. Do not overwrite the issue description. `gh` is read-only; create/update PRs with `ManagePullRequest`.
 
@@ -54,7 +54,7 @@ Create a plan and post it on the issue. Do not implement.
 <what this issue does; what related issues own>
 
 ### Phases
-<numbered code changes, files, unimplemented-enum impact>
+<numbered code changes, files; name the root Error Handling tier: unimplemented vs unknown vs unused/reserved>
 
 ### Tests
 <exact nextest/clippy commands from the nearest AGENTS.md>
@@ -74,8 +74,8 @@ Implement the plan **found on the Linear issue**.
 
 1. Take the newest comment whose heading is `## Implementation plan`. If none exists, run Plan first, then continue.
 2. If `main` has moved past the plan's sha, re-validate the still-exists section. If the plan is wrong, post an updated plan, then implement that update.
-3. Branch from `origin/main` if needed. Prefer Linear `gitBranchName`, else `cursor/sre-N-short-slug`.
-4. Implement only the posted scope. Unimplemented hardware stays `on_unimplemented` until the plan removes that variant.
+3. Branch from `origin/main` if this run has no PR branch. Prefer Linear `gitBranchName`, else `cursor/sre-N-short-slug`.
+4. Implement only the posted scope. Hardware gaps follow root Error Handling (unimplemented / unknown / unused); do not panic. Keep `on_unimplemented` until the plan removes that variant.
 5. Tests and `AGENTS.md` / `//!`: follow root `AGENTS.md` and `write-agents-docs`. Run the commands in the plan.
 6. Before opening a PR, run [../code-review/SKILL.md](../code-review/SKILL.md) (you authored the diff). Fix blockers; re-review once.
 7. Push. `ManagePullRequest` `create_pr` **draft**. `save_issue` `links` the PR URL, status `In Review`, comment with branch + PR.
@@ -93,7 +93,7 @@ Review the PR created for the issue. Do not merge, do not implement unless the a
 
 ## 4. Submit
 
-Submit is explicit permission to merge this issue's PR, delete its head branch, and close the Linear issue. Never `main`.
+Submit is explicit permission to merge this issue's PR, delete its head branch, and close the Linear issue. Never delete `main`.
 
 1. Refuse unless a GitHub PR exists and Review in this conversation (or a posted Linear review) is `approve` with no open blockers. If Review never ran, run step 3 first and stop on request-changes.
 2. `ManagePullRequest` `get_ci_status`. Stop if not green.

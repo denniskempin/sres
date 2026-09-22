@@ -1,11 +1,11 @@
 ---
 name: write-agents-docs
-description: "Write or refresh AGENTS.md files and //! file headers in the SRES repo. Use after an architectural or test-strategy change, when a directory lacks an AGENTS.md, or when applying agreed AGENTS.md edits. Do not use to mine a conversation for what to document (that is agent-retro), or for periodic crate/CI/skill housekeeping (that is health-audit)."
+description: "Write or refresh AGENTS.md files and //! file headers in the SRES repo. Use after an architectural or test-strategy change, when a directory lacks an AGENTS.md, or when applying agreed AGENTS.md edits. Do not use to mine a conversation for what to document (that is agent-retro), to execute a Linear SRE-# workflow (linear-issue; that skill calls this for AGENTS.md edits), or for periodic crate/CI/skill housekeeping (that is health-audit)."
 ---
 
 # Writing AGENTS.md and `//!` headers
 
-Scope: `AGENTS.md` files and the leading `//!` block of `.rs` files. Not in scope: `///` item docs, code changes, conversation retrospectives (`.cursor/skills/agent-retro/`), `.cursor/skills/` authorship, periodic crate/CI/skill housekeeping (`.cursor/skills/health-audit/`). Policy lives in the root `AGENTS.md`; the code-review skill enforces it. Do not restate it.
+Scope: `AGENTS.md` files and the leading `//!` block of `.rs` files. Not in scope: `///` item docs, code changes, conversation retrospectives (`.cursor/skills/agent-retro/`), `.cursor/skills/` authorship, Linear `SRE-#` orchestration (`.cursor/skills/linear-issue/`; that skill calls this when Implement edits `AGENTS.md` / `//!`), periodic crate/CI/skill housekeeping (`.cursor/skills/health-audit/`). Policy lives in the root `AGENTS.md`; the code-review skill enforces it. Do not restate it.
 
 ## How these files are consumed
 
