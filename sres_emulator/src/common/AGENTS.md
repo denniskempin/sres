@@ -22,7 +22,7 @@ Foundational types shared by all emulator layers.
 ## Behaviors & Gotchas
 
 1. `AddressU24`/`AddressU16` have no `Add`/`Sub`. Use `add`/`sub`/`add_signed` with `Wrap` (`WrapPage`, `WrapBank`, `NoWrap`). `AddressU16` `WrapBank` is `unimplemented!()`. `AddressU15` (PPU VRAM) does not implement `Address`; `+`/`-` wrap with `& 0x7FFF`.
-2. `ClockInfo::from_mesen_vhf` maps Mesen traces, which increment `f` at vblank (`v = 225`), not `v = 0`. Use `from_master_clock` elsewhere. `vblank()` is `v >= 225`. Short scanline and 6-cycle dots: `components/clock.rs`.
+2. `ClockInfo::from_mesen_vhf` maps Mesen traces, which increment `f` at vblank (`v = 225`), not `v = 0`. Use `from_master_clock` elsewhere. `vblank()` is `v >= 225`. Short scanline and 6-cycle dots: `components/clock.rs`. Debug events stamp `master_clock` (`u64`); recover `v`/`h`/`f` with `from_master_clock`. Event enums do not carry `ClockInfo`.
 3. `init()` reads `SRES_LOG` (default `error`) and sets `trace_as_context_only`. Traces buffer (20 lines) and dump on the next non-`Trace` record, not only warnings. `test_init(verbose)` sets `trace_as_context_only = !verbose`. `init` and `test_init` share one `Once`; the first caller wins.
 4. `TestBus` records `Cycle::Read`/`Write`/`Internal` on every bus cycle. Unmapped reads store `None` and return `0`.
 
