@@ -173,7 +173,7 @@ After CI or crate edits, run the verify set in step 3. After skill/docs-only edi
 - Root `AGENTS.md` — Commands, Environment Gotchas, Reference
 - [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md) — `AGENTS.md` / `//!` edits
 - [../agent-retro/SKILL.md](../agent-retro/SKILL.md) — conversation-sourced doc proposals
-- [../linear-issue/SKILL.md](../linear-issue/SKILL.md) — Linear `SRES-#` plan/implement/review/submit
+- [../linear-issue/SKILL.md](../linear-issue/SKILL.md) — Linear `SRES-#` plan/implement/submit
 - [../code-review/references/review-guide.md](../code-review/references/review-guide.md) §10 — Tooling & CI
 - `.github/workflows/postsubmit.yml`, `.github/rulesets/require-postsubmit.json`, `check-all.sh`, `fix-all.sh`, `rust-toolchain.toml`
 

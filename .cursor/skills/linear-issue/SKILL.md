@@ -1,6 +1,6 @@
 ---
 name: linear-issue
-description: "Work a SRES Linear issue (SRES-#): plan and post, implement the posted plan, review its PR, or submit/merge/close. Use when the user names SRES-N (or the old SRE-N alias). Pick the step from the ask (default: plan). Do not use to review a diff with no Linear id (code-review), author AGENTS.md (write-agents-docs), retro a conversation (agent-retro), or run housekeeping (health-audit)."
+description: "Work a SRES Linear issue (SRES-#): plan and post, implement the posted plan (includes a pre-merge code review), or submit/merge/close. Use when the user names SRES-N (or the old SRE-N alias) and asks to plan, implement, or submit. Pick the step from the ask (default: plan). Do not use to review a diff (code-review), author AGENTS.md (write-agents-docs), retro a conversation (agent-retro), or run housekeeping (health-audit)."
 ---
 
 # Linear issues
@@ -11,9 +11,9 @@ The Linear team is **SRES**. Issue identifiers are **`SRES-N`**. Treat `SRE-N` a
 
 ## When
 
-Use when the user names `SRES-N` or `SRE-N`. This skill is the parent workflow. Call `code-review` for Review and as a pre-merge gate; do not skip it.
+Use when the user names `SRES-N` or `SRE-N` and asks to plan, implement, or submit. This skill is the parent workflow. Call `code-review` as the Implement pre-merge gate (and on Submit if that gate has not run this conversation); do not skip it.
 
-Do not use when there is no Linear id (`code-review`), the task is `AGENTS.md` authorship (`write-agents-docs`), a conversation retro (`agent-retro`), or housekeeping (`health-audit`).
+Do not use when there is no Linear id, the ask is only to review a PR (`code-review`), the task is `AGENTS.md` authorship (`write-agents-docs`), a conversation retro (`agent-retro`), or housekeeping (`health-audit`).
 
 ## Pick the step
 
@@ -23,8 +23,9 @@ Do **only** the steps the ask names, in this order. Default if the id is the onl
 |-----|------|
 | plan, implementation plan, still exist, validate, investigate | Plan |
 | implement, fix, build, do the plan | Implement |
-| review the PR, code review (with an issue id) | Review |
 | submit, merge, land, ship, close the issue | Submit |
+
+A review-only ask is [../code-review/SKILL.md](../code-review/SKILL.md), not a step here. Implement already runs that skill before opening a PR.
 
 ## Shared setup
 
@@ -82,30 +83,22 @@ Implement the plan **found on the Linear issue**.
 
 Do not merge. Do not delete the branch.
 
-## 3. Review
-
-Review the PR created for the issue. Do not merge, do not implement unless the ask also includes Implement.
-
-1. Resolve the PR: Linear `links` / attachments, comments, `gitBranchName`, then `gh pr list` / REST. A 404 attachment is not a PR.
-2. Follow [../code-review/SKILL.md](../code-review/SKILL.md) as **user asked for a review**: present the verdict, every blocker, and nits. Do not auto-fix.
-3. Post the verdict and blockers on the Linear issue. Leave status `In Review` on approve; `In Progress` on request-changes.
-4. Do not comment on the GitHub PR unless the user asked.
-
-## 4. Submit
+## 3. Submit
 
 Submit is explicit permission to merge this issue's PR, delete its head branch, and close the Linear issue. Never delete `main`.
 
-1. Refuse unless a GitHub PR exists and Review in this conversation (or a posted Linear review) is `approve` with no open blockers. If Review never ran, run step 3 first and stop on request-changes.
-2. `ManagePullRequest` `get_ci_status`. Stop if not green.
-3. Mark the PR ready (`draft: false`) if it is still a draft.
-4. Merge using a merge action on `ManagePullRequest` if this run has one. Do not use `gh` for writes. If no merge path exists, comment that CI is green and the PR is ready, leave the issue open, and **do not** delete the branch.
-5. After merge is confirmed (`mergedAt` set): `git push origin --delete <head>` (root Cursor Cloud instructions).
-6. `save_issue` status `Done`. Comment the merged PR URL. Do not use `set_pr_status` closed as a substitute for merge.
+1. Refuse unless a GitHub PR exists.
+2. If this conversation did not already get `approve` from Implement's `code-review`, run [../code-review/SKILL.md](../code-review/SKILL.md) as a pre-merge gate. Stop on request-changes.
+3. `ManagePullRequest` `get_ci_status`. Stop if not green.
+4. Mark the PR ready (`draft: false`) if it is still a draft.
+5. Merge using a merge action on `ManagePullRequest` if this run has one. Do not use `gh` for writes. If no merge path exists, comment that CI is green and the PR is ready, leave the issue open, and **do not** delete the branch.
+6. After merge is confirmed (`mergedAt` set): `git push origin --delete <head>` (root Cursor Cloud instructions).
+7. `save_issue` status `Done`. Comment the merged PR URL. Do not use `set_pr_status` closed as a substitute for merge.
 
 ## Gotchas
 
 - Identifier is `SRES-N`. The MCP `get_issue` id is `SRES-N`. `SRE-N` still resolves as an alias; always record and write `SRES-N`.
-- Agent-session threads are stubs. Plans and reviews are new top-level comments.
+- Agent-session threads are stubs. Plans are new top-level comments.
 - `gh` GraphQL `pr view` can 500 when REST works.
 - Draft PRs stay draft through Implement. Ready is Submit.
 - Closing Linear before merge hides unfinished work. Deleting the branch before merge drops the PR.
@@ -113,7 +106,7 @@ Submit is explicit permission to merge this issue's PR, delete its head branch, 
 ## Pointers
 
 - Root `AGENTS.md` — Commands, testing, unimplemented hardware, Cursor Cloud git
-- [../code-review/SKILL.md](../code-review/SKILL.md) — Review step and pre-merge gate
+- [../code-review/SKILL.md](../code-review/SKILL.md) — Implement/Submit pre-merge gate
 - [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md) — `AGENTS.md` / `//!` in Implement
 - Linear: `get_issue`, `list_comments`, `save_comment`, `save_issue`
 
@@ -125,6 +118,6 @@ Answer each before finishing. Any "no" means go back.
 - Only requested steps ran?
 - Plan posted as a top-level comment with the heading `## Implementation plan`?
 - Implement followed that comment, not a new invented plan?
-- `code-review` used for Review and before opening a PR?
+- `code-review` ran before opening a PR, and on Submit if it had not run this conversation?
 - Submit merged (or stopped cleanly), deleted the head only after merge, set `Done` only after merge?
 - `gh` used read-only? Issue description left intact?

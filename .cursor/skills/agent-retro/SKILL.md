@@ -21,7 +21,7 @@ Do not use for:
 
 - Authoring `AGENTS.md` after a known architecture or test-strategy change (`write-agents-docs`)
 - Reviewing a code diff (`code-review`)
-- Executing a Linear `SRES-#` plan/implement/review/submit workflow (`linear-issue`)
+- Executing a Linear `SRES-#` plan/implement/submit workflow (`linear-issue`)
 - Mining chats for user-preference memory (`continual-learning` / `agents-memory-updater`)
 - Periodic crate, CI, or skill/AGENTS.md housekeeping (`health-audit`)
 
