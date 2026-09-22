@@ -109,7 +109,7 @@ Capture mid-frame MMIO with `Debugger` `EventFilter` log points, not a device-sp
 - `.cursor/skills/code-review/SKILL.md` — independent code-owner review via a readonly subagent. Checks: `.cursor/skills/code-review/references/review-guide.md`.
 - `.cursor/skills/linear/SKILL.md` — Linear team, `SRES-#` identifiers, comments, and MCP tools.
 - `.cursor/skills/write-agents-docs/SKILL.md` — follow it when editing any `AGENTS.md` or `//!` file header.
-- `.cursor/skills/agent-retro/SKILL.md` — review a conversation and propose generalized `AGENTS.md` or skill changes. Suggest only; apply `AGENTS.md` edits with `write-agents-docs`.
+- `.cursor/skills/agent-retro/SKILL.md` — only when the user asks to retro a conversation. Suggest only; apply `AGENTS.md` edits with `write-agents-docs`. Skip for implementation plans, issues, and ordinary coding.
 - `.cursor/skills/health-audit/SKILL.md` — periodic housekeeping: agent/skill files, crate/toolchain freshness, CI alignment and speed.
 
 ## Subdirectory AGENTS.md Files
