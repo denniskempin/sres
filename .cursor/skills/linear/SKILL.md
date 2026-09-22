@@ -1,6 +1,6 @@
 ---
 name: linear
-description: "How this project uses Linear: SRES team, SRES-N identifiers, comments, status, and MCP tools. Use when the user mentions Linear, SRES-N, or posting on an issue. Do not use to review a diff (code-review), author AGENTS.md (write-agents-docs), retro a conversation (agent-retro), or run housekeeping (health-audit)."
+description: "How this project uses Linear: SRES team, SRES-N identifiers, comments, status, and MCP tools. Use when the user mentions Linear, SRES-N, or posting on an issue. Do not use to run Understand, Implementation Plan, Execution, or Submit (workflow); workflow calls this skill. Do not use to review a diff (code-review), author AGENTS.md (write-agents-docs), retro a conversation (agent-retro), or run housekeeping (health-audit)."
 ---
 
 # Linear
@@ -11,7 +11,7 @@ Project facts for talking to Linear. Git, tests, and unimplemented-hardware poli
 
 Use when the user mentions Linear, `SRES-N`, posting a comment on an issue, or changing issue status.
 
-Do not use to review a PR (`code-review`), write `AGENTS.md` (`write-agents-docs`), retro a conversation (`agent-retro`), or run housekeeping (`health-audit`).
+Do not use to run Understand, Implementation Plan, Execution, or Submit (`workflow`); that skill calls this one. Do not use to review a PR (`code-review`), write `AGENTS.md` (`write-agents-docs`), retro a conversation (`agent-retro`), or run housekeeping (`health-audit`).
 
 ## Project
 
@@ -55,5 +55,6 @@ Statuses: `Backlog`, `Todo`, `In Progress`, `In Review`, `Done`, `Canceled`, `Du
 ## Pointers
 
 - Root `AGENTS.md` — git from `origin/main`, delete head after merge, `gh` read-only
+- [../workflow/SKILL.md](../workflow/SKILL.md) — gated Understand / Implementation Plan / Execution / Submit
 - [../code-review/SKILL.md](../code-review/SKILL.md) — PR/diff review
 - Linear: `get_issue`, `list_comments`, `save_comment`, `save_issue`
