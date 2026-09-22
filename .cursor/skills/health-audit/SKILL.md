@@ -1,6 +1,6 @@
 ---
 name: health-audit
-description: "Periodic SRES housekeeping: review agent/skill files, crate and toolchain freshness, and CI alignment/speed. Use when the user asks for a health audit, housekeeping, crate updates, CI hygiene, or skill/AGENTS.md alignment across the repo. Do not use to run Understand/Plan/Execute/Submit (workflow), to author AGENTS.md after an architecture change (write-agents-docs), to retro a conversation (agent-retro), to look up Linear usage (linear), or to review a feature PR (code-review)."
+description: "Periodic SRES housekeeping: review agent/skill files, crate and toolchain freshness, and CI alignment/speed. Use when the user asks for a health audit, housekeeping, crate updates, CI hygiene, or skill/AGENTS.md alignment across the repo. Do not use to run Understand, Implementation Plan, Execution, or Submit (workflow), to author AGENTS.md after an architecture change (write-agents-docs), to retro a conversation (agent-retro), to look up Linear usage (linear), or to review a feature PR (code-review)."
 ---
 
 # Health audit

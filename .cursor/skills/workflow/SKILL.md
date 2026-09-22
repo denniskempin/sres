@@ -30,7 +30,7 @@ Run **exactly one** phase, then stop. Name the next phase; do not start it.
 - User-named phase wins. If they named none, the phase is Understand.
 - "Continue" / "next" means only the next phase, still one phase.
 - If they name two phases or say to run the whole workflow, do the first (or Understand) and push back.
-- Submit may span a CI wait (end the turn after subscribe; resume Submit on the notification). No other phase spans turns by itself.
+- Same-phase waits only: Understand after questions (resume Understand when the user answers); Submit after CI subscribe (resume Submit on the notification). A resume never starts a different phase.
 
 ## Linear
 
@@ -92,7 +92,7 @@ If a step is wrong:
 
 After the plan's code is in:
 
-1. Run `cargo nextest run --workspace --locked`. Fail → no PR.
+1. Run `cargo nextest run --workspace --locked`. Fail → no PR. fmt, clippy, and wasm are CI on Submit, not this gate.
 2. Run [../code-review/SKILL.md](../code-review/SKILL.md). Fix blockers; re-review once as that skill says. Blockers remaining → no PR.
 3. If the change altered architecture or test strategy, [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md) in this same phase.
 4. Push and open a **draft** PR (`ManagePullRequest` `create_pr`, `draft: true`).
@@ -105,7 +105,7 @@ This phase is merge authorization. Require the draft (or open) PR from Execution
 
 1. Mark ready: `ManagePullRequest` `update_pr` with `draft: false`.
 2. Subscribe to CI on the PR head branch (`subscribe_github_ci`). State that you are waiting for checks, then end the turn. On failure notification: stop, do not merge. On success: continue Submit.
-3. Merge. Use a dedicated PR merge action if one exists; otherwise `gh pr merge <n>` with explicit `--squash`, `--merge`, or `--rebase` matching the repo. No `--auto`. If merge is refused, stop and report.
+3. Merge. `ManagePullRequest` has no merge action. Submit authorizes `gh pr merge <n>` with explicit `--squash`, `--merge`, or `--rebase` matching the repo. No `--auto`. If merge is refused, stop and report.
 4. Delete the merged head: `git push origin --delete <branch>`. Never delete `main` (root `AGENTS.md` Cursor Cloud).
 5. Close the Linear issue if associated and this PR finishes it.
 
@@ -163,7 +163,7 @@ clean | issues
 
 ## Hard rules
 
-- Never chain phases in one turn (except Submit resuming after CI).
+- Never chain phases in one turn (except Understand resuming after questions, and Submit resuming after CI).
 - Never execute during Understand or Implementation Plan.
 - Never mark ready or merge during Execution.
 - Guessing scope during Understand is a bug; ask.

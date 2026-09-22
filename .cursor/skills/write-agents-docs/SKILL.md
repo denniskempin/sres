@@ -1,12 +1,11 @@
 ---
 name: write-agents-docs
-description: "Write or refresh AGENTS.md files and //! file headers in the SRES repo. Use after an architectural or test-strategy change, when a directory lacks an AGENTS.md, or when applying agreed AGENTS.md edits. Do not use to run gated Understand/Plan/Execute/Submit (workflow), to draft implementation plans or post on issues, to look up Linear usage (linear), to mine a conversation for what to document (that is agent-retro), or for periodic crate/CI/skill housekeeping (that is health-audit)."
+description: "Write or refresh AGENTS.md files and //! file headers in the SRES repo. Use after an architectural or test-strategy change, when a directory lacks an AGENTS.md, or when applying agreed AGENTS.md edits. Do not use to run gated Understand, Implementation Plan, Execution, or Submit (workflow), to draft implementation plans or post on issues, to look up Linear usage (linear), to mine a conversation for what to document (that is agent-retro), or for periodic crate/CI/skill housekeeping (that is health-audit)."
 ---
 
 # Writing AGENTS.md and `//!` headers
 
 Scope: `AGENTS.md` files and the leading `//!` block of `.rs` files. Not in scope: `///` item docs, code changes, gated feature phases (`.cursor/skills/workflow/`), implementation plans or issue comments, conversation retrospectives (`.cursor/skills/agent-retro/`), `.cursor/skills/` authorship, Linear project facts (`.cursor/skills/linear/`), periodic crate/CI/skill housekeeping (`.cursor/skills/health-audit/`). Policy lives in the root `AGENTS.md`; the code-review skill enforces it. Do not restate it.
->>>>>>> 4dd6e72 (Add a gated four-phase workflow skill.)
 
 ## How these files are consumed
 

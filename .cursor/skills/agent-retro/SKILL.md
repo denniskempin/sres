@@ -1,6 +1,6 @@
 ---
 name: agent-retro
-description: "Mine a completed conversation, transcript, or prior agent run for friction, then propose generalized AGENTS.md or skill edits. Use only when the user asks to retro, debrief, or review a conversation for agent-doc gaps. Do not use to run Understand/Plan/Execute/Submit (workflow), to draft implementation plans, post on Linear/GitHub issues (linear), implement hardware or tests, read AGENTS.md as reference during other work, or edit a skill the user already named. Do not use to write AGENTS.md after an architecture change (write-agents-docs), to review a code diff (code-review), to store user-preference memory (continual-learning), or for periodic crate/CI/skill housekeeping (health-audit)."
+description: "Mine a completed conversation, transcript, or prior agent run for friction, then propose generalized AGENTS.md or skill edits. Use only when the user asks to retro, debrief, or review a conversation for agent-doc gaps. Do not use to run Understand, Implementation Plan, Execution, or Submit (workflow), to draft implementation plans, post on Linear/GitHub issues (linear), implement hardware or tests, read AGENTS.md as reference during other work, or edit a skill the user already named. Do not use to write AGENTS.md after an architecture change (write-agents-docs), to review a code diff (code-review), to store user-preference memory (continual-learning), or for periodic crate/CI/skill housekeeping (health-audit)."
 ---
 
 # Agent retro
