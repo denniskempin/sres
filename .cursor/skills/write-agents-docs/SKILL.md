@@ -113,7 +113,7 @@ Examples from this repo:
      `wc -c AGENTS.md sres_emulator/src/AGENTS.md sres_emulator/src/apu/AGENTS.md`
 1. `ls` the directory. List every `.rs` file.
 2. For each file, read the first 40 lines and every `pub` item: `rg -n '^\s*pub' <file>`.
-3. Read the parent `AGENTS.md` chain up to the root. Write down which facts are already explained upward. Delete them from the leaf if present.
+3. Read the parent `AGENTS.md` chain up to the root. Write down which facts are already explained upward. Delete them from the leaf if present. If the change alters a fact the root already states (`## Entry Point Call Chain`, `## Testing Strategy`, `## Error Handling & Unimplemented Hardware`), edit that root line in the same change. Do not leave the leaf as the only correct statement.
 4. Edit in template order. For each fact you claim, note the file:line it came from in a scratch file outside the repo. Do not commit the scratch file.
 5. Run the self-check.
 6. If the change touched a file's role, update its `//!` block in the same commit.
@@ -134,7 +134,7 @@ Subagents do not see this conversation. Each prompt must be self-contained and i
 
 Coordinator duties after each wave:
 1. Read every report. Reject and re-run any unit whose self-check has a "no" or whose report lacks line counts.
-2. Cross-file pass the subagent cannot do alone: `wc -c` every chain that changed; `rg` each new fact in the wave against sibling and parent `AGENTS.md` files for duplicates; check every `## Gaps` entry against the root error-handling section.
+2. Cross-file pass the subagent cannot do alone: `wc -c` every chain that changed; `rg` each new fact in the wave against sibling and parent `AGENTS.md` files for duplicates; check every `## Gaps` entry against the root error-handling section. If a leaf change alters a root-stated call-chain, test-taxonomy, or error-policy fact, the coordinator edits that root line (subagents stay inside `<dir>`).
 3. Commit one directory per commit before starting the next wave.
 
 ## Self-check
@@ -148,6 +148,7 @@ Answer each before finishing. Any "no" means go back.
 - Every identifier, path, and register verified to exist?
 - File under its cap and chain under 24 KiB?
 - `## Gaps` consistent with the root error-handling section?
+- Root `## Entry Point Call Chain` / `## Testing Strategy` / `## Error Handling & Unimplemented Hardware` still true?
 - `## Tests` has a command that runs?
 - Leaf voice declarative, root voice imperative?
 - Every touched `//!` header 1 to 4 lines with no banned words?
