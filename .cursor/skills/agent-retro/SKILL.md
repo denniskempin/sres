@@ -1,6 +1,6 @@
 ---
 name: agent-retro
-description: "Review this conversation, a transcript, or a prior agent run and propose generalized AGENTS.md and skill changes that would help a future agent finish the same class of work. Use when the user asks to retro a conversation, suggest AGENTS.md or skill improvements after a task, document what was hard, or make the next agent faster. Do not use to write AGENTS.md after an architecture change (write-agents-docs), to review a code diff (code-review), to store user-preference memory (continual-learning), or for periodic crate/CI/skill housekeeping (health-audit)."
+description: "Mine a completed conversation, transcript, or prior agent run for friction, then propose generalized AGENTS.md or skill edits. Use only when the user asks to retro, debrief, or review a conversation for agent-doc gaps. Do not use to draft implementation plans, post on Linear/GitHub issues, implement hardware or tests, read AGENTS.md as reference during other work, or edit a skill the user already named. Do not use to write AGENTS.md after an architecture change (write-agents-docs), to review a code diff (code-review), to store user-preference memory (continual-learning), or for periodic crate/CI/skill housekeeping (health-audit)."
 ---
 
 # Agent retro
@@ -14,11 +14,14 @@ Policy, architecture, and test taxonomy live in root `AGENTS.md`. How to author 
 Use when any of these is true:
 
 - The user asks to retro, debrief, or review a conversation for agent-doc gaps
-- The user wants `AGENTS.md` or skill changes so the next agent has an easier time
-- The user points at a transcript, prior agent run, or PR discussion as the source
+- The user names a transcript, prior agent run, or PR thread as the source to mine
 
 Do not use for:
 
+- Drafting or posting implementation plans, issue comments, or Linear/GitHub tickets
+- Implementing a feature or bugfix, even if `AGENTS.md` or a skill might be updated later
+- Reading `AGENTS.md` or skills as reference during other work
+- Editing a skill or `AGENTS.md` the user already named (`write-agents-docs` for `AGENTS.md` / `//!`; otherwise edit the named skill)
 - Authoring `AGENTS.md` after a known architecture or test-strategy change (`write-agents-docs`)
 - Reviewing a code diff (`code-review`)
 - Mining chats for user-preference memory (`continual-learning` / `agents-memory-updater`)
@@ -124,6 +127,7 @@ If the user asks to apply:
 
 ## Hard rules
 
+- Do not load this skill unless the user asked to retro, debrief, or review a conversation. "Might later need `AGENTS.md`" is not a trigger.
 - Suggest first; never apply on the retro turn unless the user already said to apply.
 - Never write `## Learned User Preferences` or `## Learned Workspace Facts` (that is continual-learning).
 - Never add a skill whose body is a single fact.
