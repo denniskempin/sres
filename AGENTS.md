@@ -91,6 +91,7 @@ cpal callback (sres_egui/src/audio.rs)
 | Golden-WAV | `tests/apu_tests/` | `System` | SPC700/S-DSP vs `.wav` (`play_noise` is RAM/DSP, not WAV) |
 
 Golden files are auto-created on first run; verify them before committing. Mismatches write `.actual.png` / `.actual.wav`.
+Capture mid-frame MMIO with `Debugger` `EventFilter` log points, not a device-specific recorder.
 
 ## Error Handling & Unimplemented Hardware
 

@@ -232,7 +232,7 @@ The four integration test types are in [AGENTS.md](../../../../AGENTS.md#testing
 | Trace ROM | `{name}.sfc` + `{name}-trace.log.xz` | Test fails |
 | Framebuffer | `{name}-framebuffer.png` | Write `.actual.png`, panic |
 | Audio | `{name}.wav` | Write `.actual.wav`, panic |
-| Snapshot | `{rom}-{scene}.snapshot` + `.png` | Test fails |
+| Snapshot | `{rom}-{scene}.snapshot` + optional `.writes` + `.png` | Test fails |
 
 Binary assets are committed directly to git (no LFS).
 
