@@ -5,7 +5,7 @@ description: "Periodic SRES housekeeping: review agent/skill files, crate and to
 
 # Health audit
 
-Periodic housekeeping across agent/skill files, crates/toolchain, and CI. Policy, commands, and test taxonomy live in root `AGENTS.md`. `AGENTS.md` / `//!` authorship is [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md). Conversation mining is [../agent-retro/SKILL.md](../agent-retro/SKILL.md). Feature diffs are [../code-review/SKILL.md](../code-review/SKILL.md). Linear project facts are [../linear/SKILL.md](../linear/SKILL.md). Do not restate those.
+Periodic housekeeping across agent/skill files, crates/toolchain, and CI. Policy, commands, and test taxonomy live in root `AGENTS.md`. `AGENTS.md` / `//!` authorship is [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md). Conversation mining is [../agent-retro/SKILL.md](../agent-retro/SKILL.md). Feature diffs are [../code-review/SKILL.md](../code-review/SKILL.md). Linear project facts are [../linear/SKILL.md](../linear/SKILL.md). Gated phases are [../workflow/SKILL.md](../workflow/SKILL.md). Do not restate those.
 
 ## When
 

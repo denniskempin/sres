@@ -39,7 +39,6 @@ Follow [../linear/SKILL.md](../linear/SKILL.md) when an issue is associated (`SR
 
 - Understand and Implementation Plan: post the artifact as a new top-level comment; always also put it in chat.
 - No issue: chat only. Do not create an issue.
-- Execution and Submit: comments and status via that skill.
 
 ## Understand
 
@@ -93,10 +92,11 @@ If a step is wrong:
 
 After the plan's code is in:
 
-1. Run `cargo nextest run --workspace --locked`. Fail → no PR. fmt, clippy, and wasm are CI on Submit, not this gate.
-2. Run [../code-review/SKILL.md](../code-review/SKILL.md). Fix blockers; re-review once as that skill says. Blockers remaining → no PR.
-3. If the change altered architecture or test strategy, [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md) in this same phase.
+1. Run `cargo nextest run --workspace --locked` (root Commands Test). Fail → no PR. fmt, clippy, and wasm are CI on Submit, not this gate.
+2. If the change altered architecture or test strategy, [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md) in this same phase, before review.
+3. Run [../code-review/SKILL.md](../code-review/SKILL.md). Fix blockers; re-review once as that skill says. Blockers remaining → no PR.
 4. Push and open a **draft** PR (`ManagePullRequest` `create_pr`, `draft: true`).
+5. If a Linear issue is associated, set `In Review` per [../linear/SKILL.md](../linear/SKILL.md).
 
 **Stop.** Next phase: Submit. Do not mark ready. Do not merge.
 
@@ -106,7 +106,7 @@ This phase is merge authorization. Require the draft (or open) PR from Execution
 
 1. Mark ready: `ManagePullRequest` `update_pr` with `draft: false`.
 2. Subscribe to CI on the PR head branch (`subscribe_github_ci`). State that you are waiting for checks, then end the turn. On failure notification: stop, do not merge. On success: continue Submit.
-3. Merge. `ManagePullRequest` has no merge action. Submit authorizes `gh pr merge <n>` with explicit `--squash`, `--merge`, or `--rebase` matching the repo. No `--auto`. If merge is refused, stop and report.
+3. Merge. `ManagePullRequest` has no merge action. Submit is the exception to `gh` read-only in [../linear/SKILL.md](../linear/SKILL.md): `gh pr merge <n>` with explicit `--squash`, `--merge`, or `--rebase` matching the repo. No `--auto`. If merge is refused, stop and report.
 4. Delete the merged head: `git push origin --delete <branch>`. Never delete `main` (root `AGENTS.md` Cursor Cloud).
 5. If a Linear issue is associated and this PR finishes it, set `Done` per [../linear/SKILL.md](../linear/SKILL.md).
 
