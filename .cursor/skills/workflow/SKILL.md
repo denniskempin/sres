@@ -1,11 +1,11 @@
 ---
 name: workflow
-description: "Gated four-phase SRES work: Understand, Implementation Plan, Execution, Submit. Use when the user names a phase or this skill, or wants a Linear/GitHub issue done in gated phases. Run exactly one phase per invocation, then stop. Do not use to author AGENTS.md (write-agents-docs), mine a conversation (agent-retro), review a standalone diff (code-review), or run crate/CI housekeeping (health-audit)."
+description: "Gated four-phase SRES work: Understand, Implementation Plan, Execution, Submit. Use when the user names a phase or this skill, or wants a Linear/GitHub issue done in gated phases. Run exactly one phase per invocation, then stop. Do not use to look up Linear usage (linear); this skill calls that one. Do not use to author AGENTS.md (write-agents-docs), mine a conversation (agent-retro), review a standalone diff (code-review), or run crate/CI housekeeping (health-audit)."
 ---
 
 # Workflow
 
-Four phases with a hard gate: Understand, Implementation Plan, Execution, Submit. Policy, commands, and test taxonomy live in root `AGENTS.md`. Do not copy them here.
+Four phases with a hard gate: Understand, Implementation Plan, Execution, Submit. Policy, commands, and test taxonomy live in root `AGENTS.md`. Linear project facts live in [../linear/SKILL.md](../linear/SKILL.md). Do not copy either.
 
 ## When
 
@@ -20,6 +20,7 @@ Do not use for:
 - Authoring `AGENTS.md` / `//!` (`write-agents-docs`)
 - Conversation retro (`agent-retro`)
 - A standalone diff review (`code-review`; Execution calls that skill as a step)
+- Looking up Linear usage or posting a comment with no phase (`linear`; this skill calls that one when an issue is associated)
 - Crate, CI, or skill housekeeping (`health-audit`)
 - A one-shot fix when the user did not name this skill or a phase
 
@@ -34,11 +35,11 @@ Run **exactly one** phase, then stop. Name the next phase; do not start it.
 
 ## Linear
 
-An issue is associated when the user gave a Linear identifier or URL. Then `get_issue` first.
+Follow [../linear/SKILL.md](../linear/SKILL.md) when an issue is associated (`SRES-N` or a Linear URL). Fetch it first. Do not restate team, identifiers, or MCP tools.
 
-- Understand and Implementation Plan: post the artifact with `save_comment` (`issueId`, markdown `body`). Always also put it in chat.
+- Understand and Implementation Plan: post the artifact as a new top-level comment; always also put it in chat.
 - No issue: chat only. Do not create an issue.
-- Submit: close with `save_issue` (`state` completed/Done) only if this PR finishes the issue. Leave it open when remaining work is listed. Unknown names: `list_issue_statuses`.
+- Execution and Submit: comments and status via that skill.
 
 ## Understand
 
@@ -107,7 +108,7 @@ This phase is merge authorization. Require the draft (or open) PR from Execution
 2. Subscribe to CI on the PR head branch (`subscribe_github_ci`). State that you are waiting for checks, then end the turn. On failure notification: stop, do not merge. On success: continue Submit.
 3. Merge. `ManagePullRequest` has no merge action. Submit authorizes `gh pr merge <n>` with explicit `--squash`, `--merge`, or `--rebase` matching the repo. No `--auto`. If merge is refused, stop and report.
 4. Delete the merged head: `git push origin --delete <branch>`. Never delete `main` (root `AGENTS.md` Cursor Cloud).
-5. Close the Linear issue if associated and this PR finishes it.
+5. If a Linear issue is associated and this PR finishes it, set `Done` per [../linear/SKILL.md](../linear/SKILL.md).
 
 **Stop.**
 
@@ -172,5 +173,6 @@ clean | issues
 ## Pointers
 
 - Root `AGENTS.md`: Commands, Testing Strategy, Cursor Cloud (branch delete)
+- [../linear/SKILL.md](../linear/SKILL.md) — identifiers, comments, status, MCP
 - [../code-review/SKILL.md](../code-review/SKILL.md) — Execution step
 - [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md) — Execution, only if architecture/test strategy changed

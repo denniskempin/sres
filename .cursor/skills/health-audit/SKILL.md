@@ -175,6 +175,7 @@ After CI or crate edits, run the verify set in step 3. After skill/docs-only edi
 - [../write-agents-docs/SKILL.md](../write-agents-docs/SKILL.md) — `AGENTS.md` / `//!` edits
 - [../agent-retro/SKILL.md](../agent-retro/SKILL.md) — conversation-sourced doc proposals
 - [../linear/SKILL.md](../linear/SKILL.md) — Linear team, `SRES-#`, comments, MCP
+- [../workflow/SKILL.md](../workflow/SKILL.md) — gated Understand / Implementation Plan / Execution / Submit
 - [../code-review/references/review-guide.md](../code-review/references/review-guide.md) §10 — Tooling & CI
 - `.github/workflows/postsubmit.yml`, `.github/rulesets/require-postsubmit.json`, `check-all.sh`, `fix-all.sh`, `rust-toolchain.toml`
 
