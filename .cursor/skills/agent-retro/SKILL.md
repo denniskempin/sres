@@ -1,6 +1,6 @@
 ---
 name: agent-retro
-description: "Review this conversation, a transcript, or a prior agent run and propose generalized AGENTS.md and skill changes that would help a future agent finish the same class of work. Use when the user asks to retro a conversation, suggest AGENTS.md or skill improvements after a task, document what was hard, or make the next agent faster. Do not use to write AGENTS.md after an architecture change (write-agents-docs), to review a code diff (code-review), to execute a Linear SRES-# workflow (linear-issue), to store user-preference memory (continual-learning), or for periodic crate/CI/skill housekeeping (health-audit)."
+description: "Review this conversation, a transcript, or a prior agent run and propose generalized AGENTS.md and skill changes that would help a future agent finish the same class of work. Use when the user asks to retro a conversation, suggest AGENTS.md or skill improvements after a task, document what was hard, or make the next agent faster. Do not use to write AGENTS.md after an architecture change (write-agents-docs), to review a code diff (code-review), to look up Linear usage (linear), to store user-preference memory (continual-learning), or for periodic crate/CI/skill housekeeping (health-audit)."
 ---
 
 # Agent retro
@@ -21,7 +21,7 @@ Do not use for:
 
 - Authoring `AGENTS.md` after a known architecture or test-strategy change (`write-agents-docs`)
 - Reviewing a code diff (`code-review`)
-- Executing a Linear `SRES-#` plan/implement/submit workflow (`linear-issue`)
+- Looking up Linear usage (`linear`)
 - Mining chats for user-preference memory (`continual-learning` / `agents-memory-updater`)
 - Periodic crate, CI, or skill/AGENTS.md housekeeping (`health-audit`)
 
