@@ -111,6 +111,7 @@ Capture mid-frame MMIO with `Debugger` `EventFilter` log points, not a device-sp
 - `.cursor/skills/write-agents-docs/SKILL.md` — follow it when editing any `AGENTS.md` or `//!` file header.
 - `.cursor/skills/agent-retro/SKILL.md` — only when the user asks to retro a conversation. Suggest only; apply `AGENTS.md` edits with `write-agents-docs`. Skip for implementation plans, issues, and ordinary coding.
 - `.cursor/skills/health-audit/SKILL.md` — periodic housekeeping: agent/skill files, crate/toolchain freshness, CI alignment and speed.
+- `.cursor/skills/workflow/SKILL.md` — gated Understand / Implementation Plan / Execution / Submit. One phase per invocation.
 
 ## Subdirectory AGENTS.md Files
 
