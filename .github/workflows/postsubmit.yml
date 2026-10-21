@@ -19,62 +19,63 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  # fmt + clippy. Commands: `./check-all.sh fmt clippy`
+  # Every job runs inside the flake dev shell, so tool versions come from `flake.lock`.
+  # fmt + clippy. Commands: `nix develop -c ./check-all.sh fmt clippy`
   health:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-x11-0
+          cmd-format: nix develop -c {0}
 
       - name: Format and Clippy
-        run: ./check-all.sh fmt clippy
+        run: nix develop -c ./check-all.sh fmt clippy
 
-  # Workspace tests (sres_emulator + sres_egui). Command: `./check-all.sh test`
+  # Workspace tests (sres_emulator + sres_egui). Command: `nix develop .#ci -c ./check-all.sh test`
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@cargo-nextest
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-x11-0 xvfb mesa-vulkan-drivers libegl1 libgl1-mesa-dri
+          cmd-format: nix develop .#ci -c {0}
 
       - name: Tests
-        env:
-          # GitHub-hosted runners have no GPU. llvmpipe/lavapipe need these.
-          LIBGL_ALWAYS_SOFTWARE: "1"
-          WGPU_BACKEND: gl,vulkan
-        run: ./check-all.sh test
+        run: nix develop .#ci -c ./check-all.sh test
 
-  # Trunk WASM build. Command: `./check-all.sh wasm`
+  # Trunk WASM build. Command: `nix develop -c ./check-all.sh wasm`
   wasm:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@trunk
+          cmd-format: nix develop -c {0}
 
       - name: WASM build
-        run: ./check-all.sh wasm
+        run: nix develop -c ./check-all.sh wasm
 
   # Single required check for pull requests targeting main.
   # Keep this job id stable; `.github/rulesets/require-postsubmit.json` requires it.
@@ -104,14 +105,17 @@ jobs:
         working-directory: ./sres_egui
     steps:
       - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@trunk
+          cmd-format: nix develop -c {0}
 
       - name: Build
-        run: trunk build --public-url=https://denniskempin.github.io/sres/
+        run: nix develop -c trunk build --public-url=https://denniskempin.github.io/sres/
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
