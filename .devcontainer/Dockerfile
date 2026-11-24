@@ -8,7 +8,6 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Dev utilities not needed by CI.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     git \
     jq \
     openssh-client \

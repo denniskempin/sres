@@ -9,6 +9,7 @@ ARG TRUNK_VERSION=0.22.2
 
 # SRES Linux GUI/audio libs and Mesa software GL/Vulkan (llvmpipe/lavapipe) for headless egui_kittest.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     libasound2-dev \
     libegl-mesa0 \
     libgl1-mesa-dri \
@@ -17,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     xauth \
     xvfb \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/* \
 
 # Hardening: strip setuid/setgid bits from base and installed packages.
