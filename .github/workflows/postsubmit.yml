@@ -20,57 +20,61 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  # Every job runs inside `.devcontainer/Dockerfile` (`ghcr.io/denniskempin/sres-dev`).
-  # fmt + clippy. Command: `./check-all.sh fmt clippy`
+  # Every job runs inside the prebuilt CI container (`ghcr.io/denniskempin/sres-ci:latest`).
   health:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/denniskempin/sres-ci:latest
+      options: --user 0:0
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-container
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          cmd-format: ci-container {0}
 
       - name: Format and Clippy
-        run: ci-container ./check-all.sh fmt clippy
+        run: ./check-all.sh fmt clippy
 
-  # Workspace tests (sres_emulator + sres_egui). Command: `./check-all.sh test`
   test:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/denniskempin/sres-ci:latest
+      options: --user 0:0
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-container
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          cmd-format: ci-container {0}
 
       - name: Tests
-        run: ci-container ./check-all.sh test
+        run: ./check-all.sh test
 
-  # Trunk WASM build. Command: `./check-all.sh wasm`
   wasm:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/denniskempin/sres-ci:latest
+      options: --user 0:0
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-container
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: postsubmit
+          shared-key: wasm
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          cmd-format: ci-container {0}
+      - name: Cache Trunk tools
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/trunk
+          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile.ci') }}
+          restore-keys: trunk-tools-
 
       - name: WASM build
-        run: ci-container ./check-all.sh wasm
+        run: ./check-all.sh wasm
 
   # Single required check for pull requests targeting main.
   # Keep this job id stable; `.github/rulesets/require-postsubmit.json` requires it.
@@ -90,23 +94,33 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [required]
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/denniskempin/sres-ci:latest
+      options: --user 0:0
     timeout-minutes: 25
     permissions:
       contents: read
       packages: read
       pages: write
       id-token: write
+    defaults:
+      run:
+        working-directory: ./sres_egui
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-container
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: postsubmit
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-          cmd-format: ci-container {0}
+          shared-key: wasm
+          save-if: false
+      - name: Restore Trunk tools
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/trunk
+          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile.ci') }}
+          restore-keys: trunk-tools-
 
       - name: Build
-        run: ci-container bash -c "cd sres_egui && NO_COLOR=true trunk build --public-url=https://denniskempin.github.io/sres/"
+        run: NO_COLOR=true trunk build --public-url=https://denniskempin.github.io/sres/
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

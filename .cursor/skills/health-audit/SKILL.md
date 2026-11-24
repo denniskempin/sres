@@ -120,7 +120,7 @@ Required shape:
 - `concurrency.group` is per PR number or ref so a PR run cannot cancel Pages
 - `health` compiles WASM (`cargo check --target wasm32-unknown-unknown -p sres_egui`). Native clippy never sees `#[cfg(target_arch = "wasm32")]`
 - Rust jobs use `Swatinem/rust-cache` and `cargo nextest`, not `cargo test`
-- Isolated workflows (`.github/workflows/copilot-setup-steps.yml`, `.github/workflows/dev-image.yml`) stay path-filtered
+- Isolated workflows (`.github/workflows/dev-image.yml`) stay path-filtered
 
 Speed: do not add a workspace-wide job that rebuilds what `test` or `coverage` already builds. Do not run `trunk` on every PR when `health` already has the wasm32 check. Do not add apt packages a crate can replace with a static feature. Bump `uses:` majors when the pinned major is stale; do not churn patch tags.
 

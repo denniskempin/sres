@@ -15,7 +15,9 @@
 	],
 	"containerEnv": {
 		"CARGO_HOME": "/cargo",
-		"CARGO_TARGET_DIR": "/target"
+		"CARGO_TARGET_DIR": "/target",
+		"LIBGL_ALWAYS_SOFTWARE": "1",
+		"WGPU_BACKEND": "gl,vulkan"
 	},
 	"remoteEnv": {
 		"CARGO_HOME": "/cargo",
@@ -34,5 +36,6 @@
 	"forwardPorts": [
 		8080
 	],
+	"postCreateCommand": "bash -lc 'command -v jj >/dev/null 2>&1 || exit 0; if [ -d .git ] && [ ! -d .jj ]; then jj git init --colocate; fi; if [ -z \"$(jj config get user.name 2>/dev/null)\" ] && name=$(git config user.name 2>/dev/null); then jj config set --user user.name \"$name\"; fi; if [ -z \"$(jj config get user.email 2>/dev/null)\" ] && email=$(git config user.email 2>/dev/null); then jj config set --user user.email \"$email\"; fi'",
 	"remoteUser": "dev"
 }

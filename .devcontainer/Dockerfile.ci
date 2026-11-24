@@ -1,0 +1,39 @@
+FROM rust:slim-trixie@sha256:3b199fd6db7d709274df56565b8f4003f9e30d7bfcff9d53148c86053b7855e2
+
+LABEL org.opencontainers.image.source="https://github.com/denniskempin/sres"
+LABEL org.opencontainers.image.description="Reproducible SRES CI container"
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG NEXTEST_VERSION=0.9.152
+ARG TRUNK_VERSION=0.22.2
+
+# SRES Linux GUI/audio libs and Mesa software GL/Vulkan (llvmpipe/lavapipe) for headless egui_kittest.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libasound2-dev \
+    libegl-mesa0 \
+    libgl1-mesa-dri \
+    libxkbcommon-x11-0 \
+    mesa-vulkan-drivers \
+    pkg-config \
+    xauth \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/* \
+
+# Hardening: strip setuid/setgid bits from base and installed packages.
+RUN find / -xdev -perm /6000 -exec chmod a-s {} + 2>/dev/null || true
+
+# Build cargo-nextest and trunk from crates.io source into /usr/local/cargo/bin (stays on PATH when CARGO_HOME=/cargo is mounted).
+RUN cargo install --locked "cargo-nextest@${NEXTEST_VERSION}" "trunk@${TRUNK_VERSION}" \
+    && rm -rf /usr/local/cargo/registry /usr/local/cargo/git
+
+# Pre-install the pinned nightly toolchain from rust-toolchain.toml.
+COPY rust-toolchain.toml /tmp/rust-toolchain.toml
+RUN (cd /tmp && rustup show active-toolchain) \
+    && rm /tmp/rust-toolchain.toml \
+    # Hardening: Read-only toolchain
+    && chmod -R a-w,a+rX /usr/local/rustup /usr/local/cargo
+
+ENV CARGO_HOME=/cargo \
+    TRUNK_SKIP_VERSION_CHECK=true \
+    LIBGL_ALWAYS_SOFTWARE=1 \
+    WGPU_BACKEND=gl,vulkan

@@ -19,7 +19,7 @@ SRES is a SNES emulator in Rust.
 - Test: `cargo nextest run --workspace --locked` (or `cargo test`)
 - Full check: `./check-all.sh` (same commands as CI; subset: `fmt`, `clippy`, `test`, `wasm`)
 - Fix: `./fix-all.sh`
-- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`). Jobs run `check-all.sh` inside `.devcontainer/Dockerfile` (`ghcr.io/denniskempin/sres-dev`, published by `.github/workflows/dev-image.yml`).
+- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`). Jobs run `check-all.sh` inside `.devcontainer/Dockerfile.ci` (`ghcr.io/denniskempin/sres-ci`, published with `ghcr.io/denniskempin/sres-dev` by `.github/workflows/dev-image.yml`).
 
 ## Architecture Overview
 
@@ -119,7 +119,7 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 ## Environment Gotchas
 
 - **Nightly Rust**: Required. `rust-toolchain.toml` specifies channel; `rust-src` component needed.
-- **Dev container**: `.devcontainer/` (DevPod / Dev Containers) provides the `rust-toolchain.toml` toolchain, `agy`, `cargo-nextest`, `trunk`, `wasm-bindgen`, `wasm-opt`, Linux GUI/audio libraries, and Mesa llvmpipe/lavapipe for GPU-less `egui_kittest` snapshots. Persists `/cargo`, `/target`, and `/home/dev/.gemini` in named volumes. Outside the container on Linux, `apt install libasound2-dev libxkbcommon-x11-0`.
+- **Dev container**: `.devcontainer/` (DevPod / Dev Containers) provides the `rust-toolchain.toml` toolchain, `cargo-nextest`, `trunk`, Linux GUI/audio libraries, and Mesa llvmpipe/lavapipe for GPU-less `egui_kittest` snapshots. Persists `/cargo`, `/target`, and `/home/dev/.gemini` in named volumes. Outside the container on Linux, `apt install libasound2-dev libxkbcommon-x11-0`.
 - **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
 - **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only.
 - **cargo-nextest**: Preferred runner. `-E` uses nextest expression syntax (`|` is OR, `+` is AND).

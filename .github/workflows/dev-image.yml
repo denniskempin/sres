@@ -37,17 +37,34 @@ jobs:
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Build and push ${{ matrix.arch }} image
+      - name: Build and push ${{ matrix.arch }} CI and Dev images
         run: |
-          TAG="$(sha256sum .devcontainer/Dockerfile rust-toolchain.toml | sha256sum | cut -c1-12)"
-          REPO="ghcr.io/denniskempin/sres-dev"
-          docker pull "${REPO}:latest" || true
-          docker build \
-            --cache-from "${REPO}:latest" \
-            -t "${REPO}:${TAG}-${{ matrix.arch }}" \
-            -f .devcontainer/Dockerfile \
+          TAG="$(sha256sum .devcontainer/Dockerfile .devcontainer/Dockerfile.ci rust-toolchain.toml | sha256sum | cut -c1-12)"
+          CI_REPO="ghcr.io/denniskempin/sres-ci"
+          DEV_REPO="ghcr.io/denniskempin/sres-dev"
+
+          docker buildx create --name sres-builder --driver docker-container --use
+
+          docker buildx build \
+            --cache-from "type=registry,ref=${CI_REPO}:buildcache-${{ matrix.arch }}" \
+            --cache-from "type=registry,ref=${CI_REPO}:latest" \
+            --cache-to "type=registry,ref=${CI_REPO}:buildcache-${{ matrix.arch }},mode=max" \
+            --cache-to "type=inline" \
+            -t "${CI_REPO}:${TAG}-${{ matrix.arch }}" \
+            -f .devcontainer/Dockerfile.ci \
+            --push \
             .
-          docker push "${REPO}:${TAG}-${{ matrix.arch }}"
+
+          docker buildx build \
+            --build-arg "CI_IMAGE=${CI_REPO}:${TAG}-${{ matrix.arch }}" \
+            --cache-from "type=registry,ref=${DEV_REPO}:buildcache-${{ matrix.arch }}" \
+            --cache-from "type=registry,ref=${DEV_REPO}:latest" \
+            --cache-to "type=registry,ref=${DEV_REPO}:buildcache-${{ matrix.arch }},mode=max" \
+            --cache-to "type=inline" \
+            -t "${DEV_REPO}:${TAG}-${{ matrix.arch }}" \
+            -f .devcontainer/Dockerfile \
+            --push \
+            .
 
   publish-manifest:
     needs: [build-arch]
@@ -60,12 +77,13 @@ jobs:
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Create and push multi-arch manifest
+      - name: Create and push multi-arch manifests
         run: |
-          TAG="$(sha256sum .devcontainer/Dockerfile rust-toolchain.toml | sha256sum | cut -c1-12)"
-          REPO="ghcr.io/denniskempin/sres-dev"
-          docker buildx imagetools create \
-            -t "${REPO}:${TAG}" \
-            -t "${REPO}:latest" \
-            "${REPO}:${TAG}-amd64" \
-            "${REPO}:${TAG}-arm64"
+          TAG="$(sha256sum .devcontainer/Dockerfile .devcontainer/Dockerfile.ci rust-toolchain.toml | sha256sum | cut -c1-12)"
+          for REPO in ghcr.io/denniskempin/sres-ci ghcr.io/denniskempin/sres-dev; do
+            docker buildx imagetools create \
+              -t "${REPO}:${TAG}" \
+              -t "${REPO}:latest" \
+              "${REPO}:${TAG}-amd64" \
+              "${REPO}:${TAG}-arm64"
+          done
