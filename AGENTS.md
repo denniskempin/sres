@@ -19,7 +19,7 @@ SRES is a SNES emulator in Rust.
 - Test: `cargo nextest run --workspace --locked` (or `cargo test`)
 - Full check: `./check-all.sh` (same commands as CI; subset: `fmt`, `clippy`, `test`, `wasm`)
 - Fix: `./fix-all.sh`
-- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`)
+- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`). Jobs run `check-all.sh` inside `.devcontainer/Dockerfile.ci` (`ghcr.io/denniskempin/sres-ci`, published with `ghcr.io/denniskempin/sres-dev` by `.github/workflows/dev-image.yml`).
 
 ## Architecture Overview
 
@@ -119,11 +119,11 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 ## Environment Gotchas
 
 - **Nightly Rust**: Required. `rust-toolchain.toml` specifies channel; `rust-src` component needed.
-- **libxkbcommon-x11-0**: Runtime dependency for native egui. Install via `apt` if missing.
+- **Dev container**: `.devcontainer/` (DevPod / Dev Containers) provides the `rust-toolchain.toml` toolchain, `cargo-nextest`, `trunk`, Linux GUI/audio libraries, and Mesa llvmpipe/lavapipe for GPU-less `egui_kittest` snapshots. Persists `/cargo`, `/target`, and `/home/dev/.gemini` in named volumes. Outside the container on Linux, `apt install libasound2-dev libxkbcommon-x11-0`.
 - **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
 - **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only.
-- **cargo-nextest**: Preferred runner. `-E` uses nextest expression syntax (`|` is OR, `+` is AND). `curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ${CARGO_HOME:-$HOME/.cargo}/bin`
-- **trunk**: WASM bundler for `./check-all.sh wasm`. `cargo install trunk` or CI `taiki-e/install-action@trunk`.
+- **cargo-nextest**: Preferred runner. `-E` uses nextest expression syntax (`|` is OR, `+` is AND).
+- **trunk**: WASM bundler for `./check-all.sh wasm`. `cargo install --locked trunk` outside the container.
 
 ## Cursor Cloud specific instructions
 

@@ -1,0 +1,89 @@
+name: Dev Container Image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".devcontainer/**"
+      - ".dockerignore"
+      - "rust-toolchain.toml"
+      - ".github/workflows/dev-image.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-arch:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push ${{ matrix.arch }} CI and Dev images
+        run: |
+          TAG="$(sha256sum .devcontainer/Dockerfile .devcontainer/Dockerfile.ci rust-toolchain.toml | sha256sum | cut -c1-12)"
+          CI_REPO="ghcr.io/denniskempin/sres-ci"
+          DEV_REPO="ghcr.io/denniskempin/sres-dev"
+
+          docker buildx create --name sres-builder --driver docker-container --use
+
+          docker buildx build \
+            --cache-from "type=registry,ref=${CI_REPO}:buildcache-${{ matrix.arch }}" \
+            --cache-from "type=registry,ref=${CI_REPO}:latest" \
+            --cache-to "type=registry,ref=${CI_REPO}:buildcache-${{ matrix.arch }},mode=max" \
+            --cache-to "type=inline" \
+            -t "${CI_REPO}:${TAG}-${{ matrix.arch }}" \
+            -f .devcontainer/Dockerfile.ci \
+            --push \
+            .
+
+          docker buildx build \
+            --build-arg "CI_IMAGE=${CI_REPO}:${TAG}-${{ matrix.arch }}" \
+            --cache-from "type=registry,ref=${DEV_REPO}:buildcache-${{ matrix.arch }}" \
+            --cache-from "type=registry,ref=${DEV_REPO}:latest" \
+            --cache-to "type=registry,ref=${DEV_REPO}:buildcache-${{ matrix.arch }},mode=max" \
+            --cache-to "type=inline" \
+            -t "${DEV_REPO}:${TAG}-${{ matrix.arch }}" \
+            -f .devcontainer/Dockerfile \
+            --push \
+            .
+
+  publish-manifest:
+    needs: [build-arch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Create and push multi-arch manifests
+        run: |
+          TAG="$(sha256sum .devcontainer/Dockerfile .devcontainer/Dockerfile.ci rust-toolchain.toml | sha256sum | cut -c1-12)"
+          for REPO in ghcr.io/denniskempin/sres-ci ghcr.io/denniskempin/sres-dev; do
+            docker buildx imagetools create \
+              -t "${REPO}:${TAG}" \
+              -t "${REPO}:latest" \
+              "${REPO}:${TAG}-amd64" \
+              "${REPO}:${TAG}-arm64"
+          done
