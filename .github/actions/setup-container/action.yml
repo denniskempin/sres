@@ -1,0 +1,40 @@
+name: Setup SRES Dev Container
+description: Pulls or builds the reproducible dev container and installs the ci-container shim.
+
+runs:
+  using: composite
+  steps:
+    - name: Log in to GHCR
+      shell: bash
+      continue-on-error: true
+      run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+    - name: Ensure image and install ci-container shim
+      shell: bash
+      run: |
+        TAG="$(sha256sum .devcontainer/Dockerfile rust-toolchain.toml | sha256sum | cut -c1-12)"
+        IMAGE="ghcr.io/denniskempin/sres-dev:${TAG}"
+
+        if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+          if ! docker pull "$IMAGE"; then
+            docker build -t "$IMAGE" -f .devcontainer/Dockerfile .
+          fi
+        fi
+
+        printf '%s\n' \
+          '#!/usr/bin/env bash' \
+          'set -euo pipefail' \
+          'HOST_CARGO="${CARGO_HOME:-$HOME/.cargo}"' \
+          'mkdir -p "$HOST_CARGO"' \
+          'exec docker run --rm \' \
+          '  --user "$(id -u):$(id -g)" \' \
+          '  -e HOME=/tmp \' \
+          '  -e CARGO_HOME=/cargo \' \
+          '  -e CARGO_TERM_COLOR="${CARGO_TERM_COLOR:-always}" \' \
+          '  -e CARGO_INCREMENTAL="${CARGO_INCREMENTAL:-0}" \' \
+          '  -v "${GITHUB_WORKSPACE}:/workspace" \' \
+          '  -v "${HOST_CARGO}:/cargo" \' \
+          '  -w /workspace \' \
+          "  \"${IMAGE}\" \"\$@\"" \
+          | sudo tee /usr/local/bin/ci-container >/dev/null
+        sudo chmod +x /usr/local/bin/ci-container

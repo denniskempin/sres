@@ -1,6 +1,25 @@
 {
+	"name": "SRES DevPod",
 	"build": {
-		"dockerfile": "Dockerfile"
+		"dockerfile": "Dockerfile",
+		"context": "..",
+		"cacheFrom": "ghcr.io/denniskempin/sres-dev:latest"
+	},
+	"runArgs": [
+		"--pids-limit=512"
+	],
+	"mounts": [
+		"source=sres-cargo-cache,target=/cargo,type=volume",
+		"source=sres-target,target=/target,type=volume",
+		"source=sres-gemini-state,target=/home/dev/.gemini,type=volume"
+	],
+	"containerEnv": {
+		"CARGO_HOME": "/cargo",
+		"CARGO_TARGET_DIR": "/target"
+	},
+	"remoteEnv": {
+		"CARGO_HOME": "/cargo",
+		"CARGO_TARGET_DIR": "/target"
 	},
 	"customizations": {
 		"vscode": {
@@ -15,6 +34,5 @@
 	"forwardPorts": [
 		8080
 	],
-	"updateContentCommand": "git lfs pull",
-	"remoteUser": "vscode"
+	"remoteUser": "dev"
 }

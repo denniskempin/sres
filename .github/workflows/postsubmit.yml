@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -19,63 +20,57 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  # Every job runs inside the flake dev shell, so tool versions come from `flake.lock`.
-  # fmt + clippy. Commands: `nix develop -c ./check-all.sh fmt clippy`
+  # Every job runs inside `.devcontainer/Dockerfile` (`ghcr.io/denniskempin/sres-dev`).
+  # fmt + clippy. Command: `./check-all.sh fmt clippy`
   health:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-container
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          cmd-format: nix develop -c {0}
+          cmd-format: ci-container {0}
 
       - name: Format and Clippy
-        run: nix develop -c ./check-all.sh fmt clippy
+        run: ci-container ./check-all.sh fmt clippy
 
-  # Workspace tests (sres_emulator + sres_egui). Command: `nix develop .#ci -c ./check-all.sh test`
+  # Workspace tests (sres_emulator + sres_egui). Command: `./check-all.sh test`
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-container
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          cmd-format: nix develop .#ci -c {0}
+          cmd-format: ci-container {0}
 
       - name: Tests
-        run: nix develop .#ci -c ./check-all.sh test
+        run: ci-container ./check-all.sh test
 
-  # Trunk WASM build. Command: `nix develop -c ./check-all.sh wasm`
+  # Trunk WASM build. Command: `./check-all.sh wasm`
   wasm:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-container
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          cmd-format: nix develop -c {0}
+          cmd-format: ci-container {0}
 
       - name: WASM build
-        run: nix develop -c ./check-all.sh wasm
+        run: ci-container ./check-all.sh wasm
 
   # Single required check for pull requests targeting main.
   # Keep this job id stable; `.github/rulesets/require-postsubmit.json` requires it.
@@ -98,24 +93,20 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: read
+      packages: read
       pages: write
       id-token: write
-    defaults:
-      run:
-        working-directory: ./sres_egui
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-container
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-          cmd-format: nix develop -c {0}
+          cmd-format: ci-container {0}
 
       - name: Build
-        run: nix develop -c trunk build --public-url=https://denniskempin.github.io/sres/
+        run: ci-container bash -c "cd sres_egui && NO_COLOR=true trunk build --public-url=https://denniskempin.github.io/sres/"
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
