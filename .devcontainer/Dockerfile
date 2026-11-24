@@ -19,9 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xauth \
     xvfb \
     xz-utils \
-    && rm -rf /var/lib/apt/lists/* \
-    # Hardening: strip setuid/setgid bits from base and installed packages.
-    && (find / -xdev -perm /6000 -exec chmod a-s {} + 2>/dev/null || true)
+    && rm -rf /var/lib/apt/lists/*
 
 # Install SHA-256 verified cargo-nextest and trunk binaries into /usr/local/bin (unaffected by CARGO_HOME=/cargo).
 RUN set -eux; \
@@ -51,11 +49,10 @@ RUN set -eux; \
     tar -xzf /tmp/trunk.tar.gz -C /usr/local/bin trunk; \
     rm /tmp/trunk.tar.gz
 
-# Pre-install the pinned nightly toolchain from rust-toolchain.toml and lock down toolchain dirs read-only.
+# Pre-install the pinned nightly toolchain from rust-toolchain.toml.
 COPY rust-toolchain.toml /tmp/rust-toolchain.toml
 RUN (cd /tmp && rustup toolchain install) \
-    && rm /tmp/rust-toolchain.toml \
-    && chmod -R a-w,a+rX /usr/local/rustup /usr/local/cargo
+    && rm /tmp/rust-toolchain.toml
 
 ENV CARGO_HOME=/cargo \
     TRUNK_SKIP_VERSION_CHECK=true \
@@ -75,19 +72,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     python3 \
     ripgrep \
-    && rm -rf /var/lib/apt/lists/* \
-    # Hardening: strip setuid/setgid bits from installed packages (e.g. openssh-client).
-    && (find / -xdev -perm /6000 -exec chmod a-s {} + 2>/dev/null || true)
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
 
-# Add rust-analyzer to the pinned nightly toolchain and keep toolchain dirs read-only.
+# Add rust-analyzer to the pinned nightly toolchain.
 COPY rust-toolchain.toml /tmp/rust-toolchain.toml
 RUN (cd /tmp && rustup component add rust-analyzer || true) \
-    && rm /tmp/rust-toolchain.toml \
-    && chmod -R a-w,a+rX /usr/local/rustup /usr/local/cargo
+    && rm /tmp/rust-toolchain.toml
 
-# Create non-root dev user and writable workspace/cache directories.
+# Create non-root dev user with passwordless sudo and writable workspace/cache directories.
 RUN groupadd --gid 1000 dev \
     && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash dev \
+    && echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev \
+    && chmod 0440 /etc/sudoers.d/dev \
     && mkdir -p /cargo /target /workspace /home/dev/.gemini \
     && chown -R dev:dev /cargo /target /workspace /home/dev \
     && chmod 0755 /home/dev
