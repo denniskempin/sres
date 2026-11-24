@@ -1,9 +1,38 @@
-FROM mcr.microsoft.com/devcontainers/rust:latest
+ARG CI_IMAGE=ghcr.io/denniskempin/sres-ci:latest
+FROM ${CI_IMAGE}
 
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install xa65 git-lfs
+LABEL org.opencontainers.image.source="https://github.com/denniskempin/sres"
+LABEL org.opencontainers.image.description="Reproducible SRES DevPod container with Antigravity CLI"
 
-RUN curl -LsSf "https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz" | tar zxf - -C "$CARGO_HOME/bin"
-RUN cargo binstall -y cargo-watch
-RUN cargo binstall -y cargo-nextest
+ARG DEBIAN_FRONTEND=noninteractive
 
+# Dev utilities not needed by CI.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    jq \
+    openssh-client \
+    python3 \
+    ripgrep \
+    && rm -rf /var/lib/apt/lists/*
+
+# Hardening: strip setuid/setgid bits from installed packages (e.g. openssh-client).
+RUN find / -xdev -perm /6000 -exec chmod a-s {} + 2>/dev/null || true
+
+# Add rust-analyzer to the pinned nightly toolchain
+COPY rust-toolchain.toml /tmp/rust-toolchain.toml
+RUN (cd /tmp && rustup component add rust-analyzer || true) \
+    && rm /tmp/rust-toolchain.toml \
+    && rm -rf /usr/local/cargo/registry /usr/local/cargo/git \
+    # Hardening: Read-only toolchain
+    && chmod -R a-w,a+rX /usr/local/rustup /usr/local/cargo
+
+# Create non-root dev user and writable workspace/cache directories.
+RUN groupadd --gid 1000 dev \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash dev \
+    && mkdir -p /cargo /target /workspace /home/dev/.gemini \
+    && chown -R dev:dev /cargo /target /workspace /home/dev \
+    && chmod 0755 /home/dev
+
+USER dev
+WORKDIR /workspace

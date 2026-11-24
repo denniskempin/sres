@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -19,59 +20,58 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  # fmt + clippy. Commands: `./check-all.sh fmt clippy`
+  # Every job runs inside the prebuilt CI container (`ghcr.io/denniskempin/sres-ci:latest`).
   health:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/denniskempin/sres-ci:latest
+      options: --user 0:0
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-x11-0
 
       - name: Format and Clippy
         run: ./check-all.sh fmt clippy
 
-  # Workspace tests (sres_emulator + sres_egui). Command: `./check-all.sh test`
   test:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/denniskempin/sres-ci:latest
+      options: --user 0:0
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: postsubmit
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@cargo-nextest
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libxkbcommon-x11-0 xvfb mesa-vulkan-drivers libegl1 libgl1-mesa-dri
 
       - name: Tests
-        env:
-          # GitHub-hosted runners have no GPU. llvmpipe/lavapipe need these.
-          LIBGL_ALWAYS_SOFTWARE: "1"
-          WGPU_BACKEND: gl,vulkan
         run: ./check-all.sh test
 
-  # Trunk WASM build. Command: `./check-all.sh wasm`
   wasm:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/denniskempin/sres-ci:latest
+      options: --user 0:0
     timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: postsubmit
+          shared-key: wasm
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@trunk
+      - name: Cache Trunk tools
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/trunk
+          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile.ci') }}
+          restore-keys: trunk-tools-
 
       - name: WASM build
         run: ./check-all.sh wasm
@@ -94,9 +94,13 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [required]
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/denniskempin/sres-ci:latest
+      options: --user 0:0
     timeout-minutes: 25
     permissions:
       contents: read
+      packages: read
       pages: write
       id-token: write
     defaults:
@@ -106,12 +110,17 @@ jobs:
       - uses: actions/checkout@v7
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: postsubmit
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@trunk
+          shared-key: wasm
+          save-if: false
+      - name: Restore Trunk tools
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/trunk
+          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile.ci') }}
+          restore-keys: trunk-tools-
 
       - name: Build
-        run: trunk build --public-url=https://denniskempin.github.io/sres/
+        run: NO_COLOR=true trunk build --public-url=https://denniskempin.github.io/sres/
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

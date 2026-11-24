@@ -1,6 +1,27 @@
 {
+	"name": "SRES DevPod",
 	"build": {
-		"dockerfile": "Dockerfile"
+		"dockerfile": "Dockerfile",
+		"context": "..",
+		"cacheFrom": "ghcr.io/denniskempin/sres-dev:latest"
+	},
+	"runArgs": [
+		"--pids-limit=512"
+	],
+	"mounts": [
+		"source=sres-cargo-cache,target=/cargo,type=volume",
+		"source=sres-target,target=/target,type=volume",
+		"source=sres-gemini-state,target=/home/dev/.gemini,type=volume"
+	],
+	"containerEnv": {
+		"CARGO_HOME": "/cargo",
+		"CARGO_TARGET_DIR": "/target",
+		"LIBGL_ALWAYS_SOFTWARE": "1",
+		"WGPU_BACKEND": "gl,vulkan"
+	},
+	"remoteEnv": {
+		"CARGO_HOME": "/cargo",
+		"CARGO_TARGET_DIR": "/target"
 	},
 	"customizations": {
 		"vscode": {
@@ -15,6 +36,6 @@
 	"forwardPorts": [
 		8080
 	],
-	"updateContentCommand": "git lfs pull",
-	"remoteUser": "vscode"
+	"postCreateCommand": "bash -lc 'command -v jj >/dev/null 2>&1 || exit 0; if [ -d .git ] && [ ! -d .jj ]; then jj git init --colocate; fi; if [ -z \"$(jj config get user.name 2>/dev/null)\" ] && name=$(git config user.name 2>/dev/null); then jj config set --user user.name \"$name\"; fi; if [ -z \"$(jj config get user.email 2>/dev/null)\" ] && email=$(git config user.email 2>/dev/null); then jj config set --user user.email \"$email\"; fi'",
+	"remoteUser": "dev"
 }
