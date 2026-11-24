@@ -19,7 +19,7 @@ SRES is a SNES emulator in Rust.
 - Test: `cargo nextest run --workspace --locked` (or `cargo test`)
 - Full check: `./check-all.sh` (same commands as CI; subset: `fmt`, `clippy`, `test`, `wasm`)
 - Fix: `./fix-all.sh`
-- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`). Jobs run `check-all.sh` inside `.devcontainer/Dockerfile.ci` (`ghcr.io/denniskempin/sres-ci`, published with `ghcr.io/denniskempin/sres-dev` by `.github/workflows/dev-image.yml`).
+- CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`). Jobs run `check-all.sh` inside `.devcontainer/Dockerfile` `ci` target (`ghcr.io/denniskempin/sres-ci`, published with `ghcr.io/denniskempin/sres-dev` by `.github/workflows/dev-image.yml`).
 
 ## Architecture Overview
 

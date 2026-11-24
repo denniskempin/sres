@@ -70,7 +70,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/trunk
-          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile.ci') }}
+          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile') }}
           restore-keys: trunk-tools-
 
       - name: WASM build
@@ -116,7 +116,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ~/.cache/trunk
-          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile.ci') }}
+          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile') }}
           restore-keys: trunk-tools-
 
       - name: Build

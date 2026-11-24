@@ -3,7 +3,11 @@
 	"build": {
 		"dockerfile": "Dockerfile",
 		"context": "..",
-		"cacheFrom": "ghcr.io/denniskempin/sres-dev:latest"
+		"target": "dev",
+		"cacheFrom": [
+			"ghcr.io/denniskempin/sres-dev:latest",
+			"ghcr.io/denniskempin/sres-ci:latest"
+		]
 	},
 	"runArgs": [
 		"--pids-limit=512"
