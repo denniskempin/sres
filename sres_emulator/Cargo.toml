@@ -24,7 +24,6 @@ itertools = "0.15"
 strum = { version = "0.28", features = ["derive"] }
 bilge = "0.5"
 bitcode = { version = "0.6.9", default-features = false, features = ["std", "derive"] }
-hound = "3.5"
 lazy_static = "1.5"
 
 [dev-dependencies]
