@@ -34,6 +34,8 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      # TODO: Remove this fallback step once `ghcr.io/denniskempin/sres-ci:latest`
+      # is rebuilt on `main` with `git` and `cargo-deny` from `.devcontainer/Dockerfile`.
       - name: Install cargo-deny and git if missing from CI image
         run: |
           if ! command -v git >/dev/null 2>&1; then
