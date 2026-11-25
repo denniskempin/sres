@@ -270,7 +270,7 @@ Do not commit `corpus/`, `artifacts/`, `coverage/`.
 
 ### Benchmarks
 
-- Registered in `Cargo.toml` as `[[bench]]` with `harness = false`
+- Registered in `Cargo.toml` as `[[bench]]` using nightly `#[bench]` (`test::Bencher`, `#![feature(test)]`, `extern crate test`)
 - Compare `SyncSystem` / `BatchedSystem` / `AsyncSystem` variants — do not use as regression tests
 - ROM paths point at existing test ROMs, not duplicated binaries
 
