@@ -11,6 +11,7 @@ ARG DENY_VERSION=0.22.1
 # SRES Linux GUI/audio libs and Mesa software GL/Vulkan (llvmpipe/lavapipe) for headless egui_kittest.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    git \
     libasound2-dev \
     libegl-mesa0 \
     libgl1-mesa-dri \
@@ -78,7 +79,6 @@ LABEL org.opencontainers.image.description="Reproducible SRES DevPod container"
 
 # Dev utilities not needed by CI.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
     jq \
     openssh-client \
     python3 \

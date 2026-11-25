@@ -34,8 +34,11 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Install cargo-deny if missing from CI image
+      - name: Install cargo-deny and git if missing from CI image
         run: |
+          if ! command -v git >/dev/null 2>&1; then
+            apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+          fi
           if ! command -v cargo-deny >/dev/null 2>&1; then
             DENY_VERSION=0.22.1
             triple="x86_64-unknown-linux-musl"
