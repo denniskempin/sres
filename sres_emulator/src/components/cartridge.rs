@@ -7,7 +7,6 @@ use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
 use intbits::Bits;
-use packed_struct::prelude::*;
 
 #[derive(Clone, Default)]
 pub struct Cartridge {
@@ -136,55 +135,34 @@ impl SnesHeader {
 
     fn parse_header(data: &[u8]) -> Result<Self> {
         ensure!(data.len() >= 32, "Header too short");
-        let raw = RawSnesHeader::unpack_from_slice(&data[0..32]).unwrap();
-        ensure!(
-            raw.rom_size <= 16,
-            "Invalid ROM size shift: {}",
-            raw.rom_size
-        );
-        ensure!(
-            raw.sram_size <= 10,
-            "Invalid SRAM size shift: {}",
-            raw.sram_size
-        );
+        let mapping = data[21];
+        let rom_size = data[23];
+        let sram_size = data[24];
+        ensure!(rom_size <= 16, "Invalid ROM size shift: {rom_size}");
+        ensure!(sram_size <= 10, "Invalid SRAM size shift: {sram_size}");
         Ok(SnesHeader {
-            name: String::from_utf8(raw.name.to_vec())
+            name: std::str::from_utf8(&data[0..21])
                 .with_context(|| "ROM name is not ASCII")?
                 .trim()
                 .to_string(),
-            fast_rom: raw.mapping.bit(5),
-            mapping_mode: match raw.mapping.bits(0..4) {
+            fast_rom: mapping.bit(5),
+            mapping_mode: match mapping.bits(0..4) {
                 0 => MappingMode::LoRom,
                 1 => MappingMode::HiRom,
                 other => bail!("Invalid mapping mode: {other}"),
             },
-            rom_size: if raw.rom_size < 5 {
+            rom_size: if rom_size < 5 {
                 32 * 1024 // Use 32kB as a minimum. The test roms specify 2kB but provide 32kB
             } else {
-                (1 << raw.rom_size) * 1024
+                (1 << rom_size) * 1024
             },
-            sram_size: if raw.sram_size == 0 {
+            sram_size: if sram_size == 0 {
                 0
             } else {
-                (1 << raw.sram_size) * 1024
+                (1 << sram_size) * 1024
             },
         })
     }
-}
-
-#[derive(PackedStruct, Clone, Debug, Default, PartialEq, Eq)]
-#[packed_struct(bit_numbering = "msb0", endian = "lsb")]
-struct RawSnesHeader {
-    name: [u8; 21],
-    mapping: u8,
-    chipset: u8,
-    rom_size: u8,
-    sram_size: u8,
-    country: u8,
-    developer_id: u8,
-    version: u8,
-    checksum_complement: u16,
-    checksum: u16,
 }
 
 #[cfg(test)]

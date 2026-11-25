@@ -2,10 +2,10 @@
 //! HDMA sequencing lives in `hdma.rs`; this module stores channel state and `$43x7–$43xB`/`$43xF`.
 use std::fmt::Display;
 
+use bilge::prelude::*;
 use intbits::Bits;
 use log::info;
 use log::trace;
-use packed_struct::prelude::*;
 
 use crate::common::address::Address;
 use crate::common::address::AddressU24;
@@ -95,15 +95,15 @@ impl DmaController {
                         .bus_b_address
                         .add(bus_b_pattern[idx % bus_b_pattern.len()], Wrap::NoWrap);
 
-                    if channel.parameters.direction {
+                    if channel.parameters.direction() {
                         transfers.push((bus_b_address, channel.bus_a_address));
                     } else {
                         transfers.push((channel.bus_a_address, bus_b_address));
                     }
 
-                    let increment = if channel.parameters.fixed {
+                    let increment = if channel.parameters.fixed() {
                         0
-                    } else if channel.parameters.decrement {
+                    } else if channel.parameters.decrement() {
                         -1
                     } else {
                         1
@@ -252,11 +252,11 @@ impl DmaController {
     /// |+-------- Indirect (HDMA only)
     /// +--------- Direction: 0=Copy from A to B, 1=Copy from B to A
     fn write_dmapn(&mut self, channel: usize, value: u8) {
-        self.dma_channels[channel].parameters = DmaParameters::unpack_from_slice(&[value]).unwrap();
+        self.dma_channels[channel].parameters = DmaParameters::from(value);
     }
 
     fn peek_dmapn(&self, channel: usize) -> u8 {
-        self.dma_channels[channel].parameters.pack().unwrap()[0]
+        u8::from(self.dma_channels[channel].parameters)
     }
 
     /// Register 43N1: BBADn - DMA channel N B-bus address
@@ -382,7 +382,7 @@ impl DmaController {
 }
 
 pub(super) fn unit_pattern(parameters: &DmaParameters) -> &'static [u8] {
-    match parameters.transfer_pattern {
+    match parameters.transfer_pattern() {
         DmaTransferPattern::Pattern_0 => &[0],
         DmaTransferPattern::Pattern_0_1 => &[0, 1],
         DmaTransferPattern::Pattern_0_0 => &[0, 0],
@@ -435,19 +435,19 @@ impl Default for DmaChannel {
 
 impl Display for DmaChannel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let direction = if self.parameters.direction {
+        let direction = if self.parameters.direction() {
             "<-"
         } else {
             "->"
         };
-        let increment = if self.parameters.fixed {
+        let increment = if self.parameters.fixed() {
             "+0"
-        } else if self.parameters.decrement {
+        } else if self.parameters.decrement() {
             "-1"
         } else {
             "+1"
         };
-        let pattern = match self.parameters.transfer_pattern {
+        let pattern = match self.parameters.transfer_pattern() {
             DmaTransferPattern::Pattern_0 => "0",
             DmaTransferPattern::Pattern_0_1 => "0,1",
             DmaTransferPattern::Pattern_0_0 => "0,0",
@@ -473,7 +473,8 @@ impl Display for DmaChannel {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(PrimitiveEnum_u8, Clone, Debug, Copy, PartialEq, Eq, Default)]
+#[bitsize(3)]
+#[derive(Clone, Copy, Debug, Default, Eq, FromBits, PartialEq)]
 pub enum DmaTransferPattern {
     #[default]
     Pattern_0 = 0,
@@ -486,20 +487,51 @@ pub enum DmaTransferPattern {
     Undocumented_0_0_1_1 = 7,
 }
 
-#[derive(PackedStruct, Clone, Debug, Copy, PartialEq, Eq, Default)]
-#[packed_struct(bit_numbering = "msb0")]
+#[bitsize(8)]
+#[derive(Clone, Copy, DebugBits, Default, Eq, FromBits, PartialEq)]
 pub struct DmaParameters {
-    // True: Transfers A -> B, False: Transfers B -> A
-    pub direction: bool,
-    // HDMA only
-    pub indirect: bool,
-    // Reserved
-    pub _unused: bool,
-    // True: decrement A bus address, False: increment A bus address.
-    pub decrement: bool,
-    // True: fixed A bus address. Overrides increment/decrement
-    pub fixed: bool,
     // Pick one of 8 transfer patterns for the B bus address
-    #[packed_field(size_bits = "3", ty = "enum")]
-    pub transfer_pattern: DmaTransferPattern,
+    pub(super) transfer_pattern: DmaTransferPattern,
+    // True: fixed A bus address. Overrides increment/decrement
+    pub(super) fixed: bool,
+    // True: decrement A bus address, False: increment A bus address.
+    pub(super) decrement: bool,
+    // Reserved
+    unused: bool,
+    // HDMA only
+    pub(super) indirect: bool,
+    // True: Transfers B -> A, False: Transfers A -> B
+    pub(super) direction: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dma_parameters_bit_layout() {
+        let params = DmaParameters::from(0b1010_1100);
+        assert!(params.direction());
+        assert!(!params.indirect());
+        assert!(params.unused());
+        assert!(!params.decrement());
+        assert!(params.fixed());
+        assert_eq!(
+            params.transfer_pattern(),
+            DmaTransferPattern::Pattern_0_1_2_3
+        );
+        assert_eq!(u8::from(params), 0b1010_1100);
+
+        let indirect_decrement = DmaParameters::from(0b0101_0011);
+        assert!(!indirect_decrement.direction());
+        assert!(indirect_decrement.indirect());
+        assert!(!indirect_decrement.unused());
+        assert!(indirect_decrement.decrement());
+        assert!(!indirect_decrement.fixed());
+        assert_eq!(
+            indirect_decrement.transfer_pattern(),
+            DmaTransferPattern::Pattern_0_0_1_1
+        );
+        assert_eq!(u8::from(indirect_decrement), 0b0101_0011);
+    }
 }

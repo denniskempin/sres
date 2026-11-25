@@ -15,7 +15,6 @@ debug_log = []
 [dependencies]
 anyhow = "1.0"
 intbits = "0.2"
-packed_struct = "0.10"
 num-traits = "0.2"
 env_logger = { version = "0.11", default-features = false }
 log = "0.4"

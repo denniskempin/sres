@@ -173,9 +173,8 @@ Use `AddressU24`, `AddressU16`, `AddressU15` — not bare `u32`/`u16`. All arith
 
 ### Bit fields
 
-- Cartridge header / DMA / controller: `packed_struct` with `bit_numbering = "msb0"`
-- S-DSP registers: `bilge`
-- Ad-hoc register bytes: `intbits::Bits`
+- Register/flag bitfield structs (DMA, S-DSP): `bilge`
+- Ad-hoc register bytes & manual bit packing (cartridge header, controller): `intbits::Bits`
 
 ### Save states
 
