@@ -43,7 +43,6 @@ pub struct DebugUi {
     log_viewer: LogViewer,
     unimplemented_viewer: UnimplementedViewer,
     selected_memory_location: InternalLink,
-    pub show_profiler: bool,
     break_reason: Option<BreakReason>,
     event_filter_input: event::EventFilterInputState,
 }
@@ -56,7 +55,6 @@ impl DebugUi {
             ppu_debug: PpuDebugWindow::new(cc),
             apu_debug: ApuDebugWindow::new(),
             memory_viewer: MemoryViewer::new("CPU Bus"),
-            show_profiler: false,
             log_viewer: LogViewer::new(),
             unimplemented_viewer: UnimplementedViewer::new(),
             past_emulation_times: RingBuffer::default(),
@@ -110,7 +108,6 @@ impl DebugUi {
     }
 
     pub fn run_emulator(&mut self, emulator: &mut System, delta_t: f64) {
-        puffin::profile_function!();
         if !matches!(self.command, DebugCommand::Pause) {
             match self.run_command(emulator, self.command, delta_t) {
                 ExecutionResult::Normal => (),
@@ -130,9 +127,6 @@ impl DebugUi {
         self.alert.render(ctx);
         self.ppu_debug.show(ctx, emulator);
         self.apu_debug.show(ctx, emulator);
-        /* if self.show_profiler && !puffin_egui::profiler_window(ctx) {
-            self.show_profiler = false;
-        } */
         self.log_viewer
             .show(ctx, emulator, &mut self.selected_memory_location);
         self.unimplemented_viewer.show(ctx, emulator);
@@ -191,9 +185,6 @@ impl DebugUi {
             }
             if ui.button("Memory").clicked() {
                 self.memory_viewer.toggle();
-            }
-            if ui.button("Profiler").clicked() {
-                self.show_profiler = !self.show_profiler;
             }
             if ui.button("Log Viewer").clicked() {
                 self.log_viewer.toggle();

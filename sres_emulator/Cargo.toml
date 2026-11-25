@@ -17,25 +17,23 @@ anyhow = "1.0"
 intbits = "0.2"
 packed_struct = "0.10"
 num-traits = "0.2"
-env_logger = "0.11"
+env_logger = { version = "0.11", default-features = false }
 log = "0.4"
 colored = "3"
-puffin = "0.20"
 itertools = "0.15"
 strum = { version = "0.28", features = ["derive"] }
 bilge = "0.5"
-bitcode = "0.6.9"
+bitcode = { version = "0.6.9", default-features = false, features = ["std", "derive"] }
 hound = "3.5"
 lazy_static = "1.5"
 
 [dev-dependencies]
-tempfile = "3.27"
 pretty_assertions = "1.4"
 criterion = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 liblzma = { version = "0.4", features = ["static"] }
-image = { version = "0.25", features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
 rasciigraph = "0.3"
 
 [[bench]]
