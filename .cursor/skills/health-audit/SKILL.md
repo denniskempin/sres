@@ -100,10 +100,10 @@ Apply, in order:
 Verify after crate or toolchain edits:
 
 ```bash
-cargo clippy --workspace --all-targets
-cargo fmt --check
-cargo nextest run --workspace
-cargo check --target wasm32-unknown-unknown -p sres_egui
+cargo clippy --workspace --all-targets --locked
+cargo fmt --all -- --check
+cargo nextest run --workspace --locked
+cargo check --target wasm32-unknown-unknown -p sres_egui --locked
 ```
 
 Skip `trunk build` unless frontend, WASM deps, or the deploy job changed.

@@ -31,7 +31,7 @@ run_test() {
 run_wasm() {
   banner "WASM Build"
   # trunk 0.21 parses NO_COLOR as a bool and rejects the common value `1`.
-  (cd sres_egui && NO_COLOR=true trunk build)
+  (cd sres_egui && NO_COLOR=true trunk build --locked)
 }
 
 if [[ $# -eq 0 ]]; then
