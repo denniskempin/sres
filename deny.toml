@@ -1,12 +1,6 @@
 [advisories]
 yanked = "deny"
-ignore = [
-    { id = "RUSTSEC-2024-0436", reason = "paste is unmaintained; transitive via pulp/rav1e -> image 0.25" },
-    { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained; transitive via owned_ttf_parser -> ab_glyph -> sctk-adwaita -> winit" },
-    { id = "RUSTSEC-2026-0370", reason = "zvariant is unmaintained (merged into zbus 6); transitive via accesskit_unix" },
-    { id = "RUSTSEC-2026-0371", reason = "zbus_names is unmaintained (merged into zbus 6); transitive via accesskit_unix" },
-    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive is unmaintained (merged into zbus 6); transitive via accesskit_unix" },
-]
+ignore = []
 
 [licenses]
 confidence-threshold = 0.8
@@ -18,7 +12,6 @@ allow = [
     "BSL-1.0",
     "ISC",
     "MIT",
-    "MPL-2.0",
     "OFL-1.1",
     "Ubuntu-font-1.0",
     "Unicode-3.0",

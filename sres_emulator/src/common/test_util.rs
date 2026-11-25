@@ -122,11 +122,12 @@ mod tests {
 
     #[test]
     fn wav_file_roundtrip_and_odd_chunk_padding() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("test.wav");
+        let path = std::env::temp_dir().join(format!("sres_wav_test_{}.wav", std::process::id()));
         let samples = vec![0, 100, -100, i16::MAX, i16::MIN];
         write_snes_wav(&samples, &path);
-        assert_eq!(read_snes_wav(&path), samples);
+        let read_back = read_snes_wav(&path);
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(read_back, samples);
 
         // Insert an odd-length metadata chunk before `data` to verify RIFF word alignment.
         let raw = encode_snes_wav(&samples);
