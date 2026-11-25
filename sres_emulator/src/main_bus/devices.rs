@@ -143,8 +143,6 @@ impl<DeviceT: BusDeviceU24> BatchedBusDeviceU24<DeviceT> {
     }
 
     pub fn flush(&mut self) {
-        let cache_size = format!("{} {}", DeviceT::NAME, self.cache.len());
-        puffin::profile_function!(&cache_size);
         for action in self.cache.drain(..) {
             match action {
                 BusAction::Clock(clock) => {
@@ -199,7 +197,6 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> BusDeviceU24 for AsyncBusDeviceU24<
     }
 
     fn read(&mut self, addr: AddressU24) -> u8 {
-        puffin::profile_function!(&DeviceT::NAME);
         self.flush();
         self.inner.lock().unwrap().read(addr)
     }
@@ -231,12 +228,9 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
         thread::spawn(move || {
             while let Ok(action) = receiver.recv() {
                 let mut inner = inner.lock().unwrap();
-                {
-                    puffin::profile_scope!("processing events", &DeviceT::NAME);
+                Self::process_action(&mut inner, action);
+                while let Ok(action) = receiver.try_recv() {
                     Self::process_action(&mut inner, action);
-                    while let Ok(action) = receiver.try_recv() {
-                        Self::process_action(&mut inner, action);
-                    }
                 }
             }
         });
@@ -250,7 +244,6 @@ impl<DeviceT: BusDeviceU24 + Send + 'static> AsyncBusDeviceU24<DeviceT> {
     }
 
     pub fn flush(&mut self) {
-        puffin::profile_function!(&DeviceT::NAME);
         // Wait for lock to free after all actions have been processed
         // (I guess there could be a race condition if the thread has not yet started processing)
         drop(self.inner.lock().unwrap());

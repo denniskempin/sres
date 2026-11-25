@@ -226,8 +226,6 @@ impl EmulatorApp {
     }
 
     fn emulator_ui(&mut self, ui: &mut Ui) {
-        puffin::profile_function!();
-        puffin::GlobalProfiler::lock().new_frame();
         let start = Instant::now();
 
         egui::Panel::top("menu_bar").show(ui, |ui| {
@@ -243,7 +241,6 @@ impl EmulatorApp {
         let stable_dt = ui.input(|input| input.stable_dt as f64);
 
         if !self.emulator.debugger().enabled() {
-            puffin::set_scopes_on(false);
             if self.audio_output.is_playing() {
                 self.emulator.execute_for_audio_samples(
                     self.audio_output.samples_needed_to_maintain_buffer(),
@@ -252,7 +249,6 @@ impl EmulatorApp {
                 self.emulator.execute_for_duration(stable_dt);
             }
         } else {
-            puffin::set_scopes_on(self.debug_ui.show_profiler);
             self.debug_ui.run_emulator(&mut self.emulator, stable_dt);
 
             egui::Panel::right("right_debug_panel")
