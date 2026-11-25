@@ -102,6 +102,8 @@ Verify after crate or toolchain edits:
 ```bash
 cargo clippy --workspace --all-targets --locked
 cargo fmt --all -- --check
+cargo deny check
+(cd sres_emulator/fuzz && cargo deny check)
 cargo nextest run --workspace --locked
 cargo check --target wasm32-unknown-unknown -p sres_egui --locked
 ```

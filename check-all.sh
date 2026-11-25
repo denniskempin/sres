@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PR checks. Same commands as `.github/workflows/postsubmit.yml` (`health` / `test` / `wasm`).
-# Usage: ./check-all.sh [fmt|clippy|test|wasm]...
-# No arguments runs all four.
+# Usage: ./check-all.sh [fmt|clippy|deny|test|wasm]...
+# No arguments runs all five.
 set -euo pipefail
 
 banner() {
@@ -16,6 +16,11 @@ run_fmt() {
 run_clippy() {
   banner "Clippy"
   cargo clippy --workspace --all-targets --locked
+}
+
+run_deny() {
+  banner "Deny"
+  cargo deny check
 }
 
 run_test() {
@@ -35,23 +40,24 @@ run_wasm() {
 }
 
 if [[ $# -eq 0 ]]; then
-  set -- fmt clippy test wasm
+  set -- fmt clippy deny test wasm
 fi
 
 for check in "$@"; do
   case "$check" in
     fmt) run_fmt ;;
     clippy) run_clippy ;;
+    deny) run_deny ;;
     test) run_test ;;
     wasm) run_wasm ;;
     -h | --help | help)
-      echo "Usage: $0 [fmt|clippy|test|wasm]..."
-      echo "No arguments runs all PR checks (fmt, clippy, test, wasm)."
+      echo "Usage: $0 [fmt|clippy|deny|test|wasm]..."
+      echo "No arguments runs all PR checks (fmt, clippy, deny, test, wasm)."
       exit 0
       ;;
     *)
       echo "Unknown check: $check" >&2
-      echo "Usage: $0 [fmt|clippy|test|wasm]..." >&2
+      echo "Usage: $0 [fmt|clippy|deny|test|wasm]..." >&2
       exit 1
       ;;
   esac

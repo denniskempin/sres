@@ -6,6 +6,7 @@ LABEL org.opencontainers.image.description="Reproducible SRES CI container"
 ARG DEBIAN_FRONTEND=noninteractive
 ARG NEXTEST_VERSION=0.9.152
 ARG TRUNK_VERSION=v0.22.2
+ARG DENY_VERSION=0.22.1
 
 # SRES Linux GUI/audio libs and Mesa software GL/Vulkan (llvmpipe/lavapipe) for headless egui_kittest.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -21,18 +22,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Install SHA-256 verified cargo-nextest and trunk binaries into /usr/local/bin (unaffected by CARGO_HOME=/cargo).
+# Install SHA-256 verified cargo-nextest, trunk, and cargo-deny binaries into /usr/local/bin (unaffected by CARGO_HOME=/cargo).
 RUN set -eux; \
     case "$(uname -m)" in \
       x86_64) \
         triple="x86_64-unknown-linux-gnu"; \
+        musl_triple="x86_64-unknown-linux-musl"; \
         nextest_sha256="d039b43c3e0958441b6ad0a39c8884d018b3d2e8fb9928f209074b1100b5e17a"; \
         trunk_sha256="26fca8a9952e46cd7d8b8b9a2e2c1786c090fc14b8e10b6678ab4d0f9f1a385f"; \
+        deny_sha256="13f7e825e9cb811c2f8de63f29b0f45851dfb53004029f0f2501af524728364d"; \
         ;; \
       aarch64) \
         triple="aarch64-unknown-linux-gnu"; \
+        musl_triple="aarch64-unknown-linux-musl"; \
         nextest_sha256="ca1f81a5b86533eb45ab97e0064aa88e925e53aab9a698ca6331a7cad1f85f07"; \
         trunk_sha256="be7b50f2d24e9cfbaea5551be2abf3fbabac10412113213a8efe94448e514414"; \
+        deny_sha256="0bac0838a1653ce693e4602b8634d15ca179edd2198e438af9c35ab1c551d509"; \
         ;; \
       *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;; \
     esac; \
@@ -47,7 +52,13 @@ RUN set -eux; \
       "https://github.com/trunk-rs/trunk/releases/download/${TRUNK_VERSION}/trunk-${triple}.tar.gz"; \
     echo "${trunk_sha256}  /tmp/trunk.tar.gz" | sha256sum -c -; \
     tar -xzf /tmp/trunk.tar.gz -C /usr/local/bin trunk; \
-    rm /tmp/trunk.tar.gz
+    rm /tmp/trunk.tar.gz; \
+    \
+    curl --proto '=https' --tlsv1.2 -fsSL -o /tmp/cargo-deny.tar.gz \
+      "https://github.com/EmbarkStudios/cargo-deny/releases/download/${DENY_VERSION}/cargo-deny-${DENY_VERSION}-${musl_triple}.tar.gz"; \
+    echo "${deny_sha256}  /tmp/cargo-deny.tar.gz" | sha256sum -c -; \
+    tar -xzf /tmp/cargo-deny.tar.gz -C /usr/local/bin --strip-components=1 "cargo-deny-${DENY_VERSION}-${musl_triple}/cargo-deny"; \
+    rm /tmp/cargo-deny.tar.gz
 
 # Pre-install the pinned nightly toolchain from rust-toolchain.toml.
 COPY rust-toolchain.toml /tmp/rust-toolchain.toml

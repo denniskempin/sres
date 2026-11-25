@@ -15,9 +15,10 @@ SRES is a SNES emulator in Rust.
 - Build: `cargo build`
 - Run (headless): `DISPLAY=:1 cargo run`
 - Lint: `cargo clippy --workspace --all-targets --locked`
+- Supply chain: `cargo deny check`
 - Format: `cargo fmt --all -- --check`
 - Test: `cargo nextest run --workspace --locked` (or `cargo test`)
-- Full check: `./check-all.sh` (same commands as CI; subset: `fmt`, `clippy`, `test`, `wasm`)
+- Full check: `./check-all.sh` (same commands as CI; subset: `fmt`, `clippy`, `deny`, `test`, `wasm`)
 - Fix: `./fix-all.sh`
 - CI: `.github/workflows/postsubmit.yml` (`health`/`test`/`wasm` on PRs and `main`; Pages `deploy` on `main` after `required`). Jobs run `check-all.sh` inside `.devcontainer/Dockerfile` `ci` target (`ghcr.io/denniskempin/sres-ci`, published with `ghcr.io/denniskempin/sres-dev` by `.github/workflows/dev-image.yml`).
 
@@ -119,9 +120,10 @@ Each module and test directory under `sres_emulator/` and `sres_egui/src` has it
 ## Environment Gotchas
 
 - **Nightly Rust**: Required. `rust-toolchain.toml` specifies channel; `rust-src` component needed.
-- **Dev container**: `.devcontainer/` (DevPod / Dev Containers) provides the `rust-toolchain.toml` toolchain, `cargo-nextest`, `trunk`, Linux GUI/audio libraries, and Mesa llvmpipe/lavapipe for GPU-less `egui_kittest` snapshots. Persists `/cargo`, `/target`, and `/home/dev/.gemini` in named volumes. Outside the container on Linux, `apt install libasound2-dev libxkbcommon-x11-0`.
+- **Dev container**: `.devcontainer/` (DevPod / Dev Containers) provides the `rust-toolchain.toml` toolchain, `cargo-nextest`, `cargo-deny`, `trunk`, Linux GUI/audio libraries, and Mesa llvmpipe/lavapipe for GPU-less `egui_kittest` snapshots. Persists `/cargo`, `/target`, and `/home/dev/.gemini` in named volumes. Outside the container on Linux, `apt install libasound2-dev libxkbcommon-x11-0`.
 - **Binary test assets**: `.sfc`, `.xz`, `.png`, `.wav` are committed directly to git (LFS was removed in `309c47b`). Missing files fail the test; Cargo does not reassemble.
 - **bass**: Assembler for committed test ROM sources (`arch snes.cpu` / `arch snes.smp`). Test drivers load `.sfc` only.
+- **cargo-deny**: `deny.toml` checks advisories, licenses, bans, and sources for the workspace and `sres_emulator/fuzz/` (`cargo deny check`).
 - **cargo-nextest**: Preferred runner. `-E` uses nextest expression syntax (`|` is OR, `+` is AND).
 - **trunk**: WASM bundler for `./check-all.sh wasm`. `cargo install --locked trunk` outside the container.
 
