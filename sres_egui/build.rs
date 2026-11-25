@@ -48,7 +48,7 @@ fn create_rom_file_info(dir_path: &Path) -> String {
             rom_code.push_str(&format!(
                 r#"
                 RomFileInfo {{
-                    name: "{}",
+                    name: {:?},
                     image: {},
                     attribution: {},
                     path: {:?},
@@ -69,7 +69,7 @@ fn create_category_info(dir_path: &Path) -> String {
     format!(
         r#"
     CategoryInfo {{
-        name: "{}",
+        name: {:?},
         roms: &[{}]
     }},"#,
         dir_path.file_name().unwrap().to_str().unwrap(),
