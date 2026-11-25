@@ -34,8 +34,21 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Format and Clippy
-        run: ./check-all.sh fmt clippy
+      - name: Install cargo-deny if missing from CI image
+        run: |
+          if ! command -v cargo-deny >/dev/null 2>&1; then
+            DENY_VERSION=0.22.1
+            triple="x86_64-unknown-linux-musl"
+            deny_sha256="13f7e825e9cb811c2f8de63f29b0f45851dfb53004029f0f2501af524728364d"
+            curl --proto '=https' --tlsv1.2 -fsSL -o /tmp/cargo-deny.tar.gz \
+              "https://github.com/EmbarkStudios/cargo-deny/releases/download/${DENY_VERSION}/cargo-deny-${DENY_VERSION}-${triple}.tar.gz"
+            echo "${deny_sha256}  /tmp/cargo-deny.tar.gz" | sha256sum -c -
+            tar -xzf /tmp/cargo-deny.tar.gz -C /usr/local/bin --strip-components=1 "cargo-deny-${DENY_VERSION}-${triple}/cargo-deny"
+            rm /tmp/cargo-deny.tar.gz
+          fi
+
+      - name: Format, Clippy, and Deny
+        run: ./check-all.sh fmt clippy deny
 
   test:
     runs-on: ubuntu-latest
