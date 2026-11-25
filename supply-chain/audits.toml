@@ -1,718 +1,1102 @@
 
 # cargo-vet audits file
 
-[audits]
+[criteria.ai-safe-to-run]
+description = """
+AI-assisted safe-to-run review (Hydrogen swarm + deterministic capability-sink gate).
+Verifies that compiling or running the crate will not execute malicious behavior
+(credential/env exfiltration, unexpected network/process execution, filesystem
+tampering outside OUT_DIR, linker/constructor hooks, or hidden binary payloads).
+"""
+
+[[audits.accesskit]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.24.1"
+notes = "Reviewed (0 sinks verified): Pure `#![no_std]` accessibility tree schema and 2D geometry crate (`build = false`) with zero capability sinks and no unsafe or platform I/O code."
+
+[[audits.ahash]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.8.11 -> 0.8.12"
+notes = "Dual-reviewed (functional + red-team, 1 sinks verified): Delta fixes cfg check-cfg names in build.rs and src/, updates getrandom/zerocopy/portable-atomic dependencies, and cleans up conversion helpers; build.rs only emits rustc cfgs."
+
+[[audits.alsa]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.11.0"
+notes = "Reviewed (4 sinks verified): Verified Cargo.toml (build=false), src/lib.rs, and all 4 flagged mmap/dynload sinks. Safe Rust wrappers over alsa-sys and Linux ALSA kernel ioctl/mmap interfaces with no network, process, env, fs, or constructor hooks."
+
+[[audits.alsa-sys]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.2.1 -> 0.4.0"
+notes = "Dual-reviewed (functional + red-team, 4 sinks verified): Reviewed full diff.patch, Cargo.toml, build.rs, regenerate_bindings.rs/.sh, and src/lib.rs; delta replaces manual bindings with bindgen-generated FFI declarations and an optional use-bindgen feature writing to OUT_DIR."
+
+[[audits.arboard]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "3.6.1"
+notes = "Reviewed (6 sinks verified): Cross-platform OS clipboard wrapper (`NSPasteboard`, Windows clipboard APIs, X11, Wayland) with `build = false` and a benign local leak-check helper script `tools/run_with_leaks.sh`. All 6 sinks are normal backend selection, Windows CF_HDROP path resolution, test fixture setup, and a Linux clipboard-daemon example."
+
+[[audits.arrayvec]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.7.6 -> 0.7.8"
+notes = "Reviewed (0 sinks verified): Delta adds spare_capacity_mut, fixes a ZST double-drop in extend via mem::forget, uses u16 length on 16-bit targets, and updates lifetime elision and tests."
+
+[[audits.as-raw-xcb-connection]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "1.0.1"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml and src/lib.rs (no build.rs, 0 dependencies); provides only no_std trait definitions and pointer wrapper ValidConnection for libxcb FFI interop."
+
+[[audits.autocfg]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.5.0 -> 1.5.1"
+notes = "Dual-reviewed (functional + red-team, 1 sinks verified): Delta removes a bash test helper script and refactors tests/wrappers.rs to use current_exe() as a mock RUSTC_WRAPPER during test execution; library code is unchanged."
+
+[[audits.bitcode]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.6.9"
+notes = "Reviewed (6 sinks verified): Pure bitwise binary serialization library (`build = false`) across all 43 Rust source files with no filesystem, process, env, network I/O, or constructor hooks. All 6 flagged sinks only implement `Encode`/`Decode` conversion traits for `std::net` address value types."
+
+[[audits.bitcode_derive]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.6.9"
+notes = "Dual-reviewed (functional + red-team, 0 sinks verified): Full review of Cargo.toml and all 6 src/*.rs files confirms a pure proc-macro crate parsing #[bitcode] attributes and emitting Encode/Decode impls with no build script or side effects."
+
+[[audits.bitflags]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "2.11.1 -> 2.13.2"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml, dossier, and full diff.patch: pure declarative macro and trait updates (flag_name support, all_named, IterEqualNames, const-eval all(), clippy allows, tests/docs) with no build script or unsafe/system sinks."
+
+[[audits.bytemuck]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.22.0 -> 1.25.2"
+notes = "Reviewed (0 sinks verified): Delta normalizes line endings to LF and adds impl_core_error, zeroable_unwind_fn, derive::EnumTagIntegerBytes, array NoUninit/AnyBitPattern impls, and rustversion gating for nightly_portable_simd."
+
+[[audits.bytemuck_derive]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.9.3 -> 1.12.1"
+notes = "Dual-reviewed (functional + red-team, 0 sinks verified): Delta updates syn to 3.0, extends NoUninit/CheckedBitPattern/TransparentWrapper derive logic and const padding assertions, and adds unit tests with no suspicious capabilities."
+
+[[audits.concurrent-queue]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "2.5.0"
+notes = "Reviewed (2 sinks verified): Verified Cargo.toml (no build.rs) and all 10 source, test, and bench files; lock-free MPMC queue using standard atomics and a stack-local x86 lock not instruction as a SeqCst fence optimization."
+
+[[audits.core-graphics]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.24.0 -> 0.23.2"
+notes = "Reviewed (0 sinks verified): Delta is a version downgrade reverting bitflags/core-foundation/core-graphics-types dependency versions and removing display reconfiguration callback and font metric wrappers."
+
+[[audits.coreaudio-rs]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.14.2"
+notes = "Reviewed (1 sinks verified): Apple CoreAudio and AudioUnit wrapper crate with `build = false` and no network, filesystem, env, or constructor hooks. Its single sink is `std::process::id()` in an example checking CoreAudio hog-mode ownership."
+
+[[audits.cpal]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.18.2"
+notes = "Dual-reviewed (functional + red-team, 12 sinks verified): Verified Cargo.toml, build.rs, and all flagged sink sites across audio backends, examples, and tests; sinks only read standard audio/Cargo env vars, format process IDs for audio client/stream names, or write WAV output in an example binary."
+
+[[audits.crc32fast]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.4.2 -> 1.5.2"
+notes = "Dual-reviewed (functional + red-team, 3 sinks verified): Delta adds build.rs for rustc minor-version cfg gating, adds AVX2/AVX-512 VPCLMULQDQ and 3-way aarch64 CRC32 SIMD paths, updates combine math, and adds exhaustive tests."
+
+[[audits.dispatch]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.2.0"
+notes = "Reviewed (1 sinks verified): Verified Cargo.toml (no build.rs, 0 dependencies) and all 7 source files; provides standard FFI bindings and safe wrappers around Apple's Grand Central Dispatch (libdispatch/System), with process::exit only in an example."
+
+[[audits.dlib]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.5.3"
+notes = "Reviewed (6 sinks verified): Verified Cargo.toml (build = false) and src/lib.rs; provides declarative macro_rules! wrappers over libloading for caller-specified optional dynamic library loading with no hardcoded paths or build-time execution."
+
+[[audits.downcast-rs]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.2.0 -> 1.2.1"
+notes = "Reviewed (0 sinks verified): Delta consolidates trait bounds on downcast_arc in src/lib.rs to satisfy Clippy, updates docs/CI, and retains #![deny(unsafe_code)]."
+
+[[audits.either]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.16.0 -> 1.19.0"
+notes = "Reviewed (0 sinks verified): Delta adds is_left_or/is_right_or, Extend/FromIterator for (A, B), core::fmt trait impls via macro, and #[inline] annotations with corresponding tests and docs."
+
+[[audits.errno]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.3.14 -> 0.3.15"
+notes = "Reviewed (0 sinks verified): Delta adds target_os/env cfgs (nuttx, fuchsia, qnx, mlibc) to errno_location in src/unix.rs, updates clippy MSRV and doc URLs, with no build script or malicious behavior."
+
+[[audits.fax]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.2.7"
+notes = "Reviewed (29 sinks verified): Pure `#![deny(unsafe_code)]` CCITT Group 3/4 fax codec with `build = false` and no build hooks, constructor sections, or network/process behavior. All 29 sinks reside in integration tests and CLI examples reading/writing local image test vectors or user-supplied paths."
+
+[[audits.font-types]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.12.7 -> 0.12.5"
+notes = "Reviewed (0 sinks verified): Delta is a version downgrade removing TableDataRef and the fmt_shortest fixed-point Display formatter, leaving only standard font scalar types."
+
+[[audits.foreign-types-macros]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.2.3 -> 0.2.4"
+notes = "Dual-reviewed (functional + red-team, 0 sinks verified): Delta only bumps crate version, updates syn dependency from 2.0 to 3.0, and updates Cargo.lock and VCS metadata with no source code changes."
+
+[[audits.gethostname]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "1.1.0"
+notes = "Reviewed (3 sinks verified): Verified Cargo.toml (build = false) and src/lib.rs; retrieves the system hostname via rustix::system::uname on Unix or GetComputerNameExW on Windows, with Command calls confined to #[cfg(test)]."
+
+[[audits.gl_generator]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.14.0"
+notes = "Dual-reviewed (functional + red-team, 0 sinks verified): Read all 13 Rust source files and Cargo.toml; pure OpenGL/EGL/WGL/GLX bindings generator with no build script, no unsafe hooks, and no I/O outside caller-supplied io::Write sinks."
+
+[[audits.guillotiere]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.7.0"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml (build = false) and all 3 source files; pure 2D rectangle texture atlas allocator and optional SVG writer with no unsafe code or external I/O sinks."
+
+[[audits.half]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "2.5.0 -> 2.7.1"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml, dossier, and full diff.patch: moves bfloat/binary16 implementations into submodules, updates arch intrinsics (aarch64/x86/loongarch64), adds zerocopy derives and slice/rand_distr helpers with no I/O, network, env, process, or ctor hooks."
+
+[[audits.intbits]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.2.0"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml and all 3 source files (no build.rs, 0 dependencies); pure no_std safe Rust bit-indexing traits and unit tests with no I/O or unsafe code."
+
+[[audits.khronos_api]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "3.1.0"
+notes = "Dual-reviewed (functional + red-team, 4 sinks verified): Read build.rs, src/lib.rs, and Cargo.toml in full; build.rs only enumerates local api_webgl/extensions/*/extension.xml files to emit include_bytes! bindings into OUT_DIR."
+
+[[audits.libc]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.2.190 -> 0.2.191"
+notes = "Dual-reviewed (functional + red-team, 24 sinks verified): Delta adds Emscripten ABI cfg checks in build.rs and platform FFI bindings/constants in src/; full review of build.rs confirms all 24 env/process sinks are standard target/compiler version detection."
+
+[[audits.libloading]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.8.6 -> 0.8.9"
+notes = "Reviewed (1 sinks verified): Delta migrates Windows imports to windows-link, adds os::windows::Library::pin() and cygwin support; pre-existing tests/nagisa32.dll and tests/nagisa64.dll fixtures are unchanged."
+
+[[audits.liblzma]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.4.8"
+notes = "Reviewed (2 sinks verified): Safe Rust streaming wrapper around `liblzma-sys` FFI with `build = false` and no network, env, process, or constructor hooks. Both flagged sinks are in `tests/xz.rs` reading local `.xz` test vectors."
+
+[[audits.liblzma-sys]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.4.9"
+notes = "Dual-reviewed (functional + red-team, 14 sinks verified): Verified Cargo.toml, build.rs, config.h, wasm-shim headers, and all Rust sources; build.rs compiles bundled upstream xz-5.8.4 C files directly via cc without running any .sh/.m4 scripts, and wasm_shim.rs only exports C-ABI alloc/memory shims for wasm32 targets."
+
+[[audits.litrs]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.4.1 -> 1.0.1"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml, dossier, and full diff.patch: adds CStringLit parsing, fixes raw-string/unescape edge cases, updates Buffer::Cow associated types, and removes default proc-macro2 feature with pure literal-parsing Rust code."
+
+[[audits.log]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.4.34 -> 0.4.35"
+notes = "Dual-reviewed (functional + red-team, 0 sinks verified): Delta only updates GitHub CI/release workflows, Cargo.lock, docs/changelog, and removes html_root_url in src/lib.rs with no functional code changes."
+
+[[audits.mach2]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.4.2 -> 0.6.0"
+notes = 'Reviewed (0 sinks verified): Verified Cargo.toml, dossier, and full diff.patch: upgrades to edition 2024 using core::ffi instead of libc and expands Darwin Mach 3.0 extern "C" FFI bindings/types/constants; no build script, constructors, or network/fs/process sinks.'
+
+[[audits.miniz_oxide]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.8.9 -> 0.9.1"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml, dossier, and full diff.patch: crate sets #![forbid(unsafe_code)]; changes add flush modes, with_params/decompress_with_limit, Huffman validation fixes, wasm32 heap-boxed state, and no_std serde fixes without any security sinks."
+
+[[audits.moxcms]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.8.1"
+notes = "Reviewed (9 sinks verified): Verified Cargo.toml (build=false), src/lib.rs, math/conversion module layout, and all 9 fs sinks. Pure ICC color management library with no unsafe outside opt-in SIMD modules and all fs::read calls confined to #[cfg(test)] unit tests."
+
+[[audits.polling]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "3.11.0"
+notes = "Reviewed (25 sinks verified): Cross-platform I/O readiness wrapper over epoll, kqueue, illumos event ports, POSIX poll, and Windows IOCP/AFD with `build = false`. All 25 sinks are loopback `127.0.0.1` sockets in tests/examples, a panic-abort FFI guard in IOCP WaitHandle, and a kqueue `Child` process PID wrapper."
+
+[[audits.profiling]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "1.0.18"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml (build = false) and all 8 source files; consists solely of thin macro_rules! wrappers and SuperluminalGuard forwarding profiling scopes to optional profiler backends."
+
+[[audits.pxfm]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.1.30"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml (build=false, zero dependencies), src/lib.rs, and sampled math/table modules. Crate implements pure floating-point math functions and static lookup tables with no IO, process, network, or linker hooks."
+
+[[audits.quick-error]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.2.3 -> 2.0.1"
+notes = "Reviewed (2 sinks verified): Delta updates the macro crate to Rust 2018 edition, replaces Error::cause with Error::source, and updates tests and examples; no malicious code or build scripts."
+
+[[audits.self_cell]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "1.3.0"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml (no build.rs) and both src/lib.rs and src/unsafe_self_cell.rs; pure no_std + alloc macro and pointer/atomic helpers for heap-allocated self-referential structs."
+
+[[audits.simd-adler32]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.3.7 -> 0.3.10"
+notes = "Reviewed (0 sinks verified): Delta implements ARM NEON Adler-32 acceleration in src/imp/neon.rs, refines wasm cfg gates and nightly feature attributes, and updates test dev-dependencies."
+
+[[audits.slotmap]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "1.1.1"
+notes = "Dual-reviewed (functional + red-team, 0 sinks verified): Read Cargo.toml, build.rs, src/ files, and examples; build.rs only queries rustc version via version_check to emit cfg flags, and the crate implements pure in-memory slot map containers."
+
+[[audits.smallvec]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.15.2 -> 1.16.1"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml, dossier, and full diff.patch: removes debugger_visualizer feature/files, refactors push branching and SmallVecData::empty MaybeUninit handling, and applies formatting/Cargo.lock updates with no malicious sinks."
+
+[[audits.smol_str]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.3.2 -> 0.2.2"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml, dossier, and full diff.patch: downgrade delta removing 0.3.x borsh/SmolStrBuilder/AsRef additions and restoring 0.2.2 Writer and new_inline_from_ascii APIs; no build script or suspicious sinks."
+
+[[audits.strum]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.27.2 -> 0.28.0"
+notes = "Reviewed (0 sinks verified): Delta bumps optional phf/strum_macros dependencies, removes the std cfg gate on ParseError Display using core::fmt, and updates docs."
+
+[[audits.strum_macros]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.27.2 -> 0.28.0"
+notes = "Dual-reviewed (functional + red-team, 0 sinks verified): Delta updates MSRV to 1.71, refactors macro token generation for EnumDiscriminants and EnumString, and adds #[automatically_derived] with no I/O, env, or process usage."
+
+[[audits.unicode-general-category]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "1.1.0"
+notes = "Dual-reviewed (functional + red-team, 4 sinks verified): Read build.rs, Cargo.toml, and all src/ files; build.rs compiles static Unicode GeneralCategory lookup tables from src/tables.rs and writes category.rs solely inside OUT_DIR."
+
+[[audits.uuid]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "1.8.0 -> 1.29.3"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml, dossier, and full diff.patch: adds NonNilUuid, ContextV7 monotonic timestamps, const macro_rules! uuid!, updated parser/rng (getrandom/rand/wasm webcrypto), and zerocopy transmute macros with no malicious sinks."
+
+[[audits.version_check]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+delta = "0.9.4 -> 0.9.5"
+notes = "Dual-reviewed (functional + red-team, 0 sinks verified): Delta only bumps version to 0.9.5 and adds doc comments on feature detection in src/lib.rs and src/channel.rs with no functional code changes."
+
+[[audits.x11-dl]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "2.21.0"
+notes = "Dual-reviewed (functional + red-team, 7 sinks verified): Verified Cargo.toml, build.rs, src/lib.rs, and src/link.rs; build.rs queries pkg-config libdirs to emit OUT_DIR/config.rs, and runtime dlopen/dlsym only loads X11 shared libraries and symbols."
+
+[[audits.x11rb]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.13.2"
+notes = "Reviewed (28 sinks verified): Verified Cargo.toml (build=false), src/lib.rs, generated protocol module layout, and all 28 sinks across src/, examples/, and tests/. Network, env, fs, and optional libxcb dynamic loading strictly implement standard X11 client connectivity, cursor/resource loading, and example/test fixtures."
+
+[[audits.x11rb-protocol]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.13.2"
+notes = "Reviewed (16 sinks verified): Verified Cargo.toml (build=false), src/lib.rs (#![no_std], #![forbid(unsafe_code)]), generated protocol bindings, and all 16 flagged sinks. Sinks are limited to loopback TCP in Criterion benchmarks, read-only Xauthority/Xresources/DISPLAY lookups under std/resource_manager features, and unit tests."
+
+[[audits.xcursor]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.3.11"
+notes = "Reviewed (5 sinks verified): Verified Cargo.toml (build = false, 0 dependencies) and both src/lib.rs and src/parser.rs; reads XDG/XCursor environment variables and index.theme files purely to locate and parse XCursor icon files."
+
+[[audits.xkeysym]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.2.1"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml, src/lib.rs (#![no_std], #![forbid(unsafe_code)]), and src/automatically_generated.rs. Crate consists solely of X11 keysym constants, name/char lookup tables, and case-conversion logic with no IO, process, network, or linker hooks."
+
+[[audits.xml-rs]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.8.29"
+notes = "Dual-reviewed (functional + red-team, 2 sinks verified): Verified Cargo.toml (build = false), lib.rs (#![forbid(unsafe_code)]), and the optional xml-analyze binary; pure Rust XML parser/emitter with no malicious build-time or runtime behavior."
+
+[[audits.zune-core]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.5.3"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml (build = false) and all 18 source files; pure no_std-compatible image metadata types, decoder/encoder options, logging macros, and bytestream reader/writer wrappers with no unsafe or OS sinks."
+
+[[audits.zune-jpeg]]
+who = "Hydrogen Swarm (AI-assisted)"
+criteria = "ai-safe-to-run"
+version = "0.5.15"
+notes = "Reviewed (0 sinks verified): Verified Cargo.toml (build=false, depends only on zune-core), src/lib.rs, and decoder/IDCT/color-conversion/SIMD modules. Unsafe blocks are restricted to x86 AVX2 and aarch64 NEON SIMD intrinsics guarded by runtime feature checks, with no IO, process, network, or linker hooks."
 
 [[trusted.aho-corasick]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-03-28"
 end = "2027-11-25"
 
 [[trusted.anyhow]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-10-05"
 end = "2027-11-25"
 
 [[trusted.block2]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2021-11-19"
 end = "2027-11-25"
 
 [[trusted.byteorder-lite]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 5862 # fintelia
 start = "2024-04-07"
 end = "2027-11-25"
 
 [[trusted.calloop]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 69526 # John Nunley (notgull)
 start = "2024-01-15"
 end = "2027-11-25"
 
 [[trusted.calloop-wayland-source]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2023-07-20"
 end = "2027-11-25"
 
 [[trusted.cc]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:rust-lang/cc-rs"
 start = "2025-09-01"
 end = "2027-11-25"
 
 [[trusted.cfg-if]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 55123 # rust-lang-owner
 start = "2025-06-09"
 end = "2027-11-25"
 
 [[trusted.color]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 106440 # Tom Churchman (tomcur)
 start = "2025-04-30"
 end = "2027-11-25"
 
 [[trusted.crossbeam-utils]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 33035 # Taiki Endo (taiki-e)
 start = "2020-10-12"
 end = "2027-11-25"
 
 [[trusted.cursor-icon]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2023-05-05"
 end = "2027-11-25"
 
 [[trusted.dispatch2]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2025-01-23"
 end = "2027-11-25"
 
 [[trusted.dpi]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2024-03-13"
 end = "2027-11-25"
 
 [[trusted.ecolor]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.eframe]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.egui]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.egui-wgpu]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.egui-winit]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.egui_extras]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.egui_glow]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.emath]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.env_filter]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 6743 # Ed Page (epage)
 start = "2024-01-19"
 end = "2027-11-25"
 
 [[trusted.env_logger]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 6743 # Ed Page (epage)
 start = "2022-11-24"
 end = "2027-11-25"
 
 [[trusted.epaint]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.epaint_default_fonts]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 197939 # Rerun (rerunio)
 start = "2024-12-16"
 end = "2027-11-25"
 
 [[trusted.fearless_simd]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 288469 # Laurenz Stampfl (LaurenzV)
 start = "2025-08-26"
 end = "2027-11-25"
 
 [[trusted.find-msvc-tools]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:rust-lang/cc-rs"
 start = "2025-09-05"
 end = "2027-11-25"
 
 [[trusted.flate2]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 980 # Sebastian Thiel (Byron)
 start = "2023-08-15"
 end = "2027-11-25"
 
 [[trusted.glifo]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 288469 # Laurenz Stampfl (LaurenzV)
 start = "2026-05-30"
 end = "2027-11-25"
 
 [[trusted.glow]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 9941 # Josh Groves (grovesNL)
 start = "2019-03-20"
 end = "2027-11-25"
 
 [[trusted.glutin]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2022-09-03"
 end = "2027-11-25"
 
 [[trusted.glutin-winit]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2022-11-12"
 end = "2027-11-25"
 
 [[trusted.glutin_egl_sys]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2022-09-03"
 end = "2027-11-25"
 
 [[trusted.glutin_glx_sys]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2022-09-03"
 end = "2027-11-25"
 
 [[trusted.harfrust]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 299582 # Behdad Esfahbod (behdad)
 start = "2025-06-10"
 end = "2027-11-25"
 
 [[trusted.hashbrown]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 55123 # rust-lang-owner
 start = "2025-04-30"
 end = "2027-11-25"
 
 [[trusted.image]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 11453 # Aurelia Molzer (197g)
 start = "2019-04-13"
 end = "2027-11-25"
 
 [[trusted.itoa]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-05-02"
 end = "2027-11-25"
 
 [[trusted.jobserver]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 55123 # rust-lang-owner
 start = "2024-07-23"
 end = "2027-11-25"
 
 [[trusted.js-sys]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
 start = "2026-04-28"
 end = "2027-11-25"
 
 [[trusted.kurbo]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 106440 # Tom Churchman (tomcur)
 start = "2025-07-21"
 end = "2027-11-25"
 
 [[trusted.libc]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 55123 # rust-lang-owner
 start = "2024-08-15"
 end = "2027-11-25"
 
 [[trusted.linebender_resource_handle]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 109051 # Daniel McNab (DJMcNab)
 start = "2025-09-09"
 end = "2027-11-25"
 
 [[trusted.linux-raw-sys]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 6825 # Dan Gohman (sunfishcode)
 start = "2021-06-12"
 end = "2027-11-25"
 
 [[trusted.lock_api]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 2915 # Amanieu d'Antras (Amanieu)
 start = "2019-05-04"
 end = "2027-11-25"
 
 [[trusted.log]]
-criteria = "safe-to-run"
-user-id = 3204
+criteria = ["safe-to-run", "ai-safe-to-run"]
+user-id = 3204 # Ashley Mannix (KodrAus)
 start = "2019-07-10"
 end = "2027-11-25"
 
 [[trusted.memchr]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-07-07"
 end = "2027-11-25"
 
 [[trusted.objc-sys]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2021-11-22"
 end = "2027-11-25"
 
 [[trusted.objc2]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2021-11-19"
 end = "2027-11-25"
 
 [[trusted.objc2-app-kit]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-17"
 end = "2027-11-25"
 
 [[trusted.objc2-audio-toolbox]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-12-15"
 end = "2027-11-25"
 
 [[trusted.objc2-avf-audio]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-12-15"
 end = "2027-11-25"
 
 [[trusted.objc2-cloud-kit]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-17"
 end = "2027-11-25"
 
 [[trusted.objc2-contacts]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-17"
 end = "2027-11-25"
 
 [[trusted.objc2-core-audio]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2025-01-12"
 end = "2027-11-25"
 
 [[trusted.objc2-core-audio-types]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-12-09"
 end = "2027-11-25"
 
 [[trusted.objc2-core-data]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-17"
 end = "2027-11-25"
 
 [[trusted.objc2-core-image]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-05-14"
 end = "2027-11-25"
 
 [[trusted.objc2-core-location]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-17"
 end = "2027-11-25"
 
 [[trusted.objc2-foundation]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2021-11-19"
 end = "2027-11-25"
 
 [[trusted.objc2-link-presentation]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-18"
 end = "2027-11-25"
 
 [[trusted.objc2-metal]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-17"
 end = "2027-11-25"
 
 [[trusted.objc2-quartz-core]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-17"
 end = "2027-11-25"
 
 [[trusted.objc2-symbols]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-05-10"
 end = "2027-11-25"
 
 [[trusted.objc2-ui-kit]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-17"
 end = "2027-11-25"
 
 [[trusted.objc2-uniform-type-identifiers]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-18"
 end = "2027-11-25"
 
 [[trusted.objc2-user-notifications]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 36629 # Mads Marquart (madsmtm)
 start = "2024-04-18"
 end = "2027-11-25"
 
 [[trusted.parking_lot]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 2915 # Amanieu d'Antras (Amanieu)
 start = "2019-05-04"
 end = "2027-11-25"
 
 [[trusted.parking_lot_core]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 2915 # Amanieu d'Antras (Amanieu)
 start = "2019-05-04"
 end = "2027-11-25"
 
 [[trusted.peniko]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 4033 # Bruce Mitchener (waywardmonkeys)
 start = "2025-01-20"
 end = "2027-11-25"
 
 [[trusted.pin-project]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:taiki-e/pin-project"
 start = "2026-02-27"
 end = "2027-11-25"
 
 [[trusted.pin-project-internal]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:taiki-e/pin-project"
 start = "2026-02-27"
 end = "2027-11-25"
 
 [[trusted.pin-project-lite]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:taiki-e/pin-project-lite"
 start = "2026-02-27"
 end = "2027-11-25"
 
 [[trusted.png]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 11453 # Aurelia Molzer (197g)
 start = "2019-04-24"
 end = "2027-11-25"
 
 [[trusted.polycool]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 2423 # jneem
 start = "2025-10-09"
 end = "2027-11-25"
 
 [[trusted.proc-macro2]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-04-23"
 end = "2027-11-25"
 
 [[trusted.regex]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-02-27"
 end = "2027-11-25"
 
 [[trusted.regex-automata]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-02-25"
 end = "2027-11-25"
 
 [[trusted.regex-syntax]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-03-30"
 end = "2027-11-25"
 
 [[trusted.rustix]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 6825 # Dan Gohman (sunfishcode)
 start = "2021-10-29"
 end = "2027-11-25"
 
 [[trusted.rustversion]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-07-08"
 end = "2027-11-25"
 
 [[trusted.serde]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-03-01"
 end = "2027-11-25"
 
 [[trusted.serde_core]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2025-09-13"
 end = "2027-11-25"
 
 [[trusted.serde_derive]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-03-01"
 end = "2027-11-25"
 
 [[trusted.serde_json]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-02-28"
 end = "2027-11-25"
 
 [[trusted.slab]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2021-10-13"
 end = "2027-11-25"
 
 [[trusted.smithay-client-toolkit]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 111182 # Ashley Wulber (wash2)
 start = "2023-09-18"
 end = "2027-11-25"
 
 [[trusted.smithay-clipboard]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 111182 # Ashley Wulber (wash2)
 start = "2023-10-10"
 end = "2027-11-25"
 
 [[trusted.syn]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-03-01"
 end = "2027-11-25"
 
 [[trusted.thiserror]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-10-09"
 end = "2027-11-25"
 
 [[trusted.thiserror-impl]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-10-09"
 end = "2027-11-25"
 
 [[trusted.tiff]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 11453 # Aurelia Molzer (197g)
 start = "2019-04-25"
 end = "2027-11-25"
 
 [[trusted.tracing]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 172786 # Hayden Stainsby (hds)
 start = "2024-11-27"
 end = "2027-11-25"
 
 [[trusted.unicode-ident]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2021-10-02"
 end = "2027-11-25"
 
 [[trusted.vello_common]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 288469 # Laurenz Stampfl (LaurenzV)
 start = "2026-01-08"
 end = "2027-11-25"
 
 [[trusted.vello_cpu]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 288469 # Laurenz Stampfl (LaurenzV)
 start = "2026-01-08"
 end = "2027-11-25"
 
 [[trusted.wasm-bindgen]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
 start = "2026-04-28"
 end = "2027-11-25"
 
 [[trusted.wasm-bindgen-futures]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
 start = "2026-04-28"
 end = "2027-11-25"
 
 [[trusted.wasm-bindgen-macro]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
 start = "2026-04-28"
 end = "2027-11-25"
 
 [[trusted.wasm-bindgen-macro-support]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
 start = "2026-04-28"
 end = "2027-11-25"
 
 [[trusted.wasm-bindgen-shared]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
 start = "2026-04-28"
 end = "2027-11-25"
 
 [[trusted.wayland-backend]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 4118 # Ian Douglas Scott (ids1024)
 start = "2026-03-05"
 end = "2027-11-25"
 
 [[trusted.wayland-client]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 4118 # Ian Douglas Scott (ids1024)
 start = "2026-07-22"
 end = "2027-11-25"
 
 [[trusted.wayland-csd-frame]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2023-05-10"
 end = "2027-11-25"
 
 [[trusted.wayland-cursor]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 1557 # Elinor B. (elinorbgr)
 start = "2019-09-14"
 end = "2027-11-25"
 
 [[trusted.wayland-protocols]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 4118 # Ian Douglas Scott (ids1024)
 start = "2026-06-19"
 end = "2027-11-25"
 
 [[trusted.wayland-protocols-experimental]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 4118 # Ian Douglas Scott (ids1024)
 start = "2025-07-29"
 end = "2027-11-25"
 
 [[trusted.wayland-protocols-misc]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 1557 # Elinor B. (elinorbgr)
 start = "2022-05-23"
 end = "2027-11-25"
 
 [[trusted.wayland-protocols-plasma]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 1557 # Elinor B. (elinorbgr)
 start = "2022-05-23"
 end = "2027-11-25"
 
 [[trusted.wayland-protocols-wlr]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 1557 # Elinor B. (elinorbgr)
 start = "2022-05-23"
 end = "2027-11-25"
 
 [[trusted.wayland-scanner]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 4118 # Ian Douglas Scott (ids1024)
 start = "2026-07-22"
 end = "2027-11-25"
 
 [[trusted.wayland-sys]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 4118 # Ian Douglas Scott (ids1024)
 start = "2025-01-31"
 end = "2027-11-25"
 
 [[trusted.web-sys]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
 start = "2026-04-28"
 end = "2027-11-25"
 
 [[trusted.weezl]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 11453 # Aurelia Molzer (197g)
 start = "2020-06-29"
 end = "2027-11-25"
 
 [[trusted.winit]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2022-09-11"
 end = "2027-11-25"
 
 [[trusted.xkbcommon-dl]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 42583 # Kirill Chibisov (kchibisov)
 start = "2023-06-27"
 end = "2027-11-25"
 
 [[trusted.zerocopy]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:google/zerocopy"
 start = "2026-09-08"
 end = "2027-11-25"
 
 [[trusted.zerocopy-derive]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 trusted-publisher = "github:google/zerocopy"
 start = "2026-09-08"
 end = "2027-11-25"
 
 [[trusted.zmij]]
-criteria = "safe-to-run"
+criteria = ["safe-to-run", "ai-safe-to-run"]
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2025-12-18"
 end = "2027-11-25"
