@@ -8,8 +8,6 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::fmt::Formatter;
 
-use itertools::Itertools;
-
 use crate::common::address::Address;
 use crate::common::bus::Bus;
 
@@ -91,7 +89,9 @@ impl<AddressT: Address> SparseMemory<AddressT> {
 
 impl<AddressT: Address> Display for SparseMemory<AddressT> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for (addr, value) in self.memory.iter().sorted() {
+        let mut entries: Vec<_> = self.memory.iter().collect();
+        entries.sort();
+        for (addr, value) in entries {
             writeln!(f, "{}: {:02X}", addr, value)?;
         }
         Ok(())

@@ -146,7 +146,6 @@ const GAUSSIAN_TABLE: &[i32; 512] = &[
 
 #[cfg(test)]
 mod test {
-    use itertools::Itertools;
     use rasciigraph::Config;
 
     use super::PitchCounter;
@@ -230,7 +229,7 @@ mod test {
         generator.init(&mut input);
         let actual = (0..(expected.len()))
             .map(|_| generator.generate_sample(pitch, &mut input))
-            .collect_vec();
+            .collect::<Vec<_>>();
 
         if expected != actual {
             println!();
@@ -250,7 +249,9 @@ mod test {
         println!(
             "{}",
             rasciigraph::plot(
-                data.into_iter().map(|v| (v as f64) / 1024.0).collect_vec(),
+                data.into_iter()
+                    .map(|v| (v as f64) / 1024.0)
+                    .collect::<Vec<_>>(),
                 Config::default()
                     .with_offset(4)
                     .with_height(10)
