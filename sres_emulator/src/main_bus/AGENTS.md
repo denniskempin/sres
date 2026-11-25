@@ -51,5 +51,5 @@ Ranges → owner. Register bitfields: `docs/index.md`. LoRom/HiRom WRAM/ROM/SRAM
 ## Tests
 
 - Unit tests in `mod.rs`: `test_lorom_memory_map_image`, `test_hirom_memory_map_image` (goldens `lorom_memory_map.png` / `hirom_memory_map.png` beside the source), `test_hirom_rom_ranges`.
-- HDMA unit tests in `hdma.rs` (`RecordingDevice` mock). Clock latches: `components::clock`.
+- DMA unit tests in `dma.rs` (`DmaParameters` bit layout); HDMA unit tests in `hdma.rs` (`RecordingDevice` mock). Clock latches: `components::clock`.
 - `cargo nextest run -p sres_emulator --lib -E 'test(main_bus::)'`

@@ -59,10 +59,10 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
                 (
                     channel.hdma_do_transfer,
                     channel.hdma_completed,
-                    channel.parameters.indirect,
-                    channel.parameters.direction,
+                    channel.parameters.indirect(),
+                    channel.parameters.direction(),
                     channel.bus_b_address,
-                    if channel.parameters.indirect {
+                    if channel.parameters.indirect() {
                         channel.indirect_bank
                     } else {
                         channel.bus_a_address.bank
@@ -146,7 +146,7 @@ impl<PpuT: BusDeviceU24, ApuT: BusDeviceU24> MainBusImpl<PpuT, ApuT> {
             channel.hdma_completed = data == 0;
             channel.hdma_do_transfer = !channel.hdma_completed;
             (
-                channel.parameters.indirect && !channel.hdma_completed,
+                channel.parameters.indirect() && !channel.hdma_completed,
                 channel.table_address,
             )
         };
