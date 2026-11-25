@@ -521,15 +521,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "colored"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
-dependencies = [
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "combine"
 version = "4.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -732,7 +723,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ce0fb972943b4e88cd03b8f92953df0c71bb05e0bde8e5b684895d808013cc"
 dependencies = [
  "anyhow",
- "colored 2.2.0",
+ "colored",
  "getopts",
  "image",
  "rayon",
@@ -3220,8 +3211,6 @@ dependencies = [
  "egui_extras",
  "egui_kittest",
  "image",
- "itertools 0.15.0",
- "lazy_static",
  "log",
  "serde_json",
  "sres_emulator",
@@ -3238,13 +3227,10 @@ dependencies = [
  "anyhow",
  "bilge",
  "bitcode",
- "colored 3.1.1",
  "criterion",
  "env_logger",
  "image",
  "intbits",
- "itertools 0.15.0",
- "lazy_static",
  "liblzma",
  "log",
  "num-traits",

@@ -7,7 +7,6 @@ use egui::Label;
 use egui::RichText;
 use egui::ScrollArea;
 use egui::TextStyle;
-use itertools::Itertools;
 use sres_emulator::common::address::Address;
 use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::address::Wrap;
@@ -74,6 +73,7 @@ impl MemoryViewer {
                                 b.map(|b| format!("{b:02X}"))
                                     .unwrap_or_else(|| "XX".to_string())
                             })
+                            .collect::<Vec<_>>()
                             .join(" ");
                         ui.add(
                             Label::new(RichText::new(format!("{addr}: {bytes_str}")))

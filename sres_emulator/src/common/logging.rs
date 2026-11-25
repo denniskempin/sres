@@ -4,11 +4,19 @@ use std::collections::VecDeque;
 use std::sync::Mutex;
 use std::sync::Once;
 
-use colored::*;
 use env_logger::Logger;
 use log::LevelFilter;
 use log::Log;
 use log::Record;
+
+const RESET: &str = "\x1b[0m";
+const DIM: &str = "\x1b[2m";
+const RED: &str = "\x1b[31m";
+const BOLD_RED: &str = "\x1b[1;31m";
+const YELLOW: &str = "\x1b[33m";
+const BOLD_YELLOW: &str = "\x1b[1;33m";
+const BLUE: &str = "\x1b[34m";
+const BOLD_BLUE: &str = "\x1b[1;34m";
 
 static ONCE_INIT: Once = Once::new();
 
@@ -40,20 +48,18 @@ impl SresLogger {
     fn format_record(&self, record: &Record) -> String {
         match record.level() {
             log::Level::Error => {
-                format!("{} {}", "E".red().bold(), record.args().to_string().red())
+                format!("{BOLD_RED}E{RESET} {RED}{}{RESET}", record.args())
             }
-            log::Level::Warn => format!(
-                "{} {}",
-                "W".yellow().bold(),
-                record.args().to_string().yellow()
-            ),
-            log::Level::Info => format!(
-                "{} {}",
-                "I".blue().bold(),
-                record.args().to_string().normal()
-            ),
-            log::Level::Debug => format!("{} {}", "D".blue(), record.args().to_string().normal()),
-            log::Level::Trace => format!("{}", record.args().to_string().dimmed()),
+            log::Level::Warn => {
+                format!("{BOLD_YELLOW}W{RESET} {YELLOW}{}{RESET}", record.args())
+            }
+            log::Level::Info => {
+                format!("{BOLD_BLUE}I{RESET} {}", record.args())
+            }
+            log::Level::Debug => {
+                format!("{BLUE}D{RESET} {}", record.args())
+            }
+            log::Level::Trace => format!("{DIM}{}{RESET}", record.args()),
         }
     }
 }
@@ -75,10 +81,10 @@ impl Log for SresLogger {
         } else {
             if !trace_logs.is_empty() {
                 if trace_logs.len() == TRACE_CONTEXT_LINES {
-                    println!("T {}", "...".dimmed());
+                    println!("T {DIM}...{RESET}");
                 }
                 for log in trace_logs.drain(0..).rev() {
-                    println!("T {}", log.dimmed());
+                    println!("T {DIM}{log}{RESET}");
                 }
             }
             println!("{record_str}");

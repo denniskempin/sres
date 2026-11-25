@@ -9,7 +9,6 @@ use std::io;
 use std::io::BufRead;
 use std::path::PathBuf;
 
-use itertools::Itertools;
 use liblzma::read::XzDecoder;
 use pretty_assertions::Comparison;
 use pretty_assertions::StrComparison;
@@ -186,7 +185,9 @@ fn run_tomharte_test(test_name: &str) {
 
     if !failed_opcodes.is_empty() {
         println!("Failing tests by opcode:");
-        for failed_opcode in failed_opcodes.iter().sorted() {
+        let mut failed_opcodes: Vec<_> = failed_opcodes.iter().collect();
+        failed_opcodes.sort();
+        for failed_opcode in failed_opcodes {
             println!("0x{:02X}: {}", failed_opcode.0, failed_opcode.1);
         }
         panic!("Some tests failed");

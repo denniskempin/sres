@@ -19,12 +19,9 @@ packed_struct = "0.10"
 num-traits = "0.2"
 env_logger = { version = "0.11", default-features = false }
 log = "0.4"
-colored = "3"
-itertools = "0.15"
 strum = { version = "0.28", features = ["derive"] }
 bilge = "0.5"
 bitcode = { version = "0.6.9", default-features = false, features = ["std", "derive"] }
-lazy_static = "1.5"
 
 [dev-dependencies]
 pretty_assertions = "1.4"
