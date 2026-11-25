@@ -92,7 +92,7 @@ Apply, in order:
 1. Bump the toolchain pin and `rust-version` if needed.
 2. Raise direct deps that `cargo search` shows behind (minor/major). `cargo update` for lockfile patches.
 3. Replace unmaintained crates; drop crates that lag the UI stack.
-4. Update `sres_emulator/fuzz/Cargo.lock` even when the bins do not compile.
+4. Update `sres_emulator/fuzz/Cargo.lock` and verify `(cd sres_emulator/fuzz && cargo check --locked)`.
 5. Fix compile, API, and new-nightly clippy breakage.
 6. If `egui` / `eframe` / `egui_kittest` moved, run `cargo test -p sres_egui` and commit regenerated widget snapshots after inspecting them.
 7. Refresh `AGENTS.md` / `//!` for any call-chain or API change (`write-agents-docs`).
@@ -165,7 +165,6 @@ After CI or crate edits, run the verify set in step 3. After skill/docs-only edi
 
 - Native `clippy` / `check` does not compile `#[cfg(target_arch = "wasm32")]` bodies. A green health job that lacks the wasm32 line will fail Pages deploy.
 - `sres_emulator/fuzz` is not a workspace member. Root `cargo update` does not refresh `sres_emulator/fuzz/Cargo.lock`.
-- Fuzz bins are stale and do not compile (root Error Handling). Lock freshness is in scope; rewriting the bins is not, unless the user asks.
 - `cargo-outdated` is not in the toolchain. Use `cargo update -n`, `cargo search`, and `rustup check`.
 - egui major/minor bumps change `egui_kittest` glyph metrics. Blind snapshot commits fail the review-guide golden check.
 - A skill is the wrong home for a single command. `AGENTS.md` is the wrong home for this procedure.
