@@ -1,5 +1,2 @@
 [registries.crates-io]
 protocol = "sparse"
-
-[unstable]
-build-std = ['std', 'panic_abort']

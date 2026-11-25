@@ -1,6 +1,6 @@
 # `sres_emulator/tests/ppu_tests`
 
-Assets for three PPU test kinds: ROM→framebuffer, snapshot→framebuffer, and debug renders. Driver: `sres_emulator/tests/ppu_tests.rs`. Pixel-perfect exact RGBA match.
+Assets for three PPU test kinds: ROM→framebuffer, snapshot→framebuffer, and debug renders. Driver: `sres_emulator/tests/integration/ppu_tests.rs`. Pixel-perfect exact RGBA match.
 
 ## Files
 
@@ -32,8 +32,8 @@ Assets for three PPU test kinds: ROM→framebuffer, snapshot→framebuffer, and 
 
 ## Tests
 
-- `cargo nextest run -p sres_emulator --test ppu_tests`
-- Ignored generators: `cargo nextest run -p sres_emulator --test ppu_tests --run-ignored only -E 'test(generate_)'`
+- `cargo nextest run -p sres_emulator --test integration ppu_tests::`
+- Ignored generators: `cargo nextest run -p sres_emulator --test integration --run-ignored only -E 'test(generate_)'`
 
 ## Subdirectories
 

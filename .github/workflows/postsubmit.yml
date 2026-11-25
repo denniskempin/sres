@@ -84,14 +84,8 @@ jobs:
         with:
           shared-key: wasm
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - name: Cache Trunk tools
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ~/.cache/trunk
-          key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile') }}
-          restore-keys: trunk-tools-
 
-      - name: WASM build
+      - name: WASM check
         run: ./check-all.sh wasm
 
   # Single required check for pull requests targeting main.
@@ -130,8 +124,8 @@ jobs:
         with:
           shared-key: wasm
           save-if: false
-      - name: Restore Trunk tools
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      - name: Cache Trunk tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/trunk
           key: trunk-tools-${{ hashFiles('Cargo.lock', '.devcontainer/Dockerfile') }}

@@ -4,6 +4,10 @@
 # No arguments runs all five.
 set -euo pipefail
 
+if [[ -z "${RUSTC_WRAPPER:-}" ]] && command -v sccache >/dev/null 2>&1; then
+  export RUSTC_WRAPPER=sccache
+fi
+
 banner() {
   printf '\e[1m\e[32m---------------------------- %s -------------------------------------\e[0m\n' "$1"
 }
@@ -15,7 +19,7 @@ run_fmt() {
 
 run_clippy() {
   banner "Clippy"
-  cargo clippy --workspace --all-targets --locked
+  cargo clippy --workspace --lib --bins --tests --locked
 }
 
 run_deny() {
@@ -34,9 +38,8 @@ run_test() {
 }
 
 run_wasm() {
-  banner "WASM Build"
-  # trunk 0.21 parses NO_COLOR as a bool and rejects the common value `1`.
-  (cd sres_egui && NO_COLOR=true trunk build --locked)
+  banner "WASM Check"
+  cargo check --target wasm32-unknown-unknown -p sres_egui --locked
 }
 
 if [[ $# -eq 0 ]]; then

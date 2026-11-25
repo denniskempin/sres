@@ -1,6 +1,6 @@
 # `sres_emulator/tests/rom_tests`
 
-Assets for CPU trace-comparison and ROM-outcome tests driven by `../rom_tests.rs`. `SyncSystem` vs `System` mapping is in root Testing Strategy.
+Assets for CPU trace-comparison and ROM-outcome tests driven by `../integration/rom_tests.rs`. `SyncSystem` vs `System` mapping is in root Testing Strategy.
 
 ## Files
 
@@ -25,7 +25,7 @@ Assets for CPU trace-comparison and ROM-outcome tests driven by `../rom_tests.rs
 
 ## Integration
 
-- Crate test binary `rom_tests` in `sres_emulator/tests/rom_tests.rs`.
+- Crate test binary `integration` (`rom_tests` module in `sres_emulator/tests/integration/rom_tests.rs`).
 - CPU-only traces: `Cartridge::with_sfc_file` into `SyncSystem`, then `cpu_step_iter` vs `trace_log_from_xz_file`.
 - `play_noise`: `trace_step_iter` vs `mixed_trace_log_from_xz_file`.
 - Outcome: `run_test_rom` until `halted()`, asserting `< 10_000_000` steps. `dma_vram`, `dma_cgram`, `dma_oam` compare WRAM `$0000` and `$0100` after DMA copy-back. `wai_nmi` checks `$0000`/`$0001` == `$A5` and halt PC in `$00:8000–$00FFFF`. `wai_irq` checks `$0000` == 0 and `$0001` == `$80`.
@@ -37,6 +37,6 @@ Assets for CPU trace-comparison and ROM-outcome tests driven by `../rom_tests.rs
 
 ## Tests
 
-- `cargo nextest run -p sres_emulator --test rom_tests` (parent Tests).
-- One test: `cargo nextest run -p sres_emulator --test rom_tests test_play_noise`
-- Ignored: `cargo nextest run -p sres_emulator --test rom_tests test_krom_msc --run-ignored only`
+- `cargo nextest run -p sres_emulator --test integration rom_tests::` (parent Tests).
+- One test: `cargo nextest run -p sres_emulator --test integration test_play_noise`
+- Ignored: `cargo nextest run -p sres_emulator --test integration test_krom_msc --run-ignored only`

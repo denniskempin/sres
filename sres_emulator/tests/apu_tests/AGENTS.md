@@ -1,6 +1,6 @@
 # `sres_emulator/tests/apu_tests`
 
-Assets for `../apu_tests.rs`. No `.rs` here.
+Assets for `../integration/apu_tests.rs`. No `.rs` here.
 
 ## Files
 
@@ -19,4 +19,4 @@ Assets for `../apu_tests.rs`. No `.rs` here.
 
 ## Tests
 
-- `cargo nextest run -p sres_emulator --test apu_tests`
+- `cargo nextest run -p sres_emulator --test integration apu_tests::`
