@@ -265,7 +265,7 @@ When hardware is unimplemented or behavior differs from reference:
 | Target | Validates |
 |--------|-----------|
 | `program` | `Cpu::step()` × 1000 never panics on arbitrary bytes |
-| `sfc` | `Cartridge::load_sfc_data()` never panics |
+| `sfc` | `Cartridge::with_sfc_data()` never panics |
 
 Do not commit `corpus/`, `artifacts/`, `coverage/`.
 

@@ -102,7 +102,7 @@ Capture mid-frame MMIO with `Debugger` `EventFilter` log points, not a device-sp
 - **Open bus**: not emulated; unmapped reads return `0` (known divergence from hardware, noted in test comments).
 - **FastROM**: not implemented; banks `$80+` still use SLOW access (`TODO` in `main_bus/mod.rs`).
 - **Panics** are reserved for internal logic errors (wrong operand type, CPU halt in wrong context) — never for unimplemented hardware.
-- **Fuzz targets** in `sres_emulator/fuzz/` are intended to test that arbitrary input never panics. The bins are stale and do not compile.
+- **Fuzz targets** in `sres_emulator/fuzz/` test that arbitrary input never panics (`program` and `sfc`).
 
 ## Reference
 

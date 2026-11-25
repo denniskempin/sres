@@ -137,6 +137,16 @@ impl SnesHeader {
     fn parse_header(data: &[u8]) -> Result<Self> {
         ensure!(data.len() >= 32, "Header too short");
         let raw = RawSnesHeader::unpack_from_slice(&data[0..32]).unwrap();
+        ensure!(
+            raw.rom_size <= 16,
+            "Invalid ROM size shift: {}",
+            raw.rom_size
+        );
+        ensure!(
+            raw.sram_size <= 10,
+            "Invalid SRAM size shift: {}",
+            raw.sram_size
+        );
         Ok(SnesHeader {
             name: String::from_utf8(raw.name.to_vec())
                 .with_context(|| "ROM name is not ASCII")?
@@ -204,5 +214,16 @@ mod tests {
                 sram_size: 8 * 1024
             }
         )
+    }
+
+    #[test]
+    fn test_parse_header_rejects_overflow_shifts() {
+        let mut bad_rom_size = EXAMPLE_HEADER.to_vec();
+        bad_rom_size[23] = 64;
+        assert!(SnesHeader::parse_header(&bad_rom_size).is_err());
+
+        let mut bad_sram_size = EXAMPLE_HEADER.to_vec();
+        bad_sram_size[24] = 64;
+        assert!(SnesHeader::parse_header(&bad_sram_size).is_err());
     }
 }
