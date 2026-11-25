@@ -4,10 +4,6 @@
 # No arguments runs all six.
 set -euo pipefail
 
-if [[ -z "${RUSTC_WRAPPER:-}" ]] && command -v sccache >/dev/null 2>&1; then
-  export RUSTC_WRAPPER=sccache
-fi
-
 banner() {
   printf '\e[1m\e[32m---------------------------- %s -------------------------------------\e[0m\n' "$1"
 }
