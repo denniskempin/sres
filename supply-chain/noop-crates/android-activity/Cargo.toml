@@ -1,0 +1,13 @@
+[package]
+name = "android-activity"
+version = "0.6.1"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../empty.rs"
+
+[features]
+default = []
+game-activity = []
+native-activity = []

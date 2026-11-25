@@ -35,8 +35,8 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # TODO: Remove this fallback step once `ghcr.io/denniskempin/sres-ci:latest`
-      # is rebuilt on `main` with `git` and `cargo-deny` from `.devcontainer/Dockerfile`.
-      - name: Install cargo-deny and git if missing from CI image
+      # is rebuilt on `main` with `git`, `cargo-deny`, and `cargo-vet` from `.devcontainer/Dockerfile`.
+      - name: Install cargo-deny, cargo-vet, and git if missing from CI image
         run: |
           if ! command -v git >/dev/null 2>&1; then
             apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
@@ -51,9 +51,17 @@ jobs:
             tar -xzf /tmp/cargo-deny.tar.gz -C /usr/local/bin --strip-components=1 "cargo-deny-${DENY_VERSION}-${triple}/cargo-deny"
             rm /tmp/cargo-deny.tar.gz
           fi
+          if ! command -v cargo-vet >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -fsSL -o /tmp/cargo-vet.tar.xz \
+              https://github.com/mozilla/cargo-vet/releases/download/v0.10.4/cargo-vet-x86_64-unknown-linux-gnu.tar.xz
+            echo "e367f8ac156208711511274abab0c309e19ed0f11ef2bbe8a7b0294f824cb032  /tmp/cargo-vet.tar.xz" | sha256sum -c -
+            tar -xJf /tmp/cargo-vet.tar.xz --strip-components=1 -C /usr/local/bin \
+              cargo-vet-x86_64-unknown-linux-gnu/cargo-vet
+            rm /tmp/cargo-vet.tar.xz
+          fi
 
-      - name: Format, Clippy, and Deny
-        run: ./check-all.sh fmt clippy deny
+      - name: Format, Clippy, Deny, and Vet
+        run: ./check-all.sh fmt clippy deny vet
 
   test:
     runs-on: ubuntu-latest

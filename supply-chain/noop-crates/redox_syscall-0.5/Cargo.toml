@@ -1,0 +1,12 @@
+[package]
+name = "redox_syscall"
+version = "0.5.18"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../empty.rs"
+
+[features]
+default = []
+userspace = []

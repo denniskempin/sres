@@ -9,8 +9,6 @@ use std::io::BufRead;
 use std::path::PathBuf;
 
 use liblzma::read::XzDecoder;
-use pretty_assertions::Comparison;
-use pretty_assertions::StrComparison;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -22,6 +20,7 @@ use crate::common::debug_events::test::mock_collector;
 use crate::common::logging;
 use crate::common::test_bus::Cycle;
 use crate::common::test_bus::TestBus;
+use crate::common::test_util::format_line_diff;
 
 const SKIP_OPCODES: &[u8] = &[
     0x44, // MVP test cases seem to follow a very different implementation
@@ -148,22 +147,23 @@ fn run_tomharte_test(test_name: &str) {
             test_case.initial.create_cpu().debug().state()
         );
         println!(
-            "Result: {}",
-            StrComparison::new(
+            "Result:\n{}",
+            format_line_diff(
                 &actual_state.debug().state().to_string(),
                 &expected_state.debug().state().to_string()
             )
         );
         println!(
-            "Memory: {}",
-            StrComparison::new(
+            "Memory:\n{}",
+            format_line_diff(
                 &actual_state.bus.memory.to_string(),
                 &expected_state.bus.memory.to_string()
             )
         );
         println!(
-            "Cycles: {}",
-            Comparison::new(&actual_state.bus.cycles, &test_case.cycles())
+            "Cycles:\n  actual: {:?}\n  expect: {:?}",
+            actual_state.bus.cycles,
+            test_case.cycles()
         );
         break;
     }

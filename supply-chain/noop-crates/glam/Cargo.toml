@@ -1,0 +1,10 @@
+[package]
+name = "glam"
+version = "0.33.7"
+edition = "2021"
+publish = false
+
+[features]
+default = []
+rand = []
+std = []

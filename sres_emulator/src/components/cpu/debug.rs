@@ -415,8 +415,6 @@ pub static ADDR_ANNOTATIONS_REVERSE: LazyLock<HashMap<&'static str, u32>> = Lazy
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
-
     use super::*;
 
     static EXAMPLE_MESEN_TRACE: &str = r"00e811  BPL $E80E                      A:9901 X:0100 Y:0000 S:1FF3 D:0000 DB:00 P:nVMxdIZC V:123 H:1226 F:1";

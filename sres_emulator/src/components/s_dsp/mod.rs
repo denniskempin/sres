@@ -6,7 +6,6 @@ mod pitch;
 mod test;
 pub mod voice;
 
-use bilge::prelude::*;
 use intbits::Bits;
 
 use self::voice::Voice;
@@ -52,7 +51,7 @@ impl SDsp {
         // decode as a named register via nibble matching.
         match reg {
             0x5D => self.dir,
-            0x6C => self.flg.value,
+            0x6C => self.flg.0,
             0x00..=0x7F => match reg.low_nibble() {
                 0x0..=0x9 => {
                     self.voices[reg.high_nibble() as usize].read_register(reg.low_nibble())
@@ -212,17 +211,35 @@ impl SDspDebug<'_> {
 // ||+------- Echo disable (E)
 // |+-------- Mute all (M)
 // +--------- Soft reset (R)
-#[bitsize(8)]
-#[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-pub struct Flg {
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Flg(pub u8);
+
+impl Flg {
     /// Bit 7: Soft reset (R)
-    pub reset: bool,
+    pub fn reset(self) -> bool {
+        self.0.bit(7)
+    }
+
     /// Bit 6: Mute all voices (M)
-    pub mute: bool,
+    pub fn mute(self) -> bool {
+        self.0.bit(6)
+    }
+
     /// Bit 5: Echo disable (E)
-    pub echo_disable: bool,
+    pub fn echo_disable(self) -> bool {
+        self.0.bit(5)
+    }
+
     /// Bits 0-4: Noise frequency (N)
-    pub noise_frequency: u5,
+    pub fn noise_frequency(self) -> u8 {
+        self.0.bits(0..5)
+    }
+}
+
+impl From<u8> for Flg {
+    fn from(value: u8) -> Self {
+        Self(value)
+    }
 }
 
 /// Handles the SNES DSP white noise generation
@@ -244,9 +261,9 @@ impl NoiseGenerator {
 
     /// Updates the noise generator state based on the given frequency setting
     /// Returns the current noise bits
-    fn generate(&mut self, noise_frequency: u5) -> u16 {
+    fn generate(&mut self, noise_frequency: u8) -> u16 {
         self.counter = self.counter.wrapping_add(1);
-        let noise_rate_divider = NOISE_RATE_DIVIDERS[noise_frequency.value() as usize];
+        let noise_rate_divider = NOISE_RATE_DIVIDERS[noise_frequency as usize];
         // Only update noise when counter reaches the divider
         if noise_rate_divider > 0 && self.counter >= noise_rate_divider {
             let noise_bit = self.bits.bit(14) ^ self.bits.bit(13);

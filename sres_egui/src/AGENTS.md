@@ -10,7 +10,7 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 | `app.rs` | `EmulatorApp` (`eframe::App::ui`): cartridge load, joypads, texture present, debugger vs audio-paced run |
 | `embedded_roms.rs` | `EMBEDDED_ROMS` (`CategoryInfo`, `RomFileInfo`) included from `OUT_DIR/embedded_roms_generated.rs` |
 | `debug.rs` | `DebugUi`, `DebugCommand`, `InternalLink`; module file for `debug/` |
-| `test_utils.rs` | `widget_snapshot` / `snapshot_options` for `egui_kittest` PNG goldens |
+| `test_utils.rs` | `widget_snapshot` headless `egui_glow` PNG goldens |
 | `util.rs` | `RingBuffer`, `EguiImageImpl` (`Image` → egui `ColorImage`), cfg-split `Instant` |
 | `audio.rs` | `AudioOutput`: device-rate cpal stream + linear resample from 32 kHz `AudioBufferQueue` |
 | `home.rs` | `home_screen`: clickable `EMBEDDED_ROMS` cards; loads with `Cartridge::with_sfc_data` |
@@ -46,5 +46,5 @@ Native/WASM egui frontend: home screen, `EmulatorApp` loop, cpal audio, and debu
 ## Tests
 
 - Interpolator tests in `audio.rs` (`resample_identity_at_ratio_one`, `resample_empty_queue_is_none`, `resample_underrun_holds_current`, `resample_constant_stays_constant`, `resample_two_thirds_midpoint`).
-- `test_utils.rs` feeds `debug/` `egui_kittest` snapshots (`UPDATE_SNAPSHOTS=1` writes `sres_egui/tests/snapshots/`). After adding a widget row, open the PNG: `fit_contents` (`test_utils.rs:38`) can clip the last line so the golden still matches.
-- Crate: `cargo test -p sres_egui` (`egui_kittest` in `sres_egui/Cargo.toml` `[dev-dependencies]`; debug tests listed in `debug/AGENTS.md`).
+- `test_utils.rs` feeds `debug/` PNG snapshots (`UPDATE_SNAPSHOTS=1` writes `sres_egui/tests/snapshots/`). After adding a widget row, open the PNG: `sizing_pass` (`test_utils.rs:70`) can clip the last line so the golden still matches.
+- Crate: `cargo test -p sres_egui` (debug tests listed in `debug/AGENTS.md`).

@@ -4,6 +4,36 @@ members = [
     "sres_emulator",
     "sres_egui",
 ]
+exclude = [
+    "supply-chain/noop-crates/*",
+]
+
+# Stub out target-only dependencies for unsupported OSes (Windows, Android, Redox, Hermit, UEFI, WASIp2)
+# and unactivated optional dependencies pulled into `cargo metadata` by Cargo's V1 `dep?/feat` resolver.
+[patch.crates-io]
+android-activity = { path = "supply-chain/noop-crates/android-activity" }
+clipboard-win = { path = "supply-chain/noop-crates/clipboard-win" }
+egui-wgpu = { path = "supply-chain/noop-crates/egui-wgpu" }
+glam = { path = "supply-chain/noop-crates/glam" }
+glutin_wgl_sys = { path = "supply-chain/noop-crates/glutin_wgl_sys" }
+hermit-abi = { path = "supply-chain/noop-crates/hermit-abi" }
+jni = { path = "supply-chain/noop-crates/jni" }
+ndk = { path = "supply-chain/noop-crates/ndk" }
+ndk-context = { path = "supply-chain/noop-crates/ndk-context" }
+orbclient = { path = "supply-chain/noop-crates/orbclient" }
+r_efi_53 = { package = "r-efi", path = "supply-chain/noop-crates/r-efi-5.3" }
+r_efi_60 = { package = "r-efi", path = "supply-chain/noop-crates/r-efi-6.0" }
+redox_syscall_04 = { package = "redox_syscall", path = "supply-chain/noop-crates/redox_syscall-0.4" }
+redox_syscall_05 = { package = "redox_syscall", path = "supply-chain/noop-crates/redox_syscall-0.5" }
+wasip2 = { path = "supply-chain/noop-crates/wasip2" }
+windows = { path = "supply-chain/noop-crates/windows" }
+windows-core = { path = "supply-chain/noop-crates/windows-core" }
+windows-link = { path = "supply-chain/noop-crates/windows-link" }
+windows_sys_052 = { package = "windows-sys", path = "supply-chain/noop-crates/windows-sys-0.52" }
+windows_sys_059 = { package = "windows-sys", path = "supply-chain/noop-crates/windows-sys-0.59" }
+windows_sys_060 = { package = "windows-sys", path = "supply-chain/noop-crates/windows-sys-0.60" }
+windows_sys_061 = { package = "windows-sys", path = "supply-chain/noop-crates/windows-sys-0.61" }
+zlib-rs = { path = "supply-chain/noop-crates/zlib-rs" }
 
 [profile.dev]
 opt-level = 0

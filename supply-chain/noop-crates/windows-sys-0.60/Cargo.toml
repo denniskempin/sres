@@ -1,0 +1,23 @@
+[package]
+name = "windows-sys"
+version = "0.60.2"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../empty.rs"
+
+[features]
+Win32 = []
+Win32_Foundation = []
+Win32_Graphics = []
+Win32_Graphics_Gdi = []
+Win32_Storage = []
+Win32_Storage_FileSystem = []
+Win32_System = []
+Win32_System_DataExchange = []
+Win32_System_Memory = []
+Win32_System_Ole = []
+Win32_UI = []
+Win32_UI_Shell = []
+default = []

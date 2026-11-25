@@ -5,7 +5,6 @@
 
 use std::collections::VecDeque;
 
-use bilge::prelude::*;
 use intbits::Bits;
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -85,7 +84,7 @@ impl BrrDecoder {
         self.end = block.header.end();
 
         let left_shift = u32::from(block.header.left_shift());
-        let coeff = match block.header.filter().value() {
+        let coeff = match block.header.filter() {
             0 => [0.0, 0.0],
             1 => [15.0 / 16.0, 0.0],
             2 => [61.0 / 32.0, -15.0 / 16.0],
@@ -156,13 +155,41 @@ fn i4_to_i16(sample: u8) -> i16 {
     }
 }
 
-#[bitsize(8)]
-#[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-struct BrrBlockHeader {
-    end: bool,
-    loop_flag: bool,
-    filter: u2,
-    left_shift: u4,
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+struct BrrBlockHeader(u8);
+
+impl BrrBlockHeader {
+    #[cfg(test)]
+    fn new(end: bool, loop_flag: bool, filter: u8, left_shift: u8) -> Self {
+        Self(
+            u8::from(end)
+                | (u8::from(loop_flag) << 1)
+                | ((filter & 0b11) << 2)
+                | ((left_shift & 0b1111) << 4),
+        )
+    }
+
+    fn end(self) -> bool {
+        self.0.bit(0)
+    }
+
+    fn loop_flag(self) -> bool {
+        self.0.bit(1)
+    }
+
+    fn filter(self) -> u8 {
+        self.0.bits(2..4)
+    }
+
+    fn left_shift(self) -> u8 {
+        self.0.bits(4..8)
+    }
+}
+
+impl From<u8> for BrrBlockHeader {
+    fn from(value: u8) -> Self {
+        Self(value)
+    }
 }
 
 #[derive(Clone, Copy, Default, PartialEq)]
@@ -208,7 +235,7 @@ mod tests {
         assert_eq!(
             BrrBlock::from_bytes(&bytes),
             BrrBlock {
-                header: BrrBlockHeader::new(false, false, u2::new(0), u4::new(0)),
+                header: BrrBlockHeader::new(false, false, 0, 0),
                 raw_samples: [
                     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
                     0x0E, 0x0F, 0x00
@@ -220,7 +247,7 @@ mod tests {
     #[test]
     pub fn test_decode_filter0() {
         let block = BrrBlock {
-            header: BrrBlockHeader::new(true, false, u2::new(0), u4::new(6)),
+            header: BrrBlockHeader::new(true, false, 0, 6),
             raw_samples: impulse(),
         };
         assert_eq!(
@@ -232,7 +259,7 @@ mod tests {
     #[test]
     pub fn test_decode_filter1() {
         let block = BrrBlock {
-            header: BrrBlockHeader::new(true, false, u2::new(1), u4::new(6)),
+            header: BrrBlockHeader::new(true, false, 1, 6),
             raw_samples: impulse(),
         };
         assert_eq!(
@@ -244,7 +271,7 @@ mod tests {
     #[test]
     pub fn test_decode_filter2() {
         let block = BrrBlock {
-            header: BrrBlockHeader::new(true, false, u2::new(2), u4::new(6)),
+            header: BrrBlockHeader::new(true, false, 2, 6),
             raw_samples: impulse(),
         };
         assert_eq!(
@@ -256,7 +283,7 @@ mod tests {
     #[test]
     pub fn test_decode_filter3() {
         let block = BrrBlock {
-            header: BrrBlockHeader::new(true, false, u2::new(3), u4::new(6)),
+            header: BrrBlockHeader::new(true, false, 3, 6),
             raw_samples: impulse(),
         };
         assert_eq!(

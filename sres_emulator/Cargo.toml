@@ -19,16 +19,13 @@ num-traits = "0.2"
 env_logger = { version = "0.11", default-features = false }
 log = "0.4"
 strum = { version = "0.28", features = ["derive"] }
-bilge = "0.5"
 bitcode = { version = "0.6.9", default-features = false, features = ["std", "derive"] }
 
 [dev-dependencies]
-pretty_assertions = "1.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 liblzma = { version = "0.4", features = ["static"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
-rasciigraph = "0.3"
 
 [[bench]]
 name = "rom_benches"

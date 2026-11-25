@@ -146,8 +146,6 @@ const GAUSSIAN_TABLE: &[i32; 512] = &[
 
 #[cfg(test)]
 mod test {
-    use rasciigraph::Config;
-
     use super::PitchCounter;
     use super::PitchGenerator;
 
@@ -232,31 +230,10 @@ mod test {
             .collect::<Vec<_>>();
 
         if expected != actual {
-            println!();
             println!("Input: {:?}", input_vec);
-            debug_plot(input_vec);
-            println!();
             println!("Expected: {:?}", expected);
-            debug_plot(expected);
-            println!();
             println!("Actual: {:?}", actual);
-            debug_plot(actual);
             panic!("Result does not match!")
         }
-    }
-
-    fn debug_plot(data: impl IntoIterator<Item = i16>) {
-        println!(
-            "{}",
-            rasciigraph::plot(
-                data.into_iter()
-                    .map(|v| (v as f64) / 1024.0)
-                    .collect::<Vec<_>>(),
-                Config::default()
-                    .with_offset(4)
-                    .with_height(10)
-                    .with_width(120),
-            )
-        );
     }
 }

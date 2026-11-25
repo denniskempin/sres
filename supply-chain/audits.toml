@@ -1,0 +1,718 @@
+
+# cargo-vet audits file
+
+[audits]
+
+[[trusted.aho-corasick]]
+criteria = "safe-to-run"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-28"
+end = "2027-11-25"
+
+[[trusted.anyhow]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-05"
+end = "2027-11-25"
+
+[[trusted.block2]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2021-11-19"
+end = "2027-11-25"
+
+[[trusted.byteorder-lite]]
+criteria = "safe-to-run"
+user-id = 5862 # fintelia
+start = "2024-04-07"
+end = "2027-11-25"
+
+[[trusted.calloop]]
+criteria = "safe-to-run"
+user-id = 69526 # John Nunley (notgull)
+start = "2024-01-15"
+end = "2027-11-25"
+
+[[trusted.calloop-wayland-source]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2023-07-20"
+end = "2027-11-25"
+
+[[trusted.cc]]
+criteria = "safe-to-run"
+trusted-publisher = "github:rust-lang/cc-rs"
+start = "2025-09-01"
+end = "2027-11-25"
+
+[[trusted.cfg-if]]
+criteria = "safe-to-run"
+user-id = 55123 # rust-lang-owner
+start = "2025-06-09"
+end = "2027-11-25"
+
+[[trusted.color]]
+criteria = "safe-to-run"
+user-id = 106440 # Tom Churchman (tomcur)
+start = "2025-04-30"
+end = "2027-11-25"
+
+[[trusted.crossbeam-utils]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2020-10-12"
+end = "2027-11-25"
+
+[[trusted.cursor-icon]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2023-05-05"
+end = "2027-11-25"
+
+[[trusted.dispatch2]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2025-01-23"
+end = "2027-11-25"
+
+[[trusted.dpi]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2024-03-13"
+end = "2027-11-25"
+
+[[trusted.ecolor]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.eframe]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.egui]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.egui-wgpu]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.egui-winit]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.egui_extras]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.egui_glow]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.emath]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.env_filter]]
+criteria = "safe-to-run"
+user-id = 6743 # Ed Page (epage)
+start = "2024-01-19"
+end = "2027-11-25"
+
+[[trusted.env_logger]]
+criteria = "safe-to-run"
+user-id = 6743 # Ed Page (epage)
+start = "2022-11-24"
+end = "2027-11-25"
+
+[[trusted.epaint]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.epaint_default_fonts]]
+criteria = "safe-to-run"
+user-id = 197939 # Rerun (rerunio)
+start = "2024-12-16"
+end = "2027-11-25"
+
+[[trusted.fearless_simd]]
+criteria = "safe-to-run"
+user-id = 288469 # Laurenz Stampfl (LaurenzV)
+start = "2025-08-26"
+end = "2027-11-25"
+
+[[trusted.find-msvc-tools]]
+criteria = "safe-to-run"
+trusted-publisher = "github:rust-lang/cc-rs"
+start = "2025-09-05"
+end = "2027-11-25"
+
+[[trusted.flate2]]
+criteria = "safe-to-run"
+user-id = 980 # Sebastian Thiel (Byron)
+start = "2023-08-15"
+end = "2027-11-25"
+
+[[trusted.glifo]]
+criteria = "safe-to-run"
+user-id = 288469 # Laurenz Stampfl (LaurenzV)
+start = "2026-05-30"
+end = "2027-11-25"
+
+[[trusted.glow]]
+criteria = "safe-to-run"
+user-id = 9941 # Josh Groves (grovesNL)
+start = "2019-03-20"
+end = "2027-11-25"
+
+[[trusted.glutin]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2022-09-03"
+end = "2027-11-25"
+
+[[trusted.glutin-winit]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2022-11-12"
+end = "2027-11-25"
+
+[[trusted.glutin_egl_sys]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2022-09-03"
+end = "2027-11-25"
+
+[[trusted.glutin_glx_sys]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2022-09-03"
+end = "2027-11-25"
+
+[[trusted.harfrust]]
+criteria = "safe-to-run"
+user-id = 299582 # Behdad Esfahbod (behdad)
+start = "2025-06-10"
+end = "2027-11-25"
+
+[[trusted.hashbrown]]
+criteria = "safe-to-run"
+user-id = 55123 # rust-lang-owner
+start = "2025-04-30"
+end = "2027-11-25"
+
+[[trusted.image]]
+criteria = "safe-to-run"
+user-id = 11453 # Aurelia Molzer (197g)
+start = "2019-04-13"
+end = "2027-11-25"
+
+[[trusted.itoa]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-05-02"
+end = "2027-11-25"
+
+[[trusted.jobserver]]
+criteria = "safe-to-run"
+user-id = 55123 # rust-lang-owner
+start = "2024-07-23"
+end = "2027-11-25"
+
+[[trusted.js-sys]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-25"
+
+[[trusted.kurbo]]
+criteria = "safe-to-run"
+user-id = 106440 # Tom Churchman (tomcur)
+start = "2025-07-21"
+end = "2027-11-25"
+
+[[trusted.libc]]
+criteria = "safe-to-run"
+user-id = 55123 # rust-lang-owner
+start = "2024-08-15"
+end = "2027-11-25"
+
+[[trusted.linebender_resource_handle]]
+criteria = "safe-to-run"
+user-id = 109051 # Daniel McNab (DJMcNab)
+start = "2025-09-09"
+end = "2027-11-25"
+
+[[trusted.linux-raw-sys]]
+criteria = "safe-to-run"
+user-id = 6825 # Dan Gohman (sunfishcode)
+start = "2021-06-12"
+end = "2027-11-25"
+
+[[trusted.lock_api]]
+criteria = "safe-to-run"
+user-id = 2915 # Amanieu d'Antras (Amanieu)
+start = "2019-05-04"
+end = "2027-11-25"
+
+[[trusted.log]]
+criteria = "safe-to-run"
+user-id = 3204
+start = "2019-07-10"
+end = "2027-11-25"
+
+[[trusted.memchr]]
+criteria = "safe-to-run"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-07-07"
+end = "2027-11-25"
+
+[[trusted.objc-sys]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2021-11-22"
+end = "2027-11-25"
+
+[[trusted.objc2]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2021-11-19"
+end = "2027-11-25"
+
+[[trusted.objc2-app-kit]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-17"
+end = "2027-11-25"
+
+[[trusted.objc2-audio-toolbox]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-12-15"
+end = "2027-11-25"
+
+[[trusted.objc2-avf-audio]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-12-15"
+end = "2027-11-25"
+
+[[trusted.objc2-cloud-kit]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-17"
+end = "2027-11-25"
+
+[[trusted.objc2-contacts]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-17"
+end = "2027-11-25"
+
+[[trusted.objc2-core-audio]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2025-01-12"
+end = "2027-11-25"
+
+[[trusted.objc2-core-audio-types]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-12-09"
+end = "2027-11-25"
+
+[[trusted.objc2-core-data]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-17"
+end = "2027-11-25"
+
+[[trusted.objc2-core-image]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-05-14"
+end = "2027-11-25"
+
+[[trusted.objc2-core-location]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-17"
+end = "2027-11-25"
+
+[[trusted.objc2-foundation]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2021-11-19"
+end = "2027-11-25"
+
+[[trusted.objc2-link-presentation]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-18"
+end = "2027-11-25"
+
+[[trusted.objc2-metal]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-17"
+end = "2027-11-25"
+
+[[trusted.objc2-quartz-core]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-17"
+end = "2027-11-25"
+
+[[trusted.objc2-symbols]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-05-10"
+end = "2027-11-25"
+
+[[trusted.objc2-ui-kit]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-17"
+end = "2027-11-25"
+
+[[trusted.objc2-uniform-type-identifiers]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-18"
+end = "2027-11-25"
+
+[[trusted.objc2-user-notifications]]
+criteria = "safe-to-run"
+user-id = 36629 # Mads Marquart (madsmtm)
+start = "2024-04-18"
+end = "2027-11-25"
+
+[[trusted.parking_lot]]
+criteria = "safe-to-run"
+user-id = 2915 # Amanieu d'Antras (Amanieu)
+start = "2019-05-04"
+end = "2027-11-25"
+
+[[trusted.parking_lot_core]]
+criteria = "safe-to-run"
+user-id = 2915 # Amanieu d'Antras (Amanieu)
+start = "2019-05-04"
+end = "2027-11-25"
+
+[[trusted.peniko]]
+criteria = "safe-to-run"
+user-id = 4033 # Bruce Mitchener (waywardmonkeys)
+start = "2025-01-20"
+end = "2027-11-25"
+
+[[trusted.pin-project]]
+criteria = "safe-to-run"
+trusted-publisher = "github:taiki-e/pin-project"
+start = "2026-02-27"
+end = "2027-11-25"
+
+[[trusted.pin-project-internal]]
+criteria = "safe-to-run"
+trusted-publisher = "github:taiki-e/pin-project"
+start = "2026-02-27"
+end = "2027-11-25"
+
+[[trusted.pin-project-lite]]
+criteria = "safe-to-run"
+trusted-publisher = "github:taiki-e/pin-project-lite"
+start = "2026-02-27"
+end = "2027-11-25"
+
+[[trusted.png]]
+criteria = "safe-to-run"
+user-id = 11453 # Aurelia Molzer (197g)
+start = "2019-04-24"
+end = "2027-11-25"
+
+[[trusted.polycool]]
+criteria = "safe-to-run"
+user-id = 2423 # jneem
+start = "2025-10-09"
+end = "2027-11-25"
+
+[[trusted.proc-macro2]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-04-23"
+end = "2027-11-25"
+
+[[trusted.regex]]
+criteria = "safe-to-run"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-27"
+end = "2027-11-25"
+
+[[trusted.regex-automata]]
+criteria = "safe-to-run"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-25"
+end = "2027-11-25"
+
+[[trusted.regex-syntax]]
+criteria = "safe-to-run"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-30"
+end = "2027-11-25"
+
+[[trusted.rustix]]
+criteria = "safe-to-run"
+user-id = 6825 # Dan Gohman (sunfishcode)
+start = "2021-10-29"
+end = "2027-11-25"
+
+[[trusted.rustversion]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-07-08"
+end = "2027-11-25"
+
+[[trusted.serde]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-11-25"
+
+[[trusted.serde_core]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2025-09-13"
+end = "2027-11-25"
+
+[[trusted.serde_derive]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-11-25"
+
+[[trusted.serde_json]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-02-28"
+end = "2027-11-25"
+
+[[trusted.slab]]
+criteria = "safe-to-run"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2021-10-13"
+end = "2027-11-25"
+
+[[trusted.smithay-client-toolkit]]
+criteria = "safe-to-run"
+user-id = 111182 # Ashley Wulber (wash2)
+start = "2023-09-18"
+end = "2027-11-25"
+
+[[trusted.smithay-clipboard]]
+criteria = "safe-to-run"
+user-id = 111182 # Ashley Wulber (wash2)
+start = "2023-10-10"
+end = "2027-11-25"
+
+[[trusted.syn]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-11-25"
+
+[[trusted.thiserror]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-09"
+end = "2027-11-25"
+
+[[trusted.thiserror-impl]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-09"
+end = "2027-11-25"
+
+[[trusted.tiff]]
+criteria = "safe-to-run"
+user-id = 11453 # Aurelia Molzer (197g)
+start = "2019-04-25"
+end = "2027-11-25"
+
+[[trusted.tracing]]
+criteria = "safe-to-run"
+user-id = 172786 # Hayden Stainsby (hds)
+start = "2024-11-27"
+end = "2027-11-25"
+
+[[trusted.unicode-ident]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2021-10-02"
+end = "2027-11-25"
+
+[[trusted.vello_common]]
+criteria = "safe-to-run"
+user-id = 288469 # Laurenz Stampfl (LaurenzV)
+start = "2026-01-08"
+end = "2027-11-25"
+
+[[trusted.vello_cpu]]
+criteria = "safe-to-run"
+user-id = 288469 # Laurenz Stampfl (LaurenzV)
+start = "2026-01-08"
+end = "2027-11-25"
+
+[[trusted.wasm-bindgen]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-25"
+
+[[trusted.wasm-bindgen-futures]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-25"
+
+[[trusted.wasm-bindgen-macro]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-25"
+
+[[trusted.wasm-bindgen-macro-support]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-25"
+
+[[trusted.wasm-bindgen-shared]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-25"
+
+[[trusted.wayland-backend]]
+criteria = "safe-to-run"
+user-id = 4118 # Ian Douglas Scott (ids1024)
+start = "2026-03-05"
+end = "2027-11-25"
+
+[[trusted.wayland-client]]
+criteria = "safe-to-run"
+user-id = 4118 # Ian Douglas Scott (ids1024)
+start = "2026-07-22"
+end = "2027-11-25"
+
+[[trusted.wayland-csd-frame]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2023-05-10"
+end = "2027-11-25"
+
+[[trusted.wayland-cursor]]
+criteria = "safe-to-run"
+user-id = 1557 # Elinor B. (elinorbgr)
+start = "2019-09-14"
+end = "2027-11-25"
+
+[[trusted.wayland-protocols]]
+criteria = "safe-to-run"
+user-id = 4118 # Ian Douglas Scott (ids1024)
+start = "2026-06-19"
+end = "2027-11-25"
+
+[[trusted.wayland-protocols-experimental]]
+criteria = "safe-to-run"
+user-id = 4118 # Ian Douglas Scott (ids1024)
+start = "2025-07-29"
+end = "2027-11-25"
+
+[[trusted.wayland-protocols-misc]]
+criteria = "safe-to-run"
+user-id = 1557 # Elinor B. (elinorbgr)
+start = "2022-05-23"
+end = "2027-11-25"
+
+[[trusted.wayland-protocols-plasma]]
+criteria = "safe-to-run"
+user-id = 1557 # Elinor B. (elinorbgr)
+start = "2022-05-23"
+end = "2027-11-25"
+
+[[trusted.wayland-protocols-wlr]]
+criteria = "safe-to-run"
+user-id = 1557 # Elinor B. (elinorbgr)
+start = "2022-05-23"
+end = "2027-11-25"
+
+[[trusted.wayland-scanner]]
+criteria = "safe-to-run"
+user-id = 4118 # Ian Douglas Scott (ids1024)
+start = "2026-07-22"
+end = "2027-11-25"
+
+[[trusted.wayland-sys]]
+criteria = "safe-to-run"
+user-id = 4118 # Ian Douglas Scott (ids1024)
+start = "2025-01-31"
+end = "2027-11-25"
+
+[[trusted.web-sys]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-25"
+
+[[trusted.weezl]]
+criteria = "safe-to-run"
+user-id = 11453 # Aurelia Molzer (197g)
+start = "2020-06-29"
+end = "2027-11-25"
+
+[[trusted.winit]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2022-09-11"
+end = "2027-11-25"
+
+[[trusted.xkbcommon-dl]]
+criteria = "safe-to-run"
+user-id = 42583 # Kirill Chibisov (kchibisov)
+start = "2023-06-27"
+end = "2027-11-25"
+
+[[trusted.zerocopy]]
+criteria = "safe-to-run"
+trusted-publisher = "github:google/zerocopy"
+start = "2026-09-08"
+end = "2027-11-25"
+
+[[trusted.zerocopy-derive]]
+criteria = "safe-to-run"
+trusted-publisher = "github:google/zerocopy"
+start = "2026-09-08"
+end = "2027-11-25"
+
+[[trusted.zmij]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2025-12-18"
+end = "2027-11-25"

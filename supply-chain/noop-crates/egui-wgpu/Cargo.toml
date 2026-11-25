@@ -1,0 +1,12 @@
+[package]
+name = "egui-wgpu"
+version = "0.36.2"
+edition = "2021"
+publish = false
+
+[features]
+default = []
+capture = []
+wayland = []
+winit = []
+x11 = []

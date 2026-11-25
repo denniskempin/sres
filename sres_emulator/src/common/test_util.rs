@@ -106,6 +106,36 @@ fn decode_snes_wav(bytes: &[u8]) -> Vec<i16> {
     samples.expect("WAV missing data chunk")
 }
 
+/// Formats a line-by-line diff between `actual` and `expected` for test failure output.
+pub fn format_line_diff(actual: &str, expected: &str) -> String {
+    let mut out = String::new();
+    let actual_lines: Vec<&str> = actual.lines().collect();
+    let expected_lines: Vec<&str> = expected.lines().collect();
+    for i in 0..actual_lines.len().max(expected_lines.len()) {
+        let a = actual_lines.get(i).copied();
+        let e = expected_lines.get(i).copied();
+        if a == e {
+            if let Some(line) = a {
+                out.push_str("  ");
+                out.push_str(line);
+                out.push('\n');
+            }
+        } else {
+            if let Some(line) = e {
+                out.push_str("- ");
+                out.push_str(line);
+                out.push('\n');
+            }
+            if let Some(line) = a {
+                out.push_str("+ ");
+                out.push_str(line);
+                out.push('\n');
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

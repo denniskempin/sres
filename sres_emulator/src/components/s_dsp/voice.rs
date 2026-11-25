@@ -3,7 +3,6 @@
 #![allow(dead_code)]
 use std::fmt::Display;
 
-use bilge::prelude::*;
 use intbits::Bits;
 
 use super::brr::BrrDecoder;
@@ -86,7 +85,7 @@ impl DspEnvelope {
     fn update_adsr(&mut self, global_counter: u16, adsr1: Adsr1, adsr2: Adsr2) {
         match self.state {
             EnvelopeState::Attack => {
-                let attack_rate = adsr1.attack_rate().value();
+                let attack_rate = adsr1.attack_rate();
                 let rate = if attack_rate == 15 {
                     31 // Special case: rate 31 for max attack
                 } else {
@@ -109,7 +108,7 @@ impl DspEnvelope {
                 }
             }
             EnvelopeState::Decay => {
-                let decay_rate = adsr1.decay_rate().value();
+                let decay_rate = adsr1.decay_rate();
                 let rate = (decay_rate * 2) + 16;
 
                 if self.should_update_at_rate(global_counter, rate) {
@@ -120,14 +119,14 @@ impl DspEnvelope {
                     }
 
                     // Check if we've reached sustain level
-                    let sustain_level = (adsr2.sustain_level().value() as u16 + 1) << 8;
+                    let sustain_level = (adsr2.sustain_level() as u16 + 1) << 8;
                     if self.value <= sustain_level {
                         self.state = EnvelopeState::Sustain;
                     }
                 }
             }
             EnvelopeState::Sustain => {
-                let sustain_rate = adsr2.release_rate().value();
+                let sustain_rate = adsr2.release_rate();
                 if sustain_rate > 0 && self.should_update_at_rate(global_counter, sustain_rate) {
                     // Exponential decrease: envelope -= 1, then envelope -= envelope >> 8
                     if self.value > 0 {
@@ -290,8 +289,8 @@ impl Voice {
             0x2 => self.pitch.low_byte(),
             0x3 => self.pitch.high_byte(),
             0x4 => self.sample_source,
-            0x5 => self.adsr1.value,
-            0x6 => self.adsr2.value,
+            0x5 => self.adsr1.0,
+            0x6 => self.adsr2.0,
             0x7 => self.gain.0,
             0x8 => self.envx,
             0x9 => self.outx as u8,
@@ -399,19 +398,56 @@ impl<const N: usize> Default for AudioRingBuffer<N> {
         }
     }
 }
-#[bitsize(8)]
-#[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-pub struct Adsr1 {
-    pub attack_rate: u4,
-    pub decay_rate: u3,
-    pub enable: bool,
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Adsr1(pub u8);
+
+impl Adsr1 {
+    #[cfg(test)]
+    pub fn new(attack_rate: u8, decay_rate: u8, enable: bool) -> Self {
+        Self((attack_rate & 0x0F) | ((decay_rate & 0x07) << 4) | (u8::from(enable) << 7))
+    }
+
+    pub fn attack_rate(self) -> u8 {
+        self.0.bits(0..4)
+    }
+
+    pub fn decay_rate(self) -> u8 {
+        self.0.bits(4..7)
+    }
+
+    pub fn enable(self) -> bool {
+        self.0.bit(7)
+    }
 }
 
-#[bitsize(8)]
-#[derive(Clone, Copy, DebugBits, Default, FromBits, PartialEq)]
-pub struct Adsr2 {
-    pub release_rate: u5,
-    pub sustain_level: u3,
+impl From<u8> for Adsr1 {
+    fn from(value: u8) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Adsr2(pub u8);
+
+impl Adsr2 {
+    #[cfg(test)]
+    pub fn new(release_rate: u8, sustain_level: u8) -> Self {
+        Self((release_rate & 0x1F) | ((sustain_level & 0x07) << 5))
+    }
+
+    pub fn release_rate(self) -> u8 {
+        self.0.bits(0..5)
+    }
+
+    pub fn sustain_level(self) -> u8 {
+        self.0.bits(5..8)
+    }
+}
+
+impl From<u8> for Adsr2 {
+    fn from(value: u8) -> Self {
+        Self(value)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -481,8 +517,8 @@ mod test {
             vol_r: 127,
             pitch: 4096,
             sample_source: 0,
-            adsr1: Adsr1::new(u4::new(10), u3::new(7), true),
-            adsr2: Adsr2::new(u5::new(0), u3::new(7)),
+            adsr1: Adsr1::new(10, 7, true),
+            adsr2: Adsr2::new(0, 7),
             gain: Gain(0),
             envx: 0,
             outx: 0,

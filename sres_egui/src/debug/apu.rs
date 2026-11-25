@@ -110,10 +110,10 @@ fn voice_detail_widget(
             if adsr1.enable() {
                 ui.label(format!(
                     "ADSR: {}/{}/{}/{}",
-                    adsr1.attack_rate().value(),
-                    adsr1.decay_rate().value(),
-                    adsr2.sustain_level().value(),
-                    adsr2.release_rate().value()
+                    adsr1.attack_rate(),
+                    adsr1.decay_rate(),
+                    adsr2.sustain_level(),
+                    adsr2.release_rate()
                 ));
             } else {
                 ui.label(format!(
@@ -169,7 +169,7 @@ fn global_dsp_state_widget(
             flags.reset(),
             flags.mute(),
             !flags.echo_disable(),
-            flags.noise_frequency().value()
+            flags.noise_frequency()
         ));
     });
 

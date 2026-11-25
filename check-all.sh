@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PR checks. Same commands as `.github/workflows/postsubmit.yml` (`health` / `test` / `wasm`).
-# Usage: ./check-all.sh [fmt|clippy|deny|test|wasm]...
-# No arguments runs all five.
+# Usage: ./check-all.sh [fmt|clippy|deny|vet|test|wasm]...
+# No arguments runs all six.
 set -euo pipefail
 
 if [[ -z "${RUSTC_WRAPPER:-}" ]] && command -v sccache >/dev/null 2>&1; then
@@ -27,6 +27,11 @@ run_deny() {
   cargo deny check
 }
 
+run_vet() {
+  banner "Cargo Vet"
+  cargo vet --locked
+}
+
 run_test() {
   banner "Tests"
   # egui_kittest/wgpu needs an X display. GitHub-hosted runners have none.
@@ -43,7 +48,7 @@ run_wasm() {
 }
 
 if [[ $# -eq 0 ]]; then
-  set -- fmt clippy deny test wasm
+  set -- fmt clippy deny vet test wasm
 fi
 
 for check in "$@"; do
@@ -51,16 +56,17 @@ for check in "$@"; do
     fmt) run_fmt ;;
     clippy) run_clippy ;;
     deny) run_deny ;;
+    vet) run_vet ;;
     test) run_test ;;
     wasm) run_wasm ;;
     -h | --help | help)
-      echo "Usage: $0 [fmt|clippy|deny|test|wasm]..."
-      echo "No arguments runs all PR checks (fmt, clippy, deny, test, wasm)."
+      echo "Usage: $0 [fmt|clippy|deny|vet|test|wasm]..."
+      echo "No arguments runs all PR checks (fmt, clippy, deny, vet, test, wasm)."
       exit 0
       ;;
     *)
       echo "Unknown check: $check" >&2
-      echo "Usage: $0 [fmt|clippy|deny|test|wasm]..." >&2
+      echo "Usage: $0 [fmt|clippy|deny|vet|test|wasm]..." >&2
       exit 1
       ;;
   esac

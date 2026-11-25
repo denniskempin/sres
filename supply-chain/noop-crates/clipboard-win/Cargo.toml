@@ -1,0 +1,11 @@
+[package]
+name = "clipboard-win"
+version = "5.4.3"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../empty.rs"
+
+[features]
+std = []

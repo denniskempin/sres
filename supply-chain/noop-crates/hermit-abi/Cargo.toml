@@ -1,0 +1,11 @@
+[package]
+name = "hermit-abi"
+version = "0.5.3"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../empty.rs"
+
+[features]
+default = []

@@ -8,7 +8,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use pretty_assertions::assert_eq;
 use sres_emulator::common::address::AddressU24;
 use sres_emulator::common::bus::Bus;
 use sres_emulator::common::logging;

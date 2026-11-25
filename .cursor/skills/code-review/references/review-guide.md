@@ -291,13 +291,13 @@ Do not commit `corpus/`, `artifacts/`, `coverage/`.
 
 ## 10. Tooling & CI
 
-All PRs pass `./check-all.sh` (commands listed in [AGENTS.md](../../../../AGENTS.md#commands)). CI runs the same script (`fmt`/`clippy`/`deny`, `test`, `wasm`).
+All PRs pass `./check-all.sh` (commands listed in [AGENTS.md](../../../../AGENTS.md#commands)). CI runs the same script (`fmt`/`clippy`/`deny`/`vet`, `test`, `wasm`).
 
-### Supply chain (`deny.toml`)
+### Supply chain (`deny.toml`, `supply-chain/`)
 
-`cargo deny check` runs in `./check-all.sh` and CI `health`.
+`cargo deny check` and `cargo vet --locked` run in `./check-all.sh` and CI `health`.
 
-**Reject:** Adding `ignore` entries to `deny.toml` without a concrete `reason`; introducing unapproved licenses, wildcard crate versions, or non-crates.io dependencies without justification.
+**Reject:** Adding `ignore` entries to `deny.toml` or `[exemptions]` to `supply-chain/config.toml` without justification; introducing unapproved licenses, wildcard crate versions, or non-crates.io dependencies without justification.
 
 ### Formatting (`rustfmt.toml`)
 

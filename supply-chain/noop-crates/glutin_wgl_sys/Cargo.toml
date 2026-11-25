@@ -1,0 +1,8 @@
+[package]
+name = "glutin_wgl_sys"
+version = "0.6.1"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../empty.rs"

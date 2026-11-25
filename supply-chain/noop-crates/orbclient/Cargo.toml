@@ -1,0 +1,8 @@
+[package]
+name = "orbclient"
+version = "0.3.55"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../empty.rs"

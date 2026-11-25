@@ -16,7 +16,7 @@ fn assert_state(spc700: &Spc700<impl Spc700Bus>, expected_state: &str) {
     expected.instruction.operand_str = None;
     actual.master_cycle = 0;
     expected.master_cycle = 0;
-    pretty_assertions::assert_eq!(actual.to_string(), expected.to_string());
+    assert_eq!(actual.to_string(), expected.to_string());
 }
 
 fn assert_states(spc700: &mut Spc700<impl Spc700Bus>, expected_states: &[&str]) {

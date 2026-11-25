@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 
-use pretty_assertions::assert_eq;
 use sres_emulator::apu::AudioBuffer;
 use sres_emulator::common::test_util::compare_wav_against_golden;
 use sres_emulator::common::util::format_memory;

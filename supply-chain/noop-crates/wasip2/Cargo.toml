@@ -1,0 +1,8 @@
+[package]
+name = "wasip2"
+version = "1.0.4+wasi-0.2.12"
+edition = "2021"
+publish = false
+
+[lib]
+path = "../empty.rs"

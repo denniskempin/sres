@@ -2,7 +2,6 @@
 //! HDMA sequencing lives in `hdma.rs`; this module stores channel state and `$43x7–$43xB`/`$43xF`.
 use std::fmt::Display;
 
-use bilge::prelude::*;
 use intbits::Bits;
 use log::info;
 use log::trace;
@@ -473,8 +472,8 @@ impl Display for DmaChannel {
 }
 
 #[allow(non_camel_case_types)]
-#[bitsize(3)]
-#[derive(Clone, Copy, Debug, Default, Eq, FromBits, PartialEq)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum DmaTransferPattern {
     #[default]
     Pattern_0 = 0,
@@ -487,21 +486,62 @@ pub enum DmaTransferPattern {
     Undocumented_0_0_1_1 = 7,
 }
 
-#[bitsize(8)]
-#[derive(Clone, Copy, DebugBits, Default, Eq, FromBits, PartialEq)]
-pub struct DmaParameters {
-    // Pick one of 8 transfer patterns for the B bus address
-    pub(super) transfer_pattern: DmaTransferPattern,
-    // True: fixed A bus address. Overrides increment/decrement
-    pub(super) fixed: bool,
-    // True: decrement A bus address, False: increment A bus address.
-    pub(super) decrement: bool,
-    // Reserved
-    unused: bool,
-    // HDMA only
-    pub(super) indirect: bool,
-    // True: Transfers B -> A, False: Transfers A -> B
-    pub(super) direction: bool,
+impl From<u8> for DmaTransferPattern {
+    fn from(value: u8) -> Self {
+        match value & 0b111 {
+            0 => Self::Pattern_0,
+            1 => Self::Pattern_0_1,
+            2 => Self::Pattern_0_0,
+            3 => Self::Pattern_0_0_1_1,
+            4 => Self::Pattern_0_1_2_3,
+            5 => Self::Undocumented_0_1_0_1,
+            6 => Self::Undocumented_0_0,
+            7 => Self::Undocumented_0_0_1_1,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct DmaParameters(u8);
+
+impl DmaParameters {
+    pub(super) fn transfer_pattern(self) -> DmaTransferPattern {
+        DmaTransferPattern::from(self.0)
+    }
+
+    pub(super) fn fixed(self) -> bool {
+        self.0.bit(3)
+    }
+
+    pub(super) fn decrement(self) -> bool {
+        self.0.bit(4)
+    }
+
+    #[cfg(test)]
+    fn unused(self) -> bool {
+        self.0.bit(5)
+    }
+
+    pub(super) fn indirect(self) -> bool {
+        self.0.bit(6)
+    }
+
+    pub(super) fn direction(self) -> bool {
+        self.0.bit(7)
+    }
+}
+
+impl From<u8> for DmaParameters {
+    fn from(value: u8) -> Self {
+        Self(value)
+    }
+}
+
+impl From<DmaParameters> for u8 {
+    fn from(value: DmaParameters) -> Self {
+        value.0
+    }
 }
 
 #[cfg(test)]

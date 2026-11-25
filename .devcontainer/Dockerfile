@@ -7,6 +7,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG NEXTEST_VERSION=0.9.152
 ARG TRUNK_VERSION=v0.22.2
 ARG DENY_VERSION=0.22.1
+ARG CARGO_VET_VERSION=v0.10.4
 
 # SRES Linux GUI/audio libs and Mesa software GL/Vulkan (llvmpipe/lavapipe) for headless egui_kittest.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -61,10 +62,34 @@ RUN set -eux; \
     tar -xzf /tmp/cargo-deny.tar.gz -C /usr/local/bin --strip-components=1 "cargo-deny-${DENY_VERSION}-${musl_triple}/cargo-deny"; \
     rm /tmp/cargo-deny.tar.gz
 
-# Pre-install the pinned nightly toolchain from rust-toolchain.toml.
+# Pre-install the pinned nightly toolchain from rust-toolchain.toml, plus SHA-256 verified cargo-vet
+# (prebuilt binary on x86_64; built from verified release source on aarch64 where upstream ships no binary).
 COPY rust-toolchain.toml /tmp/rust-toolchain.toml
-RUN (cd /tmp && rustup toolchain install) \
-    && rm /tmp/rust-toolchain.toml
+RUN set -eux; \
+    (cd /tmp && rustup toolchain install); \
+    case "$(uname -m)" in \
+      x86_64) \
+        curl --proto '=https' --tlsv1.2 -fsSL -o /tmp/cargo-vet.tar.xz \
+          "https://github.com/mozilla/cargo-vet/releases/download/${CARGO_VET_VERSION}/cargo-vet-x86_64-unknown-linux-gnu.tar.xz"; \
+        echo "e367f8ac156208711511274abab0c309e19ed0f11ef2bbe8a7b0294f824cb032  /tmp/cargo-vet.tar.xz" | sha256sum -c -; \
+        tar -xJf /tmp/cargo-vet.tar.xz --strip-components=1 -C /usr/local/bin \
+          cargo-vet-x86_64-unknown-linux-gnu/cargo-vet; \
+        rm /tmp/cargo-vet.tar.xz; \
+        ;; \
+      aarch64) \
+        curl --proto '=https' --tlsv1.2 -fsSL -o /tmp/cargo-vet-src.tar.gz \
+          "https://github.com/mozilla/cargo-vet/releases/download/${CARGO_VET_VERSION}/source.tar.gz"; \
+        echo "5b5d2b4eea7b8b567cdd3a2c11855ff3a42dc0463b3c8469cd8310f7a9f561cc  /tmp/cargo-vet-src.tar.gz" | sha256sum -c -; \
+        mkdir /tmp/cargo-vet-src; \
+        tar -xzf /tmp/cargo-vet-src.tar.gz --strip-components=1 -C /tmp/cargo-vet-src; \
+        (cd /tmp/cargo-vet-src \
+          && CARGO_HOME=/tmp/cargo-vet-home CARGO_TARGET_DIR=/tmp/cargo-vet-target \
+             cargo install --locked --path . --root /usr/local --no-track); \
+        rm -rf /tmp/cargo-vet-src.tar.gz /tmp/cargo-vet-src /tmp/cargo-vet-home /tmp/cargo-vet-target; \
+        ;; \
+      *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;; \
+    esac; \
+    rm /tmp/rust-toolchain.toml
 
 ENV CARGO_HOME=/cargo \
     TRUNK_SKIP_VERSION_CHECK=true \
